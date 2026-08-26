@@ -33,8 +33,15 @@ DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 't')
 
 ALLOWED_HOSTS = [
     host.strip()
-    for host in os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',')
+    for host in os.environ.get('DJANGO_ALLOWED_HOSTS', 'www.pickpickles.xyz,pickpickles.xyz,127.0.0.1,localhost,*').split(',')
     if host.strip()
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://www.pickpickles.xyz',
+    'https://pickpickles.xyz',
+    'http://www.pickpickles.xyz',
+    'http://pickpickles.xyz',
 ]
 
 
