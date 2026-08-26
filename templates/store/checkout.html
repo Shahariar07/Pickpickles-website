@@ -1,0 +1,286 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Quick Checkout | Pickpickles Bangladesh{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+        <span class="text-xs font-black uppercase tracking-widest text-emerald-900 bg-emerald-100 border border-emerald-300 px-3.5 py-1.5 rounded-full">
+            Quick 1-Step Checkout
+        </span>
+        <h1 class="font-display font-black text-2xl sm:text-4xl text-slate-950 mt-3">
+            Complete Your Pickle Order
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-700 font-medium mt-1">Cash on Delivery or bKash / Nagad payment</p>
+    </div>
+
+    <form method="POST" action="{% url 'store:checkout' %}" id="checkoutForm">
+        {% csrf_token %}
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- Left: Customer Information & Delivery Zone -->
+            <div class="lg:col-span-7 space-y-6">
+                
+                <!-- 1. Customer Information Card -->
+                <div class="bg-white p-6 rounded-3xl border-2 border-slate-200 shadow-xs space-y-4">
+                    <div class="flex items-center gap-2.5 border-b border-slate-200 pb-3">
+                        <div class="w-8 h-8 rounded-full bg-[#15803d] text-white flex items-center justify-center text-xs font-black">1</div>
+                        <h2 class="font-display font-black text-lg text-slate-950">Your Contact Details</h2>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-black text-slate-900 mb-1" for="customer_name">Full Name *</label>
+                            {{ form.customer_name }}
+                            {% if form.customer_name.errors %}<p class="text-rose-600 font-bold text-xs mt-1">{{ form.customer_name.errors.0 }}</p>{% endif %}
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-black text-slate-900 mb-1" for="customer_phone">Phone Number (For Delivery Call & Verification) *</label>
+                            {{ form.customer_phone }}
+                            {% if form.customer_phone.errors %}<p class="text-rose-600 font-bold text-xs mt-1">{{ form.customer_phone.errors.0 }}</p>{% endif %}
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-black text-slate-900 mb-1" for="customer_email">Email Address (Optional)</label>
+                            {{ form.customer_email }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Delivery Address Card -->
+                <div class="bg-white p-6 rounded-3xl border-2 border-slate-200 shadow-xs space-y-4">
+                    <div class="flex items-center gap-2.5 border-b border-slate-200 pb-3">
+                        <div class="w-8 h-8 rounded-full bg-[#15803d] text-white flex items-center justify-center text-xs font-black">2</div>
+                        <h2 class="font-display font-black text-lg text-slate-950">Delivery Address</h2>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-black text-slate-900 mb-1">Select Delivery Zone *</label>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <label class="border-2 border-emerald-600 bg-emerald-50 p-4 rounded-2xl cursor-pointer flex items-center justify-between transition-all" id="zoneInsideLabel">
+                                    <div class="flex items-center gap-2.5">
+                                        <input type="radio" name="delivery_zone" value="INSIDE_DHAKA" checked class="text-emerald-700 focus:ring-emerald-500" onchange="updateDeliveryFee('INSIDE_DHAKA')">
+                                        <div>
+                                            <span class="font-black text-xs text-slate-950 block">Inside Dhaka</span>
+                                            <span class="text-[11px] text-slate-600 font-semibold">Fresh Brining (3d) + Transit (1-2d)</span>
+                                        </div>
+                                    </div>
+                                    <span class="font-display font-black text-sm text-emerald-950">৳130</span>
+                                </label>
+
+                                <label class="border-2 border-slate-300 bg-white p-4 rounded-2xl cursor-pointer flex items-center justify-between transition-all hover:border-slate-400" id="zoneOutsideLabel">
+                                    <div class="flex items-center gap-2.5">
+                                        <input type="radio" name="delivery_zone" value="OUTSIDE_DHAKA" class="text-emerald-700 focus:ring-emerald-500" onchange="updateDeliveryFee('OUTSIDE_DHAKA')">
+                                        <div>
+                                            <span class="font-black text-xs text-slate-950 block">Outside Dhaka</span>
+                                            <span class="text-[11px] text-slate-600 font-semibold">Fresh Brining (3d) + Transit (2-3d)</span>
+                                        </div>
+                                    </div>
+                                    <span class="font-display font-black text-sm text-slate-950">৳130</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-black text-slate-900 mb-1" for="delivery_city">City / District *</label>
+                            {{ form.delivery_city }}
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-black text-slate-900 mb-1" for="delivery_address">Full Street Address *</label>
+                            {{ form.delivery_address }}
+                            <p class="text-[11px] text-slate-600 font-medium mt-1">Please include House #, Road #, Area/Sector, Landmark.</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-black text-slate-900 mb-1" for="customer_notes">Delivery Notes (Optional)</label>
+                            {{ form.customer_notes }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Payment Method Card -->
+                <div class="bg-white p-6 rounded-3xl border-2 border-slate-200 shadow-xs space-y-4">
+                    <div class="flex items-center gap-2.5 border-b border-slate-200 pb-3">
+                        <div class="w-8 h-8 rounded-full bg-[#15803d] text-white flex items-center justify-center text-xs font-black">3</div>
+                        <h2 class="font-display font-black text-lg text-slate-950">Payment Option</h2>
+                    </div>
+
+                    <div class="space-y-3">
+                        <!-- COD Option -->
+                        <label class="border-2 border-emerald-600 bg-emerald-50/70 p-4 rounded-2xl cursor-pointer flex items-center gap-3 transition-all" id="payCodLabel">
+                            <input type="radio" name="payment_method" value="COD" checked class="text-emerald-700 focus:ring-emerald-500" onchange="togglePaymentInputs('COD')">
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-black text-sm text-slate-950">Cash on Delivery (COD)</span>
+                                    <span class="text-xl">💵</span>
+                                </div>
+                                <p class="text-xs text-slate-700 font-medium mt-0.5">Pay in cash to the delivery rider upon receiving your fresh jars.</p>
+                            </div>
+                        </label>
+
+                        <!-- bKash Option -->
+                        <label class="border-2 border-slate-300 bg-white p-4 rounded-2xl cursor-pointer flex items-center gap-3 transition-all hover:border-pink-300" id="payBkashLabel">
+                            <input type="radio" name="payment_method" value="BKASH" class="text-pink-600 focus:ring-pink-500" onchange="togglePaymentInputs('BKASH')">
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-black text-sm text-slate-950">bKash (Send Money / Payment)</span>
+                                    <span class="text-xs bg-pink-100 text-pink-900 font-black px-2 py-0.5 rounded border border-pink-300">bKash</span>
+                                </div>
+                                <p class="text-xs text-slate-700 font-medium mt-0.5">Send money to our official bKash account.</p>
+                            </div>
+                        </label>
+
+                        <!-- Nagad Option -->
+                        <label class="border-2 border-slate-300 bg-white p-4 rounded-2xl cursor-pointer flex items-center gap-3 transition-all hover:border-orange-300" id="payNagadLabel">
+                            <input type="radio" name="payment_method" value="NAGAD" class="text-orange-600 focus:ring-orange-500" onchange="togglePaymentInputs('NAGAD')">
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-black text-sm text-slate-950">Nagad</span>
+                                    <span class="text-xs bg-orange-100 text-orange-900 font-black px-2 py-0.5 rounded border border-orange-300">Nagad</span>
+                                </div>
+                                <p class="text-xs text-slate-700 font-medium mt-0.5">Send money via Nagad wallet.</p>
+                            </div>
+                        </label>
+
+                        <!-- bKash / Nagad Details Box (Visible when selected) -->
+                        <div id="mfsPaymentDetails" class="hidden bg-pink-50 p-4 rounded-2xl border-2 border-pink-300 space-y-3">
+                            <div class="flex items-start gap-2 text-xs text-pink-950 font-bold">
+                                <i class="fa-solid fa-circle-info text-pink-600 mt-0.5 text-base"></i>
+                                <div>
+                                    <p>Please Send Money of <strong id="mfsAmountText" class="text-pink-950 font-black">৳{{ cart_subtotal|add:"130" }}</strong> to: <strong class="text-pink-900 font-black underline">01886804566</strong> (Personal).</p>
+                                    <p class="text-[11px] text-pink-800 mt-1 font-semibold">Enter your Sender Number & TrxID below for instant confirmation.</p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-black text-slate-900 mb-1">Your Sender Mobile #</label>
+                                    {{ form.payment_sender_number }}
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-black text-slate-900 mb-1">Transaction ID (TrxID)</label>
+                                    {{ form.payment_trx_id }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right: Order Items & Total Summary -->
+            <div class="lg:col-span-5 bg-white p-6 rounded-3xl border-2 border-slate-200 shadow-md space-y-5 sticky top-24">
+                <h3 class="font-display font-black text-lg text-slate-950 border-b border-slate-200 pb-3">Your Order Jars</h3>
+
+                <!-- Items list -->
+                <div class="space-y-3 max-h-60 overflow-y-auto pr-1 divide-y divide-slate-100">
+                    {% for item in cart %}
+                    <div class="flex items-center justify-between gap-3 text-xs pt-2">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <img src="{{ item.product.primary_image_url }}" alt="{{ item.product.name }}" class="w-12 h-12 object-cover rounded-xl border border-slate-200 flex-shrink-0">
+                            <div class="truncate">
+                                <h4 class="font-black text-slate-950 truncate">{{ item.product.name }}</h4>
+                                <span class="text-slate-600 font-semibold">{{ item.quantity }}x • {{ item.product.jar_weight_grams }}g</span>
+                            </div>
+                        </div>
+                        <span class="font-display font-black text-slate-950 text-sm whitespace-nowrap">৳{{ item.total_price }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Price Calculations -->
+                <div class="border-t border-slate-200 pt-4 space-y-2.5 text-xs">
+                    <div class="flex justify-between text-slate-700 font-bold">
+                        <span>Items Subtotal</span>
+                        <span class="font-black text-slate-950 text-sm">৳<span id="checkoutSubtotal">{{ cart_subtotal }}</span></span>
+                    </div>
+                    <div class="flex justify-between text-slate-700 font-bold">
+                        <span>Delivery Fee</span>
+                        <span class="font-black text-slate-950 text-sm">৳<span id="checkoutDeliveryFee">130.00</span></span>
+                    </div>
+                    <div class="border-t-2 border-slate-200 pt-3 flex justify-between items-baseline text-base">
+                        <span class="font-black text-slate-950">Grand Total</span>
+                        <span class="font-display font-black text-2xl text-emerald-800">৳<span id="checkoutTotal">{{ cart_subtotal|add:"130" }}</span></span>
+                    </div>
+                </div>
+
+                <div class="bg-emerald-50/60 p-4 rounded-2xl border border-emerald-200 text-xs text-slate-700 space-y-1.5 font-medium">
+                    <div class="flex items-center gap-2 font-black text-slate-950">
+                        <i class="fa-solid fa-truck-fast text-emerald-700"></i>
+                        <span>Nationwide Safe Delivery</span>
+                    </div>
+                    <p class="text-[11px] leading-relaxed">
+                        Every jar is bubble-wrapped with heavy padding to ensure zero leakage and peak crispness on arrival.
+                    </p>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="w-full bg-[#15803d] hover:bg-[#166534] active:scale-[0.99] text-white font-display font-black text-base py-4 rounded-2xl shadow-xl shadow-emerald-700/30 flex items-center justify-center gap-2 transition-all">
+                    <span>Confirm Order Now</span>
+                    <i class="fa-solid fa-arrow-right text-sm"></i>
+                </button>
+
+                <p class="text-[11px] text-slate-500 text-center font-semibold">
+                    By clicking Confirm Order, you agree to receive fresh artisanal pickles carefully packaged and delivered to your address.
+                </p>
+            </div>
+
+        </div>
+    </form>
+
+</div>
+
+<script>
+const subtotalValue = parseFloat("{{ cart_subtotal }}");
+
+function updateDeliveryFee(zone) {
+    const fee = 130.00;
+    const total = subtotalValue + fee;
+    
+    document.getElementById('checkoutDeliveryFee').innerText = fee.toFixed(2);
+    document.getElementById('checkoutTotal').innerText = total.toFixed(2);
+    
+    const mfsTotalText = document.getElementById('mfsAmountText');
+    if (mfsTotalText) mfsTotalText.innerText = '৳' + total.toFixed(2);
+
+    const insideLabel = document.getElementById('zoneInsideLabel');
+    const outsideLabel = document.getElementById('zoneOutsideLabel');
+    
+    if (zone === 'INSIDE_DHAKA') {
+        insideLabel.classList.add('border-emerald-600', 'bg-emerald-50');
+        outsideLabel.classList.remove('border-emerald-600', 'bg-emerald-50');
+    } else {
+        outsideLabel.classList.add('border-emerald-600', 'bg-emerald-50');
+        insideLabel.classList.remove('border-emerald-600', 'bg-emerald-50');
+    }
+}
+
+function togglePaymentInputs(method) {
+    const mfsBox = document.getElementById('mfsPaymentDetails');
+    const codLabel = document.getElementById('payCodLabel');
+    const bkashLabel = document.getElementById('payBkashLabel');
+    const nagadLabel = document.getElementById('payNagadLabel');
+
+    [codLabel, bkashLabel, nagadLabel].forEach(el => {
+        el.classList.remove('border-emerald-600', 'bg-emerald-50/70', 'border-pink-600', 'border-orange-600');
+    });
+
+    if (method === 'BKASH') {
+        mfsBox.classList.remove('hidden');
+        bkashLabel.classList.add('border-pink-600', 'bg-pink-50');
+    } else if (method === 'NAGAD') {
+        mfsBox.classList.remove('hidden');
+        nagadLabel.classList.add('border-orange-600', 'bg-orange-50');
+    } else {
+        mfsBox.classList.add('hidden');
+        codLabel.classList.add('border-emerald-600', 'bg-emerald-50/70');
+    }
+}
+</script>
+{% endblock %}

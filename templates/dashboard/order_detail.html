@@ -1,0 +1,270 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Order #{{ order.order_number }} | Pickpickles Admin{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+    <!-- Top Action Bar -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2">
+                <a href="{% url 'dashboard:index' %}" class="text-xs font-bold text-gray-500 hover:text-gray-900 flex items-center gap-1">
+                    <i class="fa-solid fa-arrow-left"></i> All Orders
+                </a>
+                <span class="text-gray-300">•</span>
+                <span class="text-xs text-gray-400">Placed on {{ order.created_at|date:"F d, Y at h:i A" }}</span>
+            </div>
+            <h1 class="font-display font-black text-2xl sm:text-3xl text-gray-900 mt-1">
+                Order #{{ order.order_number }}
+            </h1>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+            <button type="button" onclick="openMarkReturnModal()" class="bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold px-3.5 py-2.5 rounded-xl border border-amber-300 flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-rotate-left text-amber-600"></i>
+                <span>Log Return</span>
+            </button>
+            <a href="{% url 'dashboard:order_invoice' order.order_number %}" target="_blank" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-800 text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs flex items-center gap-2 transition">
+                <i class="fa-solid fa-print text-gray-500"></i>
+                <span>Print Packing Slip</span>
+            </a>
+            <form action="{% url 'dashboard:delete_order' order.order_number %}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete order #{{ order.order_number }} permanently?')">
+                {% csrf_token %}
+                <button type="submit" class="bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold px-3.5 py-2.5 rounded-xl border border-rose-200 flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-trash-can"></i>
+                    <span>Delete</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Status Editor Form -->
+    <form method="POST" class="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm space-y-6">
+        {% csrf_token %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1">Order Fulfillment Status</label>
+                <select name="order_status" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500">
+                    <option value="PENDING" {% if order.order_status == 'PENDING' %}selected{% endif %}>Pending Confirmation</option>
+                    <option value="CONFIRMED" {% if order.order_status == 'CONFIRMED' %}selected{% endif %}>Confirmed & In Queue</option>
+                    <option value="PACKING" {% if order.order_status == 'PACKING' %}selected{% endif %}>Packing Fresh Jars</option>
+                    <option value="OUT_FOR_DELIVERY" {% if order.order_status == 'OUT_FOR_DELIVERY' %}selected{% endif %}>Out for Delivery / Shipped</option>
+                    <option value="DELIVERED" {% if order.order_status == 'DELIVERED' %}selected{% endif %}>Delivered 🎉</option>
+                    <option value="CANCELLED" {% if order.order_status == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1">Payment Verification Status</label>
+                <select name="payment_status" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500">
+                    <option value="UNPAID" {% if order.payment_status == 'UNPAID' %}selected{% endif %}>Unpaid (Cash on Delivery)</option>
+                    <option value="PENDING_VERIFICATION" {% if order.payment_status == 'PENDING_VERIFICATION' %}selected{% endif %}>Pending bKash/Nagad Check</option>
+                    <option value="PAID" {% if order.payment_status == 'PAID' %}selected{% endif %}>Payment Received & Verified</option>
+                    <option value="REFUNDED" {% if order.payment_status == 'REFUNDED' %}selected{% endif %}>Refunded</option>
+                </select>
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">Internal Admin / Rider Dispatch Notes</label>
+            <textarea name="admin_notes" rows="2" placeholder="e.g. Verified bKash TrxID, handed over to Pathao/Steadfast Courier tracking #12345" class="w-full bg-gray-50 border border-gray-300 rounded-xl p-3 text-xs text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500">{{ order.admin_notes }}</textarea>
+        </div>
+
+        <button type="submit" class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-6 py-3 rounded-xl shadow-md transition">
+            Save Status & Notes
+        </button>
+    </form>
+
+    <!-- Customer & Destination Details Card -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <div class="bg-white p-6 rounded-3xl border border-gray-200 shadow-xs space-y-3">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-2">
+                <h3 class="font-display font-bold text-base text-gray-900 flex items-center gap-2">
+                    <i class="fa-solid fa-user text-brand-600"></i> Customer & Shipping Info
+                </h3>
+                <button type="button" onclick="openEditCustomerModal()" class="text-xs font-bold text-brand-600 hover:text-brand-800 underline">
+                    Edit Info
+                </button>
+            </div>
+            <div class="space-y-1.5 text-xs">
+                <p><span class="text-gray-400 font-bold">Name:</span> <strong class="text-gray-900">{{ order.customer_name }}</strong></p>
+                <p class="flex items-center gap-2">
+                    <span class="text-gray-400 font-bold">Phone:</span>
+                    <a href="tel:{{ order.customer_phone }}" class="text-emerald-700 font-bold hover:underline bg-emerald-50 px-2 py-0.5 rounded">
+                        <i class="fa-solid fa-phone text-[10px]"></i> {{ order.customer_phone }}
+                    </a>
+                </p>
+                {% if order.customer_email %}
+                <p><span class="text-gray-400 font-bold">Email:</span> <span class="text-gray-800">{{ order.customer_email }}</span></p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-3xl border border-gray-200 shadow-xs space-y-3">
+            <h3 class="font-display font-bold text-base text-gray-900 border-b border-gray-100 pb-2 flex items-center gap-2">
+                <i class="fa-solid fa-location-dot text-brand-600"></i> Delivery Address
+            </h3>
+            <div class="space-y-1.5 text-xs text-gray-700">
+                <p class="font-bold text-gray-900">{{ order.delivery_address }}</p>
+                <p><span class="text-gray-400 font-bold">City / District:</span> {{ order.delivery_city }}</p>
+                <p><span class="text-gray-400 font-bold">Zone:</span> <span class="bg-gray-100 px-2 py-0.5 rounded font-semibold">{{ order.get_delivery_zone_display }}</span></p>
+                {% if order.customer_notes %}
+                <p class="text-amber-800 bg-amber-50 p-2 rounded-xl mt-2"><strong class="block">Customer Instructions:</strong> {{ order.customer_notes }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Ordered Items Card -->
+    <div class="bg-white p-6 rounded-3xl border border-gray-200 shadow-xs space-y-4">
+        <h3 class="font-display font-bold text-base text-gray-900 border-b border-gray-100 pb-3 flex items-center gap-2">
+            <i class="fa-solid fa-jar text-brand-600"></i> Ordered Pickle Jars ({{ order.total_items_count }})
+        </h3>
+
+        <div class="divide-y divide-gray-100">
+            {% for item in order.items.all %}
+            <div class="py-3 flex items-center justify-between text-xs">
+                <div>
+                    <h4 class="font-bold text-gray-900 text-sm">{{ item.product_name }}</h4>
+                    <span class="text-gray-500">{{ item.jar_weight_grams }}g Jar • ৳{{ item.unit_price }} each</span>
+                </div>
+                <div class="text-right">
+                    <span class="text-gray-500">{{ item.quantity }} x ৳{{ item.unit_price }}</span>
+                    <span class="font-black text-gray-900 text-sm block">৳{{ item.total_price }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="border-t border-gray-200 pt-4 space-y-2 text-xs">
+            <div class="flex justify-between text-gray-600">
+                <span>Subtotal</span>
+                <span class="font-bold text-gray-900">৳{{ order.subtotal }}</span>
+            </div>
+            <div class="flex justify-between text-gray-600">
+                <span>Delivery Fee ({{ order.get_delivery_zone_display }})</span>
+                <span class="font-bold text-gray-900">৳{{ order.delivery_fee }}</span>
+            </div>
+            <div class="border-t border-gray-200 pt-3 flex justify-between items-baseline text-base font-bold">
+                <span>Grand Total</span>
+                <span class="font-display font-black text-2xl text-brand-700">৳{{ order.total_amount }} BDT</span>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- EDIT CUSTOMER MODAL -->
+<div id="editCustomerModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+            <h3 class="font-display font-black text-lg text-gray-900">Edit Customer & Destination</h3>
+            <button type="button" onclick="closeEditCustomerModal()" class="text-gray-400 hover:text-gray-700 text-lg p-1">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form action="{% url 'dashboard:edit_order_customer' order.order_number %}" method="POST" class="space-y-3 text-xs">
+            {% csrf_token %}
+            <div>
+                <label class="font-bold text-gray-700 block mb-1">Customer Name</label>
+                <input type="text" name="customer_name" value="{{ order.customer_name }}" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white">
+            </div>
+
+            <div>
+                <label class="font-bold text-gray-700 block mb-1">Phone Number</label>
+                <input type="tel" name="customer_phone" value="{{ order.customer_phone }}" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white">
+            </div>
+
+            <div>
+                <label class="font-bold text-gray-700 block mb-1">Delivery Address</label>
+                <input type="text" name="delivery_address" value="{{ order.delivery_address }}" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
+            </div>
+
+            <div>
+                <label class="font-bold text-gray-700 block mb-1">City / District</label>
+                <input type="text" name="delivery_city" value="{{ order.delivery_city }}" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
+            </div>
+
+            <div class="pt-2 flex items-center justify-end gap-2">
+                <button type="button" onclick="closeEditCustomerModal()" class="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold transition">Cancel</button>
+                <button type="submit" class="px-5 py-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold transition shadow-md">Update Details</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Mark Return Modal -->
+<div id="markReturnModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+            <h3 class="font-display font-black text-lg text-gray-900 flex items-center gap-2">
+                <i class="fa-solid fa-rotate-left text-amber-600"></i>
+                Log Return for Order #{{ order.order_number }}
+            </h3>
+            <button type="button" onclick="closeMarkReturnModal()" class="text-gray-400 hover:text-gray-600 p-1">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <form method="POST" action="{% url 'dashboard:mark_order_returned' order.order_number %}" class="space-y-4 text-xs">
+            {% csrf_token %}
+
+            <div>
+                <label class="block font-bold text-gray-700 mb-1">Return Reason *</label>
+                <select name="return_reason" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-bold text-gray-800 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    <option value="CUSTOMER_UNREACHABLE">Customer Phone Off / Unreachable 📵</option>
+                    <option value="CUSTOMER_REFUSED">Customer Refused at Doorstep 🚪</option>
+                    <option value="WRONG_ADDRESS">Incorrect Address / Area Issue 📍</option>
+                    <option value="COURIER_DELAY">Courier Delayed Delivery ⏳</option>
+                    <option value="DAMAGED_IN_TRANSIT">Jar Broken / Leaked during Delivery 💥</option>
+                    <option value="WRONG_ITEM">Wrong Item Sent 🫙</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block font-bold text-gray-700 mb-1">Return Status *</label>
+                <select name="return_status" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-bold text-gray-800 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    <option value="RETURNING">Returning with Courier (ফেরত আসছে)</option>
+                    <option value="RECEIVED_INTACT">Received Intact (অক্ষত প্রাপ্ত)</option>
+                    <option value="RECEIVED_DAMAGED">Received Broken/Damaged (ভাঙা/নষ্ট)</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block font-bold text-gray-700 mb-1">Courier Return Fee Charged (৳)</label>
+                <input type="number" step="0.01" name="courier_return_fee" value="0.00" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-bold text-gray-800 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            </div>
+
+            <div>
+                <label class="block font-bold text-gray-700 mb-1">Notes / Remarks</label>
+                <textarea name="notes" rows="2" placeholder="Steadfast return tracking ID, rider note, etc." class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-medium text-gray-800 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none"></textarea>
+            </div>
+
+            <div class="pt-2 flex items-center justify-end gap-2 border-t border-gray-100">
+                <button type="button" onclick="closeMarkReturnModal()" class="px-4 py-2 rounded-xl text-gray-600 font-bold hover:bg-gray-100 transition">Cancel</button>
+                <button type="submit" class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-5 py-2 rounded-xl shadow-md transition">Confirm Return</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openEditCustomerModal() {
+    document.getElementById('editCustomerModal').classList.remove('hidden');
+}
+function closeEditCustomerModal() {
+    document.getElementById('editCustomerModal').classList.add('hidden');
+}
+function openMarkReturnModal() {
+    document.getElementById('markReturnModal').classList.remove('hidden');
+}
+function closeMarkReturnModal() {
+    document.getElementById('markReturnModal').classList.add('hidden');
+}
+</script>
+{% endblock %}

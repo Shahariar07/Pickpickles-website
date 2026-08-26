@@ -1,0 +1,237 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Our Story & Pickle FAQ | Pickpickles Bangladesh{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 space-y-12">
+    
+    <!-- Hero Header -->
+    <div class="text-center max-w-3xl mx-auto space-y-3">
+        <span class="text-xs font-black uppercase tracking-widest text-brand-600 bg-brand-50 border border-brand-200 px-3.5 py-1.5 rounded-full">
+            Our Pickling History & Craft
+        </span>
+        <h1 class="font-display font-black text-3xl sm:text-5xl text-gray-900 leading-tight">
+            Our Pickling History & Craft in Bangladesh
+        </h1>
+        <p class="text-sm sm:text-base text-gray-600 leading-relaxed font-medium">
+            Inspired by classic vinegar-brined deli pickling traditions, we craft pure, crunchy, and oil-free pickles across Bangladesh!
+        </p>
+    </div>
+
+    <!-- 3 Pillars Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white p-6 sm:p-8 rounded-3xl border border-gray-200 shadow-xs space-y-3">
+            <div class="w-12 h-12 rounded-2xl bg-brand-50 text-brand-700 flex items-center justify-center text-2xl">🥒</div>
+            <h3 class="font-display font-bold text-lg text-gray-900">1. Fresh Local Market Veggies</h3>
+            <p class="text-xs sm:text-sm text-gray-600 leading-relaxed">
+                We hand-select firm, crisp cucumbers, sweet carrots, crisp bell peppers, deshi onions, green chillies, and fresh aromatics directly from local markets for maximum crunch.
+            </p>
+        </div>
+
+        <div class="bg-white p-6 sm:p-8 rounded-3xl border border-gray-200 shadow-xs space-y-3">
+            <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center text-2xl">🌿</div>
+            <h3 class="font-display font-bold text-lg text-gray-900">2. Artisanal Vinegar Brine</h3>
+            <p class="text-xs sm:text-sm text-gray-600 leading-relaxed">
+                Zero heavy mustard oil. We use pure cane vinegar, whole mustard seeds, fragrant bay leaves, Himalayan pink salt, and fresh local garlic.
+            </p>
+        </div>
+
+        <div class="bg-white p-6 sm:p-8 rounded-3xl border border-gray-200 shadow-xs space-y-3">
+            <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center text-2xl">⚡</div>
+            <h3 class="font-display font-bold text-lg text-gray-900">3. Cold-Snap Ferment</h3>
+            <p class="text-xs sm:text-sm text-gray-600 leading-relaxed">
+                Our controlled brining process locks in cellular crispness, so every spear gives that iconic, audible "crunch" when you bite.
+            </p>
+        </div>
+    </div>
+
+    <!-- Food Pairing Guide: Fast Foods & Traditional Bengali Meals -->
+    <div class="bg-brand-900 text-white p-8 sm:p-12 rounded-3xl border border-brand-800 shadow-2xl relative overflow-hidden space-y-6">
+        <div class="relative z-10 space-y-2">
+            <span class="text-xs font-bold text-brand-accent uppercase tracking-widest">Food Pairing Guide</span>
+            <h2 class="font-display font-black text-2xl sm:text-4xl text-white">
+                How To Enjoy Your Pickpickles Jars
+            </h2>
+            <p class="text-xs sm:text-sm text-gray-300">
+                Our crunchy, oil-free vinegar pickles pair phenomenally with popular street foods, juicy burgers, and hearty traditional Bangladeshi meals!
+            </p>
+        </div>
+
+        <div class="space-y-6">
+            <!-- 1. Fast Food & Western Favorites (First) -->
+            <div>
+                <h3 class="font-display font-bold text-sm sm:text-base text-emerald-400 mb-3 flex items-center gap-2">
+                    <span>🍔</span>
+                    <span>1. Burgers, Sandwiches & Fast Foods</span>
+                </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs sm:text-sm text-gray-300">
+                    <div class="flex items-start gap-3 bg-white/10 p-4 rounded-2xl backdrop-blur-sm">
+                        <span class="text-xl">🍔</span>
+                        <div>
+                            <strong class="text-white block">Smash Burgers & Cheeseburgers:</strong>
+                            Layer crisp pickle chips over melted cheese for that authentic, juicy deli crunch and acidity balance.
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-3 bg-white/10 p-4 rounded-2xl backdrop-blur-sm">
+                        <span class="text-xl">🌯</span>
+                        <div>
+                            <strong class="text-white block">Shawarmas, Rolls & Wraps:</strong>
+                            Stuff crisp pickle slices inside chicken shawarmas and paratha rolls for a refreshing, tangy bite.
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-3 bg-white/10 p-4 rounded-2xl backdrop-blur-sm">
+                        <span class="text-xl">🍗</span>
+                        <div>
+                            <strong class="text-white block">Crispy Fried Chicken & Tenders:</strong>
+                            Spears are the legendary companion to spicy hot chicken tenders, waffles, and wings.
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-3 bg-white/10 p-4 rounded-2xl backdrop-blur-sm">
+                        <span class="text-xl">🥪</span>
+                        <div>
+                            <strong class="text-white block">Club Sandwiches & Grilled Cheese:</strong>
+                            Serve alongside pastrami, roast beef, or toasties for that classic diner-style snap.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Traditional & Everyday Bangladeshi Meals (Second) -->
+            <div>
+                <h3 class="font-display font-bold text-sm sm:text-base text-brand-accent mb-3 flex items-center gap-2">
+                    <span>🍛</span>
+                    <span>2. Traditional & Everyday Bangladeshi Meals</span>
+                </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs sm:text-sm text-gray-300">
+                    <div class="flex items-start gap-3 bg-white/10 p-4 rounded-2xl backdrop-blur-sm">
+                        <span class="text-xl">🍛</span>
+                        <div>
+                            <strong class="text-white block">Beef Tehari, Biryani & Morog Polao:</strong>
+                            Even better than a side salad! The zesty vinegar crunch cuts through rich rice dishes for a clean, refreshing palate.
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-3 bg-white/10 p-4 rounded-2xl backdrop-blur-sm">
+                        <span class="text-xl">🍲</span>
+                        <div>
+                            <strong class="text-white block">Bhuna Khichuri & Meat Curries:</strong>
+                            An unbeatable pairing with hot steaming bhuna khichuri on rainy days and festive family meals.
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-3 bg-white/10 p-4 rounded-2xl backdrop-blur-sm">
+                        <span class="text-xl">🍚</span>
+                        <div>
+                            <strong class="text-white block">Daily Rice, Daal & Fried Fish:</strong>
+                            A crunchy spear instantly elevates a simple everyday home lunch into a delicious, savory experience.
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-3 bg-white/10 p-4 rounded-2xl backdrop-blur-sm">
+                        <span class="text-xl">🍢</span>
+                        <div>
+                            <strong class="text-white block">Seekh Kebabs, Tandoori & Naan:</strong>
+                            Restaurant-style crisp pickle spears serve as the ultimate refreshing side dish with sizzling hot kebabs.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Storage & Shelf Life Info -->
+    <div class="bg-white p-8 rounded-3xl border border-gray-200 shadow-xs space-y-4">
+        <h3 class="font-display font-black text-xl text-gray-900">Jar Storage & Freshness Guide</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-gray-600">
+            <div class="p-4 bg-emerald-50/60 border border-emerald-100 rounded-2xl">
+                <strong class="text-emerald-950 block mb-1 text-sm">📦 Fresh Batch & Delivery</strong>
+                <span>Handcrafted fresh! Takes <strong>3 days of brining</strong> + <strong>2–3 days courier transit</strong> (Total: 5–6 days).</span>
+            </div>
+            <div class="p-4 bg-emerald-50/60 border border-emerald-100 rounded-2xl">
+                <strong class="text-emerald-950 block mb-1 text-sm">❄️ Always Keep Refrigerated</strong>
+                <span>Put in the refrigerator upon delivery. Keeps maximum crunch and zesty flavor for <strong>up to 1 month</strong>.</span>
+            </div>
+            <div class="p-4 bg-emerald-50/60 border border-emerald-100 rounded-2xl">
+                <strong class="text-emerald-950 block mb-1 text-sm">🥄 Clean Utensils</strong>
+                <span>Use a dry, clean fork or spoon to take out pickles so your herb brine stays fresh and crystal clear.</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Frequently Asked Questions Accordion -->
+    <div class="bg-slate-50 p-6 sm:p-10 rounded-3xl border border-gray-200 shadow-xs space-y-6">
+        <div class="text-center max-w-2xl mx-auto space-y-2">
+            <span class="text-xs font-black uppercase tracking-widest text-brand-600 bg-brand-50 border border-brand-200 px-3.5 py-1.5 rounded-full">
+                FAQ
+            </span>
+            <h2 class="font-display font-black text-2xl sm:text-3xl text-gray-900">
+                Frequently Asked Questions
+            </h2>
+            <p class="text-xs sm:text-sm text-gray-600 font-medium">Everything you need to know about our jars, storage & delivery.</p>
+        </div>
+
+        <div class="space-y-3 max-w-3xl mx-auto">
+            <details class="group bg-white p-5 rounded-2xl border border-gray-200 shadow-xs [&_summary::-webkit-details-marker]:hidden" open>
+                <summary class="flex items-center justify-between cursor-pointer font-black text-sm text-gray-900">
+                    <span>How long do Pickpickles jars last & how should I store them?</span>
+                    <i class="fa-solid fa-chevron-down text-xs text-gray-500 group-open:rotate-180 transition-transform"></i>
+                </summary>
+                <p class="text-xs sm:text-sm text-gray-700 font-medium mt-3 leading-relaxed">
+                    Our natural vinegar & salt brine keeps the jar completely safe during delivery transit. Upon delivery, <strong>always keep the jar in the refrigerator</strong>. When refrigerated, our pickles stay ultra-crunchy, tangy, and fresh for <strong>up to 1 month</strong>! Always use a clean, dry utensil when serving.
+                </p>
+            </details>
+
+            <details class="group bg-white p-5 rounded-2xl border border-gray-200 shadow-xs [&_summary::-webkit-details-marker]:hidden">
+                <summary class="flex items-center justify-between cursor-pointer font-black text-sm text-gray-900">
+                    <span>What is the delivery timeline and shipping charge?</span>
+                    <i class="fa-solid fa-chevron-down text-xs text-gray-500 group-open:rotate-180 transition-transform"></i>
+                </summary>
+                <div class="text-xs sm:text-sm text-gray-700 font-medium mt-3 leading-relaxed space-y-2">
+                    <p>
+                        🥒 <strong>Fresh Batch Preparation (3 Days):</strong> We craft our pickles fresh upon order. Every jar requires at least <strong>3 days of natural brining & infusion</strong> to develop that signature crunchy snap and balanced tangy-sweet flavor.
+                    </p>
+                    <p>
+                        🚚 <strong>Delivery Transit (2–3 Days):</strong> Once properly brined, your jar is bubble-wrapped and dispatched via courier (takes 2–3 days).
+                    </p>
+                    <p>
+                        💵 <strong>Delivery Charges:</strong> Flat <strong>৳130</strong> across all of Bangladesh. Total estimated time from order confirmation to your doorstep is <strong>5 to 6 days</strong>.
+                    </p>
+                </div>
+            </details>
+
+            <details class="group bg-white p-5 rounded-2xl border border-gray-200 shadow-xs [&_summary::-webkit-details-marker]:hidden">
+                <summary class="flex items-center justify-between cursor-pointer font-black text-sm text-gray-900">
+                    <span>What ingredients are used in Pickpickles?</span>
+                    <i class="fa-solid fa-chevron-down text-xs text-gray-500 group-open:rotate-180 transition-transform"></i>
+                </summary>
+                <div class="p-5 bg-white border-t border-gray-100 text-xs sm:text-sm text-gray-600 leading-relaxed font-medium">
+                    We hand-select crisp local cucumbers, sweet carrots, crisp bell peppers, deshi onions, fresh green chillies, filtered water, pure cane vinegar, Himalayan pink salt, fresh garlic cloves, bay leaves, and whole yellow mustard seeds. 100% oil-free and handcrafted with love!
+                </div>
+            </details>
+
+            <details class="group bg-white p-5 rounded-2xl border border-gray-200 shadow-xs [&_summary::-webkit-details-marker]:hidden">
+                <summary class="flex items-center justify-between cursor-pointer font-black text-sm text-gray-900">
+                    <span>Can I pay via bKash / Nagad or Cash on Delivery?</span>
+                    <i class="fa-solid fa-chevron-down text-xs text-gray-500 group-open:rotate-180 transition-transform"></i>
+                </summary>
+                <p class="text-xs sm:text-sm text-gray-700 font-medium mt-3 leading-relaxed">
+                    Yes! We accept Cash on Delivery (COD) as well as direct bKash and Nagad payments. You can select your preferred method during checkout.
+                </p>
+            </details>
+        </div>
+    </div>
+
+    <!-- Call to action -->
+    <div class="text-center pt-4">
+        <a href="{% url 'store:index' %}#pickle-menu" class="inline-flex items-center gap-2 bg-brand-700 hover:bg-brand-800 text-white font-display font-extrabold text-base px-8 py-4 rounded-2xl shadow-xl shadow-brand-700/20 transition-all">
+            <span>Shop The Fresh Pickle Batch</span>
+            <i class="fa-solid fa-arrow-right"></i>
+        </a>
+    </div>
+
+</div>
+{% endblock %}

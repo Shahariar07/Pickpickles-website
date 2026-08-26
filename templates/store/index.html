@@ -1,0 +1,436 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Pickpickles | Homemade Fresh Pickles in Bangladesh{% endblock %}
+
+{% block content %}
+<!-- Hero Section (Rich High-Contrast Dark Forest Theme) -->
+<section class="relative overflow-hidden text-white py-12 sm:py-20 px-4 sm:px-6 lg:px-8 border-b-4 border-amber-500" style="background-color: #04170c; background-image: radial-gradient(#166534 1.5px, transparent 1.5px), linear-gradient(180deg, #02130a 0%, #092d18 50%, #04170c 100%); background-size: 24px 24px, 100% 100%;">
+    <div class="max-w-7xl mx-auto relative z-10">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+            
+            <!-- Left Text Content -->
+            <div class="lg:col-span-7 space-y-6 text-center lg:text-left">
+                <div class="inline-flex items-center gap-2 bg-[#082816] border-2 border-emerald-400 px-4 py-1.5 rounded-full text-xs font-black tracking-wide uppercase text-amber-300 shadow-lg">
+                    <span>🥒 100% Fresh Pickles</span>
+                    <span class="text-emerald-400">•</span>
+                    <span>🇧🇩 Handcrafted in Bangladesh</span>
+                </div>
+
+                <h1 class="font-display font-black text-3xl sm:text-5xl lg:text-6xl tracking-tight leading-[1.15] text-white">
+                    That <span class="text-amber-400">Crispy, Zesty Crunch</span> You’ve Been Craving.
+                </h1>
+
+                <p class="text-base sm:text-lg text-emerald-100 leading-relaxed max-w-2xl mx-auto lg:mx-0 font-semibold">
+                    Elevate your burgers, shawarmas, sandwiches, and daily snacks with crave-worthy crunchy pickled vegetables crafted with farm-fresh cucumbers, sweet carrots, whole garlic, and zesty herbs right here in Bangladesh!
+                </p>
+
+                <!-- Value Props Pills -->
+                <div class="flex flex-wrap items-center justify-center lg:justify-start gap-2.5 pt-2">
+                    <span class="inline-flex items-center gap-1.5 bg-[#082816] px-3.5 py-2 rounded-xl text-xs font-black text-emerald-200 border-2 border-emerald-600/60 shadow-md">
+                        <i class="fa-solid fa-bolt text-amber-400"></i> Maximum Crunch
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 bg-[#082816] px-3.5 py-2 rounded-xl text-xs font-black text-emerald-200 border-2 border-emerald-600/60 shadow-md">
+                        <i class="fa-solid fa-seedling text-amber-400"></i> 100% Real Herbs & Spices
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 bg-[#082816] px-3.5 py-2 rounded-xl text-xs font-black text-emerald-200 border-2 border-emerald-600/60 shadow-md">
+                        <i class="fa-solid fa-burger text-amber-400"></i> Perfect for Burgers & Sandwiches
+                    </span>
+                </div>
+
+                <!-- CTA Actions -->
+                <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4">
+                    <a href="#pickle-menu" class="w-full sm:w-auto bg-amber-400 hover:bg-amber-300 text-slate-950 font-display font-black text-base px-8 py-4 rounded-2xl shadow-xl shadow-amber-500/40 hover:scale-[1.02] active:scale-95 transition-all text-center flex items-center justify-center gap-2 border-2 border-amber-300">
+                        <span>Shop Pickle Jars</span>
+                        <i class="fa-solid fa-arrow-down text-sm"></i>
+                    </a>
+                    <a href="{% url 'store:about_story' %}" class="w-full sm:w-auto bg-[#082816] hover:bg-[#0c3820] text-white font-black text-sm px-6 py-4 rounded-2xl border-2 border-emerald-400 hover:border-emerald-300 transition-all text-center shadow-lg">
+                        Our Pickling Story
+                    </a>
+                </div>
+
+                <!-- Delivery Fast Banner -->
+                <div class="pt-2 flex items-center justify-center lg:justify-start gap-4 text-xs text-emerald-200 font-bold">
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-truck-fast text-amber-400"></i> Nationwide Safe Delivery</span>
+                    <span>•</span>
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-shield-check text-emerald-400"></i> bKash / Nagad / Cash on Delivery</span>
+                </div>
+            </div>
+
+            <!-- Right Hero Visual Card -->
+            <div class="lg:col-span-5 relative flex justify-center">
+                <div class="relative w-full max-w-sm sm:max-w-md p-6 rounded-3xl shadow-2xl border-2 border-emerald-400" style="background-color: #082816;">
+                    <!-- Featured Jar showcase image -->
+                    <div class="relative aspect-square rounded-2xl overflow-hidden bg-black/60 border border-emerald-500/40 mb-5 flex items-center justify-center">
+                        <img src="{% if featured_products.0.image %}{{ featured_products.0.image.url }}{% elif featured_products.0.image_url %}{{ featured_products.0.image_url }}{% else %}/static/images/pickle_hero.png{% endif %}" alt="NYC Kosher Dill Pickles" class="w-full h-full object-cover transform hover:scale-105 transition-transform duration-500">
+                        <div class="absolute top-3 left-3 bg-amber-400 text-slate-950 text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-md">
+                            Best Seller 🔥
+                        </div>
+                        <div class="absolute bottom-3 right-3 bg-slate-950/90 text-white text-xs font-black px-3 py-1.5 rounded-xl border border-white/30 flex items-center gap-1">
+                            {% if featured_products.0.reviews_count > 0 %}
+                            <span>⭐ {{ featured_products.0.average_rating }}/5 ({{ featured_products.0.reviews_count }} Review{{ featured_products.0.reviews_count|pluralize }})</span>
+                            {% else %}
+                            <span>⭐ {{ featured_products.0.crunch_rating|default:5 }}/5 Crunch Rating</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="text-center space-y-2">
+                        <h3 class="font-display font-black text-2xl text-white">{% if featured_products.0 %}{{ featured_products.0.name }}{% else %}Pickled Mixed Veggies{% endif %}</h3>
+                        <p class="text-xs text-emerald-100 font-semibold">{% if featured_products.0 %}{{ featured_products.0.tagline }}{% else %}Crisp cucumbers & sweet carrots in tangy-sweet vinegar brine.{% endif %}</p>
+                        <div class="flex items-center justify-center gap-3 pt-2">
+                            <span class="font-display font-black text-3xl text-amber-300">৳{% if featured_products.0 %}{{ featured_products.0.price_bdt|floatformat:0 }}{% else %}380{% endif %}</span>
+                            {% if featured_products.0.original_price_bdt %}
+                            <span class="text-sm text-emerald-300/80 line-through font-bold">৳{{ featured_products.0.original_price_bdt|floatformat:0 }}</span>
+                            <span class="bg-rose-600 text-white font-black text-xs px-2.5 py-0.5 rounded-full">Save {{ featured_products.0.discount_percent }}%</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- Brand Benefits / Why American Pickles Bar -->
+<section class="bg-white border-b border-slate-200 py-8 px-4 sm:px-6 lg:px-8 shadow-xs">
+    <div class="max-w-7xl mx-auto">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center sm:text-left">
+            <div class="flex flex-col sm:flex-row items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-900 flex items-center justify-center text-2xl flex-shrink-0 border border-emerald-300">
+                    🥒
+                </div>
+                <div>
+                    <h4 class="font-black text-sm text-slate-900">Cold Vinegar Brine</h4>
+                    <p class="text-xs text-slate-700 font-medium">No mustard oil, ultra fresh & crisp snap.</p>
+                </div>
+            </div>
+            <div class="flex flex-col sm:flex-row items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-900 flex items-center justify-center text-2xl flex-shrink-0 border border-amber-300">
+                    🧄
+                </div>
+                <div>
+                    <h4 class="font-black text-sm text-slate-900">Whole Artisan Spices</h4>
+                    <p class="text-xs text-slate-700 font-medium">Fresh garlic, bay leaves, mustard seed.</p>
+                </div>
+            </div>
+            <div class="flex flex-col sm:flex-row items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-teal-100 text-teal-900 flex items-center justify-center text-2xl flex-shrink-0 border border-teal-300">
+                    🍔
+                </div>
+                <div>
+                    <h4 class="font-black text-sm text-slate-900">Burger & BBQ Ready</h4>
+                    <p class="text-xs text-slate-700 font-medium">Cuts cleanly through rich meats & cheese.</p>
+                </div>
+            </div>
+            <div class="flex flex-col sm:flex-row items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-900 flex items-center justify-center text-2xl flex-shrink-0 border border-rose-300">
+                    ⚡
+                </div>
+                <div>
+                    <h4 class="font-black text-sm text-slate-900">Dhaka & Nationwide</h4>
+                    <p class="text-xs text-slate-700 font-medium">Carefully bubble-wrapped fresh jars.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Main Product Flavor Menu -->
+<section id="pickle-menu" class="py-14 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+    <div class="text-center max-w-2xl mx-auto mb-10">
+        <span class="text-xs font-black uppercase tracking-widest text-emerald-800 bg-emerald-100 border border-emerald-300 px-3.5 py-1.5 rounded-full">
+            Artisanal Pickle Lineup
+        </span>
+        <h2 class="font-display font-black text-2xl sm:text-4xl text-slate-950 mt-3">
+            Pick Your Perfect Crunch
+        </h2>
+        <p class="text-sm text-slate-700 font-medium mt-2">
+            Every jar is packed by hand in small batches using crisp local cucumbers and aromatic pickling spices.
+        </p>
+    </div>
+
+    <!-- Category Filter Tabs -->
+    <div class="flex items-center justify-center gap-2 overflow-x-auto pb-4 mb-8 text-xs font-extrabold scrollbar-none">
+        <a href="{% url 'store:index' %}#pickle-menu" class="px-5 py-2.5 rounded-full transition-all whitespace-nowrap {% if not selected_cat %}bg-slate-950 text-white shadow-md{% else %}bg-slate-200 text-slate-800 hover:bg-slate-300{% endif %}">
+            All Pickles ({{ total_products_count }})
+        </a>
+        {% for cat in categories %}
+        <a href="{% url 'store:index' %}?category={{ cat.slug }}#pickle-menu" class="px-5 py-2.5 rounded-full transition-all whitespace-nowrap {% if selected_cat == cat.slug %}bg-slate-950 text-white shadow-md{% else %}bg-slate-200 text-slate-800 hover:bg-slate-300{% endif %}">
+            {{ cat.name }} ({{ cat.product_count }})
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- Products Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+        {% for product in all_products %}
+        <div class="product-card rounded-3xl overflow-hidden flex flex-col justify-between group transition-all duration-300">
+            
+            <!-- Card Image Box -->
+            <div class="relative aspect-4/3 overflow-hidden bg-slate-100 border-b border-slate-200">
+                <a href="{% url 'store:product_detail' product.slug %}">
+                    <img src="{{ product.primary_image_url }}" alt="{{ product.name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                </a>
+                
+                <!-- Spice Level Badge -->
+                <div class="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full text-xs font-black text-slate-900 shadow-md border border-slate-300 flex items-center gap-1">
+                    {{ product.get_spice_level_display }}
+                </div>
+
+                <!-- Weight badge -->
+                <div class="absolute top-3 right-3 bg-slate-900 text-white px-3 py-1 rounded-full text-xs font-black shadow-md border border-slate-700">
+                    {{ product.jar_weight_grams }}g Jar
+                </div>
+
+                <!-- Discount badge if applicable -->
+                {% if product.discount_percent > 0 %}
+                <div class="absolute bottom-3 left-3 bg-rose-600 text-white text-xs font-black px-2.5 py-1 rounded-md shadow-md">
+                    {{ product.discount_percent }}% OFF
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Card Body -->
+            <div class="p-6 flex-1 flex flex-col justify-between space-y-4">
+                <div>
+                    <div class="flex items-center justify-between text-xs font-black mb-1.5">
+                        <span class="text-emerald-800 uppercase tracking-wide">{{ product.get_cut_style_display }}</span>
+                        {% if product.reviews_count > 0 %}
+                        <span class="text-amber-600">⭐ {{ product.average_rating }}/5 ({{ product.reviews_count }})</span>
+                        {% else %}
+                        <span class="text-amber-600">⭐ {{ product.crunch_rating }}/5 Crunch</span>
+                        {% endif %}
+                    </div>
+
+                    <h3 class="font-display font-black text-xl text-slate-950 group-hover:text-emerald-700 transition leading-tight">
+                        <a href="{% url 'store:product_detail' product.slug %}">{{ product.name }}</a>
+                    </h3>
+
+                    <p class="text-xs sm:text-sm text-slate-700 font-medium mt-2 line-clamp-2 leading-relaxed">
+                        {{ product.tagline }}
+                    </p>
+                    
+                    <!-- Flavor tag notes -->
+                    <div class="mt-3 flex flex-wrap gap-1">
+                        <span class="text-[11px] bg-slate-100 text-slate-800 font-bold px-2.5 py-1 rounded-lg border border-slate-300">
+                            🌿 {{ product.flavor_profile }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Price and Add to Cart Row -->
+                <div class="pt-4 border-t border-slate-200 flex items-center justify-between gap-3">
+                    <div>
+                        <span class="text-[11px] text-slate-600 font-bold block uppercase">Price per Jar</span>
+                        <div class="flex items-baseline gap-2">
+                            <span class="font-display font-black text-2xl text-slate-950">৳{{ product.price_bdt }}</span>
+                            {% if product.original_price_bdt %}
+                            <span class="text-xs text-slate-500 line-through font-bold">৳{{ product.original_price_bdt }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Quick Add Button with AJAX -->
+                    <button onclick="ajaxAddToCart({{ product.id }})" class="bg-[#15803d] hover:bg-[#166534] active:scale-95 text-white font-extrabold text-xs sm:text-sm px-4 py-3 rounded-xl shadow-md flex items-center gap-1.5 transition-all">
+                        <i class="fa-solid fa-plus text-xs"></i>
+                        <span>Add to Bag</span>
+                    </button>
+                </div>
+
+            </div>
+
+        </div>
+        {% empty %}
+        <div class="col-span-3 text-center py-12">
+            <p class="text-slate-600 font-medium">No pickles in this category yet. Check back soon!</p>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- American Pickles Benefits & Highlights -->
+<section class="py-14 bg-gradient-to-b from-slate-50 to-emerald-50/40 px-4 sm:px-6 lg:px-8 border-y border-slate-200">
+    <div class="max-w-6xl mx-auto">
+        <div class="text-center max-w-2xl mx-auto mb-10">
+            <span class="text-xs font-black uppercase tracking-widest text-emerald-900 bg-emerald-100 border border-emerald-300 px-3.5 py-1.5 rounded-full">
+                Why You'll Love American Pickles 🥒
+            </span>
+            <h2 class="font-display font-black text-2xl sm:text-4xl text-slate-950 mt-3">
+                The Unique Benefits of Artisanal Vinegar Pickles
+            </h2>
+            <p class="text-sm text-slate-600 font-medium mt-2">
+                Crafted in small batches with hand-selected crisp local veggies, pure vinegar brine, and aromatic dill herbs — made for serious crunch and unbeatable flavor!
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Benefit 1: Ultra Crunch -->
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs hover:shadow-md hover:border-emerald-500 transition-all group">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-bolt"></i>
+                </div>
+                <h3 class="font-display font-black text-lg text-slate-900 mb-2">
+                    Signature Crisp Snap
+                </h3>
+                <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                    Cold-brined crisp local cucumbers retain their fresh, loud audible crunch in every single bite without ever going soggy.
+                </p>
+            </div>
+
+            <!-- Benefit 2: 100% Oil-Free -->
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs hover:shadow-md hover:border-emerald-500 transition-all group">
+                <div class="w-12 h-12 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-droplet-slash"></i>
+                </div>
+                <h3 class="font-display font-black text-lg text-slate-900 mb-2">
+                    100% Oil-Free & Light
+                </h3>
+                <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                    Zero heavy oils. Brined purely in filtered water, cane vinegar, Himalayan pink salt, garlic cloves, and whole mustard seeds.
+                </p>
+            </div>
+
+            <!-- Benefit 3: Perfect Food Pairing -->
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs hover:shadow-md hover:border-emerald-500 transition-all group">
+                <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-burger"></i>
+                </div>
+                <h3 class="font-display font-black text-lg text-slate-900 mb-2">
+                    Palate Cleanser & Booster
+                </h3>
+                <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                    Pairs deliciously with Smash Burgers, Fried Chicken, Shawarmas & snacks, as well as Beef Tehari, Biryani, Bhuna Khichuri, Kebabs & Daal-Bhat!
+                </p>
+            </div>
+
+            <!-- Benefit 4: Low Calorie & Guilt-Free -->
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs hover:shadow-md hover:border-emerald-500 transition-all group">
+                <div class="w-12 h-12 rounded-2xl bg-lime-100 text-lime-800 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-heart-pulse"></i>
+                </div>
+                <h3 class="font-display font-black text-lg text-slate-900 mb-2">
+                    Fresh & Guilt-Free Snacking
+                </h3>
+                <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                    Naturally low calorie, refreshing, and packed with aromatic dill herbs that aid digestion and elevate your meals.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Customer Reviews Section -->
+<section class="py-14 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+    <div class="text-center max-w-2xl mx-auto mb-10">
+        <span class="text-xs font-black uppercase tracking-widest text-amber-900 bg-amber-100 border border-amber-300 px-3.5 py-1.5 rounded-full">
+            Real Pickle Lovers Nationwide 🇧🇩
+        </span>
+        <h2 class="font-display font-black text-2xl sm:text-4xl text-slate-950 mt-3">
+            What Foodies Across Bangladesh Are Saying
+        </h2>
+        <p class="text-sm text-slate-600 font-medium mt-2">
+            Loved by burger enthusiasts, home chefs, and foodies from all across Bangladesh!
+        </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {% for review in recent_reviews %}
+        <div class="bg-white p-6 rounded-3xl border-2 border-slate-200 shadow-xs flex flex-col justify-between space-y-4">
+            <div>
+                <div class="flex items-center gap-1 text-amber-500 text-sm mb-3">
+                    {% for i in "12345" %}
+                        <i class="fa-solid fa-star"></i>
+                    {% endfor %}
+                </div>
+                <p class="text-xs sm:text-sm text-slate-800 font-medium italic leading-relaxed">
+                    "{{ review.comment }}"
+                </p>
+            </div>
+            <div class="pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
+                <div>
+                    <span class="font-black text-slate-950 block">{{ review.reviewer_name }}</span>
+                    <span class="text-slate-600 font-semibold text-[11px]">{{ review.reviewer_location }}</span>
+                </div>
+                <span class="bg-emerald-100 text-emerald-900 font-extrabold px-2.5 py-1 rounded-md text-[11px] border border-emerald-300">
+                    {{ review.product.name }}
+                </span>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-3 text-center py-6 text-slate-600 font-medium text-sm">
+            Be the first to try and review our freshly brined homemade pickles!
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- FAQ Accordion Section -->
+<section class="py-12 bg-slate-100 border-t border-slate-300 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl mx-auto">
+        <div class="text-center mb-8">
+            <h2 class="font-display font-black text-2xl sm:text-3xl text-slate-950">
+                Frequently Asked Questions
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-700 font-medium mt-1">Everything you need to know about our jars, storage & delivery.</p>
+        </div>
+
+        <div class="space-y-3">
+            <details class="group bg-white p-5 rounded-2xl border-2 border-slate-200 shadow-xs [&_summary::-webkit-details-marker]:hidden" open>
+                <summary class="flex items-center justify-between cursor-pointer font-black text-sm text-slate-950">
+                    <span>How long do Pickpickles jars last & how should I store them?</span>
+                    <i class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
+                </summary>
+                <p class="text-xs sm:text-sm text-slate-700 font-medium mt-3 leading-relaxed">
+                    Our natural vinegar & salt brine keeps the jar completely safe during delivery transit. Upon delivery, <strong>always keep the jar in the refrigerator</strong>. When refrigerated, our pickles stay ultra-crunchy, tangy, and fresh for <strong>up to 1 month</strong>! Always use a clean, dry utensil when serving.
+                </p>
+            </details>
+
+            <details class="group bg-white p-5 rounded-2xl border-2 border-slate-200 shadow-xs [&_summary::-webkit-details-marker]:hidden">
+                <summary class="flex items-center justify-between cursor-pointer font-black text-sm text-slate-950">
+                    <span>What ingredients are used in Pickpickles?</span>
+                    <i class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
+                </summary>
+                <p class="text-xs sm:text-sm text-slate-700 font-medium mt-3 leading-relaxed">
+                    We hand-select crisp local cucumbers, sweet carrots, crisp bell peppers, deshi onions, green chillies, filtered water, pure cane vinegar, Himalayan pink salt, fresh garlic cloves, bay leaves, and whole yellow mustard seeds. 100% oil-free and handcrafted with love!
+                </p>
+            </details>
+
+            <details class="group bg-white p-5 rounded-2xl border-2 border-slate-200 shadow-xs [&_summary::-webkit-details-marker]:hidden">
+                <summary class="flex items-center justify-between cursor-pointer font-black text-sm text-slate-950">
+                    <span>What is the delivery timeline and shipping charge?</span>
+                    <i class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
+                </summary>
+                <div class="text-xs sm:text-sm text-slate-700 font-medium mt-3 leading-relaxed space-y-2">
+                    <p>
+                        🥒 <strong>Fresh Batch Preparation (3 Days):</strong> We craft our pickles fresh upon order. Every jar requires at least <strong>3 days of natural brining & infusion</strong> to develop that signature crunchy snap and balanced tangy-sweet flavor.
+                    </p>
+                    <p>
+                        🚚 <strong>Delivery Transit (2–3 Days):</strong> Once properly brined, your jar is bubble-wrapped and dispatched via courier (takes 2–3 days).
+                    </p>
+                    <p>
+                        💵 <strong>Delivery Charges:</strong> Flat <strong>৳130</strong> across all of Bangladesh. Total estimated time from order confirmation to your doorstep is <strong>5 to 6 days</strong>.
+                    </p>
+                </div>
+            </details>
+
+            <details class="group bg-white p-5 rounded-2xl border-2 border-slate-200 shadow-xs [&_summary::-webkit-details-marker]:hidden">
+                <summary class="flex items-center justify-between cursor-pointer font-black text-sm text-slate-950">
+                    <span>Can I pay via bKash / Nagad or Cash on Delivery?</span>
+                    <i class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
+                </summary>
+                <p class="text-xs sm:text-sm text-slate-700 font-medium mt-3 leading-relaxed">
+                    Yes! We accept Cash on Delivery (COD) as well as direct bKash and Nagad payments. You can select your preferred method during checkout.
+                </p>
+            </details>
+        </div>
+    </div>
+</section>
+
+<!-- Floating Toast Message Container for AJAX Cart Feedback -->
+<div id="toastNotification" class="fixed bottom-24 right-4 z-50 transform translate-y-20 opacity-0 pointer-events-none transition-all duration-300 max-w-sm bg-slate-950 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 border-2 border-emerald-500">
+    <img src="{% static 'images/logo.png' %}" alt="Logo" class="w-7 h-7 rounded-full object-cover">
+    <div class="flex-1 text-xs font-bold" id="toastMessage">Added to jar bag!</div>
+</div>
+{% endblock %}

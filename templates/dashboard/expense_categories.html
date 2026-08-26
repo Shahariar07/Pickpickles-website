@@ -1,0 +1,217 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Expense Categories & Costing | Pickpickles Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Top Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-3xl border border-gray-200 shadow-xs">
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-rose-100 text-rose-900">
+                    <i class="fa-solid fa-receipt text-rose-600"></i>
+                    Cost Accounting Taxonomy
+                </span>
+                <span class="text-xs text-gray-400 font-semibold">• {{ total_categories }} categories configured</span>
+            </div>
+            <h1 class="font-display font-black text-2xl sm:text-3xl text-gray-900 mt-1">
+                Expense Categories List
+            </h1>
+            <p class="text-xs sm:text-sm text-gray-500 mt-0.5">
+                Manage operational cost heads, customize expense classifications, and track total expenditure.
+            </p>
+        </div>
+        
+        <div class="flex items-center gap-2">
+            <button type="button" onclick="openAddExpCatModal()" class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md flex items-center gap-2 transition active:scale-95">
+                <i class="fa-solid fa-plus text-brand-accent"></i>
+                <span>Add Expense Category</span>
+            </button>
+            <a href="{% url 'dashboard:expenses' %}" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs px-4 py-2.5 rounded-xl border border-gray-300 flex items-center gap-2 transition">
+                <i class="fa-solid fa-receipt text-brand-600"></i>
+                <span>Expenses Ledger</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Expense Categories Table / List View -->
+    <div class="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-gray-50 text-gray-500 font-bold uppercase text-[10px] border-b border-gray-200">
+                    <tr>
+                        <th class="p-4">Category Name</th>
+                        <th class="p-4">Code Identifier</th>
+                        <th class="p-4">Description</th>
+                        <th class="p-4 text-center">Entries</th>
+                        <th class="p-4 text-right">Total Spent</th>
+                        <th class="p-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 font-medium">
+                    {% for cat in category_stats %}
+                    <tr class="hover:bg-gray-50/60 transition">
+                        <!-- Name & Icon -->
+                        <td class="p-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center text-sm border border-rose-200 flex-shrink-0">
+                                    <i class="fa-solid {{ cat.icon|default:'fa-receipt' }}"></i>
+                                </div>
+                                <span class="font-bold text-gray-900 text-sm">{{ cat.name }}</span>
+                            </div>
+                        </td>
+
+                        <!-- Code -->
+                        <td class="p-4">
+                            <code class="text-[11px] bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-mono font-bold">{{ cat.slug }}</code>
+                        </td>
+
+                        <!-- Description -->
+                        <td class="p-4 max-w-xs">
+                            <p class="text-xs text-gray-600 truncate">{{ cat.description|default:"—" }}</p>
+                        </td>
+
+                        <!-- Entries Count -->
+                        <td class="p-4 text-center">
+                            <span class="inline-flex items-center gap-1 bg-gray-100 text-gray-700 font-bold text-xs px-2.5 py-1 rounded-full">
+                                {{ cat.count }} logs
+                            </span>
+                        </td>
+
+                        <!-- Total Spent -->
+                        <td class="p-4 text-right">
+                            <span class="font-display font-black text-sm text-rose-700">
+                                ৳{{ cat.spent|floatformat:0 }}
+                            </span>
+                        </td>
+
+                        <!-- Actions -->
+                        <td class="p-4 text-right">
+                            <div class="flex items-center justify-end gap-2">
+                                <button type="button" onclick="openEditExpCatModal('{{ cat.id }}', '{{ cat.name|escapejs }}', '{{ cat.description|escapejs }}', '{{ cat.icon|escapejs }}')" class="bg-gray-100 hover:bg-brand-50 hover:text-brand-800 text-gray-700 px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 transition">
+                                    <i class="fa-solid fa-pen-to-square text-brand-600"></i>
+                                    <span>Edit</span>
+                                </button>
+                                <form method="POST" onsubmit="return confirm('Permanently delete expense category {{ cat.name }}?')">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete_category">
+                                    <input type="hidden" name="category_id" value="{{ cat.id }}">
+                                    <button type="submit" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 transition">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                        <span>Delete</span>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="p-12 text-center text-gray-400">
+                            <i class="fa-solid fa-receipt text-4xl text-gray-300 mb-2 block"></i>
+                            <p class="font-bold">No expense categories found.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- ADD EXPENSE CATEGORY MODAL -->
+<div id="addExpCatModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+            <h3 class="font-display font-black text-lg text-gray-900">Add Expense Category</h3>
+            <button type="button" onclick="closeAddExpCatModal()" class="text-gray-400 hover:text-gray-700 text-lg p-1">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form method="POST" class="space-y-3 text-xs">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create_category">
+
+            <div>
+                <label class="font-bold text-gray-700 block mb-1">Category Name *</label>
+                <input type="text" name="name" required placeholder="e.g. Employee Wages / শ্রমিকের মজুরি" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white">
+            </div>
+
+            <div>
+                <label class="font-bold text-gray-700 block mb-1">Icon (FontAwesome Class)</label>
+                <input type="text" name="icon" value="fa-receipt" placeholder="fa-receipt, fa-truck, fa-users, fa-bolt" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
+            </div>
+
+            <div>
+                <label class="font-bold text-gray-700 block mb-1">Description</label>
+                <textarea name="description" rows="2" placeholder="Brief summary of expenses included under this category..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white"></textarea>
+            </div>
+
+            <div class="pt-2 flex items-center justify-end gap-2">
+                <button type="button" onclick="closeAddExpCatModal()" class="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold transition">Cancel</button>
+                <button type="submit" class="px-5 py-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold transition shadow-md">Create Category</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- EDIT EXPENSE CATEGORY MODAL -->
+<div id="editExpCatModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+            <h3 class="font-display font-black text-lg text-gray-900">Edit Expense Category</h3>
+            <button type="button" onclick="closeEditExpCatModal()" class="text-gray-400 hover:text-gray-700 text-lg p-1">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form method="POST" class="space-y-3 text-xs">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="edit_category">
+            <input type="hidden" id="edit_exp_cat_id" name="category_id" value="">
+
+            <div>
+                <label class="font-bold text-gray-700 block mb-1">Category Name *</label>
+                <input type="text" id="edit_exp_cat_name" name="name" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white">
+            </div>
+
+            <div>
+                <label class="font-bold text-gray-700 block mb-1">Icon (FontAwesome Class)</label>
+                <input type="text" id="edit_exp_cat_icon" name="icon" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
+            </div>
+
+            <div>
+                <label class="font-bold text-gray-700 block mb-1">Description</label>
+                <textarea id="edit_exp_cat_desc" name="description" rows="2" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white"></textarea>
+            </div>
+
+            <div class="pt-2 flex items-center justify-end gap-2">
+                <button type="button" onclick="closeEditExpCatModal()" class="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold transition">Cancel</button>
+                <button type="submit" class="px-5 py-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold transition shadow-md">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openAddExpCatModal() {
+    document.getElementById('addExpCatModal').classList.remove('hidden');
+}
+function closeAddExpCatModal() {
+    document.getElementById('addExpCatModal').classList.add('hidden');
+}
+function openEditExpCatModal(id, name, desc, icon) {
+    document.getElementById('edit_exp_cat_id').value = id;
+    document.getElementById('edit_exp_cat_name').value = name;
+    document.getElementById('edit_exp_cat_desc').value = desc;
+    document.getElementById('edit_exp_cat_icon').value = icon;
+    document.getElementById('editExpCatModal').classList.remove('hidden');
+}
+function closeEditExpCatModal() {
+    document.getElementById('editExpCatModal').classList.add('hidden');
+}
+</script>
+{% endblock %}

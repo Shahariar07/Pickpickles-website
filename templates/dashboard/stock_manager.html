@@ -1,0 +1,644 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Inventory & Stock Manager | Pickpickles Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Top Action & Summary Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-3xl border border-gray-200 shadow-xs">
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-100 text-emerald-800">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                    Jar Stock Control
+                </span>
+                <span class="text-xs text-gray-400 font-semibold">• {{ total_products_count }} active flavors</span>
+            </div>
+            <h1 class="font-display font-black text-2xl sm:text-3xl text-gray-900 mt-1">
+                Pickle Jar Inventory & Catalog
+            </h1>
+            <p class="text-xs sm:text-sm text-gray-500 mt-0.5">
+                Manage pickle varieties, update pricing per jar, edit details, or remove products.
+            </p>
+        </div>
+        
+        <div class="flex items-center gap-2 flex-wrap">
+            <a href="{% url 'dashboard:damage_returns' %}" class="bg-rose-50 hover:bg-rose-100 text-rose-800 font-bold text-xs px-3.5 py-2.5 rounded-xl border border-rose-200 flex items-center gap-2 transition active:scale-95">
+                <i class="fa-solid fa-triangle-exclamation text-rose-600"></i>
+                <span>Damage & Returns</span>
+            </a>
+            <a href="{% url 'dashboard:pickle_categories' %}" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs px-3.5 py-2.5 rounded-xl border border-gray-300 flex items-center gap-2 transition active:scale-95">
+                <i class="fa-solid fa-tags text-brand-600"></i>
+                <span>Categories</span>
+            </a>
+            <button type="button" onclick="openAddModal()" class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md flex items-center gap-2 transition active:scale-95">
+                <i class="fa-solid fa-circle-plus text-brand-accent"></i>
+                <span>Add New Pickle Variety</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Inventory Quick Stats -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs flex items-center justify-between">
+            <div>
+                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Total Catalog Items</span>
+                <span class="font-display font-black text-2xl text-gray-900 mt-0.5">{{ total_products_count }}</span>
+            </div>
+            <span class="w-10 h-10 rounded-xl bg-gray-50 text-gray-700 flex items-center justify-center text-sm font-black">
+                <i class="fa-solid fa-layer-group"></i>
+            </span>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-emerald-200 bg-emerald-50/20 shadow-xs flex items-center justify-between">
+            <div>
+                <span class="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">In-Stock & Active</span>
+                <span class="font-display font-black text-2xl text-emerald-800 mt-0.5">{{ in_stock_count }}</span>
+            </div>
+            <span class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-sm font-black">
+                <i class="fa-solid fa-check"></i>
+            </span>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-rose-200 bg-rose-50/20 shadow-xs flex items-center justify-between">
+            <div>
+                <span class="text-[10px] font-bold text-rose-800 uppercase tracking-wider block">Out of Stock</span>
+                <span class="font-display font-black text-2xl text-rose-800 mt-0.5">{{ out_of_stock_count }}</span>
+            </div>
+            <span class="w-10 h-10 rounded-xl bg-rose-100 text-rose-800 flex items-center justify-center text-sm font-black">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </span>
+        </div>
+    </div>
+
+    <!-- Category Filter Pills with Live Counts -->
+    <div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs font-bold scrollbar-none">
+        <a href="{% url 'dashboard:stock_manager' %}" class="px-4 py-2 rounded-xl transition flex items-center gap-2 {% if not selected_cat %}bg-brand-700 text-white shadow-sm{% else %}bg-white text-gray-700 border border-gray-200 hover:bg-gray-50{% endif %}">
+            <span>All Varieties</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black {% if not selected_cat %}bg-white/20 text-white{% else %}bg-gray-100 text-gray-600{% endif %}">
+                {{ total_products_count }}
+            </span>
+        </a>
+        {% for cat in categories %}
+        <a href="{% url 'dashboard:stock_manager' %}?category={{ cat.slug }}" class="px-4 py-2 rounded-xl transition flex items-center gap-2 {% if selected_cat == cat.slug %}bg-brand-700 text-white shadow-sm{% else %}bg-white text-gray-700 border border-gray-200 hover:bg-gray-50{% endif %}">
+            <span>{{ cat.name }}</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black {% if selected_cat == cat.slug %}bg-white/20 text-white{% elif cat.product_count > 0 %}bg-emerald-100 text-emerald-800{% else %}bg-gray-100 text-gray-400{% endif %}">
+                {{ cat.product_count }}
+            </span>
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- Products Inventory Table -->
+    <div class="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-gray-50 text-gray-500 font-bold uppercase text-[10px] border-b border-gray-200">
+                    <tr>
+                        <th class="p-4">Pickle Variety</th>
+                        <th class="p-4">Category & Style</th>
+                        <th class="p-4">Price & Stock</th>
+                        <th class="p-4 text-center">Status</th>
+                        <th class="p-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 font-medium">
+                    {% for product in products %}
+                    <tr class="hover:bg-gray-50/50 transition group">
+                        
+                        <!-- Col 1: Product info -->
+                        <td class="p-4">
+                            <div class="flex items-center gap-3">
+                                <img src="{{ product.primary_image_url }}" alt="{{ product.name }}" class="w-12 h-12 rounded-2xl object-cover border border-gray-200 flex-shrink-0 shadow-xs">
+                                <div class="max-w-xs">
+                                    <div class="flex items-center gap-1.5">
+                                        <h4 class="font-bold text-gray-900 text-sm">{{ product.name }}</h4>
+                                        {% if product.is_featured %}
+                                        <span class="text-[9px] font-black bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">Featured</span>
+                                        {% endif %}
+                                    </div>
+                                    <span class="text-gray-400 text-[11px] block truncate mt-0.5">{{ product.tagline }}</span>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Col 2: Size & Cut -->
+                        <td class="p-4">
+                            <div class="space-y-1">
+                                <span class="font-bold text-gray-800 block text-xs">{{ product.category.name|default:"Artisan Pickles" }}</span>
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-[10px] font-semibold">
+                                        {{ product.jar_weight_grams }}g Jar
+                                    </span>
+                                    <span class="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-[10px] font-semibold">
+                                        {{ product.get_cut_style_display }}
+                                    </span>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Col 3: Price & Stock Quick Editor -->
+                        <td class="p-4">
+                            <form method="POST" class="flex items-center gap-2">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="update_pricing">
+                                <input type="hidden" name="product_id" value="{{ product.id }}">
+                                <div>
+                                    <label class="text-[9px] text-gray-400 font-bold block uppercase">Price ৳</label>
+                                    <input type="number" step="0.01" name="price_bdt" value="{{ product.price_bdt }}" class="w-20 bg-gray-50 border border-gray-300 rounded-xl px-2.5 py-1 text-xs font-bold text-gray-900 focus:bg-white focus:ring-1 focus:ring-brand-500 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-gray-400 font-bold block uppercase">Stock</label>
+                                    <input type="number" name="stock_count" value="{{ product.stock_count }}" class="w-16 bg-gray-50 border border-gray-300 rounded-xl px-2.5 py-1 text-xs font-bold text-gray-900 focus:bg-white focus:ring-1 focus:ring-brand-500 focus:outline-none">
+                                </div>
+                                <button type="submit" class="mt-3.5 bg-gray-100 hover:bg-brand-700 hover:text-white text-gray-600 font-bold p-1.5 rounded-xl text-xs transition" title="Save quick price & stock">
+                                    <i class="fa-solid fa-check"></i>
+                                </button>
+                            </form>
+                        </td>
+
+                        <!-- Col 4: Availability Status -->
+                        <td class="p-4 text-center">
+                            {% if product.is_in_stock %}
+                            <span class="inline-flex items-center gap-1.5 bg-emerald-100 text-emerald-800 font-bold text-[11px] px-3 py-1 rounded-full border border-emerald-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span> Available
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1.5 bg-rose-100 text-rose-800 font-bold text-[11px] px-3 py-1 rounded-full border border-rose-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-rose-600"></span> Out of Stock
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Col 5: Actions Column (Edit, Toggle Stock, Delete) -->
+                        <td class="p-4 text-right">
+                            <div class="flex items-center justify-end gap-1.5">
+                                
+                                <!-- Edit Button (Opens Modal) -->
+                                <button type="button" 
+                                    onclick="openEditModal({
+                                        id: '{{ product.id }}',
+                                        name: '{{ product.name|escapejs }}',
+                                        tagline: '{{ product.tagline|escapejs }}',
+                                        description: '{{ product.description|escapejs }}',
+                                        categoryId: '{{ product.category.id|default:'' }}',
+                                        cutStyle: '{{ product.cut_style }}',
+                                        spiceLevel: '{{ product.spice_level }}',
+                                        jarWeight: '{{ product.jar_weight_grams }}',
+                                        price: '{{ product.price_bdt }}',
+                                        origPrice: '{{ product.original_price_bdt|default:'' }}',
+                                        stockCount: '{{ product.stock_count }}',
+                                        isInStock: {{ product.is_in_stock|yesno:'true,false' }},
+                                        isFeatured: {{ product.is_featured|yesno:'true,false' }},
+                                        imageUrl: '{{ product.image_url|escapejs }}',
+                                        primaryImageUrl: '{{ product.primary_image_url|escapejs }}',
+                                        ingredients: '{{ product.ingredients|escapejs }}',
+                                        flavorProfile: '{{ product.flavor_profile|escapejs }}',
+                                        pairingSuggestions: '{{ product.pairing_suggestions|escapejs }}'
+                                    })"
+                                    class="bg-gray-100 hover:bg-brand-50 hover:text-brand-800 text-gray-700 px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 transition">
+                                    <i class="fa-solid fa-pen-to-square text-brand-600"></i>
+                                    <span>Edit</span>
+                                </button>
+
+                                <!-- Toggle Stock Button -->
+                                <form method="POST" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="toggle_stock">
+                                    <input type="hidden" name="product_id" value="{{ product.id }}">
+                                    <button type="submit" title="{% if product.is_in_stock %}Mark as Out of Stock{% else %}Mark as Available{% endif %}" class="p-2 rounded-xl font-bold text-xs transition {% if product.is_in_stock %}bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200{% else %}bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200{% endif %}">
+                                        <i class="fa-solid {% if product.is_in_stock %}fa-eye-slash{% else %}fa-eye{% endif %}"></i>
+                                    </button>
+                                </form>
+
+                                <!-- Delete Button (Opens Confirmation Modal) -->
+                                <button type="button" 
+                                    onclick="openDeleteModal('{{ product.id }}', '{{ product.name|escapejs }}')"
+                                    class="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition" 
+                                    title="Delete product">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+
+                            </div>
+                        </td>
+
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="p-12 text-center text-gray-400">
+                            <span class="text-3xl block mb-2">🥒</span>
+                            <span class="font-bold text-gray-700">No pickle products configured yet.</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- ========================================================================= -->
+<!-- 1. EDIT PRODUCT MODAL -->
+<!-- ========================================================================= -->
+<div id="editProductModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-5 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+        
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+            <div class="flex items-center gap-2">
+                <span class="w-8 h-8 rounded-xl bg-brand-100 text-brand-800 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                </span>
+                <h3 class="font-display font-black text-xl text-gray-900">Edit Pickle Product</h3>
+            </div>
+            <button type="button" onclick="closeEditModal()" class="text-gray-400 hover:text-gray-700 text-lg p-1">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" class="space-y-4 text-xs">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="edit_product">
+            <input type="hidden" id="edit_product_id" name="product_id" value="">
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="sm:col-span-2">
+                    <label class="font-bold text-gray-700 block mb-1">Pickle Variety Name *</label>
+                    <input type="text" id="edit_name" name="name" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label class="font-bold text-gray-700 block mb-1">Catchy Tagline</label>
+                    <input type="text" id="edit_tagline" name="tagline" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Category</label>
+                    <select id="edit_category_id" name="category_id" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        <option value="">No Category</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Cut Style</label>
+                    <select id="edit_cut_style" name="cut_style" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white">
+                        {% for code, label in cut_choices %}
+                        <option value="{{ code }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Spice Level</label>
+                    <select id="edit_spice_level" name="spice_level" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white">
+                        {% for code, label in spice_choices %}
+                        <option value="{{ code }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Jar Net Weight (Grams) *</label>
+                    <input type="number" id="edit_jar_weight" name="jar_weight_grams" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white">
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Selling Price (৳ BDT) *</label>
+                    <input type="number" step="0.01" id="edit_price" name="price_bdt" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white">
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Original / Strike Price (৳ BDT)</label>
+                    <input type="number" step="0.01" id="edit_orig_price" name="original_price_bdt" placeholder="e.g. 450.00" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 text-gray-900 focus:bg-white">
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Stock Count (Units) *</label>
+                    <input type="number" id="edit_stock_count" name="stock_count" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white">
+                </div>
+
+                <!-- Single All-in-One Image Box with Preview & Change Options -->
+                <div class="sm:col-span-2 bg-gradient-to-br from-emerald-50/40 via-white to-gray-50 p-4 rounded-2xl border-2 border-dashed border-emerald-300/80 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <label class="font-bold text-xs text-emerald-950 flex items-center gap-2">
+                            <i class="fa-solid fa-camera-rotate text-emerald-600"></i>
+                            <span>Product Photo & Change Image (ছবি পরিবর্তন / আপলোড)</span>
+                        </label>
+                        <span class="text-[10px] text-gray-400 font-bold uppercase">JPG, PNG, WebP</span>
+                    </div>
+
+                    <div class="flex items-center gap-4">
+                        <!-- Live Image Thumbnail Preview -->
+                        <div class="relative w-20 h-20 rounded-2xl bg-white border-2 border-emerald-200 overflow-hidden shadow-sm flex-shrink-0 flex items-center justify-center">
+                            <img id="edit_img_preview" src="/static/images/pickle_default.png" alt="Pickle Preview" class="w-full h-full object-cover">
+                        </div>
+
+                        <!-- Upload File & URL Controls -->
+                        <div class="flex-1 space-y-2.5">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <label class="cursor-pointer inline-flex items-center gap-2 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow-xs transition active:scale-95">
+                                    <i class="fa-solid fa-cloud-arrow-up text-brand-accent"></i>
+                                    <span>Choose New Photo from Device</span>
+                                    <input type="file" id="edit_image_file" name="image" accept="image/*" class="hidden" onchange="previewImage(this, 'edit_img_preview', 'edit_file_name')">
+                                </label>
+                                <span id="edit_file_name" class="text-[11px] text-emerald-700 font-bold"></span>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] text-gray-400 font-bold uppercase whitespace-nowrap">Or Image URL:</span>
+                                <input type="text" id="edit_image_url" name="image_url" placeholder="/media/products/your_pickle.jpg" oninput="document.getElementById('edit_img_preview').src = this.value || '/static/images/pickle_default.png'" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-1.5 text-xs text-gray-800 focus:bg-white focus:ring-1 focus:ring-brand-500 focus:outline-none">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label class="font-bold text-gray-700 block mb-1">Description</label>
+                    <textarea id="edit_description" name="description" rows="3" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white"></textarea>
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label class="font-bold text-gray-700 block mb-1">Ingredients</label>
+                    <input type="text" id="edit_ingredients" name="ingredients" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
+                </div>
+
+                <div class="sm:col-span-2 flex items-center gap-6 pt-2">
+                    <label class="flex items-center gap-2 cursor-pointer font-bold text-gray-800">
+                        <input type="checkbox" id="edit_is_in_stock" name="is_in_stock" class="w-4 h-4 text-brand-600 rounded">
+                        <span>In-Stock / Available for Sale</span>
+                    </label>
+
+                    <label class="flex items-center gap-2 cursor-pointer font-bold text-gray-800">
+                        <input type="checkbox" id="edit_is_featured" name="is_featured" class="w-4 h-4 text-brand-600 rounded">
+                        <span>Featured on Homepage</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-gray-100 flex items-center justify-end gap-2">
+                <button type="button" onclick="closeEditModal()" class="px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold transition">
+                    Cancel
+                </button>
+                <button type="submit" class="px-5 py-2.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold transition shadow-md">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- 2. ADD NEW PRODUCT MODAL -->
+<!-- ========================================================================= -->
+<div id="addProductModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-5 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+        
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+            <div class="flex items-center gap-2">
+                <span class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-plus"></i>
+                </span>
+                <h3 class="font-display font-black text-xl text-gray-900">Add New Pickle Variety</h3>
+            </div>
+            <button type="button" onclick="closeAddModal()" class="text-gray-400 hover:text-gray-700 text-lg p-1">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" class="space-y-4 text-xs">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create_product">
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="sm:col-span-2">
+                    <label class="font-bold text-gray-700 block mb-1">Pickle Variety Name *</label>
+                    <input type="text" name="name" required placeholder="e.g. Zesty Jalapeno Dill Spears" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label class="font-bold text-gray-700 block mb-1">Catchy Tagline</label>
+                    <input type="text" name="tagline" placeholder="e.g. Sharp snap infused with fresh sliced jalapenos" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 text-gray-900 focus:bg-white">
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Category</label>
+                    <select name="category_id" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white">
+                        <option value="">No Category</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Cut Style</label>
+                    <select name="cut_style" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white">
+                        {% for code, label in cut_choices %}
+                        <option value="{{ code }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Spice Level</label>
+                    <select name="spice_level" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white">
+                        {% for code, label in spice_choices %}
+                        <option value="{{ code }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Jar Net Weight (Grams) *</label>
+                    <input type="number" name="jar_weight_grams" value="500" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white">
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Selling Price (৳ BDT) *</label>
+                    <input type="number" step="0.01" name="price_bdt" value="380.00" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white">
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Original / Strike Price (৳ BDT)</label>
+                    <input type="number" step="0.01" name="original_price_bdt" placeholder="e.g. 450.00" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 text-gray-900 focus:bg-white">
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Stock Count (Units) *</label>
+                    <input type="number" name="stock_count" value="40" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white">
+                </div>
+
+                <!-- Single All-in-One Image Box with Preview & Upload Options -->
+                <div class="sm:col-span-2 bg-gradient-to-br from-emerald-50/40 via-white to-gray-50 p-4 rounded-2xl border-2 border-dashed border-emerald-300/80 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <label class="font-bold text-xs text-emerald-950 flex items-center gap-2">
+                            <i class="fa-solid fa-camera-rotate text-emerald-600"></i>
+                            <span>Product Photo / Image Upload (ছবি আপলোড করুন)</span>
+                        </label>
+                        <span class="text-[10px] text-gray-400 font-bold uppercase">JPG, PNG, WebP</span>
+                    </div>
+
+                    <div class="flex items-center gap-4">
+                        <!-- Live Image Thumbnail Preview -->
+                        <div class="relative w-20 h-20 rounded-2xl bg-white border-2 border-emerald-200 overflow-hidden shadow-sm flex-shrink-0 flex items-center justify-center">
+                            <img id="add_img_preview" src="/static/images/pickle_default.png" alt="Pickle Preview" class="w-full h-full object-cover">
+                        </div>
+
+                        <!-- Upload File & URL Controls -->
+                        <div class="flex-1 space-y-2.5">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <label class="cursor-pointer inline-flex items-center gap-2 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow-xs transition active:scale-95">
+                                    <i class="fa-solid fa-cloud-arrow-up text-brand-accent"></i>
+                                    <span>Upload Photo from Device</span>
+                                    <input type="file" id="add_image_file" name="image" accept="image/*" class="hidden" onchange="previewImage(this, 'add_img_preview', 'add_file_name')">
+                                </label>
+                                <span id="add_file_name" class="text-[11px] text-emerald-700 font-bold"></span>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] text-gray-400 font-bold uppercase whitespace-nowrap">Or Image URL:</span>
+                                <input type="text" id="add_image_url" name="image_url" placeholder="/media/products/your_pickle.jpg" oninput="document.getElementById('add_img_preview').src = this.value || '/static/images/pickle_default.png'" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-1.5 text-xs text-gray-800 focus:bg-white focus:ring-1 focus:ring-brand-500 focus:outline-none">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label class="font-bold text-gray-700 block mb-1">Description</label>
+                    <textarea name="description" rows="3" placeholder="Describe the flavor, brine ingredients, and crunchiness..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white"></textarea>
+                </div>
+
+                <div class="sm:col-span-2 flex items-center gap-6 pt-2">
+                    <label class="flex items-center gap-2 cursor-pointer font-bold text-gray-800">
+                        <input type="checkbox" name="is_in_stock" checked class="w-4 h-4 text-brand-600 rounded">
+                        <span>In-Stock & Ready to Order</span>
+                    </label>
+
+                    <label class="flex items-center gap-2 cursor-pointer font-bold text-gray-800">
+                        <input type="checkbox" name="is_featured" class="w-4 h-4 text-brand-600 rounded">
+                        <span>Featured on Store Homepage</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-gray-100 flex items-center justify-end gap-2">
+                <button type="button" onclick="closeAddModal()" class="px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold transition">
+                    Cancel
+                </button>
+                <button type="submit" class="px-5 py-2.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold transition shadow-md">
+                    Create Pickle Product
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- 3. DELETE PRODUCT CONFIRMATION MODAL -->
+<!-- ========================================================================= -->
+<div id="deleteProductModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative text-center">
+        
+        <div class="w-14 h-14 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto text-2xl">
+            <i class="fa-solid fa-trash-can"></i>
+        </div>
+
+        <div>
+            <h3 class="font-display font-black text-lg text-gray-900">Delete Pickle Product?</h3>
+            <p class="text-xs text-gray-500 mt-1">
+                Are you sure you want to permanently delete <strong id="delete_product_name" class="text-gray-900">this product</strong>? This action cannot be undone.
+            </p>
+        </div>
+
+        <form method="POST" class="pt-2 flex items-center justify-center gap-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete_product">
+            <input type="hidden" id="delete_product_id" name="product_id" value="">
+
+            <button type="button" onclick="closeDeleteModal()" class="w-1/2 px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs transition">
+                Cancel
+            </button>
+            <button type="submit" class="w-1/2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition shadow-md">
+                Yes, Delete
+            </button>
+        </form>
+
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- JAVASCRIPT MODAL HANDLERS -->
+<!-- ========================================================================= -->
+<script>
+function previewImage(input, previewId, nameId) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById(previewId).src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+        if (nameId) {
+            document.getElementById(nameId).textContent = '✓ ' + file.name;
+        }
+    }
+}
+
+function openEditModal(prod) {
+    document.getElementById('edit_product_id').value = prod.id;
+    document.getElementById('edit_name').value = prod.name;
+    document.getElementById('edit_tagline').value = prod.tagline || '';
+    document.getElementById('edit_description').value = prod.description || '';
+    document.getElementById('edit_category_id').value = prod.categoryId || '';
+    document.getElementById('edit_cut_style').value = prod.cutStyle || 'SPEARS';
+    document.getElementById('edit_spice_level').value = prod.spiceLevel || 'MILD';
+    document.getElementById('edit_jar_weight').value = prod.jarWeight || 500;
+    document.getElementById('edit_price').value = prod.price || '';
+    document.getElementById('edit_orig_price').value = prod.origPrice || '';
+    document.getElementById('edit_stock_count').value = prod.stockCount || 0;
+    document.getElementById('edit_is_in_stock').checked = prod.isInStock;
+    document.getElementById('edit_is_featured').checked = prod.isFeatured;
+    document.getElementById('edit_image_url').value = prod.imageUrl || '';
+    document.getElementById('edit_ingredients').value = prod.ingredients || '';
+
+    // Set Live Preview Image
+    document.getElementById('edit_img_preview').src = prod.primaryImageUrl || prod.imageUrl || '/static/images/pickle_default.png';
+    document.getElementById('edit_file_name').textContent = '';
+    document.getElementById('edit_image_file').value = '';
+
+    document.getElementById('editProductModal').classList.remove('hidden');
+}
+
+function closeEditModal() {
+    document.getElementById('editProductModal').classList.add('hidden');
+}
+
+function openAddModal() {
+    document.getElementById('add_img_preview').src = '/static/images/pickle_default.png';
+    document.getElementById('add_file_name').textContent = '';
+    document.getElementById('add_image_file').value = '';
+    document.getElementById('addProductModal').classList.remove('hidden');
+}
+
+function closeAddModal() {
+    document.getElementById('addProductModal').classList.add('hidden');
+}
+
+function openDeleteModal(productId, productName) {
+    document.getElementById('delete_product_id').value = productId;
+    document.getElementById('delete_product_name').textContent = productName;
+    document.getElementById('deleteProductModal').classList.remove('hidden');
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteProductModal').classList.add('hidden');
+}
+</script>
+{% endblock %}

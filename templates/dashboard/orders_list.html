@@ -1,0 +1,393 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Orders & Delivery Hub | Pickpickles Merchant{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Top Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-3xl border border-gray-200 shadow-xs">
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-blue-100 text-blue-800">
+                    <i class="fa-solid fa-list-check"></i>
+                    Orders Hub
+                </span>
+                <span class="text-xs text-gray-400 font-semibold">• {{ total_orders_count }} total customer orders</span>
+            </div>
+            <h1 class="font-display font-black text-2xl sm:text-3xl text-gray-900 mt-1">
+                Orders & Delivery Queue
+            </h1>
+            <p class="text-xs sm:text-sm text-gray-500 mt-0.5">
+                Process customer orders, verify bKash/Nagad payments, and print packaging slips.
+            </p>
+        </div>
+        
+        <div class="flex items-center gap-2">
+            <button type="button" onclick="openManualOrderModal()" class="bg-brand-700 hover:bg-brand-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md flex items-center gap-1.5 transition active:scale-95">
+                <i class="fa-solid fa-plus text-brand-accent"></i>
+                <span>Create Manual Order</span>
+            </button>
+            <a href="{% url 'dashboard:orders' %}" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold px-3.5 py-2.5 rounded-xl flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-arrows-rotate"></i>
+                <span>Refresh</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Quick Status Counter Pills -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <a href="?status=ALL&zone={{ zone_filter }}&q={{ search_query }}" class="bg-white p-3.5 rounded-2xl border transition {% if status_filter == 'ALL' %}border-gray-900 shadow-sm ring-2 ring-gray-900/10{% else %}border-gray-200 hover:border-gray-300{% endif %}">
+            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">All Orders</span>
+            <span class="font-display font-black text-xl text-gray-900 mt-0.5 block">{{ total_orders_count }}</span>
+        </a>
+
+        <a href="?status=PENDING&zone={{ zone_filter }}&q={{ search_query }}" class="bg-white p-3.5 rounded-2xl border transition {% if status_filter == 'PENDING' %}border-amber-500 bg-amber-50/40 shadow-sm ring-2 ring-amber-500/20{% else %}border-gray-200 hover:border-amber-300{% endif %}">
+            <span class="text-[10px] font-bold text-amber-700 uppercase tracking-wider block">Pending</span>
+            <span class="font-display font-black text-xl text-amber-600 mt-0.5 block">{{ pending_count }}</span>
+        </a>
+
+        <a href="?status=CONFIRMED&zone={{ zone_filter }}&q={{ search_query }}" class="bg-white p-3.5 rounded-2xl border transition {% if status_filter == 'CONFIRMED' %}border-blue-500 bg-blue-50/40 shadow-sm ring-2 ring-blue-500/20{% else %}border-gray-200 hover:border-blue-300{% endif %}">
+            <span class="text-[10px] font-bold text-blue-700 uppercase tracking-wider block">Confirmed</span>
+            <span class="font-display font-black text-xl text-blue-600 mt-0.5 block">{{ confirmed_count }}</span>
+        </a>
+
+        <a href="?status=PACKING&zone={{ zone_filter }}&q={{ search_query }}" class="bg-white p-3.5 rounded-2xl border transition {% if status_filter == 'PACKING' %}border-purple-500 bg-purple-50/40 shadow-sm ring-2 ring-purple-500/20{% else %}border-gray-200 hover:border-purple-300{% endif %}">
+            <span class="text-[10px] font-bold text-purple-700 uppercase tracking-wider block">Packing</span>
+            <span class="font-display font-black text-xl text-purple-600 mt-0.5 block">{{ packing_count }}</span>
+        </a>
+
+        <a href="?status=OUT_FOR_DELIVERY&zone={{ zone_filter }}&q={{ search_query }}" class="bg-white p-3.5 rounded-2xl border transition {% if status_filter == 'OUT_FOR_DELIVERY' %}border-indigo-500 bg-indigo-50/40 shadow-sm ring-2 ring-indigo-500/20{% else %}border-gray-200 hover:border-indigo-300{% endif %}">
+            <span class="text-[10px] font-bold text-indigo-700 uppercase tracking-wider block">Shipping</span>
+            <span class="font-display font-black text-xl text-indigo-600 mt-0.5 block">{{ out_for_delivery_count }}</span>
+        </a>
+
+        <a href="?status=DELIVERED&zone={{ zone_filter }}&q={{ search_query }}" class="bg-white p-3.5 rounded-2xl border transition {% if status_filter == 'DELIVERED' %}border-emerald-500 bg-emerald-50/40 shadow-sm ring-2 ring-emerald-500/20{% else %}border-gray-200 hover:border-emerald-300{% endif %}">
+            <span class="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">Delivered</span>
+            <span class="font-display font-black text-xl text-emerald-600 mt-0.5 block">{{ delivered_count }}</span>
+        </a>
+    </div>
+
+    <!-- Search & Filters Toolbar -->
+    <div class="bg-white p-4 sm:p-5 rounded-3xl border border-gray-200 shadow-xs space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            
+            <!-- Search Form -->
+            <form method="GET" action="{% url 'dashboard:orders' %}" class="flex-1 max-w-md">
+                <input type="hidden" name="status" value="{{ status_filter }}">
+                <div class="relative flex items-center">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 text-gray-400 text-xs"></i>
+                    <input type="text" name="q" value="{{ search_query }}" placeholder="Search by Order #, Phone, Name, City, TrxID..." class="w-full bg-gray-50 pl-9 pr-20 py-2.5 rounded-xl border border-gray-200 text-xs font-medium focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    <button type="submit" class="absolute right-1.5 bg-brand-700 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg hover:bg-brand-800 transition">
+                        Search
+                    </button>
+                </div>
+            </form>
+
+            <!-- Delivery Zone Filter -->
+            <div class="flex items-center gap-2 text-xs font-semibold">
+                <span class="text-gray-500">Zone:</span>
+                <a href="?status={{ status_filter }}&zone=ALL&q={{ search_query }}" class="px-2.5 py-1 rounded-lg {% if zone_filter == 'ALL' %}bg-brand-700 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">All</a>
+                <a href="?status={{ status_filter }}&zone=INSIDE_DHAKA&q={{ search_query }}" class="px-2.5 py-1 rounded-lg {% if zone_filter == 'INSIDE_DHAKA' %}bg-brand-700 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Inside Dhaka</a>
+                <a href="?status={{ status_filter }}&zone=OUTSIDE_DHAKA&q={{ search_query }}" class="px-2.5 py-1 rounded-lg {% if zone_filter == 'OUTSIDE_DHAKA' %}bg-brand-700 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Outside Dhaka</a>
+            </div>
+
+        </div>
+
+        <!-- Status Filter Tabs -->
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-bold scrollbar-none border-t border-gray-100 pt-3">
+            <a href="?status=ALL&zone={{ zone_filter }}&q={{ search_query }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition {% if status_filter == 'ALL' %}bg-gray-900 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+                All Orders ({{ total_orders_count }})
+            </a>
+            <a href="?status=PENDING&zone={{ zone_filter }}&q={{ search_query }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition {% if status_filter == 'PENDING' %}bg-amber-600 text-white{% else %}bg-amber-50 text-amber-800 hover:bg-amber-100{% endif %}">
+                Pending ({{ pending_count }})
+            </a>
+            <a href="?status=CONFIRMED&zone={{ zone_filter }}&q={{ search_query }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition {% if status_filter == 'CONFIRMED' %}bg-blue-600 text-white{% else %}bg-blue-50 text-blue-800 hover:bg-blue-100{% endif %}">
+                Confirmed ({{ confirmed_count }})
+            </a>
+            <a href="?status=PACKING&zone={{ zone_filter }}&q={{ search_query }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition {% if status_filter == 'PACKING' %}bg-purple-600 text-white{% else %}bg-purple-50 text-purple-800 hover:bg-purple-100{% endif %}">
+                Packing ({{ packing_count }})
+            </a>
+            <a href="?status=OUT_FOR_DELIVERY&zone={{ zone_filter }}&q={{ search_query }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition {% if status_filter == 'OUT_FOR_DELIVERY' %}bg-indigo-600 text-white{% else %}bg-indigo-50 text-indigo-800 hover:bg-indigo-100{% endif %}">
+                Out for Delivery ({{ out_for_delivery_count }})
+            </a>
+            <a href="?status=DELIVERED&zone={{ zone_filter }}&q={{ search_query }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition {% if status_filter == 'DELIVERED' %}bg-emerald-600 text-white{% else %}bg-emerald-50 text-emerald-800 hover:bg-emerald-100{% endif %}">
+                Delivered ({{ delivered_count }})
+            </a>
+            <a href="?status=CANCELLED&zone={{ zone_filter }}&q={{ search_query }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition {% if status_filter == 'CANCELLED' %}bg-rose-600 text-white{% else %}bg-rose-50 text-rose-800 hover:bg-rose-100{% endif %}">
+                Cancelled ({{ cancelled_count }})
+            </a>
+        </div>
+    </div>
+
+    <!-- Orders List Table Card -->
+    <div class="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-50/80 border-b border-gray-200/80 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider">
+                        <th class="py-3.5 px-4 sm:px-6">Order ID & Date</th>
+                        <th class="py-3.5 px-4">Customer & Location</th>
+                        <th class="py-3.5 px-4">Items / Jars</th>
+                        <th class="py-3.5 px-4">Payment</th>
+                        <th class="py-3.5 px-4">Status</th>
+                        <th class="py-3.5 px-4 text-right sm:pr-6">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 text-xs font-medium">
+                    {% for order in orders %}
+                    <tr 
+                        class="hover:bg-brand-50/40 transition-colors group cursor-pointer"
+                        onclick="if(!event.target.closest('a, button, select, input, form, label')) { window.location='{% url 'dashboard:order_detail' order.order_number %}'; }"
+                    >
+                        <!-- Order ID & Date -->
+                        <td class="py-4 px-4 sm:px-6 align-top">
+                            <div class="flex items-center gap-2">
+                                <a href="{% url 'dashboard:order_detail' order.order_number %}" class="font-display font-black text-sm text-brand-800 hover:text-brand-600 hover:underline">
+                                    #{{ order.order_number }}
+                                </a>
+                            </div>
+                            <div class="text-[11px] text-gray-400 mt-1 flex items-center gap-1 font-medium">
+                                <i class="fa-regular fa-clock text-[10px]"></i>
+                                <span>{{ order.created_at|date:"M d, Y" }}</span>
+                                <span class="text-gray-300">•</span>
+                                <span>{{ order.created_at|date:"h:i A" }}</span>
+                            </div>
+                        </td>
+
+                        <!-- Customer & Location -->
+                        <td class="py-4 px-4 align-top max-w-[220px]">
+                            <div class="font-bold text-gray-900 text-sm truncate">
+                                {{ order.customer_name }}
+                            </div>
+                            <div class="mt-1">
+                                <a href="tel:{{ order.customer_phone }}" class="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded text-[11px] font-bold transition">
+                                    <i class="fa-solid fa-phone text-[9px]"></i>
+                                    <span>{{ order.customer_phone }}</span>
+                                </a>
+                            </div>
+                            <div class="text-[11px] text-gray-500 mt-1 truncate" title="{{ order.delivery_address }}">
+                                <i class="fa-solid fa-location-dot text-gray-400 text-[10px] mr-1"></i>
+                                <span class="font-semibold text-gray-700">{{ order.delivery_city }}</span> 
+                                <span class="text-gray-400">({{ order.get_delivery_zone_display|truncatechars:18 }})</span>
+                            </div>
+                            {% if order.customer_notes %}
+                            <div class="mt-1 text-[10px] text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded inline-block truncate max-w-full" title="{{ order.customer_notes }}">
+                                <i class="fa-solid fa-note-sticky text-[9px] mr-0.5"></i> {{ order.customer_notes }}
+                            </div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Items / Jars -->
+                        <td class="py-4 px-4 align-top">
+                            <div class="flex items-center gap-1.5 mb-1.5">
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-brand-50 text-brand-800 border border-brand-200">
+                                    <i class="fa-solid fa-jar text-[9px]"></i>
+                                    {{ order.total_items_count }} Jar{% if order.total_items_count != 1 %}s{% endif %}
+                                </span>
+                            </div>
+                            <div class="space-y-1 max-w-[240px]">
+                                {% for item in order.items.all %}
+                                <div class="text-[11px] text-gray-700 flex items-center gap-1.5">
+                                    <span class="font-bold text-gray-900 bg-gray-100 px-1.5 py-0.2 rounded text-[10px]">{{ item.quantity }}x</span>
+                                    <span class="truncate font-medium">{{ item.product_name }}</span>
+                                </div>
+                                {% empty %}
+                                <span class="text-gray-400 text-xs italic">No items</span>
+                                {% endfor %}
+                            </div>
+                        </td>
+
+                        <!-- Payment -->
+                        <td class="py-4 px-4 align-top whitespace-nowrap">
+                            <div class="font-display font-black text-sm text-gray-900">
+                                ৳{{ order.total_amount }}
+                            </div>
+                            <div class="mt-1 flex flex-wrap gap-1">
+                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">
+                                    {{ order.get_payment_method_display }}
+                                </span>
+                                <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded {% if order.payment_status == 'PAID' %}bg-emerald-100 text-emerald-800{% else %}bg-amber-100 text-amber-800{% endif %}">
+                                    {{ order.get_payment_status_display }}
+                                </span>
+                            </div>
+                            {% if order.payment_trx_id %}
+                            <div class="text-[10px] text-gray-400 mt-1 font-mono">
+                                Trx: {{ order.payment_trx_id }}
+                            </div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Status & Quick Selector -->
+                        <td class="py-4 px-4 align-top">
+                            <div class="mb-1.5">
+                                <span class="inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full border {{ order.badge_color }}">
+                                    {{ order.get_order_status_display }}
+                                </span>
+                            </div>
+                            <form action="{% url 'dashboard:update_order_status_quick' order.order_number %}" method="POST" class="inline-block">
+                                {% csrf_token %}
+                                <select 
+                                    name="status" 
+                                    onchange="this.form.submit()" 
+                                    class="bg-white hover:bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 text-[11px] font-bold text-gray-700 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 cursor-pointer shadow-2xs"
+                                >
+                                    {% for code, label in status_choices %}
+                                    <option value="{{ code }}" {% if order.order_status == code %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </form>
+                        </td>
+
+                        <!-- Actions -->
+                        <td class="py-4 px-4 sm:pr-6 align-top text-right">
+                            <div class="flex items-center justify-end gap-1.5">
+                                <a 
+                                    href="{% url 'dashboard:order_detail' order.order_number %}" 
+                                    class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-[11px] px-2.5 py-1.5 rounded-xl inline-flex items-center gap-1 shadow-xs transition active:scale-95"
+                                    title="View & Edit Order Details"
+                                >
+                                    <i class="fa-solid fa-eye text-[10px]"></i>
+                                    <span>Details</span>
+                                </a>
+                                <a 
+                                    href="{% url 'dashboard:order_invoice' order.order_number %}" 
+                                    target="_blank" 
+                                    class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-[11px] px-2 py-1.5 rounded-xl inline-flex items-center gap-1 transition"
+                                    title="Print Delivery Slip / Invoice"
+                                >
+                                    <i class="fa-solid fa-print text-[10px]"></i>
+                                </a>
+                                <form action="{% url 'dashboard:delete_order' order.order_number %}" method="POST" class="inline" onsubmit="return confirm('Permanently delete order #{{ order.order_number }}?')">
+                                    {% csrf_token %}
+                                    <button 
+                                        type="submit" 
+                                        class="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition"
+                                        title="Delete Order"
+                                    >
+                                        <i class="fa-solid fa-trash-can text-xs"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-16 px-4 bg-white">
+                            <div class="max-w-sm mx-auto">
+                                <span class="text-4xl">🥒</span>
+                                <h3 class="font-display font-black text-lg text-gray-900 mt-2">No orders found</h3>
+                                <p class="text-xs text-gray-500 mt-1">There are no orders matching your current search or status filter.</p>
+                                <a href="{% url 'dashboard:orders' %}" class="inline-block mt-4 text-xs font-bold text-brand-700 hover:underline">
+                                    Reset Filters &rarr;
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- CREATE MANUAL ORDER MODAL -->
+<div id="manualOrderModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-5 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+            <div>
+                <h3 class="font-display font-black text-xl text-gray-900">Create Manual Order</h3>
+                <p class="text-xs text-gray-400">For phone calls, WhatsApp or direct customer requests</p>
+            </div>
+            <button type="button" onclick="closeManualOrderModal()" class="text-gray-400 hover:text-gray-700 text-lg p-1">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form action="{% url 'dashboard:create_manual_order' %}" method="POST" class="space-y-4 text-xs">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Customer Full Name *</label>
+                    <input type="text" name="customer_name" required placeholder="e.g. Shakil Hossain" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white">
+                </div>
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Phone Number (11 Digits) *</label>
+                    <input type="tel" name="customer_phone" required placeholder="e.g. 017XXXXXXXX" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white">
+                </div>
+            </div>
+
+            <div>
+                <label class="font-bold text-gray-700 block mb-1">Delivery Address *</label>
+                <input type="text" name="delivery_address" required placeholder="House, Road, Area, Landmark..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">City / District *</label>
+                    <input type="text" name="delivery_city" value="Dhaka" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
+                </div>
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Delivery Fee (Flat)</label>
+                    <input type="text" value="৳130.00 (Flat Nationwide)" disabled class="w-full bg-gray-100 border border-gray-200 rounded-xl px-3 py-2 text-gray-500 font-bold">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3">
+                <div class="col-span-2">
+                    <label class="font-bold text-gray-700 block mb-1">Select Pickle Jar *</label>
+                    <select name="product_id" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white">
+                        {% for p in products %}
+                        <option value="{{ p.id }}">{{ p.name }} (৳{{ p.price_bdt }}) - Stock: {{ p.stock_count }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Quantity *</label>
+                    <input type="number" name="quantity" value="1" min="1" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Payment Method</label>
+                    <select name="payment_method" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 font-bold text-gray-900">
+                        <option value="COD" selected>Cash on Delivery (COD)</option>
+                        <option value="BKASH">bKash Personal</option>
+                        <option value="NAGAD">Nagad Personal</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Payment Status</label>
+                    <select name="payment_status" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 font-bold text-gray-900">
+                        <option value="UNPAID" selected>Unpaid (Pay on Delivery)</option>
+                        <option value="PAID">Paid / Received</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="font-bold text-gray-700 block mb-1">Transaction ID / Rider Note (Optional)</label>
+                <input type="text" name="payment_trx_id" placeholder="TrxID or instructions for delivery..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
+            </div>
+
+            <div class="pt-3 border-t border-gray-100 flex items-center justify-end gap-2">
+                <button type="button" onclick="closeManualOrderModal()" class="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold transition">Cancel</button>
+                <button type="submit" class="px-5 py-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold transition shadow-md">Create Order & Reserve Stock</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openManualOrderModal() {
+    document.getElementById('manualOrderModal').classList.remove('hidden');
+}
+function closeManualOrderModal() {
+    document.getElementById('manualOrderModal').classList.add('hidden');
+}
+</script>
+{% endblock %}

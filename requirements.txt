@@ -1,0 +1,13 @@
+# Core Django Framework
+Django>=4.2,<6.0
+
+# Image processing for Product images (Django ImageField)
+Pillow>=10.0.0
+
+# Optional environment variables management
+python-dotenv>=1.0.0
+
+# Database & Utilities
+sqlparse>=0.4.4
+asgiref>=3.7.0
+tzdata>=2024.1; sys_platform == 'win32'

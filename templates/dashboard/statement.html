@@ -1,0 +1,461 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Income & Expense Statement | Pickpickles Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Top Action & Statement Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-gray-200 shadow-xs print:border-none print:shadow-none print:p-0">
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-blue-100 text-blue-800">
+                    <i class="fa-solid fa-file-invoice-dollar"></i>
+                    P&L Financial Statement
+                </span>
+                <span class="text-xs text-gray-400 font-semibold">• {{ period_title }}</span>
+            </div>
+            <h1 class="font-display font-black text-2xl sm:text-3xl text-gray-900 mt-1">
+                Income & Expense Statement (লাভ-ক্ষতি বিবরণী)
+            </h1>
+            <p class="text-xs sm:text-sm text-gray-500 mt-0.5">
+                Official consolidated financial balance sheet comparing sales revenue inflow vs production costs.
+            </p>
+        </div>
+
+        <div class="flex items-center gap-2 print:hidden flex-wrap">
+            <a href="{% url 'dashboard:statement_print' %}?range={{ date_range }}&start_date={{ start_date_str }}&end_date={{ end_date_str }}" target="_blank" class="bg-gray-900 hover:bg-black text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs flex items-center gap-2 transition active:scale-95">
+                <i class="fa-solid fa-file-pdf text-brand-accent"></i>
+                <span>Print / Save PDF (A4)</span>
+            </a>
+            <a href="{% url 'dashboard:expenses' %}" class="bg-brand-50 hover:bg-brand-100 text-brand-800 text-xs font-bold px-3.5 py-2.5 rounded-xl border border-brand-200 flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-receipt text-xs"></i>
+                <span>Expenses</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Date Range Filter Toolbar -->
+    <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs print:hidden space-y-3">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            
+            <!-- Quick Preset Date Filter Tabs -->
+            <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-xs font-extrabold text-gray-400 uppercase tracking-wider mr-1">Period:</span>
+                
+                <a href="{% url 'dashboard:statement' %}?range=ALL" class="px-3 py-1.5 rounded-xl text-xs font-bold transition {% if date_range == 'ALL' %}bg-brand-700 text-white shadow-xs{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+                    All Time (সর্বমোট)
+                </a>
+                <a href="{% url 'dashboard:statement' %}?range=THIS_MONTH" class="px-3 py-1.5 rounded-xl text-xs font-bold transition {% if date_range == 'THIS_MONTH' %}bg-brand-700 text-white shadow-xs{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+                    This Month
+                </a>
+                <a href="{% url 'dashboard:statement' %}?range=LAST_MONTH" class="px-3 py-1.5 rounded-xl text-xs font-bold transition {% if date_range == 'LAST_MONTH' %}bg-brand-700 text-white shadow-xs{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+                    Last Month
+                </a>
+                <a href="{% url 'dashboard:statement' %}?range=THIS_YEAR" class="px-3 py-1.5 rounded-xl text-xs font-bold transition {% if date_range == 'THIS_YEAR' %}bg-brand-700 text-white shadow-xs{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+                    This Year
+                </a>
+            </div>
+
+            <!-- Custom Date Range Form -->
+            <form method="GET" action="{% url 'dashboard:statement' %}" class="flex items-center gap-2 text-xs">
+                <input type="hidden" name="range" value="CUSTOM">
+                <div class="flex items-center gap-1.5 bg-gray-50 px-2.5 py-1.5 rounded-xl border border-gray-200">
+                    <label class="text-[10px] font-bold text-gray-500 uppercase">From:</label>
+                    <input type="date" name="start_date" value="{{ start_date_str }}" class="bg-transparent border-none text-xs font-semibold text-gray-800 focus:outline-none">
+                </div>
+                <div class="flex items-center gap-1.5 bg-gray-50 px-2.5 py-1.5 rounded-xl border border-gray-200">
+                    <label class="text-[10px] font-bold text-gray-500 uppercase">To:</label>
+                    <input type="date" name="end_date" value="{{ end_date_str }}" class="bg-transparent border-none text-xs font-semibold text-gray-800 focus:outline-none">
+                </div>
+                <button type="submit" class="bg-brand-700 hover:bg-brand-800 text-white font-bold px-3 py-1.5 rounded-xl transition">
+                    Filter
+                </button>
+            </form>
+
+        </div>
+    </div>
+
+    <!-- 4 High-Level Statement Summary Cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+
+        <!-- Card 1: Total Gross Revenue -->
+        <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs relative overflow-hidden">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">Gross Inflow (মোট আয়)</span>
+                <span class="w-7 h-7 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-arrow-trend-up"></i>
+                </span>
+            </div>
+            <div class="mt-2">
+                <span class="font-display font-black text-2xl sm:text-3xl text-gray-900">৳{{ gross_revenue|floatformat:0|default:"0" }}</span>
+            </div>
+            <div class="text-[11px] text-gray-500 mt-2 pt-2 border-t border-gray-100 flex items-center justify-between">
+                <span>{{ orders_count }} Orders</span>
+                <span class="font-bold text-gray-800">{{ jars_sold }} Jars Sold</span>
+            </div>
+        </div>
+
+        <!-- Card 2: Total Business Expenses -->
+        <div class="bg-white p-5 rounded-2xl border border-rose-200 bg-rose-50/15 shadow-xs relative overflow-hidden">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-extrabold text-rose-800 uppercase tracking-wider">Total Outflow (মোট ব্যয়)</span>
+                <span class="w-7 h-7 rounded-xl bg-rose-100 text-rose-800 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-arrow-trend-down"></i>
+                </span>
+            </div>
+            <div class="mt-2">
+                <span class="font-display font-black text-2xl sm:text-3xl text-rose-700">৳{{ total_expenses|floatformat:0|default:"0" }}</span>
+            </div>
+            <div class="text-[11px] text-rose-600 mt-2 pt-2 border-t border-rose-100 flex items-center justify-between font-semibold">
+                <span>{{ expenses_count }} Cost Entries</span>
+                <span>{{ cat_expenses|length }} Categories</span>
+            </div>
+        </div>
+
+        <!-- Card 3: Net Operating Profit / Balance -->
+        <div class="bg-white p-5 rounded-2xl border {% if is_profitable %}border-emerald-200 bg-emerald-50/30{% else %}border-rose-200 bg-rose-50/20{% endif %} shadow-xs relative overflow-hidden">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-extrabold {% if is_profitable %}text-emerald-800{% else %}text-rose-800{% endif %} uppercase tracking-wider">
+                    {% if is_profitable %}Net Profit (নিট লাভ){% else %}Net Balance / Loss{% endif %}
+                </span>
+                <span class="w-7 h-7 rounded-xl {% if is_profitable %}bg-emerald-100 text-emerald-800{% else %}bg-rose-100 text-rose-800{% endif %} flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-scale-balanced"></i>
+                </span>
+            </div>
+            <div class="mt-2">
+                <span class="font-display font-black text-2xl sm:text-3xl {% if is_profitable %}text-emerald-800{% else %}text-rose-700{% endif %}">
+                    ৳{{ net_profit|floatformat:0|default:"0" }}
+                </span>
+            </div>
+            <div class="text-[11px] {% if is_profitable %}text-emerald-700{% else %}text-rose-600{% endif %} font-bold mt-2 pt-2 border-t border-gray-100 flex items-center justify-between">
+                <span>Status:</span>
+                <span class="font-black">{% if is_profitable %}Profitable (লাভজনক){% else %}Cost Deficit (ব্যালেন্স ঘাটতি){% endif %}</span>
+            </div>
+        </div>
+
+        <!-- Card 4: Profit Margin Rate -->
+        <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs relative overflow-hidden">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">Net Profit Margin</span>
+                <span class="w-7 h-7 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-percent"></i>
+                </span>
+            </div>
+            <div class="mt-2">
+                <span class="font-display font-black text-2xl sm:text-3xl {% if is_profitable %}text-emerald-700{% else %}text-gray-900{% endif %}">
+                    {{ profit_margin|default:"0" }}%
+                </span>
+            </div>
+            <div class="text-[11px] text-gray-500 mt-2 pt-2 border-t border-gray-100 flex items-center justify-between">
+                <span>Efficiency:</span>
+                <span class="font-bold text-gray-800">Of gross revenue</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Comparative Statement Tables: Income Streams vs Expense Streams -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Left Table: Income Breakdown (আয় বিবরণী) -->
+        <div class="bg-white p-5 sm:p-6 rounded-2xl border border-gray-200 shadow-xs space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+                <div class="flex items-center gap-2">
+                    <span class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center text-xs">
+                        <i class="fa-solid fa-circle-plus"></i>
+                    </span>
+                    <h3 class="font-display font-black text-base text-gray-900">
+                        1. Revenue Streams (বিক্রয় ও আয়সমূহ)
+                    </h3>
+                </div>
+                <span class="text-xs font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                    +৳{{ gross_revenue|floatformat:0|default:"0" }}
+                </span>
+            </div>
+
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="bg-gray-50 text-[10px] font-extrabold text-gray-500 uppercase tracking-wider">
+                        <th class="py-2.5 px-3 rounded-l-lg">Income Source</th>
+                        <th class="py-2.5 px-3 text-center">Volume</th>
+                        <th class="py-2.5 px-3 text-right rounded-r-lg">Total Amount</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    <tr>
+                        <td class="py-3 px-3">
+                            <span class="font-bold text-gray-900 block">Pickle Product Sales</span>
+                            <span class="text-[10px] text-gray-400">Handcrafted jars item subtotal</span>
+                        </td>
+                        <td class="py-3 px-3 text-center font-bold text-gray-600">{{ jars_sold }} jars</td>
+                        <td class="py-3 px-3 text-right font-display font-black text-gray-900">৳{{ product_sales|floatformat:0 }}</td>
+                    </tr>
+                    <tr>
+                        <td class="py-3 px-3">
+                            <span class="font-bold text-gray-900 block">Delivery Charges Collected</span>
+                            <span class="text-[10px] text-gray-400">Dhaka & Nationwide Courier fees</span>
+                        </td>
+                        <td class="py-3 px-3 text-center font-bold text-gray-600">{{ orders_count }} parcels</td>
+                        <td class="py-3 px-3 text-right font-display font-black text-gray-900">৳{{ delivery_fees|floatformat:0 }}</td>
+                    </tr>
+                    <!-- Payment Methods Split -->
+                    <tr class="bg-gray-50/50">
+                        <td colspan="3" class="py-2 px-3 text-[10px] font-black uppercase tracking-wider text-gray-400">
+                            Collection Channel Summary
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="py-2.5 px-3 text-gray-700 font-semibold">• Cash on Delivery (COD)</td>
+                        <td class="py-2.5 px-3 text-center text-gray-500 text-[11px]">Courier Inflow</td>
+                        <td class="py-2.5 px-3 text-right font-bold text-gray-900">৳{{ cod_revenue|floatformat:0 }}</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2.5 px-3 text-gray-700 font-semibold">• bKash Mobile Wallet</td>
+                        <td class="py-2.5 px-3 text-center text-gray-500 text-[11px]">Digital Inflow</td>
+                        <td class="py-2.5 px-3 text-right font-bold text-gray-900">৳{{ bkash_revenue|floatformat:0 }}</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2.5 px-3 text-gray-700 font-semibold">• Nagad Mobile Wallet</td>
+                        <td class="py-2.5 px-3 text-center text-gray-500 text-[11px]">Digital Inflow</td>
+                        <td class="py-2.5 px-3 text-right font-bold text-gray-900">৳{{ nagad_revenue|floatformat:0 }}</td>
+                    </tr>
+                    <tr class="bg-amber-50/40">
+                        <td class="py-2.5 px-3 text-amber-900 font-semibold">• Pending Delivery (In-Transit)</td>
+                        <td class="py-2.5 px-3 text-center text-amber-700 text-[11px]">Awaiting Collection</td>
+                        <td class="py-2.5 px-3 text-right font-bold text-amber-800">৳{{ pipeline_revenue|floatformat:0 }}</td>
+                    </tr>
+                    <tr class="border-t-2 border-gray-200 bg-emerald-50/40">
+                        <td class="py-3 px-3 font-extrabold text-gray-900">Realized Inflow (আদায়কৃত মোট আয়)</td>
+                        <td class="py-3 px-3 text-center font-extrabold text-emerald-800">{{ orders_count }} Delivered</td>
+                        <td class="py-3 px-3 text-right font-display font-black text-emerald-800 text-sm">৳{{ gross_revenue|floatformat:0 }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Right Table: Expense Allocations (ব্যয় বিবরণী) -->
+        <div class="bg-white p-5 sm:p-6 rounded-2xl border border-gray-200 shadow-xs space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+                <div class="flex items-center gap-2">
+                    <span class="w-7 h-7 rounded-lg bg-rose-50 text-rose-700 flex items-center justify-center text-xs">
+                        <i class="fa-solid fa-circle-minus"></i>
+                    </span>
+                    <h3 class="font-display font-black text-base text-gray-900">
+                        2. Expense Allocations (ব্যবসায়িক খরচসমূহ)
+                    </h3>
+                </div>
+                <span class="text-xs font-black text-rose-700 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200">
+                    -৳{{ total_expenses|floatformat:0|default:"0" }}
+                </span>
+            </div>
+
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="bg-gray-50 text-[10px] font-extrabold text-gray-500 uppercase tracking-wider">
+                        <th class="py-2.5 px-3 rounded-l-lg">Cost Category</th>
+                        <th class="py-2.5 px-3 text-center">Share</th>
+                        <th class="py-2.5 px-3 text-right rounded-r-lg">Total Cost</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for cat in cat_expenses %}
+                    <tr>
+                        <td class="py-2.5 px-3">
+                            <span class="font-bold text-gray-900 block">{{ cat.name }}</span>
+                            <span class="text-[10px] text-gray-400">{{ cat.count }} record(s)</span>
+                        </td>
+                        <td class="py-2.5 px-3 text-center">
+                            <span class="text-[10px] font-extrabold bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">
+                                {{ cat.percentage }}%
+                            </span>
+                        </td>
+                        <td class="py-2.5 px-3 text-right font-display font-black text-rose-700">৳{{ cat.amount|floatformat:0 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="py-6 text-center text-gray-400 font-medium">
+                            No expense entries recorded in this period.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="border-t-2 border-gray-200 bg-rose-50/40">
+                        <td class="py-3 px-3 font-extrabold text-gray-900">Total Outflow (মোট প্রডাকশন ব্যয়)</td>
+                        <td class="py-3 px-3 text-center font-extrabold text-rose-800">{{ expenses_count }} Entries</td>
+                        <td class="py-3 px-3 text-right font-display font-black text-rose-800 text-sm">৳{{ total_expenses|floatformat:0 }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <!-- Final Profit & Loss Statement Reconciliation Card -->
+    <div class="bg-gray-900 text-white p-6 rounded-2xl shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6 print:bg-white print:text-black print:border print:border-gray-300">
+        <div>
+            <span class="text-[10px] font-black uppercase tracking-widest text-brand-accent">Executive Statement Balance</span>
+            <h2 class="font-display font-black text-xl sm:text-2xl mt-1">
+                Net Operating Balance (চূড়ান্ত লাভ-ক্ষতি স্থিতি):
+                <span class="{% if is_profitable %}text-emerald-400{% else %}text-rose-400{% endif %}">
+                    ৳{{ net_profit|floatformat:0 }}
+                </span>
+            </h2>
+            <p class="text-xs text-gray-400 mt-1">
+                Calculation: Gross Inflow (৳{{ gross_revenue|floatformat:0 }}) - Total Operating Costs (৳{{ total_expenses|floatformat:0 }}) = Net Balance (৳{{ net_profit|floatformat:0 }})
+            </p>
+        </div>
+        <div class="flex items-center gap-3 shrink-0">
+            <div class="text-right">
+                <span class="text-[10px] text-gray-400 block uppercase font-bold">Return Margin</span>
+                <span class="font-display font-black text-xl text-white">{{ profit_margin }}%</span>
+            </div>
+            <div class="h-10 w-px bg-gray-700"></div>
+            <div class="text-right">
+                <span class="text-[10px] text-gray-400 block uppercase font-bold">Statement Status</span>
+                <span class="font-bold text-xs {% if is_profitable %}text-emerald-400{% else %}text-rose-400{% endif %}">
+                    {% if is_profitable %}PROFITABLE 🎉{% else %}INVESTMENT PHASE{% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chronological Unified Ledger Table (আয় ও ব্যয়ের পূর্ণাঙ্গ খতিয়ান) -->
+    <div class="bg-white p-5 sm:p-6 rounded-2xl border border-gray-200 shadow-xs space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-gray-100 gap-2">
+            <div>
+                <h3 class="font-display font-black text-base sm:text-lg text-gray-900 flex items-center gap-2">
+                    <i class="fa-solid fa-list-ol text-brand-600"></i>
+                    Unified Cashflow Ledger (আয় ও ব্যয়ের ধারাবাহিক রেজিস্টার)
+                </h3>
+                <p class="text-xs text-gray-400">All customer sales inflows and supplier outflows listed chronologically</p>
+            </div>
+            <span class="text-xs font-bold text-gray-500 bg-gray-100 px-3 py-1.5 rounded-xl">
+                Showing {{ transactions|length }} Transactions
+            </span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="bg-gray-50 text-[10px] font-extrabold text-gray-500 uppercase tracking-wider rounded-xl">
+                        <th class="py-3 px-3 rounded-l-xl">Date & Time</th>
+                        <th class="py-3 px-3">Type</th>
+                        <th class="py-3 px-3">Description / Party</th>
+                        <th class="py-3 px-3">Category / Method</th>
+                        <th class="py-3 px-3">Ref / Invoice</th>
+                        <th class="py-3 px-3 text-right rounded-r-xl">Amount (BDT)</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for txn in transactions %}
+                    <tr class="hover:bg-gray-50/80 transition-colors">
+                        <td class="py-3 px-3 font-semibold text-gray-600">
+                            {{ txn.date|date:"M d, Y" }}
+                            <span class="block text-[10px] text-gray-400">{{ txn.date|date:"h:i A" }}</span>
+                        </td>
+                        <td class="py-3 px-3">
+                            {% if txn.is_income %}
+                            <span class="inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                <i class="fa-solid fa-arrow-down-left text-[9px]"></i>
+                                Inflow (আয়)
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200">
+                                <i class="fa-solid fa-arrow-up-right text-[9px]"></i>
+                                Outflow (ব্যয়)
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-3 font-bold text-gray-900">
+                            {% if txn.url %}
+                            <a href="{{ txn.url }}" class="hover:text-brand-700 hover:underline flex items-center gap-1">
+                                <span>{{ txn.title }}</span>
+                                <i class="fa-solid fa-arrow-up-right-from-square text-[9px] opacity-60"></i>
+                            </a>
+                            {% else %}
+                            <span>{{ txn.title }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-3 text-gray-600">
+                            <span class="font-semibold text-gray-800">{{ txn.category }}</span>
+                            <span class="block text-[10px] text-gray-400">{{ txn.payment_method }}</span>
+                        </td>
+                        <td class="py-3 px-3 font-mono text-[11px] text-gray-500">
+                            {{ txn.ref|default:"-" }}
+                        </td>
+                        <td class="py-3 px-3 text-right">
+                            {% if txn.is_income %}
+                            <span class="font-display font-black text-emerald-700 text-sm">
+                                +৳{{ txn.amount|floatformat:0 }}
+                            </span>
+                            {% else %}
+                            <span class="font-display font-black text-rose-700 text-sm">
+                                -৳{{ txn.amount|floatformat:0 }}
+                            </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="py-10 text-center text-gray-400 text-xs font-medium">
+                            No income or expense transactions logged yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <!-- Official Printable Letterhead Footer -->
+    <div class="hidden print:block text-center text-xs text-gray-500 pt-8 border-t border-gray-300">
+        <p class="font-bold text-gray-900">Pickpickles Handcrafted Artisan Kitchen • Dhaka, Bangladesh</p>
+        <p class="text-[10px] text-gray-400 mt-1">Generated automatically by Pickpickles Management System on {{ now|date:"F d, Y h:i A" }}</p>
+    </div>
+
+</div>
+
+<style>
+@media print {
+    body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        font-size: 11pt !important;
+    }
+    #sidebarNav, #sidebarBackdrop, nav, .print\:hidden {
+        display: none !important;
+    }
+    aside {
+        display: none !important;
+    }
+    main {
+        width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    .shadow-xs, .shadow-md, .shadow-xl {
+        box-shadow: none !important;
+    }
+    table {
+        border-collapse: collapse !important;
+        width: 100% !important;
+    }
+    th, td {
+        border: 1px solid #e5e7eb !important;
+        padding: 6px 8px !important;
+    }
+    thead th {
+        background-color: #f3f4f6 !important;
+        color: #111827 !important;
+    }
+    .bg-gray-900 {
+        background-color: #111827 !important;
+        color: #ffffff !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
+</style>
+{% endblock %}

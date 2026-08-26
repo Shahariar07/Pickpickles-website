@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Shopping Cart | Pickpickles Bangladesh{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+    
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="font-display font-black text-2xl sm:text-3xl text-gray-900">Your Pickle Jar Cart</h1>
+            <p class="text-xs sm:text-sm text-gray-500 mt-1">Review your jars before checkout.</p>
+        </div>
+        <a href="{% url 'store:index' %}#pickle-menu" class="text-xs sm:text-sm font-bold text-brand-600 hover:text-brand-800 flex items-center gap-1">
+            <i class="fa-solid fa-arrow-left"></i> Add More Jars
+        </a>
+    </div>
+
+    {% if cart|length > 0 %}
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        <!-- Cart Items List -->
+        <div class="lg:col-span-8 space-y-4">
+            {% for item in cart %}
+            <div class="bg-white p-4 sm:p-5 rounded-3xl border border-gray-200 shadow-xs flex flex-col sm:flex-row items-center gap-4 sm:gap-6" id="cart-page-item-{{ item.product.id }}">
+                <img src="{{ item.product.primary_image_url }}" alt="{{ item.product.name }}" class="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-2xl border border-gray-100 flex-shrink-0">
+                
+                <div class="flex-1 text-center sm:text-left min-w-0">
+                    <h3 class="font-display font-extrabold text-base sm:text-lg text-gray-900">
+                        <a href="{% url 'store:product_detail' item.product.slug %}" class="hover:text-brand-700">{{ item.product.name }}</a>
+                    </h3>
+                    <p class="text-xs text-gray-500 mt-0.5">{{ item.product.jar_weight_grams }}g Glass Jar • ৳{{ item.price }} each</p>
+                    <span class="inline-block mt-1 text-[10px] bg-brand-50 text-brand-700 font-bold px-2 py-0.5 rounded">{{ item.product.get_cut_style_display }}</span>
+                </div>
+
+                <!-- Quantity controls -->
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center border border-gray-200 rounded-xl bg-gray-50 overflow-hidden shadow-xs">
+                        <button onclick="ajaxUpdateCart({{ item.product.id }}, 'decrease')" class="w-8 h-8 flex items-center justify-center text-sm font-bold text-gray-600 hover:bg-gray-200">-</button>
+                        <span class="w-10 text-center font-extrabold text-sm text-gray-900 bg-white py-1" id="cart-page-qty-{{ item.product.id }}">{{ item.quantity }}</span>
+                        <button onclick="ajaxUpdateCart({{ item.product.id }}, 'increase')" class="w-8 h-8 flex items-center justify-center text-sm font-bold text-gray-600 hover:bg-gray-200">+</button>
+                    </div>
+
+                    <div class="text-right min-w-[70px]">
+                        <span class="font-display font-black text-base sm:text-lg text-gray-900 block" id="cart-page-total-{{ item.product.id }}">৳{{ item.total_price }}</span>
+                    </div>
+
+                    <button onclick="ajaxUpdateCart({{ item.product.id }}, 'remove')" class="text-gray-400 hover:text-rose-500 p-2 text-sm transition" title="Remove">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Order Summary Card -->
+        <div class="lg:col-span-4 bg-white p-6 rounded-3xl border border-gray-200 shadow-md space-y-4">
+            <h3 class="font-display font-black text-lg text-gray-900 border-b border-gray-100 pb-3">Order Summary</h3>
+
+            <div class="space-y-2 text-sm">
+                <div class="flex justify-between text-gray-600">
+                    <span>Jars Subtotal</span>
+                    <span class="font-bold text-gray-900">৳<span id="pageCartSubtotal">{{ cart_subtotal }}</span></span>
+                </div>
+                <div class="flex justify-between text-gray-600">
+                    <span>Delivery Fee (Nationwide)</span>
+                    <span class="font-bold text-gray-900">৳130.00</span>
+                </div>
+            </div>
+
+            <div class="border-t border-gray-100 pt-3 flex justify-between items-baseline">
+                <span class="font-bold text-gray-900">Total (Est.)</span>
+                <span class="font-display font-black text-2xl text-brand-700">৳<span id="pageCartTotal">{{ cart_subtotal|add:"130" }}</span></span>
+            </div>
+
+            <a href="{% url 'store:checkout' %}" class="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-700 hover:to-brand-800 active:scale-[0.99] text-white font-display font-extrabold text-base py-3.5 px-4 rounded-2xl shadow-xl shadow-brand-600/20 text-center transition-all">
+                <span>Proceed to Checkout</span>
+                <i class="fa-solid fa-arrow-right text-sm"></i>
+            </a>
+
+            <div class="pt-2 text-center text-xs text-gray-400 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-lock text-brand-600"></i>
+                <span>Fast & Secure Mobile Checkout</span>
+            </div>
+        </div>
+
+    </div>
+    {% else %}
+    <div class="text-center py-16 bg-white rounded-3xl border border-gray-200 p-8 max-w-lg mx-auto">
+        <div class="w-20 h-20 bg-brand-50 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl">
+            🥒
+        </div>
+        <h2 class="font-display font-black text-xl text-gray-900">Your Cart is Currently Empty</h2>
+        <p class="text-xs sm:text-sm text-gray-500 mt-2 mb-6">Discover our crunchy American-style deli dill and Bread & Butter pickle flavors made right here in Bangladesh.</p>
+        <a href="{% url 'store:index' %}#pickle-menu" class="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm px-6 py-3 rounded-2xl shadow-md transition">
+            <span>Explore Pickle Flavors</span>
+            <i class="fa-solid fa-arrow-right text-xs"></i>
+        </a>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

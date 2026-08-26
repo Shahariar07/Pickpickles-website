@@ -1,0 +1,144 @@
+/* =========================================================
+   PICKPICKLES - ARTISANAL AMERICAN PICKLES IN BANGLADESH
+   Custom Stylesheet & Micro-Interactions
+   ========================================================= */
+
+:root {
+    --color-pickle-dark: #081c15;
+    --color-pickle-forest: #133926;
+    --color-pickle-leaf: #1b4332;
+    --color-pickle-dill: #2d6a4f;
+    --color-pickle-light: #74c69d;
+    --color-mustard-gold: #e0a96d;
+    --color-mustard-accent: #f4a261;
+}
+
+body {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Hero Dark Section Theme */
+.hero-dark-bg {
+    background-color: #062314;
+    background-image: radial-gradient(#15803d 1px, transparent 1px), linear-gradient(180deg, #04170c 0%, #092d18 50%, #062314 100%);
+    background-size: 20px 20px, 100% 100%;
+}
+
+.hero-card-dark {
+    background-color: #0d3820;
+    border: 1px solid rgba(116, 198, 157, 0.25);
+}
+
+/* High Contrast Card Styling */
+.product-card {
+    background-color: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.08);
+}
+.product-card:hover {
+    border-color: #15803d;
+    box-shadow: 0 12px 24px -6px rgba(15, 23, 42, 0.12);
+}
+
+/* Text readability utilities */
+.text-high-contrast {
+    color: #0f172a;
+}
+.text-medium-contrast {
+    color: #334155;
+}
+.text-muted-contrast {
+    color: #64748b;
+}
+
+/* Forms & Inputs styling */
+.form-input {
+    width: 100%;
+    background-color: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 1rem;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #0f172a;
+    transition: all 0.2s ease-in-out;
+}
+.form-input:focus {
+    background-color: #ffffff;
+    border-color: #15803d;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.2);
+}
+.form-input::placeholder {
+    color: #64748b;
+    font-weight: 500;
+}
+
+.form-select {
+    width: 100%;
+    background-color: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 1rem;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #0f172a;
+    transition: all 0.2s ease-in-out;
+}
+.form-select:focus {
+    background-color: #ffffff;
+    border-color: #15803d;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.2);
+}
+
+/* Safe area inset for modern mobile screens */
+.safe-area-bottom {
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+}
+
+/* Smooth Drawer Transition */
+#cartDrawer.open {
+    transform: translateX(0);
+}
+#cartDrawerBackdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Toast animation */
+#toastNotification.show {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+/* Aspect ratio helper */
+.aspect-4\/3 {
+    aspect-ratio: 4 / 3;
+}
+

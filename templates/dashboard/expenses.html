@@ -1,0 +1,549 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Expenses & Cost Management | Pickpickles Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Top Action & Summary Header -->
+    <div
+        class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-3xl border border-gray-200 shadow-xs">
+        <div>
+            <div class="flex items-center gap-2">
+                <span
+                    class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-amber-100 text-amber-800">
+                    <i class="fa-solid fa-receipt"></i>
+                    Financial Intelligence
+                </span>
+                <span class="text-xs text-gray-400 font-semibold">• {{ expense_count }} cost records logged</span>
+            </div>
+            <h1 class="font-display font-black text-2xl sm:text-3xl text-gray-900 mt-1">
+                Expenses & Cost Tracking (খরচের হিসাব)
+            </h1>
+            <p class="text-xs sm:text-sm text-gray-500 mt-0.5">
+                Track jar packaging, cucumber sourcing, vinegar/spices, courier fees, and calculate net profit.
+            </p>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <a href="{% url 'dashboard:statement' %}"
+                class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs px-3.5 py-2.5 rounded-xl border border-gray-200 flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-file-invoice-dollar text-brand-700"></i>
+                <span>P&L Statement</span>
+            </a>
+            <button type="button" onclick="openAddExpenseModal()"
+                class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md flex items-center gap-2 transition active:scale-95">
+                <i class="fa-solid fa-circle-plus text-brand-accent"></i>
+                <span>Record Expense</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 4 Profit & Loss Metric Cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+
+        <!-- Card 1: Gross Sales Revenue (Delivered / Paid) -->
+        <div class="bg-white p-5 rounded-3xl border border-gray-200 shadow-xs">
+            <div class="flex items-center justify-between">
+                <span class="text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Collected Revenue</span>
+                <span class="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-chart-line"></i>
+                </span>
+            </div>
+            <div class="mt-2">
+                <span class="font-display font-black text-2xl sm:text-3xl text-gray-900">৳{{ total_revenue|floatformat:0|default:"0" }}</span>
+            </div>
+            <span class="text-[11px] text-gray-500 mt-1 block">Queue: ৳{{ pipeline_revenue|floatformat:0|default:"0" }} in delivery pipeline</span>
+        </div>
+
+        <!-- Card 2: Total Expenses -->
+        <div class="bg-white p-5 rounded-3xl border border-rose-200 bg-rose-50/20 shadow-xs">
+            <div class="flex items-center justify-between">
+                <span class="text-[11px] font-extrabold text-rose-800 uppercase tracking-wider">Total Costs Incurred</span>
+                <span class="w-8 h-8 rounded-xl bg-rose-100 text-rose-800 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-arrow-trend-down"></i>
+                </span>
+            </div>
+            <div class="mt-2">
+                <span class="font-display font-black text-2xl sm:text-3xl text-rose-700">৳{{ total_expenses|floatformat:0|default:"0" }}</span>
+            </div>
+            <span class="text-[11px] text-rose-600 font-semibold mt-1 block">Jars, ingredients & delivery</span>
+        </div>
+
+        <!-- Card 3: Net Profit / Net Balance -->
+        <div class="bg-white p-5 rounded-3xl border {% if net_profit >= 0 %}border-emerald-200 bg-emerald-50/30{% else %}border-rose-200 bg-rose-50/20{% endif %} shadow-xs">
+            <div class="flex items-center justify-between">
+                <span class="text-[11px] font-extrabold {% if net_profit >= 0 %}text-emerald-800{% else %}text-rose-800{% endif %} uppercase tracking-wider">
+                    {% if net_profit >= 0 %}Net Profit (নিট লাভ){% else %}Net Balance / Loss (ব্যালেন্স){% endif %}
+                </span>
+                <span class="w-8 h-8 rounded-xl {% if net_profit >= 0 %}bg-emerald-100 text-emerald-800{% else %}bg-rose-100 text-rose-800{% endif %} flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-wallet"></i>
+                </span>
+            </div>
+            <div class="mt-2">
+                <span class="font-display font-black text-2xl sm:text-3xl {% if net_profit >= 0 %}text-emerald-800{% else %}text-rose-700{% endif %}">
+                    ৳{{ net_profit|floatformat:0|default:"0" }}
+                </span>
+            </div>
+            <span class="text-[11px] {% if net_profit >= 0 %}text-emerald-700{% else %}text-rose-600{% endif %} font-bold mt-1 block">
+                Margin: {{ profit_margin|default:"0" }}% of revenue
+            </span>
+        </div>
+
+        <!-- Card 4: This Month's Spending -->
+        <div class="bg-white p-5 rounded-3xl border border-gray-200 shadow-xs">
+            <div class="flex items-center justify-between">
+                <span class="text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">This Month's Costs</span>
+                <span class="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-calendar-check"></i>
+                </span>
+            </div>
+            <div class="mt-2">
+                <span class="font-display font-black text-2xl sm:text-3xl text-gray-900">৳{{ this_month_expenses|floatformat:0|default:"0" }}</span>
+            </div>
+            <span class="text-[11px] text-gray-400 mt-1 block">Current monthly burn rate</span>
+        </div>
+
+    </div>
+
+    <!-- Search & Filters Toolbar -->
+    <div class="bg-white p-4 sm:p-5 rounded-3xl border border-gray-200 shadow-xs space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+
+            <!-- Search Form -->
+            <form method="GET" action="{% url 'dashboard:expenses' %}" class="flex-1 max-w-md">
+                <input type="hidden" name="category" value="{{ category_filter }}">
+                <div class="relative flex items-center">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 text-gray-400 text-xs"></i>
+                    <input type="text" name="q" value="{{ search_query }}"
+                        placeholder="Search by title, invoice #, notes..."
+                        class="w-full bg-gray-50 pl-9 pr-20 py-2.5 rounded-xl border border-gray-200 text-xs font-medium focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    <button type="submit"
+                        class="absolute right-1.5 bg-brand-700 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg hover:bg-brand-800 transition">
+                        Search
+                    </button>
+                </div>
+            </form>
+
+            <span class="text-xs font-bold text-gray-500">
+                Showing {{ expense_count }} records
+            </span>
+
+        </div>
+
+        <!-- Category Filter Tabs -->
+        <div
+            class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-bold scrollbar-none border-t border-gray-100 pt-3">
+            <a href="?category=ALL&q={{ search_query }}"
+                class="px-3 py-1.5 rounded-xl whitespace-nowrap transition {% if category_filter == 'ALL' %}bg-gray-900 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+                All Expenses
+            </a>
+            {% for cat in dynamic_categories %}
+            <a href="?category={{ cat.slug }}&q={{ search_query }}"
+                class="px-3 py-1.5 rounded-xl whitespace-nowrap transition {% if category_filter == cat.slug or category_filter == cat.name %}bg-brand-700 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+                {{ cat.name }}
+            </a>
+            {% empty %}
+            {% for code, label in category_choices %}
+            <a href="?category={{ code }}&q={{ search_query }}"
+                class="px-3 py-1.5 rounded-xl whitespace-nowrap transition {% if category_filter == code %}bg-brand-700 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+                {{ label }}
+            </a>
+            {% endfor %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Expenses Table Card -->
+    <div class="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-50/80 border-b border-gray-200/80 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider">
+                        <th class="py-3.5 px-4 sm:px-6">Expense Details</th>
+                        <th class="py-3.5 px-4">Category</th>
+                        <th class="py-3.5 px-4">Date & Ref</th>
+                        <th class="py-3.5 px-4">Payment Method</th>
+                        <th class="py-3.5 px-4 text-right">Cost (৳)</th>
+                        <th class="py-3.5 px-4 text-right sm:pr-6">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 text-xs font-medium">
+                    {% for exp in expenses %}
+                    <tr 
+                        class="hover:bg-brand-50/40 transition-colors group cursor-pointer"
+                        onclick="if(!event.target.closest('a, button, select, input, form, label')) { openEditExpenseModal({ id: '{{ exp.id }}', title: '{{ exp.title|escapejs }}', category: '{{ exp.category }}', amount: '{{ exp.amount }}', expenseDate: '{{ exp.expense_date|date:'Y-m-d' }}', paymentMethod: '{{ exp.payment_method }}', receiptRef: '{{ exp.receipt_reference|escapejs }}', notes: '{{ exp.notes|escapejs }}' }); }"
+                        title="Click row to view & edit expense details"
+                    >
+                        <!-- Col 1: Title & Notes -->
+                        <td class="py-4 px-4 sm:px-6 align-top max-w-[280px]">
+                            <div class="flex items-start gap-2.5">
+                                <div class="w-8 h-8 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center text-xs shrink-0 mt-0.5 border border-rose-100">
+                                    <i class="fa-solid fa-receipt"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-gray-900 text-sm group-hover:text-brand-800 transition">
+                                        {{ exp.title }}
+                                    </h4>
+                                    {% if exp.notes %}
+                                    <p class="text-gray-400 text-[11px] truncate max-w-xs mt-0.5" title="{{ exp.notes }}">
+                                        {{ exp.notes }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Col 2: Category Badge -->
+                        <td class="py-4 px-4 align-top">
+                            <span class="inline-flex items-center gap-1 bg-amber-50 text-amber-900 border border-amber-200/80 px-2.5 py-1 rounded-xl text-[11px] font-bold">
+                                {{ exp.category_display_name }}
+                            </span>
+                        </td>
+
+                        <!-- Col 3: Date & Reference -->
+                        <td class="py-4 px-4 align-top whitespace-nowrap">
+                            <span class="font-bold text-gray-800 block">
+                                <i class="fa-regular fa-calendar text-gray-400 text-[10px] mr-1"></i>
+                                {{ exp.expense_date|date:"M d, Y" }}
+                            </span>
+                            {% if exp.receipt_reference %}
+                            <span class="text-gray-400 text-[10px] font-mono mt-0.5 block">
+                                Ref: {{ exp.receipt_reference }}
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Col 4: Payment Method -->
+                        <td class="py-4 px-4 align-top whitespace-nowrap">
+                            <span class="bg-gray-100 text-gray-700 px-2.5 py-1 rounded-lg font-bold text-[11px] inline-flex items-center gap-1">
+                                <i class="fa-solid fa-credit-card text-[10px] text-gray-400"></i>
+                                {{ exp.get_payment_method_display }}
+                            </span>
+                        </td>
+
+                        <!-- Col 5: Amount -->
+                        <td class="py-4 px-4 align-top text-right whitespace-nowrap">
+                            <span class="font-display font-black text-base text-rose-700">
+                                ৳{{ exp.amount|floatformat:0 }}
+                            </span>
+                        </td>
+
+                        <!-- Col 6: Edit & Delete -->
+                        <td class="py-4 px-4 sm:pr-6 align-top text-right whitespace-nowrap">
+                            <div class="flex items-center justify-end gap-1.5">
+                                <button 
+                                    type="button" 
+                                    onclick="openEditExpenseModal({
+                                        id: '{{ exp.id }}',
+                                        title: '{{ exp.title|escapejs }}',
+                                        category: '{{ exp.category }}',
+                                        amount: '{{ exp.amount }}',
+                                        expenseDate: '{{ exp.expense_date|date:'Y-m-d' }}',
+                                        paymentMethod: '{{ exp.payment_method }}',
+                                        receiptRef: '{{ exp.receipt_reference|escapejs }}',
+                                        notes: '{{ exp.notes|escapejs }}'
+                                    })"
+                                    class="bg-brand-700 hover:bg-brand-800 text-white px-2.5 py-1.5 rounded-xl font-bold text-[11px] inline-flex items-center gap-1 shadow-xs transition active:scale-95"
+                                    title="Edit Expense Record"
+                                >
+                                    <i class="fa-solid fa-pen-to-square text-[10px]"></i>
+                                    <span>Edit</span>
+                                </button>
+
+                                <button 
+                                    type="button"
+                                    onclick="openDeleteExpenseModal('{{ exp.id }}', '{{ exp.title|escapejs }}', '{{ exp.amount }}')"
+                                    class="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition"
+                                    title="Delete expense record"
+                                >
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-16 px-4 bg-white">
+                            <div class="max-w-sm mx-auto">
+                                <span class="text-4xl">🧾</span>
+                                <h3 class="font-display font-black text-lg text-gray-900 mt-2">No expense records found</h3>
+                                <p class="text-xs text-gray-500 mt-1">There are no expense records matching your search or category filter.</p>
+                                <a href="{% url 'dashboard:expenses' %}" class="inline-block mt-4 text-xs font-bold text-brand-700 hover:underline">
+                                    Reset Filters &rarr;
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- ========================================================================= -->
+<!-- 1. RECORD NEW EXPENSE MODAL -->
+<!-- ========================================================================= -->
+<div id="addExpenseModal"
+    class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div
+        class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-5 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+            <div class="flex items-center gap-2">
+                <span
+                    class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-plus"></i>
+                </span>
+                <h3 class="font-display font-black text-xl text-gray-900">Record New Expense</h3>
+            </div>
+            <button type="button" onclick="closeAddExpenseModal()"
+                class="text-gray-400 hover:text-gray-700 text-lg p-1">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form method="POST" class="space-y-4 text-xs">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create_expense">
+
+            <div>
+                <label class="font-bold text-gray-700 block mb-1">Expense Title / Description *</label>
+                <input type="text" name="title" required placeholder="e.g. 500x Glass Jars with Gold Metal Lids"
+                    class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Expense Category *</label>
+                    <select name="category" required
+                        class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white">
+                        {% for cat in dynamic_categories %}
+                        <option value="{{ cat.slug }}">{{ cat.name }}</option>
+                        {% empty %}
+                        {% for code, label in category_choices %}
+                        <option value="{{ code }}">{{ label }}</option>
+                        {% endfor %}
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Amount (৳ BDT) *</label>
+                    <input type="number" step="0.01" name="amount" required placeholder="e.g. 4500.00"
+                        class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white">
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Expense Date</label>
+                    <input type="date" name="expense_date" value="{% now 'Y-m-d' %}"
+                        class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white">
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Payment Method</label>
+                    <select name="payment_method"
+                        class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white">
+                        {% for code, label in payment_choices %}
+                        <option value="{{ code }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="font-bold text-gray-700 block mb-1">Voucher / TrxID Reference</label>
+                <input type="text" name="receipt_reference" placeholder="e.g. BKT-991823 or MEMO #45"
+                    class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 text-gray-900 focus:bg-white">
+            </div>
+
+            <div>
+                <label class="font-bold text-gray-700 block mb-1">Notes / Supplier Info</label>
+                <textarea name="notes" rows="2" placeholder="e.g. Purchased from Chawkbazar packaging supplier..."
+                    class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white"></textarea>
+            </div>
+
+            <div class="pt-4 border-t border-gray-100 flex items-center justify-end gap-2">
+                <button type="button" onclick="closeAddExpenseModal()"
+                    class="px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold transition">
+                    Cancel
+                </button>
+                <button type="submit"
+                    class="px-5 py-2.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold transition shadow-md">
+                    Save Expense
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- 2. EDIT EXPENSE MODAL -->
+<!-- ========================================================================= -->
+<div id="editExpenseModal"
+    class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div
+        class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-5 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+            <div class="flex items-center gap-2">
+                <span class="w-8 h-8 rounded-xl bg-brand-100 text-brand-800 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                </span>
+                <h3 class="font-display font-black text-xl text-gray-900">Edit Expense Record</h3>
+            </div>
+            <button type="button" onclick="closeEditExpenseModal()"
+                class="text-gray-400 hover:text-gray-700 text-lg p-1">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form method="POST" class="space-y-4 text-xs">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="edit_expense">
+            <input type="hidden" id="edit_exp_id" name="expense_id" value="">
+
+            <div>
+                <label class="font-bold text-gray-700 block mb-1">Expense Title / Description *</label>
+                <input type="text" id="edit_exp_title" name="title" required
+                    class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Expense Category *</label>
+                    <select id="edit_exp_category" name="category" required
+                        class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white">
+                        {% for cat in dynamic_categories %}
+                        <option value="{{ cat.slug }}">{{ cat.name }}</option>
+                        {% empty %}
+                        {% for code, label in category_choices %}
+                        <option value="{{ code }}">{{ label }}</option>
+                        {% endfor %}
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Amount (৳ BDT) *</label>
+                    <input type="number" step="0.01" id="edit_exp_amount" name="amount" required
+                        class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white">
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Expense Date</label>
+                    <input type="date" id="edit_exp_date" name="expense_date"
+                        class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white">
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Payment Method</label>
+                    <select id="edit_exp_payment_method" name="payment_method"
+                        class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white">
+                        {% for code, label in payment_choices %}
+                        <option value="{{ code }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="font-bold text-gray-700 block mb-1">Voucher / TrxID Reference</label>
+                <input type="text" id="edit_exp_receipt_ref" name="receipt_reference"
+                    class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 text-gray-900 focus:bg-white">
+            </div>
+
+            <div>
+                <label class="font-bold text-gray-700 block mb-1">Notes / Supplier Info</label>
+                <textarea id="edit_exp_notes" name="notes" rows="2"
+                    class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white"></textarea>
+            </div>
+
+            <div class="pt-4 border-t border-gray-100 flex items-center justify-end gap-2">
+                <button type="button" onclick="closeEditExpenseModal()"
+                    class="px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold transition">
+                    Cancel
+                </button>
+                <button type="submit"
+                    class="px-5 py-2.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold transition shadow-md">
+                    Update Expense
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- 3. DELETE EXPENSE CONFIRMATION MODAL -->
+<!-- ========================================================================= -->
+<div id="deleteExpenseModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative text-center">
+
+        <div class="w-14 h-14 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto text-2xl">
+            <i class="fa-solid fa-trash-can"></i>
+        </div>
+
+        <div>
+            <h3 class="font-display font-black text-lg text-gray-900">Delete Expense Record?</h3>
+            <p class="text-xs text-gray-500 mt-1">
+                Are you sure you want to delete <strong id="del_exp_title" class="text-gray-900">this record</strong>
+                (৳<span id="del_exp_amount"></span>)?
+            </p>
+        </div>
+
+        <form method="POST" class="pt-2 flex items-center justify-center gap-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete_expense">
+            <input type="hidden" id="del_exp_id" name="expense_id" value="">
+
+            <button type="button" onclick="closeDeleteExpenseModal()"
+                class="w-1/2 px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs transition">
+                Cancel
+            </button>
+            <button type="submit"
+                class="w-1/2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition shadow-md">
+                Yes, Delete
+            </button>
+        </form>
+
+    </div>
+</div>
+
+<script>
+    // Modal Helpers
+    function openAddExpenseModal() {
+        document.getElementById('addExpenseModal').classList.remove('hidden');
+    }
+    function closeAddExpenseModal() {
+        document.getElementById('addExpenseModal').classList.add('hidden');
+    }
+    function openEditExpenseModal(exp) {
+        document.getElementById('edit_exp_id').value = exp.id;
+        document.getElementById('edit_exp_title').value = exp.title;
+        document.getElementById('edit_exp_category').value = exp.category;
+        document.getElementById('edit_exp_amount').value = exp.amount;
+        document.getElementById('edit_exp_date').value = exp.expenseDate;
+        document.getElementById('edit_exp_payment_method').value = exp.paymentMethod;
+        document.getElementById('edit_exp_receipt_ref').value = exp.receiptRef || '';
+        document.getElementById('edit_exp_notes').value = exp.notes || '';
+        document.getElementById('editExpenseModal').classList.remove('hidden');
+    }
+    function closeEditExpenseModal() {
+        document.getElementById('editExpenseModal').classList.add('hidden');
+    }
+    function openDeleteExpenseModal(id, title, amount) {
+        document.getElementById('del_exp_id').value = id;
+        document.getElementById('del_exp_title').textContent = title;
+        document.getElementById('del_exp_amount').textContent = amount;
+        document.getElementById('deleteExpenseModal').classList.remove('hidden');
+    }
+    function closeDeleteExpenseModal() {
+        document.getElementById('deleteExpenseModal').classList.add('hidden');
+    }
+</script>
+{% endblock %}

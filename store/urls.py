@@ -1,0 +1,17 @@
+from django.urls import path
+from . import views
+
+app_name = 'store'
+
+urlpatterns = [
+    path('', views.index, name='index'),
+    path('product/<slug:slug>/', views.product_detail, name='product_detail'),
+    path('cart/', views.cart_view, name='cart_view'),
+    path('cart/add/<int:product_id>/', views.cart_add, name='cart_add'),
+    path('cart/remove/<int:product_id>/', views.cart_remove, name='cart_remove'),
+    path('cart/update-ajax/', views.cart_update_ajax, name='cart_update_ajax'),
+    path('checkout/', views.checkout, name='checkout'),
+    path('order/success/<str:order_number>/', views.order_success, name='order_success'),
+    path('track/', views.order_track, name='order_track'),
+    path('story-and-faq/', views.about_story, name='about_story'),
+]

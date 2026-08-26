@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Login | Pickpickles Merchant Portal</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex items-center justify-center p-4 font-sans">
+    
+    <div class="max-w-md w-full bg-gray-800 p-8 rounded-3xl border border-gray-700 shadow-2xl space-y-6">
+        
+        <!-- Logo & Title -->
+        <div class="text-center space-y-3">
+            <img src="/static/images/logo.png" alt="Pickpickles Logo" class="w-20 h-20 rounded-full object-cover mx-auto shadow-xl border-2 border-emerald-500/40">
+            <div>
+                <h1 class="text-2xl font-black tracking-tight text-white">PICK<span class="text-emerald-400">PICKLES</span></h1>
+                <p class="text-xs text-gray-400 font-semibold uppercase tracking-wider mt-0.5">Merchant & Orders Dashboard</p>
+            </div>
+        </div>
+
+        {% if messages %}
+        <div class="space-y-2">
+            {% for message in messages %}
+            <div class="p-3 bg-rose-900/40 border border-rose-700 text-rose-200 text-xs font-semibold rounded-xl">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Login Form -->
+        <form method="POST" action="{% url 'dashboard:login' %}" class="space-y-4">
+            {% csrf_token %}
+            <div>
+                <label class="block text-xs font-bold text-gray-300 mb-1">Staff Username</label>
+                <div class="relative flex items-center">
+                    <i class="fa-solid fa-user absolute left-3.5 text-gray-500 text-xs"></i>
+                    <input type="text" name="username" placeholder="admin" required class="w-full bg-gray-900 border border-gray-700 rounded-xl pl-9 pr-3 py-3 text-xs font-medium text-white placeholder-gray-500 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-300 mb-1">Password</label>
+                <div class="relative flex items-center">
+                    <i class="fa-solid fa-lock absolute left-3.5 text-gray-500 text-xs"></i>
+                    <input type="password" name="password" placeholder="••••••••" required class="w-full bg-gray-900 border border-gray-700 rounded-xl pl-9 pr-3 py-3 text-xs font-medium text-white placeholder-gray-500 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none">
+                </div>
+            </div>
+
+            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white font-bold text-xs py-3.5 px-4 rounded-xl shadow-lg transition">
+                Sign In to Orders Portal
+            </button>
+        </form>
+
+        <div class="text-center pt-2">
+            <a href="{% url 'store:index' %}" class="text-xs text-gray-400 hover:text-emerald-400 transition">
+                &larr; Back to Pickpickles Customer Website
+            </a>
+        </div>
+
+    </div>
+
+</body>
+</html>

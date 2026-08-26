@@ -1,0 +1,282 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Staff & Admin Management | Pickpickles Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Top Action & Summary Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-3xl border border-gray-200 shadow-xs">
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-blue-100 text-blue-900">
+                    <i class="fa-solid fa-user-shield text-blue-600"></i>
+                    Admin & Security Access
+                </span>
+                <span class="text-xs text-gray-400 font-semibold">• {{ total_users }} accounts</span>
+            </div>
+            <h1 class="font-display font-black text-2xl sm:text-3xl text-gray-900 mt-1">
+                Admin & Staff User Management
+            </h1>
+            <p class="text-xs sm:text-sm text-gray-500 mt-0.5">
+                Manage backend admin staff credentials, change passwords, and grant or revoke administrative roles.
+            </p>
+        </div>
+        
+        <div class="flex items-center gap-2">
+            <button type="button" onclick="openUserModal()" class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md flex items-center gap-2 transition active:scale-95">
+                <i class="fa-solid fa-user-plus text-brand-accent"></i>
+                <span>Add Admin / Staff Member</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs flex items-center justify-between">
+            <div>
+                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Total Users</span>
+                <span class="font-display font-black text-2xl text-gray-900 mt-0.5">{{ total_users }}</span>
+            </div>
+            <span class="w-10 h-10 rounded-xl bg-gray-50 text-gray-700 flex items-center justify-center text-sm font-black">
+                <i class="fa-solid fa-users"></i>
+            </span>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-blue-200 bg-blue-50/20 shadow-xs flex items-center justify-between">
+            <div>
+                <span class="text-[10px] font-bold text-blue-800 uppercase tracking-wider block">Staff Access</span>
+                <span class="font-display font-black text-2xl text-blue-800 mt-0.5">{{ staff_count }}</span>
+            </div>
+            <span class="w-10 h-10 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center text-sm font-black">
+                <i class="fa-solid fa-id-badge"></i>
+            </span>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-purple-200 bg-purple-50/20 shadow-xs flex items-center justify-between">
+            <div>
+                <span class="text-[10px] font-bold text-purple-800 uppercase tracking-wider block">Superusers</span>
+                <span class="font-display font-black text-2xl text-purple-800 mt-0.5">{{ superuser_count }}</span>
+            </div>
+            <span class="w-10 h-10 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center text-sm font-black">
+                <i class="fa-solid fa-crown"></i>
+            </span>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-emerald-200 bg-emerald-50/20 shadow-xs flex items-center justify-between">
+            <div>
+                <span class="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">Products / Stock</span>
+                <span class="font-display font-black text-2xl text-emerald-800 mt-0.5">{{ products_count }}</span>
+            </div>
+            <span class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-sm font-black">
+                <i class="fa-solid fa-boxes-stacked"></i>
+            </span>
+        </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
+        <div class="p-5 border-b border-gray-100 flex items-center justify-between">
+            <h3 class="font-display font-bold text-base text-gray-900">System Accounts & Staff Logins</h3>
+            <span class="text-xs text-gray-400">All authenticated managers</span>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-gray-50 text-gray-500 font-bold uppercase text-[10px] border-b border-gray-200">
+                    <tr>
+                        <th class="p-4">Username & Email</th>
+                        <th class="p-4 text-center">Staff Role</th>
+                        <th class="p-4 text-center">Superuser</th>
+                        <th class="p-4">Date Joined</th>
+                        <th class="p-4">Last Login</th>
+                        <th class="p-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 font-medium">
+                    {% for u in users %}
+                    <tr class="hover:bg-gray-50/50 transition">
+                        <td class="p-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-full bg-brand-50 text-brand-700 font-black text-xs flex items-center justify-center border border-brand-200">
+                                    {{ u.username|slice:":2"|upper }}
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-1.5">
+                                        <strong class="text-gray-900 text-sm">{{ u.username }}</strong>
+                                        {% if u == request.user %}
+                                        <span class="text-[9px] font-black bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">You</span>
+                                        {% endif %}
+                                    </div>
+                                    <span class="text-gray-400 text-[11px] block">{{ u.email|default:"No email set" }}</span>
+                                </div>
+                            </div>
+                        </td>
+
+                        <td class="p-4 text-center">
+                            {% if u.is_staff %}
+                            <span class="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold">
+                                <i class="fa-solid fa-check text-[9px]"></i> Staff Member
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1 bg-gray-100 text-gray-600 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold">
+                                Customer
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <td class="p-4 text-center">
+                            {% if u.is_superuser %}
+                            <span class="inline-flex items-center gap-1 bg-purple-100 text-purple-800 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold">
+                                <i class="fa-solid fa-crown text-[9px]"></i> Superuser
+                            </span>
+                            {% else %}
+                            <span class="text-gray-400 text-[11px]">Regular</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="p-4 text-gray-600">
+                            {{ u.date_joined|date:"M d, Y" }}
+                        </td>
+
+                        <td class="p-4 text-gray-600">
+                            {{ u.last_login|date:"M d, Y - h:i A"|default:"Never" }}
+                        </td>
+
+                        <td class="p-4 text-right space-x-1">
+                            <!-- Change Password Button -->
+                            <button type="button" onclick="openPasswordModal('{{ u.id }}', '{{ u.username }}')" class="px-2.5 py-1 rounded-lg border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold text-[11px] transition inline-flex items-center gap-1">
+                                <i class="fa-solid fa-key text-[10px]"></i>
+                                <span>Change PW</span>
+                            </button>
+
+                            <!-- Toggle Staff -->
+                            {% if u != request.user %}
+                            <form method="POST" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="toggle_staff">
+                                <input type="hidden" name="user_id" value="{{ u.id }}">
+                                <button type="submit" class="px-2.5 py-1 rounded-lg border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold text-[11px] transition">
+                                    {% if u.is_staff %}Revoke Staff{% else %}Make Staff{% endif %}
+                                </button>
+                            </form>
+
+                            <!-- Delete User -->
+                            <form method="POST" class="inline" onsubmit="return confirm('Permanently delete user {{ u.username }}?')">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete_user">
+                                <input type="hidden" name="user_id" value="{{ u.id }}">
+                                <button type="submit" class="px-2 py-1 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold text-[11px] transition">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- CREATE ADMIN USER MODAL -->
+<div id="addUserModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-5 shadow-2xl relative">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+            <h3 class="font-display font-black text-xl text-gray-900">Add Admin / Staff Member</h3>
+            <button type="button" onclick="closeUserModal()" class="text-gray-400 hover:text-gray-700 text-lg p-1">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form method="POST" class="space-y-4 text-xs">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create_user">
+
+            <div>
+                <label class="font-bold text-gray-700 block mb-1">Username *</label>
+                <input type="text" name="username" required placeholder="e.g. manager1" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white">
+            </div>
+
+            <div>
+                <label class="font-bold text-gray-700 block mb-1">Email (Optional)</label>
+                <input type="email" name="email" placeholder="e.g. staff@pickpickles.com" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
+            </div>
+
+            <div>
+                <label class="font-bold text-gray-700 block mb-1">Password *</label>
+                <input type="password" name="password" required placeholder="Enter strong password" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white">
+            </div>
+
+            <div class="space-y-2 pt-1">
+                <label class="flex items-center gap-2 cursor-pointer font-bold text-gray-800">
+                    <input type="checkbox" name="is_staff" checked class="w-4 h-4 text-brand-600 rounded">
+                    <span>Staff Member (Can access dashboard)</span>
+                </label>
+
+                <label class="flex items-center gap-2 cursor-pointer font-bold text-gray-800">
+                    <input type="checkbox" name="is_superuser" class="w-4 h-4 text-purple-600 rounded">
+                    <span>Superuser (Full system privileges)</span>
+                </label>
+            </div>
+
+            <div class="pt-3 border-t border-gray-100 flex items-center justify-end gap-2">
+                <button type="button" onclick="closeUserModal()" class="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold transition">Cancel</button>
+                <button type="submit" class="px-5 py-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold transition shadow-md">Create Account</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- CHANGE PASSWORD MODAL -->
+<div id="passwordModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+            <h3 class="font-display font-black text-lg text-gray-900">Change User Password</h3>
+            <button type="button" onclick="closePasswordModal()" class="text-gray-400 hover:text-gray-700 text-lg p-1">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form method="POST" class="space-y-4 text-xs">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="change_password">
+            <input type="hidden" id="pw_user_id" name="user_id" value="">
+
+            <p class="text-gray-600">
+                Setting new password for: <strong id="pw_username" class="text-gray-900 font-bold">User</strong>
+            </p>
+
+            <div>
+                <label class="font-bold text-gray-700 block mb-1">New Password *</label>
+                <input type="password" name="new_password" required placeholder="Enter new password" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white">
+            </div>
+
+            <div class="pt-2 flex items-center justify-end gap-2">
+                <button type="button" onclick="closePasswordModal()" class="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold transition">Cancel</button>
+                <button type="submit" class="px-5 py-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold transition shadow-md">Update Password</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openUserModal() {
+    document.getElementById('addUserModal').classList.remove('hidden');
+}
+function closeUserModal() {
+    document.getElementById('addUserModal').classList.add('hidden');
+}
+function openPasswordModal(userId, username) {
+    document.getElementById('pw_user_id').value = userId;
+    document.getElementById('pw_username').textContent = username;
+    document.getElementById('passwordModal').classList.remove('hidden');
+}
+function closePasswordModal() {
+    document.getElementById('passwordModal').classList.add('hidden');
+}
+</script>
+{% endblock %}

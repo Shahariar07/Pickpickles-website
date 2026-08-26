@@ -1,0 +1,500 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Damage & Returns Hub | Pickpickles Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Top Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-gray-200 shadow-xs">
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-amber-100 text-amber-800">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Loss & Inventory Protection
+                </span>
+                <span class="text-xs text-gray-400 font-semibold">• {{ total_damaged_jars }} jars damaged • {{ total_returns_count }} returns</span>
+            </div>
+            <h1 class="font-display font-black text-2xl sm:text-3xl text-gray-900 mt-1">
+                Damage & Returns Hub (ভাঙা ও রিটার্ন ট্র্যাকিং)
+            </h1>
+            <p class="text-xs sm:text-sm text-gray-500 mt-0.5">
+                Track broken glass jars, courier transit losses, manage returned customer parcels and inventory restocks.
+            </p>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+            <button type="button" onclick="openDamageModal()" class="bg-rose-700 hover:bg-rose-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs flex items-center gap-1.5 transition active:scale-95">
+                <i class="fa-solid fa-burst text-rose-200"></i>
+                <span>Log Damaged Jars</span>
+            </button>
+            <button type="button" onclick="openReturnModal()" class="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs flex items-center gap-1.5 transition active:scale-95">
+                <i class="fa-solid fa-rotate-left text-amber-200"></i>
+                <span>Log Returned Parcel</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 4 Summary KPI Cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+
+        <!-- Card 1: Total Damaged Jars -->
+        <div class="bg-white p-5 rounded-2xl border border-rose-200 bg-rose-50/10 shadow-xs">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-extrabold text-rose-800 uppercase tracking-wider">Total Damaged Jars</span>
+                <span class="w-7 h-7 rounded-xl bg-rose-100 text-rose-800 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-jar"></i>
+                </span>
+            </div>
+            <div class="mt-2">
+                <span class="font-display font-black text-2xl sm:text-3xl text-rose-700">{{ total_damaged_jars }} <span class="text-sm font-semibold text-gray-500">jars</span></span>
+            </div>
+            <span class="text-[11px] text-rose-600 font-semibold mt-1 block">Production & courier transit loss</span>
+        </div>
+
+        <!-- Card 2: Financial Damage Loss -->
+        <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">Damage Cost Loss</span>
+                <span class="w-7 h-7 rounded-xl bg-red-50 text-red-700 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-bangladeshi-taka-sign"></i>
+                </span>
+            </div>
+            <div class="mt-2">
+                <span class="font-display font-black text-2xl sm:text-3xl text-gray-900">৳{{ total_damage_loss|floatformat:0 }}</span>
+            </div>
+            <span class="text-[11px] text-gray-400 mt-1 block">Cost of ruined materials & jars</span>
+        </div>
+
+        <!-- Card 3: Courier Returns -->
+        <div class="bg-white p-5 rounded-2xl border border-amber-200 bg-amber-50/20 shadow-xs">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-extrabold text-amber-800 uppercase tracking-wider">Courier Returns</span>
+                <span class="w-7 h-7 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-box-open"></i>
+                </span>
+            </div>
+            <div class="mt-2">
+                <span class="font-display font-black text-2xl sm:text-3xl text-amber-700">{{ total_returns_count }} <span class="text-sm font-semibold text-gray-500">parcels</span></span>
+            </div>
+            <div class="text-[11px] text-amber-700 font-semibold mt-1 flex items-center gap-2">
+                <span>{{ intact_returns_count }} Restocked</span>
+                <span>•</span>
+                <span>{{ pending_returning_count }} In-Transit</span>
+            </div>
+        </div>
+
+        <!-- Card 4: Total Combined Loss -->
+        <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">Combined Loss & Courier Fees</span>
+                <span class="w-7 h-7 rounded-xl bg-gray-100 text-gray-700 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-calculator"></i>
+                </span>
+            </div>
+            <div class="mt-2">
+                <span class="font-display font-black text-2xl sm:text-3xl text-rose-700">৳{{ total_combined_loss|floatformat:0 }}</span>
+            </div>
+            <span class="text-[11px] text-gray-500 mt-1 block">Includes ৳{{ total_courier_fees|floatformat:0 }} courier return fees</span>
+        </div>
+
+    </div>
+
+    <!-- SECTION 1: Customer & Courier Returns (রিটার্ন হওয়া অর্ডারসমূহ) -->
+    <div class="bg-white p-5 sm:p-6 rounded-2xl border border-gray-200 shadow-xs space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-gray-100 gap-2">
+            <div>
+                <h3 class="font-display font-black text-base sm:text-lg text-gray-900 flex items-center gap-2">
+                    <i class="fa-solid fa-truck-ramp-box text-amber-600"></i>
+                    Courier Returned Parcels (কুরিয়ার রিটার্ন পার্সেল রেজিস্টার)
+                </h3>
+                <p class="text-xs text-gray-400">Track parcels returned by Steadfast/Riders and manage inventory restocks</p>
+            </div>
+            <span class="text-xs font-bold text-gray-500 bg-gray-100 px-3 py-1 rounded-xl">
+                {{ order_returns|length }} Returns Recorded
+            </span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="bg-gray-50 text-[10px] font-extrabold text-gray-500 uppercase tracking-wider">
+                        <th class="py-3 px-3 rounded-l-xl">Order # & Customer</th>
+                        <th class="py-3 px-3">Return Reason</th>
+                        <th class="py-3 px-3">Return Status</th>
+                        <th class="py-3 px-3">Items in Parcel</th>
+                        <th class="py-3 px-3">Courier Fee</th>
+                        <th class="py-3 px-3">Restock State</th>
+                        <th class="py-3 px-3 text-right rounded-r-xl">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for ret in order_returns %}
+                    <tr class="hover:bg-gray-50/80 transition-colors">
+                        <td class="py-3 px-3">
+                            <a href="{% url 'dashboard:order_detail' ret.order.order_number %}" class="font-bold text-brand-700 hover:underline flex items-center gap-1">
+                                <span>#{{ ret.order.order_number }}</span>
+                                <i class="fa-solid fa-arrow-up-right-from-square text-[9px] opacity-60"></i>
+                            </a>
+                            <span class="font-semibold text-gray-800 block mt-0.5">{{ ret.order.customer_name }}</span>
+                            <span class="text-[10px] text-gray-400">{{ ret.order.customer_phone }} • {{ ret.order.delivery_city }}</span>
+                        </td>
+                        <td class="py-3 px-3">
+                            <span class="inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
+                                {{ ret.get_return_reason_display }}
+                            </span>
+                            {% if ret.notes %}
+                            <span class="block text-[10px] text-gray-500 mt-1 max-w-xs truncate">{{ ret.notes }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-3">
+                            {% if ret.return_status == 'RECEIVED_INTACT' %}
+                            <span class="inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                <i class="fa-solid fa-circle-check"></i>
+                                Intact (অক্ষত প্রাপ্ত)
+                            </span>
+                            {% elif ret.return_status == 'RECEIVED_DAMAGED' %}
+                            <span class="inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300">
+                                <i class="fa-solid fa-burst"></i>
+                                Broken (ভাঙা/নষ্ট)
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-300">
+                                <i class="fa-solid fa-truck-moving"></i>
+                                Returning (ফেরত আসছে)
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-3 font-medium text-gray-700">
+                            {% for item in ret.order.items.all %}
+                            <span class="block text-[11px]">• {{ item.quantity }}x {{ item.product_name }}</span>
+                            {% empty %}
+                            <span class="text-gray-400 text-[10px]">No items found</span>
+                            {% endfor %}
+                        </td>
+                        <td class="py-3 px-3 font-display font-black text-rose-700">
+                            ৳{{ ret.courier_return_fee|floatformat:0 }}
+                        </td>
+                        <td class="py-3 px-3">
+                            {% if ret.is_restocked %}
+                            <span class="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
+                                <i class="fa-solid fa-check"></i> Restocked
+                            </span>
+                            {% else %}
+                            <span class="text-[10px] text-gray-400 font-semibold">Not Restocked</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-3 text-right">
+                            <button type="button" onclick="openUpdateReturnModal('{{ ret.id }}', '{{ ret.order.order_number }}', '{{ ret.return_status }}', '{{ ret.courier_return_fee }}', '{{ ret.notes|escapejs }}')" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-[11px] px-3 py-1.5 rounded-xl transition">
+                                Update Status
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="py-10 text-center text-gray-400 text-xs font-medium">
+                            No returned orders logged yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- SECTION 2: Damaged Pickle Jars Log (ভাঙা ও নষ্ট জার তালিকা) -->
+    <div class="bg-white p-5 sm:p-6 rounded-2xl border border-gray-200 shadow-xs space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-gray-100 gap-2">
+            <div>
+                <h3 class="font-display font-black text-base sm:text-lg text-gray-900 flex items-center gap-2">
+                    <i class="fa-solid fa-burst text-rose-600"></i>
+                    Damaged Pickle Jars Register (ভাঙা ও ক্ষতিগ্রস্ত জার হিসেব)
+                </h3>
+                <p class="text-xs text-gray-400">Record jar breakage during courier shipping or kitchen preparation</p>
+            </div>
+            <button type="button" onclick="openDamageModal()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-3.5 py-1.5 rounded-xl border border-rose-200 transition">
+                <i class="fa-solid fa-plus text-xs"></i>
+                <span>Add Damage Record</span>
+            </button>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="bg-gray-50 text-[10px] font-extrabold text-gray-500 uppercase tracking-wider">
+                        <th class="py-3 px-3 rounded-l-xl">Incident Date</th>
+                        <th class="py-3 px-3">Product / Flavor</th>
+                        <th class="py-3 px-3 text-center">Damaged Qty</th>
+                        <th class="py-3 px-3">Damage Reason</th>
+                        <th class="py-3 px-3">Order Ref / Notes</th>
+                        <th class="py-3 px-3 text-right">Financial Loss</th>
+                        <th class="py-3 px-3 text-right rounded-r-xl">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for log in damage_logs %}
+                    <tr class="hover:bg-gray-50/80 transition-colors">
+                        <td class="py-3 px-3 font-semibold text-gray-600">
+                            {{ log.incident_date|date:"M d, Y" }}
+                        </td>
+                        <td class="py-3 px-3 font-bold text-gray-900">
+                            {{ log.product.name }}
+                        </td>
+                        <td class="py-3 px-3 text-center font-display font-black text-rose-700">
+                            {{ log.quantity }} jars
+                        </td>
+                        <td class="py-3 px-3">
+                            <span class="inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-900 border border-rose-200">
+                                {{ log.get_reason_display }}
+                            </span>
+                        </td>
+                        <td class="py-3 px-3 text-gray-600 text-[11px]">
+                            {% if log.order_ref %}
+                            <span class="font-mono font-bold text-gray-800">#{{ log.order_ref }}</span> • 
+                            {% endif %}
+                            <span>{{ log.notes|default:"-" }}</span>
+                        </td>
+                        <td class="py-3 px-3 text-right font-display font-black text-rose-700 text-sm">
+                            -৳{{ log.total_loss_bdt|floatformat:0 }}
+                        </td>
+                        <td class="py-3 px-3 text-right">
+                            <form method="POST" action="{% url 'dashboard:damage_returns' %}" onsubmit="return confirm('Are you sure you want to delete this damage log?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete_damage">
+                                <input type="hidden" name="damage_id" value="{{ log.id }}">
+                                <button type="submit" class="text-gray-400 hover:text-rose-600 p-1.5 rounded-lg transition" title="Delete Log">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="py-10 text-center text-gray-400 text-xs font-medium">
+                            No damaged jars recorded yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- Modal 1: Record Damaged Jars Modal -->
+<div id="damageModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+        <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+            <h3 class="font-display font-black text-lg text-gray-900 flex items-center gap-2">
+                <i class="fa-solid fa-burst text-rose-600"></i>
+                Log Damaged Pickle Jars (ভাঙা/নষ্ট জার)
+            </h3>
+            <button type="button" onclick="closeDamageModal()" class="text-gray-400 hover:text-gray-600 p-1">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <form method="POST" action="{% url 'dashboard:damage_returns' %}" class="space-y-4 text-xs">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="record_damage">
+
+            <div>
+                <label class="block font-bold text-gray-700 mb-1">Pickle Product Variety *</label>
+                <select name="product_id" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 font-semibold text-gray-800 focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none">
+                    {% for p in products %}
+                    <option value="{{ p.id }}">{{ p.name }} (Current Stock: {{ p.stock_count }} jars)</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-bold text-gray-700 mb-1">Damaged Quantity (Jars) *</label>
+                    <input type="number" name="quantity" min="1" value="1" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-bold text-gray-800 focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block font-bold text-gray-700 mb-1">Cost Per Jar (BDT ৳)</label>
+                    <input type="number" name="estimated_cost_per_jar" step="0.01" value="200.00" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-bold text-gray-800 focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-bold text-gray-700 mb-1">Damage Reason *</label>
+                    <select name="reason" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-semibold text-gray-800 focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none">
+                        {% for code, label in damage_reasons %}
+                        <option value="{{ code }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-bold text-gray-700 mb-1">Incident Date</label>
+                    <input type="date" name="incident_date" value="{{ today|date:'Y-m-d' }}" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-semibold text-gray-800 focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none">
+                </div>
+            </div>
+
+            <div>
+                <label class="block font-bold text-gray-700 mb-1">Order Ref # (If Courier/Transit)</label>
+                <input type="text" name="order_ref" placeholder="e.g. PKP-12345" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-semibold text-gray-800 focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none">
+            </div>
+
+            <div>
+                <label class="block font-bold text-gray-700 mb-1">Notes / Description</label>
+                <textarea name="notes" rows="2" placeholder="Describe how it happened, courier rider name, etc." class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-medium text-gray-800 focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none"></textarea>
+            </div>
+
+            <div class="flex items-center gap-2 pt-1">
+                <input type="checkbox" name="deduct_stock" id="deduct_stock" checked class="w-4 h-4 text-rose-600 rounded">
+                <label for="deduct_stock" class="font-bold text-gray-700">Deduct damaged jars from current Product Stock automatically</label>
+            </div>
+
+            <div class="pt-2 flex items-center justify-end gap-2 border-t border-gray-100">
+                <button type="button" onclick="closeDamageModal()" class="px-4 py-2 rounded-xl text-gray-600 font-bold hover:bg-gray-100 transition">Cancel</button>
+                <button type="submit" class="bg-rose-700 hover:bg-rose-800 text-white font-bold px-5 py-2 rounded-xl shadow-md transition">Save Damage Record</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal 2: Record Returned Order Modal -->
+<div id="returnModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+        <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+            <h3 class="font-display font-black text-lg text-gray-900 flex items-center gap-2">
+                <i class="fa-solid fa-rotate-left text-amber-600"></i>
+                Log Courier Returned Parcel (পার্সেল রিটার্ন)
+            </h3>
+            <button type="button" onclick="closeReturnModal()" class="text-gray-400 hover:text-gray-600 p-1">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <form method="POST" action="{% url 'dashboard:damage_returns' %}" class="space-y-4 text-xs">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="record_return">
+
+            <div>
+                <label class="block font-bold text-gray-700 mb-1">Select Order to Return *</label>
+                <select name="order_id" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 font-semibold text-gray-800 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    {% for o in orders %}
+                    <option value="{{ o.id }}">#{{ o.order_number }} - {{ o.customer_name }} (৳{{ o.total_amount|floatformat:0 }} • {{ o.delivery_city }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-bold text-gray-700 mb-1">Return Reason *</label>
+                    <select name="return_reason" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-semibold text-gray-800 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        {% for code, label in return_reasons %}
+                        <option value="{{ code }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-bold text-gray-700 mb-1">Current Return Status *</label>
+                    <select name="return_status" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-semibold text-gray-800 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        {% for code, label in return_statuses %}
+                        <option value="{{ code }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block font-bold text-gray-700 mb-1">Courier Return Fee Charged (BDT ৳)</label>
+                <input type="number" name="courier_return_fee" step="0.01" value="0.00" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-bold text-gray-800 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            </div>
+
+            <div>
+                <label class="block font-bold text-gray-700 mb-1">Courier Notes / Consignment #</label>
+                <textarea name="notes" rows="2" placeholder="Steadfast return tracking ID, rider note, etc." class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-medium text-gray-800 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none"></textarea>
+            </div>
+
+            <div class="flex items-center gap-2 pt-1">
+                <input type="checkbox" name="restock_now" id="restock_now" checked class="w-4 h-4 text-amber-600 rounded">
+                <label for="restock_now" class="font-bold text-gray-700">Add jars back to Product Stock (if parcel is received intact)</label>
+            </div>
+
+            <div class="pt-2 flex items-center justify-end gap-2 border-t border-gray-100">
+                <button type="button" onclick="closeReturnModal()" class="px-4 py-2 rounded-xl text-gray-600 font-bold hover:bg-gray-100 transition">Cancel</button>
+                <button type="submit" class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-5 py-2 rounded-xl shadow-md transition">Save Return Record</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal 3: Update Return Status Modal -->
+<div id="updateReturnModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+        <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+            <h3 class="font-display font-black text-lg text-gray-900">
+                Update Return Status (<span id="modalOrderNumber"></span>)
+            </h3>
+            <button type="button" onclick="closeUpdateReturnModal()" class="text-gray-400 hover:text-gray-600 p-1">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <form method="POST" action="{% url 'dashboard:damage_returns' %}" class="space-y-4 text-xs">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update_return_status">
+            <input type="hidden" name="return_id" id="modalReturnId">
+
+            <div>
+                <label class="block font-bold text-gray-700 mb-1">New Return Status *</label>
+                <select name="new_status" id="modalNewStatus" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 font-bold text-gray-800 focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    {% for code, label in return_statuses %}
+                    <option value="{{ code }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block font-bold text-gray-700 mb-1">Courier Return Fee Charged (৳)</label>
+                <input type="number" step="0.01" name="courier_return_fee" id="modalCourierFee" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-bold text-gray-800 focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none">
+            </div>
+
+            <div>
+                <label class="block font-bold text-gray-700 mb-1">Notes</label>
+                <textarea name="notes" id="modalNotes" rows="2" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-medium text-gray-800 focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none"></textarea>
+            </div>
+
+            <div class="pt-2 flex items-center justify-end gap-2 border-t border-gray-100">
+                <button type="button" onclick="closeUpdateReturnModal()" class="px-4 py-2 rounded-xl text-gray-600 font-bold hover:bg-gray-100 transition">Cancel</button>
+                <button type="submit" class="bg-brand-700 hover:bg-brand-800 text-white font-bold px-5 py-2 rounded-xl shadow-md transition">Update Return</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openDamageModal() {
+    document.getElementById('damageModal').classList.remove('hidden');
+}
+function closeDamageModal() {
+    document.getElementById('damageModal').classList.add('hidden');
+}
+
+function openReturnModal() {
+    document.getElementById('returnModal').classList.remove('hidden');
+}
+function closeReturnModal() {
+    document.getElementById('returnModal').classList.add('hidden');
+}
+
+function openUpdateReturnModal(id, orderNum, status, fee, notes) {
+    document.getElementById('modalReturnId').value = id;
+    document.getElementById('modalOrderNumber').innerText = '#' + orderNum;
+    document.getElementById('modalNewStatus').value = status;
+    document.getElementById('modalCourierFee').value = fee;
+    document.getElementById('modalNotes').value = notes || '';
+    document.getElementById('updateReturnModal').classList.remove('hidden');
+}
+function closeUpdateReturnModal() {
+    document.getElementById('updateReturnModal').classList.add('hidden');
+}
+</script>
+{% endblock %}
