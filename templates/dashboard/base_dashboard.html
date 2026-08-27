@@ -42,22 +42,22 @@
         }
     </script>
 </head>
-<body class="bg-gray-100 text-gray-800 font-sans antialiased h-full">
+<body class="bg-gray-100 text-gray-800 font-sans antialiased h-full overflow-x-hidden">
 
     <div class="min-h-full flex flex-col md:flex-row">
         
         <!-- Mobile Top Bar with Drawer Toggle -->
-        <div class="md:hidden bg-brand-900 text-white px-4 py-3.5 flex items-center justify-between sticky top-0 z-40 border-b border-brand-800 shadow-md">
-            <div class="flex items-center gap-3">
-                <button type="button" onclick="toggleSidebar()" class="p-2 rounded-xl text-gray-300 hover:text-white hover:bg-brand-800 focus:outline-none transition">
+        <div class="md:hidden bg-brand-900 text-white px-3 sm:px-4 py-3.5 flex items-center justify-between sticky top-0 z-40 border-b border-brand-800 shadow-md">
+            <div class="flex items-center gap-2.5 min-w-0">
+                <button type="button" onclick="toggleSidebar()" class="p-2 rounded-xl text-gray-300 hover:text-white hover:bg-brand-800 focus:outline-none transition shrink-0">
                     <i class="fa-solid fa-bars text-lg"></i>
                 </button>
-                <a href="{% url 'dashboard:index' %}" class="flex items-center gap-2">
-                    <img src="{% static 'images/logo.png' %}" alt="Pickpickles Logo" class="w-8 h-8 rounded-full object-cover border border-brand-400/40">
-                    <span class="font-display font-extrabold text-lg tracking-tight text-white">PICK<span class="text-brand-accent">PICKLES</span></span>
+                <a href="{% url 'dashboard:index' %}" class="flex items-center gap-2 min-w-0 truncate">
+                    <img src="{% static 'images/logo.png' %}" alt="Pickpickles Logo" class="w-8 h-8 rounded-full object-cover border border-brand-400/40 shrink-0">
+                    <span class="font-display font-extrabold text-base sm:text-lg tracking-tight text-white truncate">PICK<span class="text-brand-accent">PICKLES</span></span>
                 </a>
             </div>
-            <a href="{% url 'dashboard:logout' %}" class="p-2 rounded-xl bg-rose-900/60 hover:bg-rose-800 text-rose-200 text-xs transition">
+            <a href="{% url 'dashboard:logout' %}" class="p-2 rounded-xl bg-rose-900/60 hover:bg-rose-800 text-rose-200 text-xs transition shrink-0 ml-2">
                 <i class="fa-solid fa-right-from-bracket"></i>
             </a>
         </div>

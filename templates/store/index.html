@@ -10,36 +10,36 @@
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             
             <!-- Left Text Content -->
-            <div class="lg:col-span-7 space-y-6 text-center lg:text-left">
-                <div class="inline-flex items-center gap-2 bg-[#082816] border-2 border-emerald-400 px-4 py-1.5 rounded-full text-xs font-black tracking-wide uppercase text-amber-300 shadow-lg">
-                    <span>🥒 100% Fresh Pickles</span>
-                    <span class="text-emerald-400">•</span>
-                    <span>🇧🇩 Handcrafted in Bangladesh</span>
+            <div class="lg:col-span-7 space-y-5 sm:space-y-6 text-center lg:text-left min-w-0">
+                <div class="inline-flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 bg-[#082816] border-2 border-emerald-400/80 px-3 sm:px-4 py-1.5 rounded-full text-[11px] sm:text-xs font-bold text-amber-300 shadow-md max-w-full text-center">
+                    <span class="inline-flex items-center gap-1">🥒 100% Fresh Pickles</span>
+                    <span class="text-emerald-500 opacity-60">•</span>
+                    <span class="inline-flex items-center gap-1">🇧🇩 Handcrafted in Bangladesh</span>
                 </div>
 
-                <h1 class="font-display font-black text-3xl sm:text-5xl lg:text-6xl tracking-tight leading-[1.15] text-white">
+                <h1 class="font-display font-black text-2xl sm:text-4xl lg:text-6xl tracking-tight leading-[1.15] text-white break-words">
                     That <span class="text-amber-400">Crispy, Zesty Crunch</span> You’ve Been Craving.
                 </h1>
 
-                <p class="text-base sm:text-lg text-emerald-100 leading-relaxed max-w-2xl mx-auto lg:mx-0 font-semibold">
+                <p class="text-sm sm:text-base lg:text-lg text-emerald-100 leading-relaxed max-w-2xl mx-auto lg:mx-0 font-semibold break-words">
                     Elevate your burgers, shawarmas, sandwiches, and daily snacks with crave-worthy crunchy pickled vegetables crafted with farm-fresh cucumbers, sweet carrots, whole garlic, and zesty herbs right here in Bangladesh!
                 </p>
 
                 <!-- Value Props Pills -->
-                <div class="flex flex-wrap items-center justify-center lg:justify-start gap-2.5 pt-2">
-                    <span class="inline-flex items-center gap-1.5 bg-[#082816] px-3.5 py-2 rounded-xl text-xs font-black text-emerald-200 border-2 border-emerald-600/60 shadow-md">
+                <div class="flex flex-wrap items-center justify-center lg:justify-start gap-2 sm:gap-2.5 pt-2">
+                    <span class="inline-flex items-center gap-1.5 bg-[#082816] px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black text-emerald-200 border-2 border-emerald-600/60 shadow-md">
                         <i class="fa-solid fa-bolt text-amber-400"></i> Maximum Crunch
                     </span>
-                    <span class="inline-flex items-center gap-1.5 bg-[#082816] px-3.5 py-2 rounded-xl text-xs font-black text-emerald-200 border-2 border-emerald-600/60 shadow-md">
+                    <span class="inline-flex items-center gap-1.5 bg-[#082816] px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black text-emerald-200 border-2 border-emerald-600/60 shadow-md">
                         <i class="fa-solid fa-seedling text-amber-400"></i> 100% Real Herbs & Spices
                     </span>
-                    <span class="inline-flex items-center gap-1.5 bg-[#082816] px-3.5 py-2 rounded-xl text-xs font-black text-emerald-200 border-2 border-emerald-600/60 shadow-md">
+                    <span class="inline-flex items-center gap-1.5 bg-[#082816] px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black text-emerald-200 border-2 border-emerald-600/60 shadow-md">
                         <i class="fa-solid fa-burger text-amber-400"></i> Perfect for Burgers & Sandwiches
                     </span>
                 </div>
 
                 <!-- CTA Actions -->
-                <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4">
+                <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 sm:gap-4 pt-4">
                     <a href="#pickle-menu" class="w-full sm:w-auto bg-amber-400 hover:bg-amber-300 text-slate-950 font-display font-black text-base px-8 py-4 rounded-2xl shadow-xl shadow-amber-500/40 hover:scale-[1.02] active:scale-95 transition-all text-center flex items-center justify-center gap-2 border-2 border-amber-300">
                         <span>Shop Pickle Jars</span>
                         <i class="fa-solid fa-arrow-down text-sm"></i>
@@ -50,9 +50,9 @@
                 </div>
 
                 <!-- Delivery Fast Banner -->
-                <div class="pt-2 flex items-center justify-center lg:justify-start gap-4 text-xs text-emerald-200 font-bold">
+                <div class="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-2 sm:gap-4 text-xs text-emerald-200 font-bold">
                     <span class="flex items-center gap-1.5"><i class="fa-solid fa-truck-fast text-amber-400"></i> Nationwide Safe Delivery</span>
-                    <span>•</span>
+                    <span class="hidden sm:inline">•</span>
                     <span class="flex items-center gap-1.5"><i class="fa-solid fa-shield-check text-emerald-400"></i> bKash / Nagad / Cash on Delivery</span>
                 </div>
             </div>
@@ -152,12 +152,12 @@
     </div>
 
     <!-- Category Filter Tabs -->
-    <div class="flex items-center justify-center gap-2 overflow-x-auto pb-4 mb-8 text-xs font-extrabold scrollbar-none">
-        <a href="{% url 'store:index' %}#pickle-menu" class="px-5 py-2.5 rounded-full transition-all whitespace-nowrap {% if not selected_cat %}bg-slate-950 text-white shadow-md{% else %}bg-slate-200 text-slate-800 hover:bg-slate-300{% endif %}">
+    <div class="flex flex-wrap items-center justify-center gap-2 pb-2 mb-8 text-xs font-bold max-w-full px-2">
+        <a href="{% url 'store:index' %}#pickle-menu" class="px-4 py-2 sm:px-5 sm:py-2.5 rounded-full transition-all text-xs font-black shadow-xs {% if not selected_cat %}bg-slate-950 text-white shadow-md ring-2 ring-slate-950/20{% else %}bg-white text-slate-700 hover:bg-slate-100 border border-slate-200{% endif %}">
             All Pickles ({{ total_products_count }})
         </a>
         {% for cat in categories %}
-        <a href="{% url 'store:index' %}?category={{ cat.slug }}#pickle-menu" class="px-5 py-2.5 rounded-full transition-all whitespace-nowrap {% if selected_cat == cat.slug %}bg-slate-950 text-white shadow-md{% else %}bg-slate-200 text-slate-800 hover:bg-slate-300{% endif %}">
+        <a href="{% url 'store:index' %}?category={{ cat.slug }}#pickle-menu" class="px-4 py-2 sm:px-5 sm:py-2.5 rounded-full transition-all text-xs font-black shadow-xs {% if selected_cat == cat.slug %}bg-slate-950 text-white shadow-md ring-2 ring-slate-950/20{% else %}bg-white text-slate-700 hover:bg-slate-100 border border-slate-200{% endif %}">
             {{ cat.name }} ({{ cat.product_count }})
         </a>
         {% endfor %}
