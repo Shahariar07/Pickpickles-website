@@ -163,14 +163,9 @@
                             </form>
 
                             <!-- Delete User -->
-                            <form method="POST" class="inline" onsubmit="return confirm('Permanently delete user {{ u.username }}?')">
-                                {% csrf_token %}
-                                <input type="hidden" name="action" value="delete_user">
-                                <input type="hidden" name="user_id" value="{{ u.id }}">
-                                <button type="submit" class="px-2 py-1 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold text-[11px] transition">
-                                    <i class="fa-solid fa-trash-can"></i>
-                                </button>
-                            </form>
+                            <button type="button" onclick="openDeleteUserModal('{{ u.id }}', '{{ u.username|escapejs }}')" class="px-2 py-1 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold text-[11px] transition cursor-pointer" title="Delete User">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
                             {% endif %}
                         </td>
                     </tr>
@@ -263,6 +258,36 @@
     </div>
 </div>
 
+<!-- DELETE USER CONFIRMATION MODAL -->
+<div id="deleteUserModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative text-center">
+        
+        <div class="w-14 h-14 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto text-2xl">
+            <i class="fa-solid fa-trash-can"></i>
+        </div>
+
+        <div>
+            <h3 class="font-display font-black text-lg text-gray-900">Delete Staff / Admin User?</h3>
+            <p class="text-xs text-gray-500 mt-1">
+                Are you sure you want to permanently delete user <strong id="del_username" class="text-gray-900">User</strong>? This action cannot be undone.
+            </p>
+        </div>
+
+        <form method="POST" class="pt-2 flex items-center justify-center gap-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete_user">
+            <input type="hidden" id="del_user_id" name="user_id" value="">
+            <button type="button" onclick="closeDeleteUserModal()" class="w-1/2 px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs transition cursor-pointer">
+                Cancel
+            </button>
+            <button type="submit" class="w-1/2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition shadow-md cursor-pointer">
+                Yes, Delete
+            </button>
+        </form>
+
+    </div>
+</div>
+
 <script>
 function openUserModal() {
     document.getElementById('addUserModal').classList.remove('hidden');
@@ -277,6 +302,14 @@ function openPasswordModal(userId, username) {
 }
 function closePasswordModal() {
     document.getElementById('passwordModal').classList.add('hidden');
+}
+function openDeleteUserModal(userId, username) {
+    document.getElementById('del_user_id').value = userId;
+    document.getElementById('del_username').textContent = username;
+    document.getElementById('deleteUserModal').classList.remove('hidden');
+}
+function closeDeleteUserModal() {
+    document.getElementById('deleteUserModal').classList.add('hidden');
 }
 </script>
 {% endblock %}

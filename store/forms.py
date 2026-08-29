@@ -75,6 +75,29 @@ class CheckoutForm(forms.ModelForm):
             }),
         }
 
+    def clean(self):
+        cleaned_data = super().clean()
+        customer_phone = (cleaned_data.get('customer_phone') or '').strip()
+        payment_method = cleaned_data.get('payment_method')
+        sender_number = (cleaned_data.get('payment_sender_number') or '').strip()
+        trx_id = (cleaned_data.get('payment_trx_id') or '').strip()
+
+        # Validate main customer phone
+        if customer_phone:
+            if len(customer_phone) < 11 or not customer_phone.replace('+', '').isdigit():
+                self.add_error('customer_phone', 'Mobile number is not valid.')
+
+        # Validate MFS payment details
+        if payment_method in ['BKASH', 'NAGAD']:
+            if not sender_number or len(sender_number) < 11 or not sender_number.replace('+', '').isdigit():
+                self.add_error('payment_sender_number', 'Mobile number is not valid.')
+                
+            if not trx_id or len(trx_id) < 6:
+                self.add_error('payment_trx_id', 'Transaction ID is not valid.')
+
+        return cleaned_data
+
+
 
 class ReviewForm(forms.ModelForm):
     class Meta:

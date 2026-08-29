@@ -20,6 +20,7 @@ urlpatterns = [
     path('logout/', views.dashboard_logout, name='logout'),
     path('order/<str:order_number>/', views.order_detail, name='order_detail'),
     path('order/<str:order_number>/delete/', views.delete_order, name='delete_order'),
+    path('orders/delete/<str:order_number>/', views.delete_order, name='delete_order_alt'),
     path('order/<str:order_number>/edit-customer/', views.edit_order_customer, name='edit_order_customer'),
     path('order/<str:order_number>/quick-status/', views.update_order_status_quick, name='update_order_status_quick'),
     path('order/<str:order_number>/mark-returned/', views.mark_order_returned, name='mark_order_returned'),

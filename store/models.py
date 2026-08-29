@@ -111,16 +111,19 @@ class Order(models.Model):
     ]
 
     PAYMENT_METHOD_CHOICES = [
+        ('BKASH_ONLINE', 'bKash Direct Online Payment'),
         ('COD', 'Cash on Delivery (COD)'),
-        ('BKASH', 'bKash (Send Money / Payment)'),
-        ('NAGAD', 'Nagad (Send Money / Payment)'),
+        ('BKASH', 'bKash (Send Money / Manual)'),
+        ('NAGAD', 'Nagad (Send Money / Manual)'),
     ]
 
     PAYMENT_STATUS_CHOICES = [
         ('UNPAID', 'Unpaid (COD)'),
-        ('PENDING_VERIFICATION', 'Pending bKash/Nagad Verification'),
+        ('PENDING_PAYMENT', 'Pending bKash Online Payment'),
+        ('PENDING_VERIFICATION', 'Pending Manual Verification'),
         ('PAID', 'Payment Received & Verified'),
         ('REFUNDED', 'Refunded'),
+        ('FAILED', 'Payment Failed'),
     ]
 
     ORDER_STATUS_CHOICES = [
@@ -150,10 +153,11 @@ class Order(models.Model):
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     
     # Payment Info
-    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, default='COD')
+    payment_method = models.CharField(max_length=30, choices=PAYMENT_METHOD_CHOICES, default='BKASH_ONLINE')
     payment_status = models.CharField(max_length=30, choices=PAYMENT_STATUS_CHOICES, default='UNPAID')
     payment_sender_number = models.CharField(max_length=20, blank=True, help_text="Customer bKash/Nagad number")
     payment_trx_id = models.CharField(max_length=100, blank=True, help_text="bKash / Nagad Transaction ID")
+    bkash_payment_id = models.CharField(max_length=100, blank=True, null=True, help_text="Official bKash PGW Payment ID")
     
     # Order Status & Management
     order_status = models.CharField(max_length=30, choices=ORDER_STATUS_CHOICES, default='PENDING')

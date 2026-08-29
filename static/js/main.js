@@ -206,7 +206,7 @@ async function ajaxUpdateCart(productId, action) {
             if (pageSub) pageSub.innerText = parseFloat(data.cart_subtotal).toFixed(2);
 
             const pageTot = document.getElementById('pageCartTotal');
-            if (pageTot) pageTot.innerText = (parseFloat(data.cart_subtotal) + 60.00).toFixed(2);
+            if (pageTot) pageTot.innerText = (parseFloat(data.cart_subtotal) + 130.00).toFixed(2);
         }
     } catch (err) {
         console.error('Error updating cart:', err);

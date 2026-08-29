@@ -70,7 +70,7 @@
 
             <div class="border-t border-gray-100 pt-3 flex justify-between items-baseline">
                 <span class="font-bold text-gray-900">Total (Est.)</span>
-                <span class="font-display font-black text-2xl text-brand-700">৳<span id="pageCartTotal">{{ cart_subtotal|add:"130" }}</span></span>
+                <span class="font-display font-black text-2xl text-brand-700">৳<span id="pageCartTotal">{{ grand_total }}</span></span>
             </div>
 
             <a href="{% url 'store:checkout' %}" class="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-700 hover:to-brand-800 active:scale-[0.99] text-white font-display font-extrabold text-base py-3.5 px-4 rounded-2xl shadow-xl shadow-brand-600/20 text-center transition-all">

@@ -13,6 +13,74 @@ from .forms import CheckoutForm, ReviewForm
 
 from django.db.models import Count, Q
 
+
+def checkout(request):
+    cart = Cart(request)
+    if len(cart) == 0:
+        messages.warning(request, 'Your cart is empty. Pick some crunch first!')
+        return redirect('store:index')
+
+    if request.method == 'POST':
+        form = CheckoutForm(request.POST)
+        if form.is_valid():
+            order = form.save(commit=False)
+            
+            subtotal = cart.get_subtotal()
+            delivery_zone = form.cleaned_data['delivery_zone']
+            delivery_fee = Decimal('130.00')
+            total = subtotal + delivery_fee
+            
+            order.subtotal = subtotal
+            order.delivery_fee = delivery_fee
+            order.total_amount = total
+            
+            # Payment status determination
+            if order.payment_method == 'COD':
+                order.payment_status = 'UNPAID'
+            else:
+                order.payment_status = 'PENDING_VERIFICATION'
+                
+            order.save()
+
+            # Create Order Items
+            for item in cart:
+                OrderItem.objects.create(
+                    order=order,
+                    product=item['product'],
+                    product_name=item['product'].name,
+                    jar_weight_grams=item['product'].jar_weight_grams,
+                    unit_price=item['price'],
+                    quantity=item['quantity'],
+                    total_price=item['total_price']
+                )
+
+            # Clear cart session
+            cart.clear()
+            
+            messages.success(request, f"Order #{order.order_number} confirmed successfully!")
+            return redirect('store:order_success', order_number=order.order_number)
+        else:
+            messages.error(request, 'Mobile number or transaction ID is not valid.')
+    else:
+        form = CheckoutForm(initial={'delivery_zone': 'INSIDE_DHAKA', 'payment_method': 'COD'})
+
+    subtotal = cart.get_subtotal()
+    delivery_fee = Decimal('130.00')
+    total = subtotal + delivery_fee
+
+    context = {
+        'cart': cart,
+        'form': form,
+        'cart_subtotal': subtotal,
+        'delivery_fee': delivery_fee,
+        'grand_total': total,
+        'total_amount': total,
+    }
+    return render(request, 'store/checkout.html', context)
+
+
+
+
 def index(request):
     featured_products = Product.objects.filter(is_in_stock=True, is_featured=True).order_by('id')
     all_products = Product.objects.filter(is_in_stock=True).order_by('id')
@@ -64,7 +132,15 @@ def product_detail(request, slug):
 
 def cart_view(request):
     cart = Cart(request)
-    return render(request, 'store/cart.html', {'cart': cart})
+    subtotal = cart.get_subtotal()
+    delivery_fee = Decimal('130.00')
+    grand_total = subtotal + delivery_fee
+    return render(request, 'store/cart.html', {
+        'cart': cart,
+        'cart_subtotal': subtotal,
+        'delivery_fee': delivery_fee,
+        'grand_total': grand_total,
+    })
 
 
 @require_POST

@@ -32,9 +32,7 @@
             </div>
             <div class="sm:text-right">
                 <span class="text-xs text-gray-400 font-semibold block">Estimated Delivery</span>
-                <span class="text-sm font-bold text-gray-800">
-                    {% if order.delivery_zone == 'INSIDE_DHAKA' %}24-48 Hours (Dhaka Home Delivery){% else %}48-72 Hours (Courier){% endif %}
-                </span>
+                <span class="text-sm font-bold text-gray-800">24-72 Hours (Standard Delivery)</span>
             </div>
         </div>
 
@@ -50,12 +48,42 @@
             <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100">
                 <span class="font-bold text-gray-500 block mb-1">Payment Method & Status</span>
                 <p class="font-bold text-gray-900">{{ order.get_payment_method_display }}</p>
-                <p class="text-gray-600 mt-1">Status: <span class="font-bold text-amber-700">{{ order.get_payment_status_display }}</span></p>
+                <div class="mt-1 flex items-center gap-1.5 flex-wrap">
+                    {% if order.payment_status == 'PAID' %}
+                    <span class="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 font-black text-[11px] px-2.5 py-0.5 rounded-full border border-emerald-300">
+                        <i class="fa-solid fa-circle-check text-emerald-600"></i> Paid
+                    </span>
+                    {% elif order.payment_status == 'PENDING_VERIFICATION' %}
+                    <span class="inline-flex items-center gap-1 bg-amber-100 text-amber-800 font-bold text-[11px] px-2.5 py-0.5 rounded-full border border-amber-300">
+                        <i class="fa-solid fa-clock"></i> Pending Verification
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-800 font-bold text-[11px] px-2.5 py-0.5 rounded-full border border-slate-300">
+                        {{ order.get_payment_status_display }}
+                    </span>
+                    {% endif %}
+                </div>
                 {% if order.payment_trx_id %}
-                <p class="text-gray-600 text-[11px]">TrxID: <span class="font-mono">{{ order.payment_trx_id }}</span></p>
+                <p class="text-slate-700 font-medium text-[11px] mt-1.5">TrxID: <span class="font-mono font-bold text-pink-700 bg-pink-50 px-1.5 py-0.5 rounded border border-pink-200">{{ order.payment_trx_id }}</span></p>
                 {% endif %}
             </div>
         </div>
+
+        {% if order.payment_method in 'BKASH,NAGAD' and order.payment_status != 'PAID' %}
+        <!-- MFS Instructions Card -->
+        <div class="bg-pink-50/80 p-4 rounded-2xl border-2 border-pink-200 text-xs text-pink-950 space-y-2">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+                <span class="font-black text-pink-900 flex items-center gap-1.5">
+                    <i class="fa-solid fa-mobile-screen-button text-pink-600"></i>
+                    {% if order.payment_method == 'NAGAD' %}Nagad{% else %}bKash{% endif %} Send Money Number: <span class="font-mono font-black text-base text-slate-950">01739804566</span>
+                </span>
+                <span class="bg-pink-200/80 text-pink-900 font-bold text-[11px] px-2.5 py-0.5 rounded-full">Personal</span>
+            </div>
+            <p class="text-slate-700 font-medium leading-relaxed">
+                Please send <strong>৳{{ order.total_amount }}</strong> to the number above using Send Money, and include your Order Number <strong>{{ order.order_number }}</strong> as reference.
+            </p>
+        </div>
+        {% endif %}
 
         <!-- Ordered Jars Table -->
         <div>

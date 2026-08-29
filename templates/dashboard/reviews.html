@@ -108,14 +108,9 @@
                                 </button>
                             </form>
 
-                            <form method="POST" class="inline" onsubmit="return confirm('Delete this review permanently?')">
-                                {% csrf_token %}
-                                <input type="hidden" name="action" value="delete_review">
-                                <input type="hidden" name="review_id" value="{{ r.id }}">
-                                <button type="submit" class="px-2 py-1 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold text-[11px] transition">
-                                    <i class="fa-solid fa-trash-can"></i>
-                                </button>
-                            </form>
+                            <button type="button" onclick="openDeleteReviewModal('{{ r.id }}', '{{ r.reviewer_name|escapejs }}')" class="px-2 py-1 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold text-[11px] transition cursor-pointer" title="Delete Review">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
                         </td>
                     </tr>
                     {% empty %}
@@ -198,12 +193,50 @@
     </div>
 </div>
 
+<!-- DELETE REVIEW CONFIRMATION MODAL -->
+<div id="deleteReviewModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative text-center">
+        
+        <div class="w-14 h-14 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto text-2xl">
+            <i class="fa-solid fa-trash-can"></i>
+        </div>
+
+        <div>
+            <h3 class="font-display font-black text-lg text-gray-900">Delete Review?</h3>
+            <p class="text-xs text-gray-500 mt-1">
+                Are you sure you want to permanently delete review by <strong id="del_reviewer_name" class="text-gray-900">Customer</strong>? This action cannot be undone.
+            </p>
+        </div>
+
+        <form method="POST" class="pt-2 flex items-center justify-center gap-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete_review">
+            <input type="hidden" id="del_review_id" name="review_id" value="">
+            <button type="button" onclick="closeDeleteReviewModal()" class="w-1/2 px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs transition cursor-pointer">
+                Cancel
+            </button>
+            <button type="submit" class="w-1/2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition shadow-md cursor-pointer">
+                Yes, Delete
+            </button>
+        </form>
+
+    </div>
+</div>
+
 <script>
 function openReviewModal() {
     document.getElementById('addReviewModal').classList.remove('hidden');
 }
 function closeReviewModal() {
     document.getElementById('addReviewModal').classList.add('hidden');
+}
+function openDeleteReviewModal(reviewId, reviewerName) {
+    document.getElementById('del_review_id').value = reviewId;
+    document.getElementById('del_reviewer_name').textContent = reviewerName;
+    document.getElementById('deleteReviewModal').classList.remove('hidden');
+}
+function closeDeleteReviewModal() {
+    document.getElementById('deleteReviewModal').classList.add('hidden');
 }
 </script>
 {% endblock %}
