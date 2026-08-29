@@ -1,7 +1,9 @@
 import json
 from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
+from django.urls import reverse
+from django.utils import timezone
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from .models import Product, Category, Order, OrderItem, Review
@@ -262,3 +264,91 @@ def order_track(request):
 
 def about_story(request):
     return render(request, 'store/about_faq.html')
+
+
+def sitemap_xml(request):
+    """
+    Dynamically generates a standard XML Sitemap for search engines like Google, Bing, etc.
+    Includes homepage, product pages, category pages, static content with lastmod and priorities.
+    """
+    domain = f"{request.scheme}://{request.get_host()}"
+    
+    # 1. Main / Static pages
+    urls = [
+        {
+            'loc': domain + reverse('store:index'),
+            'changefreq': 'daily',
+            'priority': '1.0',
+            'lastmod': timezone.now().strftime('%Y-%m-%d'),
+        },
+        {
+            'loc': domain + reverse('store:about_story'),
+            'changefreq': 'monthly',
+            'priority': '0.7',
+            'lastmod': timezone.now().strftime('%Y-%m-%d'),
+        },
+        {
+            'loc': domain + reverse('store:order_track'),
+            'changefreq': 'monthly',
+            'priority': '0.5',
+            'lastmod': timezone.now().strftime('%Y-%m-%d'),
+        },
+    ]
+
+    # 2. Category list / filter URLs
+    categories = Category.objects.all()
+    for cat in categories:
+        urls.append({
+            'loc': f"{domain}/?category={cat.slug}",
+            'changefreq': 'weekly',
+            'priority': '0.8',
+            'lastmod': timezone.now().strftime('%Y-%m-%d'),
+        })
+
+    # 3. Dynamic Product detail pages
+    products = Product.objects.filter(is_in_stock=True).order_by('-updated_at')
+    for product in products:
+        lastmod = product.updated_at.strftime('%Y-%m-%d') if product.updated_at else timezone.now().strftime('%Y-%m-%d')
+        urls.append({
+            'loc': domain + reverse('store:product_detail', kwargs={'slug': product.slug}),
+            'changefreq': 'daily',
+            'priority': '0.9',
+            'lastmod': lastmod,
+        })
+
+    # Generate XML output
+    xml_output = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+    ]
+    for url in urls:
+        xml_output.append('  <url>')
+        xml_output.append(f'    <loc>{url["loc"]}</loc>')
+        if 'lastmod' in url and url['lastmod']:
+            xml_output.append(f'    <lastmod>{url["lastmod"]}</lastmod>')
+        if 'changefreq' in url and url['changefreq']:
+            xml_output.append(f'    <changefreq>{url["changefreq"]}</changefreq>')
+        if 'priority' in url and url['priority']:
+            xml_output.append(f'    <priority>{url["priority"]}</priority>')
+        xml_output.append('  </url>')
+    xml_output.append('</urlset>')
+
+    return HttpResponse('\n'.join(xml_output), content_type='application/xml')
+
+
+def robots_txt(request):
+    """
+    Dynamically generates robots.txt for search engine crawlers with a pointer to sitemap.xml.
+    """
+    domain = f"{request.scheme}://{request.get_host()}"
+    content = f"""User-agent: *
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /cart/
+Disallow: /checkout/
+Disallow: /order/
+
+Sitemap: {domain}/sitemap.xml
+"""
+    return HttpResponse(content.strip() + '\n', content_type='text/plain')
+

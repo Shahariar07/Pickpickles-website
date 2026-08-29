@@ -14,4 +14,7 @@ urlpatterns = [
     path('order/success/<str:order_number>/', views.order_success, name='order_success'),
     path('track/', views.order_track, name='order_track'),
     path('story-and-faq/', views.about_story, name='about_story'),
+    path('sitemap.xml', views.sitemap_xml, name='sitemap_xml'),
+    path('robots.txt', views.robots_txt, name='robots_txt'),
 ]
+
