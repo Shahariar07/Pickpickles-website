@@ -1454,3 +1454,60 @@ def expense_categories_manager(request):
         'total_expenses_all': Expense.objects.aggregate(Sum('amount'))['amount__sum'] or 0,
     }
     return render(request, 'dashboard/expense_categories.html', context)
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def order_notifications_api(request):
+    """
+    Returns latest order info and pending count for real-time dashboard notifications.
+    Supports ?last_id=<int> to detect any newer orders.
+    """
+    last_id = request.GET.get('last_id')
+    try:
+        last_id = int(last_id) if last_id else 0
+    except (ValueError, TypeError):
+        last_id = 0
+
+    latest_order = Order.objects.order_by('-id').first()
+    latest_id = latest_order.id if latest_order else 0
+
+    pending_count = Order.objects.filter(order_status='PENDING').count()
+
+    # New orders that came strictly after last_id
+    new_orders_data = []
+    if last_id > 0 and latest_id > last_id:
+        new_orders = Order.objects.filter(id__gt=last_id).order_by('-id')[:5]
+        for o in new_orders:
+            new_orders_data.append({
+                'id': o.id,
+                'order_number': o.order_number,
+                'customer_name': o.customer_name,
+                'customer_phone': o.customer_phone,
+                'total_amount': f"{o.total_amount:,.2f}",
+                'delivery_city': o.delivery_city or ('Inside Dhaka' if o.delivery_zone == 'INSIDE_DHAKA' else 'Outside Dhaka'),
+                'payment_method': o.get_payment_method_display(),
+                'created_at_time': o.created_at.strftime('%I:%M %p'),
+                'detail_url': reverse('dashboard:order_detail', kwargs={'order_number': o.order_number}),
+            })
+
+    # Recent 5 pending orders for dropdown list
+    recent_pending = Order.objects.filter(order_status='PENDING').order_by('-id')[:5]
+    recent_pending_data = []
+    for o in recent_pending:
+        recent_pending_data.append({
+            'id': o.id,
+            'order_number': o.order_number,
+            'customer_name': o.customer_name,
+            'total_amount': f"{o.total_amount:,.2f}",
+            'created_at_time': o.created_at.strftime('%d %b, %I:%M %p'),
+            'detail_url': reverse('dashboard:order_detail', kwargs={'order_number': o.order_number}),
+        })
+
+    return JsonResponse({
+        'status': 'ok',
+        'latest_id': latest_id,
+        'has_new': len(new_orders_data) > 0,
+        'new_orders': new_orders_data,
+        'pending_count': pending_count,
+        'recent_pending': recent_pending_data,
+    })

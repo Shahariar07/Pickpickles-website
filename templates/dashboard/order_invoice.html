@@ -3,112 +3,290 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Packing Slip #{{ order.order_number }} | Pickpickles</title>
+    <title>POS Receipt #{{ order.order_number }} | Pickpickles</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
     <style>
+        /* POS Thermal Receipt Styles */
+        @media screen {
+            body {
+                background-color: #1e293b;
+            }
+            .pos-container-80 {
+                width: 320px; /* 80mm equivalent at 96-100dpi */
+            }
+            .pos-container-58 {
+                width: 235px; /* 58mm equivalent */
+            }
+        }
+
+        /* Thermal Printer Styles */
         @media print {
-            .no-print { display: none !important; }
-            body { padding: 0; background: white; }
+            @page {
+                size: 80mm auto;
+                margin: 0;
+            }
+            html, body {
+                width: 80mm !important;
+                max-width: 80mm !important;
+                margin: 0 auto !important;
+                padding: 2mm 3mm !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+                font-family: 'Courier New', Courier, monospace, system-ui !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .pos-receipt {
+                width: 100% !important;
+                max-width: 100% !important;
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                background: transparent !important;
+                border-radius: 0 !important;
+            }
+            .thermal-dashed {
+                border-top: 1px dashed #000000 !important;
+            }
+            .thermal-double {
+                border-top: 2px solid #000000 !important;
+                border-bottom: 2px solid #000000 !important;
+            }
+        }
+
+        /* Monospace font for authentic receipt numbers */
+        .mono-num {
+            font-family: 'Courier New', Courier, monospace;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .thermal-dashed {
+            border-top: 1px dashed #4b5563;
+        }
+        .thermal-double {
+            border-top: 2px solid #111827;
+            border-bottom: 2px solid #111827;
         }
     </style>
 </head>
-<body class="bg-gray-100 p-4 sm:p-8 font-sans text-gray-900">
-    
-    <div class="no-print max-w-2xl mx-auto mb-4 flex items-center justify-between">
-        <a href="{% url 'dashboard:order_detail' order.order_number %}" class="text-xs font-bold text-gray-600 hover:text-gray-900">
-            &larr; Back to Order
-        </a>
-        <button onclick="window.print()" class="bg-green-700 hover:bg-green-800 text-white font-bold text-xs px-4 py-2 rounded-lg shadow">
-            🖨️ Print Packing Slip
-        </button>
+<body class="min-h-screen py-6 px-3 flex flex-col items-center justify-start text-gray-900 font-sans antialiased">
+
+    <!-- Top Action Toolbar (Hidden when printing) -->
+    <div class="no-print w-full max-w-md mb-5 flex flex-wrap items-center justify-between gap-3 bg-slate-800/90 backdrop-blur-md p-3 rounded-2xl border border-slate-700 shadow-xl text-white">
+        <div class="flex items-center gap-2">
+            <a href="{% url 'dashboard:orders' %}" class="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-xs font-bold transition flex items-center gap-1.5">
+                <i class="fa-solid fa-arrow-left text-[11px]"></i>
+                <span>Orders</span>
+            </a>
+            <a href="{% url 'dashboard:order_detail' order.order_number %}" class="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-xs font-bold transition flex items-center gap-1.5">
+                <span>Detail</span>
+            </a>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <!-- Width Selector (80mm vs 58mm) -->
+            <div class="flex items-center bg-slate-900/80 p-1 rounded-xl border border-slate-700 text-[11px] font-bold">
+                <button type="button" onclick="setReceiptWidth('80')" id="btn80" class="px-2.5 py-1 rounded-lg bg-emerald-600 text-white transition">80mm</button>
+                <button type="button" onclick="setReceiptWidth('58')" id="btn58" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition">58mm</button>
+            </div>
+
+            <!-- Print Button -->
+            <button onclick="window.print()" class="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs transition shadow-lg flex items-center gap-1.5 active:scale-95 cursor-pointer">
+                <i class="fa-solid fa-print"></i>
+                <span>Print Receipt</span>
+            </button>
+        </div>
     </div>
 
-    <div class="max-w-2xl mx-auto bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
+    <!-- POS Machine Thermal Slip Container -->
+    <div id="receiptContainer" class="pos-receipt pos-container-80 bg-white p-4 sm:p-5 rounded-2xl shadow-2xl transition-all duration-200">
         
-        <!-- Header -->
-        <div class="flex items-start justify-between border-b border-gray-200 pb-6">
-            <div class="flex items-center gap-3.5">
-                <img src="/static/images/logo.png" alt="Pickpickles Logo" class="w-14 h-14 rounded-full object-cover border border-green-800/30">
-                <div>
-                    <h1 class="text-2xl font-black text-green-900 leading-tight">PICKPICKLES</h1>
-                    <p class="text-xs text-gray-500 font-semibold mt-0.5">100% Fresh Homemade Pickles • Handcrafted in Bangladesh</p>
-                    <p class="text-xs text-gray-500">Dhaka, Bangladesh • 01794271523</p>
-                </div>
+        <!-- Store Header -->
+        <div class="text-center space-y-1">
+            <div class="flex justify-center mb-1">
+                <img src="/static/images/logo.png" alt="Pickpickles" class="w-12 h-12 rounded-full object-cover filter grayscale contrast-150 border border-gray-900/30">
             </div>
-            <div class="text-right">
-                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider block">PACKING SLIP / INVOICE</span>
-                <span class="text-xl font-black text-gray-900">#{{ order.order_number }}</span>
-                <p class="text-xs text-gray-500 mt-1">{{ order.created_at|date:"F d, Y - h:i A" }}</p>
+            <h1 class="text-xl font-black tracking-tight uppercase leading-none text-black">PICKPICKLES</h1>
+            <p class="text-[11px] font-bold text-gray-700">100% Homemade Fresh Pickles</p>
+            <p class="text-[10px] text-gray-600">Hotline: 01794271523 • Dhaka</p>
+            <p class="text-[10px] text-gray-500 font-mono">www.pickpickles.com</p>
+        </div>
+
+        <!-- Dashed Divider -->
+        <div class="thermal-dashed my-2.5"></div>
+
+        <!-- Order Metadata -->
+        <div class="text-[11px] space-y-1">
+            <div class="flex justify-between items-center font-bold">
+                <span>ORDER #:</span>
+                <span class="text-sm font-black text-black">#{{ order.order_number }}</span>
+            </div>
+            <div class="flex justify-between items-center text-gray-600 text-[10px]">
+                <span>DATE:</span>
+                <span class="mono-num">{{ order.created_at|date:"d M Y • h:i A" }}</span>
+            </div>
+            <div class="flex justify-between items-center text-gray-600 text-[10px]">
+                <span>FULFILLMENT:</span>
+                <span class="font-extrabold uppercase text-black">{{ order.get_order_status_display }}</span>
             </div>
         </div>
 
-        <!-- Customer & Shipping -->
-        <div class="grid grid-cols-2 gap-6 my-6 text-xs">
-            <div>
-                <span class="text-gray-400 font-bold uppercase block mb-1">Deliver To:</span>
-                <p class="font-extrabold text-sm text-gray-900">{{ order.customer_name }}</p>
-                <p class="font-bold text-gray-800 text-sm mt-0.5">{{ order.customer_phone }}</p>
-                <p class="text-gray-700 mt-1 leading-relaxed">{{ order.delivery_address }}</p>
-                <p class="font-bold text-gray-900 mt-0.5">{{ order.delivery_city }} ({{ order.get_delivery_zone_display }})</p>
-                {% if order.customer_notes %}
-                <p class="text-amber-900 bg-amber-50 p-2 rounded mt-2"><strong>Rider Note:</strong> {{ order.customer_notes }}</p>
-                {% endif %}
+        <!-- Dashed Divider -->
+        <div class="thermal-dashed my-2.5"></div>
+
+        <!-- Customer & Delivery Info (Crucial for Rider) -->
+        <div class="text-[11px] space-y-1">
+            <span class="text-[9px] font-black uppercase tracking-wider text-gray-500 block">DELIVER TO:</span>
+            <div class="font-black text-sm text-black leading-tight">{{ order.customer_name }}</div>
+            <div class="font-black text-xs text-black mono-num tracking-wide">
+                <i class="fa-solid fa-phone text-[10px] mr-0.5 no-print"></i>
+                {{ order.customer_phone }}
+            </div>
+            <div class="text-[11px] text-gray-800 leading-snug mt-1 font-medium">
+                {{ order.delivery_address }}
+            </div>
+            <div class="text-[10px] font-bold text-black uppercase mt-0.5">
+                {{ order.delivery_city }} ({{ order.get_delivery_zone_display }})
             </div>
 
-            <div class="text-right space-y-1.5">
-                <span class="text-gray-400 font-bold uppercase block mb-1">Payment Method:</span>
-                <p class="font-black text-sm text-gray-900">{{ order.get_payment_method_display }}</p>
-                <p class="text-xs font-bold {% if order.payment_status == 'PAID' %}text-green-700{% else %}text-amber-700{% endif %}">
-                    Status: {{ order.get_payment_status_display }}
-                </p>
-                {% if order.payment_trx_id %}
-                <p class="text-xs text-gray-600 font-mono">TrxID: {{ order.payment_trx_id }}</p>
-                {% endif %}
-                <div class="mt-3 p-2 bg-gray-50 rounded border border-gray-200 inline-block text-left text-[11px]">
-                    <span class="block font-bold text-gray-700">Fulfillment Status:</span>
-                    <span class="font-black text-green-800">{{ order.get_order_status_display }}</span>
-                </div>
+            {% if order.customer_notes %}
+            <div class="mt-1.5 p-1.5 bg-gray-100 rounded border border-gray-300 text-[10px] font-bold text-gray-900 leading-tight">
+                <span class="uppercase text-[9px] block text-gray-600">Rider Note:</span>
+                {{ order.customer_notes }}
             </div>
+            {% endif %}
         </div>
+
+        <!-- Dashed Divider -->
+        <div class="thermal-dashed my-2.5"></div>
 
         <!-- Items Table -->
-        <table class="w-full text-xs text-left border-collapse my-6">
-            <thead>
-                <tr class="border-b-2 border-gray-300 text-gray-500 font-bold uppercase text-[10px]">
-                    <th class="py-2">Item / Pickle Variety</th>
-                    <th class="py-2 text-center">Jar Weight</th>
-                    <th class="py-2 text-center">Qty</th>
-                    <th class="py-2 text-right">Unit Price</th>
-                    <th class="py-2 text-right">Total</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200">
-                {% for item in order.items.all %}
-                <tr class="py-2">
-                    <td class="py-2.5 font-bold text-gray-900">{{ item.product_name }}</td>
-                    <td class="py-2.5 text-center text-gray-600">{{ item.jar_weight_grams }}g</td>
-                    <td class="py-2.5 text-center font-black text-sm text-gray-900">{{ item.quantity }}</td>
-                    <td class="py-2.5 text-right text-gray-700">৳{{ item.unit_price }}</td>
-                    <td class="py-2.5 text-right font-bold text-gray-900">৳{{ item.total_price }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="space-y-1.5 text-[11px]">
+            <div class="flex justify-between text-[10px] font-black uppercase text-gray-500 pb-0.5 border-b border-gray-200">
+                <span>ITEM</span>
+                <span class="text-right">TOTAL</span>
+            </div>
 
-        <!-- Totals -->
-        <div class="border-t-2 border-gray-300 pt-3 space-y-1 text-xs text-right">
-            <p class="text-gray-600">Jars Subtotal: <strong class="text-gray-900">৳{{ order.subtotal }}</strong></p>
-            <p class="text-gray-600">Delivery Fee ({{ order.get_delivery_zone_display }}): <strong class="text-gray-900">৳{{ order.delivery_fee }}</strong></p>
-            <p class="text-base font-black text-gray-900 pt-2 border-t border-gray-200">
-                Total Amount: <span class="text-green-800">৳{{ order.total_amount }} BDT</span>
-            </p>
+            {% for item in order.items.all %}
+            <div class="py-1 border-b border-gray-100/80">
+                <div class="font-bold text-black leading-tight flex justify-between gap-1">
+                    <span class="break-words">{{ item.product_name }}</span>
+                    <span class="mono-num font-black text-right shrink-0">৳{{ item.total_price|floatformat:0 }}</span>
+                </div>
+                <div class="flex justify-between items-center text-[10px] text-gray-500 mono-num mt-0.5">
+                    <span>{{ item.jar_weight_grams }}g jar</span>
+                    <span>{{ item.quantity }} x ৳{{ item.unit_price|floatformat:0 }}</span>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-[10px] italic text-gray-400 py-1">No items found</div>
+            {% endfor %}
         </div>
 
-        <!-- Quality Guarantee Footer -->
-        <div class="border-t border-dashed border-gray-300 mt-8 pt-4 text-center text-[10px] text-gray-500">
-            Thank you for ordering Pickpickles! Keep refrigerated after opening for best crunch snap. 🥒
+        <!-- Summary & Totals -->
+        <div class="thermal-dashed my-2.5"></div>
+
+        <div class="space-y-1 text-[11px] mono-num">
+            <div class="flex justify-between text-gray-600">
+                <span>Jars ({{ order.total_items_count }} items):</span>
+                <span>৳{{ order.subtotal|floatformat:0 }}</span>
+            </div>
+            <div class="flex justify-between text-gray-600">
+                <span>Delivery ({{ order.delivery_zone }}):</span>
+                <span>৳{{ order.delivery_fee|floatformat:0 }}</span>
+            </div>
+            
+            <!-- Grand Total -->
+            <div class="thermal-double py-1.5 my-1.5 flex justify-between items-center text-sm font-black text-black">
+                <span class="tracking-tight">GRAND TOTAL:</span>
+                <span class="text-base">৳{{ order.total_amount|floatformat:0 }}</span>
+            </div>
+        </div>
+
+        <!-- Payment Mode Box -->
+        <div class="mt-2 text-center p-2 rounded border border-gray-300 {% if order.payment_status == 'PAID' %}bg-gray-50{% else %}bg-gray-100{% endif %}">
+            <div class="text-[10px] font-bold uppercase text-gray-500">PAYMENT DETAILS</div>
+            <div class="font-black text-xs uppercase text-black mt-0.5">
+                {{ order.get_payment_method_display }}
+            </div>
+            <div class="mt-0.5 font-black text-xs {% if order.payment_status == 'PAID' %}text-black{% else %}text-black underline{% endif %}">
+                {% if order.payment_status == 'PAID' %}
+                    [ PAID IN FULL ]
+                {% else %}
+                    [ CASH ON DELIVERY: PLEASE COLLECT ৳{{ order.total_amount|floatformat:0 }} ]
+                {% endif %}
+            </div>
+            {% if order.payment_trx_id %}
+            <div class="text-[9px] font-mono text-gray-600 mt-0.5">
+                TrxID: {{ order.payment_trx_id }}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Barcode / Order Identifier -->
+        <div class="mt-3 text-center">
+            <!-- Simulated High-Contrast Barcode for POS -->
+            <div class="inline-flex items-center justify-center gap-[2px] h-9 px-2 overflow-hidden">
+                <span class="w-[2px] h-full bg-black"></span>
+                <span class="w-[1px] h-full bg-black"></span>
+                <span class="w-[3px] h-full bg-black"></span>
+                <span class="w-[1px] h-full bg-black"></span>
+                <span class="w-[2px] h-full bg-black"></span>
+                <span class="w-[4px] h-full bg-black"></span>
+                <span class="w-[1px] h-full bg-black"></span>
+                <span class="w-[2px] h-full bg-black"></span>
+                <span class="w-[3px] h-full bg-black"></span>
+                <span class="w-[1px] h-full bg-black"></span>
+                <span class="w-[4px] h-full bg-black"></span>
+                <span class="w-[2px] h-full bg-black"></span>
+                <span class="w-[1px] h-full bg-black"></span>
+                <span class="w-[3px] h-full bg-black"></span>
+                <span class="w-[2px] h-full bg-black"></span>
+                <span class="w-[1px] h-full bg-black"></span>
+                <span class="w-[3px] h-full bg-black"></span>
+                <span class="w-[2px] h-full bg-black"></span>
+                <span class="w-[4px] h-full bg-black"></span>
+                <span class="w-[1px] h-full bg-black"></span>
+                <span class="w-[2px] h-full bg-black"></span>
+            </div>
+            <div class="font-mono text-[10px] font-black tracking-widest text-black mt-0.5">
+                *{{ order.order_number }}*
+            </div>
+        </div>
+
+        <!-- Footer Note -->
+        <div class="thermal-dashed mt-3 pt-2 text-center text-[9px] text-gray-600 space-y-0.5">
+            <p class="font-bold">Thank you for choosing Pickpickles! 🥒</p>
+            <p>Keep refrigerated after opening for maximum crunch.</p>
         </div>
 
     </div>
+
+    <!-- Client-side helper script -->
+    <script>
+        function setReceiptWidth(size) {
+            const container = document.getElementById('receiptContainer');
+            const btn80 = document.getElementById('btn80');
+            const btn58 = document.getElementById('btn58');
+            
+            if (size === '58') {
+                container.classList.remove('pos-container-80');
+                container.classList.add('pos-container-58');
+                btn58.className = 'px-2.5 py-1 rounded-lg bg-emerald-600 text-white transition';
+                btn80.className = 'px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition';
+            } else {
+                container.classList.remove('pos-container-58');
+                container.classList.add('pos-container-80');
+                btn80.className = 'px-2.5 py-1 rounded-lg bg-emerald-600 text-white transition';
+                btn58.className = 'px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition';
+            }
+        }
+    </script>
 </body>
 </html>

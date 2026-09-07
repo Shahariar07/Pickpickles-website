@@ -57,9 +57,41 @@
                     <span class="font-display font-extrabold text-base sm:text-lg tracking-tight text-white truncate">PICK<span class="text-brand-accent">PICKLES</span></span>
                 </a>
             </div>
-            <a href="{% url 'dashboard:logout' %}" class="p-2 rounded-xl bg-rose-900/60 hover:bg-rose-800 text-rose-200 text-xs transition shrink-0 ml-2">
-                <i class="fa-solid fa-right-from-bracket"></i>
-            </a>
+
+            <!-- Mobile Notification & Sound Icons -->
+            <div class="flex items-center gap-1.5 shrink-0">
+                <!-- Sound Toggle Mobile -->
+                <button type="button" onclick="toggleNotificationSound()" id="mobileSoundToggleBtn" title="Toggle Sound Alert" class="p-2 rounded-xl text-brand-accent hover:bg-brand-800 text-sm transition">
+                    <i id="mobileSoundIcon" class="fa-solid fa-volume-high"></i>
+                </button>
+
+                <!-- Notifications Bell Mobile -->
+                <div class="relative">
+                    <button type="button" onclick="toggleNotificationDropdown('mobileNotificationDropdown')" class="p-2 rounded-xl text-gray-300 hover:text-white hover:bg-brand-800 transition relative">
+                        <i class="fa-solid fa-bell text-base"></i>
+                        <span id="mobileNotificationBadge" class="hidden absolute top-1 right-1 min-w-[16px] h-4 px-1 bg-rose-500 text-[9px] font-black text-white rounded-full flex items-center justify-center animate-pulse">0</span>
+                    </button>
+                    <!-- Mobile Notification Dropdown Panel -->
+                    <div id="mobileNotificationDropdown" class="hidden absolute right-0 mt-2 w-72 bg-white text-gray-800 rounded-2xl shadow-2xl border border-gray-200 py-3 z-50">
+                        <div class="px-4 pb-2 border-b border-gray-100 flex items-center justify-between">
+                            <span class="font-bold text-xs text-gray-900">Pending Orders</span>
+                            <span id="mobilePendingCountText" class="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">0 pending</span>
+                        </div>
+                        <div id="mobileNotificationList" class="max-h-60 overflow-y-auto divide-y divide-gray-100 text-xs">
+                            <div class="p-4 text-center text-gray-400 text-xs">No pending orders</div>
+                        </div>
+                        <div class="pt-2 px-3 border-t border-gray-100">
+                            <a href="{% url 'dashboard:orders' %}" class="block text-center text-[11px] font-bold text-brand-700 hover:text-brand-800 py-1">
+                                Open Orders Hub →
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <a href="{% url 'dashboard:logout' %}" class="p-2 rounded-xl bg-rose-900/60 hover:bg-rose-800 text-rose-200 text-xs transition shrink-0 ml-1">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </a>
+            </div>
         </div>
 
         <!-- Mobile Backdrop Overlay -->
@@ -100,6 +132,7 @@
                             <a href="{% url 'dashboard:orders' %}" class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'orders' or request.resolver_match.url_name == 'order_detail' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
                                 <i class="fa-solid fa-list-check text-brand-accent text-sm w-4 text-center"></i>
                                 <span>Orders & Delivery</span>
+                                <span id="sidebarOrdersPendingBadge" class="hidden ml-auto px-2 py-0.5 text-[10px] font-black bg-amber-500 text-brand-950 rounded-full shadow-xs">0</span>
                             </a>
 
                             <!-- Inventory Link -->
@@ -204,8 +237,69 @@
         </aside>
 
         <!-- Main Content Area -->
-        <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        <div class="flex-1 flex flex-col min-w-0 overflow-y-auto relative">
             
+            <!-- Desktop Top Navigation Header -->
+            <header class="hidden md:flex items-center justify-between px-6 py-3.5 bg-white border-b border-gray-200 sticky top-0 z-30 shadow-2xs">
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2 bg-emerald-50 text-emerald-800 border border-emerald-200/80 px-3 py-1 rounded-full text-xs font-bold shadow-2xs">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span>Live Order Monitoring</span>
+                    </div>
+                    <span id="pendingReminderNotice" class="hidden items-center gap-1.5 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full animate-pulse">
+                        <i class="fa-solid fa-clock"></i> 30s Alert Active
+                    </span>
+                    <span class="text-xs text-gray-400 font-semibold hidden lg:inline">• 30s recurring alert when pending orders exist</span>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <!-- Sound Toggle Button -->
+                    <button type="button" id="desktopSoundToggleBtn" onclick="toggleNotificationSound()" class="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 transition shadow-2xs">
+                        <i id="desktopSoundIcon" class="fa-solid fa-volume-high text-brand-600"></i>
+                        <span id="desktopSoundText">Sound: ON</span>
+                    </button>
+
+                    <!-- Test Chime Button -->
+                    <button type="button" onclick="playChimeSound(true)" title="Click to test notification chime" class="px-2.5 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-play text-[10px] text-brand-600"></i>
+                        <span>Test Chime</span>
+                    </button>
+
+                    <!-- Notification Bell Dropdown (Desktop) -->
+                    <div class="relative">
+                        <button type="button" id="desktopNotificationBellBtn" onclick="toggleNotificationDropdown('desktopNotificationDropdown')" class="relative p-2.5 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 transition flex items-center justify-center">
+                            <i class="fa-solid fa-bell text-base text-gray-700"></i>
+                            <span id="desktopNotificationBadge" class="hidden absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-sm animate-bounce">0</span>
+                        </button>
+
+                        <!-- Notification Dropdown Menu -->
+                        <div id="desktopNotificationDropdown" class="hidden absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 py-3 z-50 transition-all">
+                            <div class="px-4 pb-2.5 border-b border-gray-100 flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <i class="fa-solid fa-bell text-brand-600"></i>
+                                    <span class="font-display font-bold text-sm text-gray-900">Order Alerts</span>
+                                </div>
+                                <span id="desktopPendingCountText" class="text-[11px] font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">0 pending</span>
+                            </div>
+                            <div id="desktopNotificationList" class="max-h-72 overflow-y-auto divide-y divide-gray-100 text-xs">
+                                <div class="p-4 text-center text-gray-400 text-xs">No pending orders</div>
+                            </div>
+                            <div class="pt-2 px-3 border-t border-gray-100 flex items-center justify-between">
+                                <a href="{% url 'dashboard:orders' %}" class="w-full text-center text-xs font-bold text-brand-700 hover:text-brand-800 py-1.5 rounded-xl hover:bg-brand-50 transition">
+                                    View Full Orders Queue →
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Direct Orders Hub Button -->
+                    <a href="{% url 'dashboard:orders' %}" class="bg-brand-700 hover:bg-brand-800 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-list-check text-brand-accent"></i>
+                        <span>Orders Hub</span>
+                    </a>
+                </div>
+            </header>
+
             <!-- Global Messages Container -->
             {% if messages %}
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">
@@ -232,6 +326,12 @@
 
     </div>
 
+    <!-- Audio Notification Element -->
+    <audio id="orderNotificationAudio" src="{% static 'audio/order_alert.wav' %}" preload="auto"></audio>
+
+    <!-- Floating Real-Time Order Alert Banner Container -->
+    <div id="liveOrderToastContainer" class="fixed top-16 right-4 sm:right-6 z-50 flex flex-col gap-3 pointer-events-none max-w-sm w-full sm:w-96"></div>
+
     <!-- Toggle Script for Mobile Sidebar -->
     <script>
         function toggleSidebar() {
@@ -247,6 +347,313 @@
         }
     </script>
 
+    <!-- Real-Time Order Notifications & Audio Alert Script -->
+    <script>
+        // 1. Audio Player (HTML5 Audio)
+        const orderAudio = document.getElementById('orderNotificationAudio');
+
+        // Silent unlock on user's first gesture anywhere
+        document.addEventListener('click', function unlockAudio() {
+            if (orderAudio) {
+                orderAudio.muted = true;
+                const p = orderAudio.play();
+                if (p !== undefined) {
+                    p.then(() => {
+                        orderAudio.pause();
+                        orderAudio.currentTime = 0;
+                        orderAudio.muted = false;
+                    }).catch(() => {});
+                }
+            }
+        }, { once: true });
+
+        // Play chime sound
+        function playChimeSound(force = false) {
+            if (!force && !isSoundEnabled()) return;
+            if (orderAudio) {
+                orderAudio.muted = false;
+                orderAudio.volume = 1.0;
+                orderAudio.currentTime = 0;
+                orderAudio.play().catch(err => {
+                    console.log('Audio playback waiting for click:', err);
+                });
+            }
+        }
+
+        // Sound state management (Default: ON)
+        function isSoundEnabled() {
+            let val = localStorage.getItem('pickpickles_dashboard_sound');
+            if (val === null) {
+                localStorage.setItem('pickpickles_dashboard_sound', 'true');
+                return true;
+            }
+            return val === 'true';
+        }
+
+        function updateSoundUI() {
+            const enabled = isSoundEnabled();
+            const dText = document.getElementById('desktopSoundText');
+            const dIcon = document.getElementById('desktopSoundIcon');
+            const mIcon = document.getElementById('mobileSoundIcon');
+
+            if (dText) dText.textContent = enabled ? 'Sound: ON' : 'Sound: MUTE';
+            if (dIcon) {
+                dIcon.className = enabled ? 'fa-solid fa-volume-high text-brand-600' : 'fa-solid fa-volume-xmark text-rose-500';
+            }
+            if (mIcon) {
+                mIcon.className = enabled ? 'fa-solid fa-volume-high text-brand-accent' : 'fa-solid fa-volume-xmark text-rose-300';
+            }
+        }
+
+        function toggleNotificationSound() {
+            const current = isSoundEnabled();
+            localStorage.setItem('pickpickles_dashboard_sound', (!current).toString());
+            updateSoundUI();
+            if (!current) {
+                playChimeSound(true);
+                if (lastPendingCount > 0) {
+                    handlePendingSoundReminder(lastPendingCount);
+                }
+                if ('Notification' in window && Notification.permission === 'default') {
+                    Notification.requestPermission();
+                }
+            }
+        }
+
+        // Dropdown toggle
+        function toggleNotificationDropdown(dropdownId) {
+            const dropdown = document.getElementById(dropdownId);
+            if (!dropdown) return;
+            const isHidden = dropdown.classList.contains('hidden');
+            
+            // Close any other open dropdowns first
+            document.querySelectorAll('#desktopNotificationDropdown, #mobileNotificationDropdown').forEach(el => {
+                el.classList.add('hidden');
+            });
+
+            if (isHidden) {
+                dropdown.classList.remove('hidden');
+                // Request browser notifications if not asked yet
+                if ('Notification' in window && Notification.permission === 'default') {
+                    Notification.requestPermission();
+                }
+            }
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#desktopNotificationBellBtn') && 
+                !e.target.closest('#desktopNotificationDropdown') &&
+                !e.target.closest('#mobileNotificationDropdown') &&
+                !e.target.closest('button[onclick*="mobileNotificationDropdown"]')) {
+                const d = document.getElementById('desktopNotificationDropdown');
+                const m = document.getElementById('mobileNotificationDropdown');
+                if (d) d.classList.add('hidden');
+                if (m) m.classList.add('hidden');
+            }
+        });
+
+        // Show floating toast banner
+        function showOrderToast(order) {
+            const container = document.getElementById('liveOrderToastContainer');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = 'pointer-events-auto bg-gray-900/95 backdrop-blur-md text-white p-4 rounded-2xl shadow-2xl border-2 border-emerald-500/80 transform transition-all duration-500 translate-y-2 opacity-0 flex flex-col gap-2';
+            toast.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-500 text-white shadow-xs">
+                        <i class="fa-solid fa-bell animate-bounce"></i>
+                        NEW ORDER RECEIVED!
+                    </span>
+                    <span class="text-xs text-brand-accent font-bold">${order.created_at_time}</span>
+                </div>
+                <div class="mt-1">
+                    <div class="flex items-center justify-between">
+                        <span class="font-display font-black text-base text-white">#${order.order_number}</span>
+                        <span class="text-sm font-black text-emerald-400">৳${order.total_amount}</span>
+                    </div>
+                    <p class="text-xs text-gray-300 font-semibold mt-0.5">${order.customer_name} • ${order.customer_phone}</p>
+                    <p class="text-[11px] text-gray-400 font-medium">${order.delivery_city} • ${order.payment_method}</p>
+                </div>
+                <div class="flex items-center gap-2 mt-2 pt-2 border-t border-gray-800">
+                    <a href="${order.detail_url}" class="flex-1 text-center bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold py-2 rounded-xl transition shadow-sm">
+                        View Order Details →
+                    </a>
+                    <button type="button" onclick="this.closest('.pointer-events-auto').remove()" class="px-3 py-2 text-xs font-bold text-gray-400 hover:text-white rounded-xl bg-gray-800 transition">
+                        ✕
+                    </button>
+                </div>
+            `;
+
+            container.appendChild(toast);
+
+            // Animate in
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            });
+
+            // Native browser OS notification
+            if ('Notification' in window && Notification.permission === 'granted') {
+                try {
+                    new Notification(`Pickpickles Order #${order.order_number}`, {
+                        body: `${order.customer_name} - ৳${order.total_amount} (${order.delivery_city})`,
+                        icon: '{% static "images/logo.png" %}'
+                    });
+                } catch(e) {}
+            }
+
+            // Auto-dismiss after 15 seconds
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.classList.add('opacity-0', 'translate-x-full');
+                    setTimeout(() => toast.remove(), 400);
+                }
+            }, 15000);
+        }
+
+        // Render pending orders in dropdown
+        function renderPendingList(orders) {
+            const renderHtml = (items) => {
+                if (!items || items.length === 0) {
+                    return '<div class="p-4 text-center text-gray-400 text-xs">No pending orders right now 🎉</div>';
+                }
+                return items.map(item => `
+                    <a href="${item.detail_url}" class="p-3 hover:bg-gray-50 flex items-center justify-between gap-2 transition group">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-1.5">
+                                <span class="font-bold text-gray-900 group-hover:text-brand-600 truncate">#${item.order_number}</span>
+                                <span class="text-[10px] text-gray-400">• ${item.created_at_time}</span>
+                            </div>
+                            <p class="text-[11px] text-gray-500 font-medium truncate">${item.customer_name}</p>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <span class="text-xs font-black text-brand-700 block">৳${item.total_amount}</span>
+                            <span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">Pending</span>
+                        </div>
+                    </a>
+                `).join('');
+            };
+
+            const dList = document.getElementById('desktopNotificationList');
+            const mList = document.getElementById('mobileNotificationList');
+            if (dList) dList.innerHTML = renderHtml(orders);
+            if (mList) mList.innerHTML = renderHtml(orders);
+        }
+
+        // Update counts and badges
+        function updateBadges(pendingCount) {
+            const dBadge = document.getElementById('desktopNotificationBadge');
+            const mBadge = document.getElementById('mobileNotificationBadge');
+            const sBadge = document.getElementById('sidebarOrdersPendingBadge');
+            const dPendingText = document.getElementById('desktopPendingCountText');
+            const mPendingText = document.getElementById('mobilePendingCountText');
+
+            const text = pendingCount > 99 ? '99+' : pendingCount.toString();
+
+            if (dPendingText) dPendingText.textContent = `${pendingCount} pending`;
+            if (mPendingText) mPendingText.textContent = `${pendingCount} pending`;
+
+            [dBadge, mBadge, sBadge].forEach(b => {
+                if (!b) return;
+                if (pendingCount > 0) {
+                    b.textContent = text;
+                    b.classList.remove('hidden');
+                } else {
+                    b.classList.add('hidden');
+                }
+            });
+        }
+
+        // 2. 30-Second recurring audio reminder while pending orders exist
+        let lastPendingCount = 0;
+        let reminderIntervalTimer = null;
+
+        function handlePendingSoundReminder(pendingCount) {
+            lastPendingCount = pendingCount;
+            const reminderBadge = document.getElementById('pendingReminderNotice');
+
+            if (pendingCount > 0) {
+                if (reminderBadge) {
+                    reminderBadge.classList.remove('hidden');
+                    reminderBadge.classList.add('inline-flex');
+                }
+
+                // Start 30-second recurring chime timer if not already running
+                if (!reminderIntervalTimer) {
+                    reminderIntervalTimer = setInterval(() => {
+                        if (lastPendingCount > 0 && isSoundEnabled()) {
+                            playChimeSound();
+                        }
+                    }, 30000); // exactly every 30 seconds
+                }
+            } else {
+                if (reminderBadge) {
+                    reminderBadge.classList.add('hidden');
+                    reminderBadge.classList.remove('inline-flex');
+                }
+                if (reminderIntervalTimer) {
+                    clearInterval(reminderIntervalTimer);
+                    reminderIntervalTimer = null;
+                }
+            }
+        }
+
+        // 3. Poller state
+        let lastKnownOrderId = 0;
+        let isFirstPoll = true;
+
+        async function pollOrderNotifications() {
+            try {
+                const url = `{% url 'dashboard:api_order_notifications' %}?last_id=${lastKnownOrderId}`;
+                const res = await fetch(url, { credentials: 'same-origin' });
+                if (!res.ok) return;
+
+                const data = await res.json();
+                if (data.status !== 'ok') return;
+
+                // On first run, record latest ID without alerting old orders
+                if (isFirstPoll) {
+                    lastKnownOrderId = data.latest_id;
+                    isFirstPoll = false;
+                    updateBadges(data.pending_count);
+                    renderPendingList(data.recent_pending);
+                    handlePendingSoundReminder(data.pending_count);
+                    return;
+                }
+
+                // If new order(s) arrived
+                if (data.has_new && data.new_orders && data.new_orders.length > 0) {
+                    playChimeSound();
+
+                    data.new_orders.forEach(order => {
+                        showOrderToast(order);
+                    });
+
+                    // Update last ID
+                    lastKnownOrderId = data.latest_id;
+                }
+
+                // Always update badges, dropdown list, and 30s recurring reminder
+                updateBadges(data.pending_count);
+                renderPendingList(data.recent_pending);
+                handlePendingSoundReminder(data.pending_count);
+
+            } catch (err) {
+                console.warn('Order polling error:', err);
+            }
+        }
+
+        // Initialize UI and start polling
+        document.addEventListener('DOMContentLoaded', function() {
+            updateSoundUI();
+            pollOrderNotifications();
+            // Poll every 12 seconds
+            setInterval(pollOrderNotifications, 12000);
+        });
+    </script>
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>
+
