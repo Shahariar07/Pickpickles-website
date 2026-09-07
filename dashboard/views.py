@@ -232,13 +232,25 @@ def orders_list(request):
         orders = orders.filter(delivery_zone=zone_filter)
 
     if search_query:
-        orders = orders.filter(
+        import re
+        clean_search = search_query.lstrip('#').strip()
+        num_match = re.search(r'(\d+)', clean_search)
+        
+        s_filter = (
             Q(order_number__icontains=search_query) |
+            Q(order_number__icontains=clean_search) |
             Q(customer_name__icontains=search_query) |
             Q(customer_phone__icontains=search_query) |
             Q(delivery_city__icontains=search_query) |
             Q(payment_trx_id__icontains=search_query)
         )
+        if num_match:
+            try:
+                padded_search = f"PKP-{int(num_match.group(1)):04d}"
+                s_filter |= Q(order_number__iexact=padded_search)
+            except Exception:
+                pass
+        orders = orders.filter(s_filter)
 
     context = {
         'orders': orders[:200],
@@ -324,12 +336,63 @@ def create_manual_order(request):
             payment_trx_id = request.POST.get('payment_trx_id', '').strip()
             admin_notes = request.POST.get('admin_notes', 'Manual order created by staff').strip()
 
-            prod_id = request.POST.get('product_id')
-            product = get_object_or_404(Product, id=prod_id)
-            quantity = max(1, int(request.POST.get('quantity', 1)))
+            # Retrieve multiple products and quantities
+            product_ids = request.POST.getlist('product_id') or request.POST.getlist('product_id[]')
+            quantities = request.POST.getlist('quantity') or request.POST.getlist('quantity[]')
 
-            delivery_fee = Decimal('130.00')
-            subtotal = product.price_bdt * quantity
+            # Fallback for single product form submissions
+            if not product_ids:
+                single_pid = request.POST.get('product_id')
+                if single_pid:
+                    product_ids = [single_pid]
+                    quantities = [request.POST.get('quantity', 1)]
+
+            # Group items by product_id (in case the same product is added multiple times)
+            items_dict = {}  # {product_id: total_quantity}
+            for idx, pid in enumerate(product_ids):
+                if not pid:
+                    continue
+                try:
+                    p_id = int(pid)
+                    qty = int(quantities[idx]) if idx < len(quantities) else 1
+                    qty = max(1, qty)
+                    items_dict[p_id] = items_dict.get(p_id, 0) + qty
+                except (ValueError, TypeError):
+                    continue
+
+            if not items_dict:
+                messages.error(request, 'Please select at least one product.')
+                return redirect('dashboard:orders')
+
+            # Fetch product objects and calculate subtotal
+            valid_items = []
+            subtotal = Decimal('0.00')
+            for p_id, qty in items_dict.items():
+                product = Product.objects.filter(id=p_id).first()
+                if product:
+                    line_price = product.price_bdt * qty
+                    subtotal += line_price
+                    valid_items.append({
+                        'product': product,
+                        'quantity': qty,
+                        'unit_price': product.price_bdt,
+                        'total_price': line_price,
+                        'jar_weight_grams': product.jar_weight_grams
+                    })
+
+            if not valid_items:
+                messages.error(request, 'None of the selected products were found in the database.')
+                return redirect('dashboard:orders')
+
+            # Delivery Fee
+            delivery_fee_str = request.POST.get('delivery_fee', '130.00').strip()
+            try:
+                delivery_fee = Decimal(delivery_fee_str)
+                if delivery_fee < 0:
+                    delivery_fee = Decimal('0.00')
+            except Exception:
+                delivery_fee = Decimal('130.00')
+
             total_amount = subtotal + delivery_fee
 
             order = Order.objects.create(
@@ -348,22 +411,31 @@ def create_manual_order(request):
                 admin_notes=admin_notes
             )
 
-            OrderItem.objects.create(
-                order=order,
-                product=product,
-                product_name=product.name,
-                jar_weight_grams=product.jar_weight_grams,
-                unit_price=product.price_bdt,
-                quantity=quantity,
-                total_price=subtotal
+            # Create OrderItems and deduct stock
+            for itm in valid_items:
+                prod = itm['product']
+                qty = itm['quantity']
+                OrderItem.objects.create(
+                    order=order,
+                    product=prod,
+                    product_name=prod.name,
+                    jar_weight_grams=itm['jar_weight_grams'],
+                    unit_price=itm['unit_price'],
+                    quantity=qty,
+                    total_price=itm['total_price']
+                )
+
+                if prod.stock_count >= qty:
+                    prod.stock_count -= qty
+                else:
+                    prod.stock_count = 0
+                prod.save()
+
+            total_jars = sum(itm['quantity'] for itm in valid_items)
+            messages.success(
+                request,
+                f'Manual Order #{order.order_number} for {customer_name} ({total_jars} jar(s)) created successfully!'
             )
-
-            # Update stock count
-            if product.stock_count >= quantity:
-                product.stock_count -= quantity
-                product.save()
-
-            messages.success(request, f'Manual Order #{order.order_number} for {customer_name} created successfully!')
             return redirect('dashboard:order_detail', order_number=order.order_number)
         except Exception as e:
             messages.error(request, f'Failed to create manual order: {str(e)}')
@@ -1511,3 +1583,31 @@ def order_notifications_api(request):
         'pending_count': pending_count,
         'recent_pending': recent_pending_data,
     })
+
+
+def launch_pos_driver(request):
+    """
+    Launch the local RongTa POS thermal printer driver installer directly on Windows.
+    """
+    if not (request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser)):
+        return JsonResponse({'status': 'error', 'message': 'Staff authorization required.'}, status=403)
+
+    import os
+    from django.conf import settings
+    driver_path = os.path.join(settings.BASE_DIR, 'static', 'driver', 'RongTaDriverInstall_V2.70.exe')
+    if not os.path.exists(driver_path):
+        alt_path = os.path.join(settings.BASE_DIR, 'static', 'driver', 'Thermal Printer Driver（Windows）', 'RongTaDriverInstall V2.70.exe')
+        if os.path.exists(alt_path):
+            driver_path = alt_path
+
+    if os.path.exists(driver_path):
+        try:
+            if hasattr(os, 'startfile'):
+                os.startfile(driver_path)
+            else:
+                import subprocess
+                subprocess.Popen([driver_path])
+            return JsonResponse({'status': 'success', 'message': 'Installer window opened! Please check your Windows taskbar or screen.'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': f'Could not launch installer: {str(e)}'}, status=500)
+    return JsonResponse({'status': 'error', 'message': 'Driver installer file not found in static/driver/'}, status=404)

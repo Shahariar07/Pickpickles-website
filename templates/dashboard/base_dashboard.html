@@ -80,6 +80,18 @@
                         <div id="mobileNotificationList" class="max-h-60 overflow-y-auto divide-y divide-gray-100 text-xs">
                             <div class="p-4 text-center text-gray-400 text-xs">No pending orders</div>
                         </div>
+                        <div class="px-3 py-2 bg-gray-50 border-t border-gray-100 flex items-center justify-between text-[11px]">
+                            <span class="text-gray-600 font-semibold flex items-center gap-1">
+                                <i class="fa-solid fa-clock text-amber-600"></i>
+                                <span>Reminder:</span>
+                            </span>
+                            <select id="mobileReminderIntervalSelect" onchange="changeReminderInterval(this.value)" class="text-[11px] font-bold bg-white border border-gray-200 rounded-lg px-2 py-1 text-gray-700">
+                                <option value="5">Every 5m</option>
+                                <option value="10" selected>Every 10m (Default)</option>
+                                <option value="15">Every 15m</option>
+                                <option value="30">Every 30m</option>
+                            </select>
+                        </div>
                         <div class="pt-2 px-3 border-t border-gray-100">
                             <a href="{% url 'dashboard:orders' %}" class="block text-center text-[11px] font-bold text-brand-700 hover:text-brand-800 py-1">
                                 Open Orders Hub →
@@ -247,9 +259,9 @@
                         <span>Live Order Monitoring</span>
                     </div>
                     <span id="pendingReminderNotice" class="hidden items-center gap-1.5 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full animate-pulse">
-                        <i class="fa-solid fa-clock"></i> 30s Alert Active
+                        <i class="fa-solid fa-clock"></i> <span id="reminderIntervalBadgeText">10m Alert Active</span>
                     </span>
-                    <span class="text-xs text-gray-400 font-semibold hidden lg:inline">• 30s recurring alert when pending orders exist</span>
+                    <span class="text-xs text-gray-400 font-semibold hidden lg:inline">• 10m recurring sound alert when pending orders exist</span>
                 </div>
 
                 <div class="flex items-center gap-3">
@@ -283,6 +295,18 @@
                             </div>
                             <div id="desktopNotificationList" class="max-h-72 overflow-y-auto divide-y divide-gray-100 text-xs">
                                 <div class="p-4 text-center text-gray-400 text-xs">No pending orders</div>
+                            </div>
+                            <div class="px-4 py-2 bg-gray-50 border-t border-gray-100 flex items-center justify-between text-xs">
+                                <span class="text-gray-600 font-semibold flex items-center gap-1.5">
+                                    <i class="fa-solid fa-clock text-amber-600"></i>
+                                    <span>Sound Reminder:</span>
+                                </span>
+                                <select id="desktopReminderIntervalSelect" onchange="changeReminderInterval(this.value)" class="text-xs font-bold bg-white border border-gray-200 rounded-lg px-2 py-1 text-gray-700 focus:outline-none focus:border-brand-500 cursor-pointer">
+                                    <option value="5">Every 5 min</option>
+                                    <option value="10" selected>Every 10 min (Default)</option>
+                                    <option value="15">Every 15 min</option>
+                                    <option value="30">Every 30 min</option>
+                                </select>
                             </div>
                             <div class="pt-2 px-3 border-t border-gray-100 flex items-center justify-between">
                                 <a href="{% url 'dashboard:orders' %}" class="w-full text-center text-xs font-bold text-brand-700 hover:text-brand-800 py-1.5 rounded-xl hover:bg-brand-50 transition">
@@ -565,7 +589,36 @@
             });
         }
 
-        // 2. 30-Second recurring audio reminder while pending orders exist
+        // Reminder interval preference (Default: 10 minutes)
+        function getReminderIntervalMinutes() {
+            let val = localStorage.getItem('pickpickles_sound_reminder_interval');
+            if (val && !isNaN(parseInt(val, 10))) {
+                return parseInt(val, 10);
+            }
+            return 10; // Default: 10 minutes
+        }
+
+        function getReminderIntervalMs() {
+            return getReminderIntervalMinutes() * 60 * 1000;
+        }
+
+        function changeReminderInterval(val) {
+            localStorage.setItem('pickpickles_sound_reminder_interval', val);
+            updateReminderIntervalUI();
+        }
+
+        function updateReminderIntervalUI() {
+            const mins = getReminderIntervalMinutes();
+            const badge = document.getElementById('reminderIntervalBadgeText');
+            if (badge) badge.textContent = `${mins}m Alert Active`;
+
+            const dSelect = document.getElementById('desktopReminderIntervalSelect');
+            const mSelect = document.getElementById('mobileReminderIntervalSelect');
+            if (dSelect) dSelect.value = mins.toString();
+            if (mSelect) mSelect.value = mins.toString();
+        }
+
+        // 2. 10-Minute recurring audio reminder while pending orders exist
         let lastPendingCount = 0;
         let reminderIntervalTimer = null;
 
@@ -579,13 +632,33 @@
                     reminderBadge.classList.add('inline-flex');
                 }
 
-                // Start 30-second recurring chime timer if not already running
+                const now = Date.now();
+                const lastChimed = parseInt(localStorage.getItem('pickpickles_last_reminder_time') || '0', 10);
+                const intervalMs = getReminderIntervalMs();
+
+                // If never chimed or interval has elapsed
+                if (lastChimed === 0) {
+                    localStorage.setItem('pickpickles_last_reminder_time', now.toString());
+                } else if (now - lastChimed >= intervalMs) {
+                    if (isSoundEnabled()) {
+                        playChimeSound();
+                    }
+                    localStorage.setItem('pickpickles_last_reminder_time', now.toString());
+                }
+
+                // Recurring check timer (evaluates every 15 seconds)
                 if (!reminderIntervalTimer) {
                     reminderIntervalTimer = setInterval(() => {
                         if (lastPendingCount > 0 && isSoundEnabled()) {
-                            playChimeSound();
+                            const curNow = Date.now();
+                            const curLast = parseInt(localStorage.getItem('pickpickles_last_reminder_time') || '0', 10);
+                            const curInterval = getReminderIntervalMs();
+                            if (curNow - curLast >= curInterval) {
+                                playChimeSound();
+                                localStorage.setItem('pickpickles_last_reminder_time', curNow.toString());
+                            }
                         }
-                    }, 30000); // exactly every 30 seconds
+                    }, 15000);
                 }
             } else {
                 if (reminderBadge) {
@@ -596,6 +669,7 @@
                     clearInterval(reminderIntervalTimer);
                     reminderIntervalTimer = null;
                 }
+                localStorage.removeItem('pickpickles_last_reminder_time');
             }
         }
 
@@ -625,6 +699,7 @@
                 // If new order(s) arrived
                 if (data.has_new && data.new_orders && data.new_orders.length > 0) {
                     playChimeSound();
+                    localStorage.setItem('pickpickles_last_reminder_time', Date.now().toString());
 
                     data.new_orders.forEach(order => {
                         showOrderToast(order);
@@ -634,7 +709,7 @@
                     lastKnownOrderId = data.latest_id;
                 }
 
-                // Always update badges, dropdown list, and 30s recurring reminder
+                // Always update badges, dropdown list, and recurring reminder
                 updateBadges(data.pending_count);
                 renderPendingList(data.recent_pending);
                 handlePendingSoundReminder(data.pending_count);
@@ -647,6 +722,7 @@
         // Initialize UI and start polling
         document.addEventListener('DOMContentLoaded', function() {
             updateSoundUI();
+            updateReminderIntervalUI();
             pollOrderNotifications();
             // Poll every 12 seconds
             setInterval(pollOrderNotifications, 12000);

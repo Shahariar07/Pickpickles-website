@@ -4,235 +4,443 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>POS Receipt #{{ order.order_number }} | Pickpickles</title>
+    
+    <!-- Google Fonts & Tailwind CSS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800;900&family=Space+Grotesk:wght@700;800&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
     <style>
-        /* POS Thermal Receipt Styles */
-        @media screen {
-            body {
-                background-color: #1e293b;
-            }
-            .pos-container-80 {
-                width: 320px; /* 80mm equivalent at 96-100dpi */
-            }
-            .pos-container-58 {
-                width: 235px; /* 58mm equivalent */
-            }
+        /* Exact color accuracy & universal print settings */
+        * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+            box-sizing: border-box;
         }
 
-        /* Thermal Printer Styles */
-        @media print {
-            @page {
-                size: 80mm auto;
-                margin: 0;
-            }
-            html, body {
-                width: 80mm !important;
-                max-width: 80mm !important;
-                margin: 0 auto !important;
-                padding: 2mm 3mm !important;
-                background: #ffffff !important;
-                color: #000000 !important;
-                font-family: 'Courier New', Courier, monospace, system-ui !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-            .no-print {
-                display: none !important;
-            }
-            .pos-receipt {
-                width: 100% !important;
-                max-width: 100% !important;
-                box-shadow: none !important;
-                border: none !important;
-                padding: 0 !important;
-                margin: 0 !important;
-                background: transparent !important;
-                border-radius: 0 !important;
-            }
-            .thermal-dashed {
-                border-top: 1px dashed #000000 !important;
-            }
-            .thermal-double {
-                border-top: 2px solid #000000 !important;
-                border-bottom: 2px solid #000000 !important;
-            }
+        body {
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
 
-        /* Monospace font for authentic receipt numbers */
         .mono-num {
-            font-family: 'Courier New', Courier, monospace;
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
             font-variant-numeric: tabular-nums;
         }
 
+        .brand-font {
+            font-family: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
+        }
+
+        /* Screen Presentation */
+        @media screen {
+            body {
+                background-color: #0f172a;
+            }
+            .a4-container {
+                width: 100%;
+                max-width: 820px;
+                margin: 0 auto;
+            }
+            .pos-container-80 {
+                width: 100%;
+                max-width: 310px;
+                margin: 0 auto;
+            }
+            .pos-container-72 {
+                width: 100%;
+                max-width: 275px;
+                margin: 0 auto;
+            }
+            .pos-container-58 {
+                width: 100%;
+                max-width: 225px;
+                margin: 0 auto;
+            }
+        }
+
+        /* Dashed dividers for authentic receipt look */
         .thermal-dashed {
-            border-top: 1px dashed #4b5563;
+            border-top: 1.5px dashed #000000;
         }
         .thermal-double {
-            border-top: 2px solid #111827;
-            border-bottom: 2px solid #111827;
+            border-top: 2px solid #000000;
+            border-bottom: 2px solid #000000;
+        }
+
+        /* General Print Overrides */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            html, body {
+                background: #ffffff !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                color: #000000 !important;
+            }
+            .print-shadow-none {
+                box-shadow: none !important;
+                border: none !important;
+            }
+            tr {
+                page-break-inside: avoid;
+            }
+
+            /* Deep Black High-Density Heat Transfer for POS Thermal Receipts */
+            #posSlipView, 
+            #posSlipView * {
+                color: #000000 !important;
+                border-color: #000000 !important;
+                text-shadow: none !important;
+                -webkit-text-stroke: 0.18px #000000 !important;
+            }
+        }
+    </style>
+    
+    <!-- Dynamic Print Page Size Stylesheet injected by JS -->
+    <style id="dynamicPrintStyle">
+        @media print {
+            @page {
+                size: auto;
+                margin: 0mm !important;
+            }
+            html, body {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #ffffff !important;
+            }
+            #a4InvoiceView {
+                display: none !important;
+            }
+            #posSlipView {
+                display: block !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 2mm 3mm !important;
+                box-sizing: border-box !important;
+                border: none !important;
+                box-shadow: none !important;
+            }
+            #posSlipView, 
+            #posSlipView * {
+                color: #000000 !important;
+                border-color: #000000 !important;
+                -webkit-text-stroke: 0.18px #000000 !important;
+            }
         }
     </style>
 </head>
-<body class="min-h-screen py-6 px-3 flex flex-col items-center justify-start text-gray-900 font-sans antialiased">
+<body class="min-h-screen py-5 px-2.5 sm:px-4 flex flex-col items-center justify-start text-slate-900 antialiased">
 
-    <!-- Top Action Toolbar (Hidden when printing) -->
-    <div class="no-print w-full max-w-md mb-5 flex flex-wrap items-center justify-between gap-3 bg-slate-800/90 backdrop-blur-md p-3 rounded-2xl border border-slate-700 shadow-xl text-white">
-        <div class="flex items-center gap-2">
-            <a href="{% url 'dashboard:orders' %}" class="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-xs font-bold transition flex items-center gap-1.5">
-                <i class="fa-solid fa-arrow-left text-[11px]"></i>
-                <span>Orders</span>
-            </a>
-            <a href="{% url 'dashboard:order_detail' order.order_number %}" class="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-xs font-bold transition flex items-center gap-1.5">
-                <span>Detail</span>
-            </a>
-        </div>
-
-        <div class="flex items-center gap-2">
-            <!-- Width Selector (80mm vs 58mm) -->
-            <div class="flex items-center bg-slate-900/80 p-1 rounded-xl border border-slate-700 text-[11px] font-bold">
-                <button type="button" onclick="setReceiptWidth('80')" id="btn80" class="px-2.5 py-1 rounded-lg bg-emerald-600 text-white transition">80mm</button>
-                <button type="button" onclick="setReceiptWidth('58')" id="btn58" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition">58mm</button>
+    <!-- Top Action Toolbar (Hidden during Print) -->
+    <div class="no-print w-full max-w-2xl mb-4 flex flex-col gap-3 bg-slate-900/95 backdrop-blur-md p-4 rounded-2xl border border-slate-700 shadow-2xl text-white">
+        
+        <!-- Row 1: Nav & Format Chooser & Print CTA -->
+        <div class="flex flex-wrap items-center justify-between gap-2.5">
+            
+            <!-- Navigation Links -->
+            <div class="flex items-center gap-2">
+                <a href="{% url 'dashboard:orders' %}" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold transition flex items-center gap-1.5 text-slate-200 hover:text-white">
+                    <i class="fa-solid fa-arrow-left text-[11px]"></i>
+                    <span>Orders</span>
+                </a>
+                <a href="{% url 'dashboard:order_detail' order.order_number %}" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold transition flex items-center gap-1.5 text-slate-200 hover:text-white">
+                    <i class="fa-solid fa-file-lines text-[11px]"></i>
+                    <span>#{{ order.order_number }}</span>
+                </a>
             </div>
 
-            <!-- Print Button -->
-            <button onclick="window.print()" class="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs transition shadow-lg flex items-center gap-1.5 active:scale-95 cursor-pointer">
-                <i class="fa-solid fa-print"></i>
-                <span>Print Receipt</span>
-            </button>
+            <!-- Action Buttons -->
+            <div class="flex items-center gap-2">
+                <button type="button" id="btnToolbarLaunch" onclick="launchDriverOnPC()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black transition flex items-center gap-2 shadow-md cursor-pointer active:scale-95 ring-2 ring-emerald-400/40" title="Click to run RongTa POS printer driver installer on your Windows PC">
+                    <i class="fa-solid fa-play text-xs"></i>
+                    <span>Install POS Driver</span>
+                </button>
+                <button type="button" onclick="openDriverModal()" title="Driver setup files & manual" class="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-bold transition flex items-center gap-1 text-slate-300 hover:text-white cursor-pointer shadow-xs">
+                    <i class="fa-solid fa-gear text-slate-400"></i>
+                    <span class="hidden sm:inline">Setup</span>
+                </button>
+                <button onclick="window.print()" class="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition shadow-lg flex items-center gap-2 active:scale-95 cursor-pointer">
+                    <i class="fa-solid fa-print text-sm"></i>
+                    <span>Print Receipt (Ctrl + P)</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Row 2: Format Switcher Tabs & Text Size Controls -->
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800">
+            <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-sliders text-emerald-400"></i>
+                    <span>Format:</span>
+                </span>
+                <div class="flex items-center bg-slate-950/80 p-1 rounded-xl border border-slate-700 text-xs font-bold flex-wrap gap-1">
+                    <!-- 80mm Roll (Default for POS machines) -->
+                    <button type="button" onclick="setInvoiceFormat('80')" id="btnFormat80" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-extrabold transition flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-receipt"></i>
+                        <span>POS 80mm</span>
+                    </button>
+                    <!-- 72mm Roll (Compact fit) -->
+                    <button type="button" onclick="setInvoiceFormat('72')" id="btnFormat72" class="px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1">
+                        <span>72mm Fit</span>
+                    </button>
+                    <!-- 58mm Roll -->
+                    <button type="button" onclick="setInvoiceFormat('58')" id="btnFormat58" class="px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1">
+                        <span>58mm Mini</span>
+                    </button>
+                    <!-- A4 Normal Paper -->
+                    <button type="button" onclick="setInvoiceFormat('a4')" id="btnFormatA4" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-invoice"></i>
+                        <span>A4 Invoice</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Receipt Text Size Presets -->
+            <div class="flex items-center gap-1.5">
+                <span class="text-[11px] font-bold text-slate-300">Text Size:</span>
+                <div class="flex items-center bg-slate-950/80 p-1 rounded-xl border border-slate-700 text-xs font-bold gap-1">
+                    <button type="button" onclick="setReceiptFontSize('compact')" id="btnFontCompact" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition">Smaller</button>
+                    <button type="button" onclick="setReceiptFontSize('normal')" id="btnFontNormal" class="px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-bold transition">Standard</button>
+                    <button type="button" onclick="setReceiptFontSize('large')" id="btnFontLarge" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition">Larger</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 3: Print Settings Notice in English -->
+        <div class="pt-2.5 border-t border-slate-800/80 bg-slate-950/90 p-3 rounded-xl border border-emerald-500/30 text-xs text-slate-200 space-y-1">
+            <div class="flex items-center gap-1.5 font-bold text-emerald-400">
+                <i class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
+                <span>Thermal POS Printer Settings (Ctrl + P):</span>
+            </div>
+            <ul class="text-[11px] text-slate-300 list-disc list-inside space-y-0.5 ml-1">
+                <li><strong>Margins:</strong> Set to <strong>"None"</strong> to prevent left-side margin offset.</li>
+                <li><strong>Paper size:</strong> Select <strong>80mm</strong> or <strong>80 x 297mm</strong>.</li>
+                <li>All receipt text is rendered in 100% solid black for maximum thermal print sharpness.</li>
+            </ul>
         </div>
     </div>
 
-    <!-- POS Machine Thermal Slip Container -->
-    <div id="receiptContainer" class="pos-receipt pos-container-80 bg-white p-4 sm:p-5 rounded-2xl shadow-2xl transition-all duration-200">
+    <!-- POS Driver Download & Installation Modal -->
+    <div id="driverModal" class="no-print fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl max-w-lg w-full p-6 text-white space-y-5 animate-in fade-in zoom-in duration-150">
+            
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                        <i class="fa-solid fa-print text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-black text-white">POS Printer Driver Installer</h3>
+                        <p class="text-xs text-slate-400">RongTa & 80mm/58mm Thermal Receipt Printers</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeDriverModal()" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+
+            <!-- Driver Installer Action Card -->
+            <div class="space-y-3">
+                <!-- Main Driver -->
+                <div class="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 hover:border-emerald-500/50 transition flex items-center justify-between gap-3">
+                    <div class="space-y-0.5">
+                        <div class="flex items-center gap-2">
+                            <span class="font-extrabold text-sm text-white">RongTa Driver V2.70</span>
+                            <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-black border border-emerald-500/30">Ready on PC</span>
+                        </div>
+                        <p class="text-xs text-slate-400">File is downloaded in project. Click button to launch installer.</p>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button type="button" onclick="launchDriverOnPC()" id="btnModalLaunchDriver" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs transition flex items-center gap-2 shadow-md cursor-pointer active:scale-95">
+                            <i class="fa-solid fa-play text-xs"></i>
+                            <span>Run Driver Setup</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- PDF Manual -->
+                <div class="p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800 hover:border-slate-700 transition flex items-center justify-between gap-3">
+                    <div class="space-y-0.5">
+                        <span class="font-bold text-xs text-white">Installation Instructions (PDF Guide)</span>
+                        <p class="text-[11px] text-slate-400">Step-by-step setup manual with screenshots</p>
+                    </div>
+                    <a href="/static/driver/80mm_Thermal_Printer_Driver_Guide.pdf" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 hover:text-white font-bold text-xs transition flex items-center gap-1.5 shrink-0">
+                        <i class="fa-solid fa-file-pdf text-rose-400"></i>
+                        <span>View PDF</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Quick Setup Guide Steps -->
+            <div class="p-3.5 rounded-2xl bg-emerald-950/20 border border-emerald-500/20 text-xs space-y-1.5">
+                <span class="font-bold text-emerald-400 flex items-center gap-1.5">
+                    <i class="fa-solid fa-lightbulb"></i>
+                    <span>How to complete installation:</span>
+                </span>
+                <ol class="text-[11px] text-slate-300 list-decimal list-inside space-y-1 ml-1 leading-relaxed">
+                    <li>Click <strong>Install POS Driver</strong> (or Run Driver Setup above).</li>
+                    <li>Check your Windows taskbar or screen for the RongTa Installer window (or UAC permission prompt).</li>
+                    <li>In the installer window, select <strong>80mm Series</strong> and <strong>USB</strong> port.</li>
+                    <li>Click <strong>Install</strong> to complete setup.</li>
+                    <li>When printing invoices, set <strong>Margins: None</strong> and <strong>Paper: 80mm</strong>.</li>
+                </ol>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="flex justify-end pt-2 border-t border-slate-800">
+                <button type="button" onclick="closeDriverModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 hover:text-white transition cursor-pointer">
+                    Close
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Driver Launcher Floating Toast Notification -->
+    <div id="driverToast" class="no-print fixed top-6 right-6 z-50 bg-slate-900 border-2 border-emerald-500 text-white px-5 py-3.5 rounded-2xl shadow-2xl hidden flex items-center gap-3 transition-all duration-200">
+        <div class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-black shrink-0">
+            <i class="fa-solid fa-check text-sm"></i>
+        </div>
+        <div>
+            <div class="text-xs font-black text-white" id="toastTitle">Driver Installer Launched!</div>
+            <div class="text-[11px] text-slate-300" id="toastMsg">Check your Windows screen/taskbar to complete installation.</div>
+        </div>
+    </div>
+
+
+    <!-- ================================================================= -->
+    <!-- 1. POS THERMAL RECEIPT SLIP VIEW (COMPACT, NEAT & DEEP BLACK)     -->
+    <!-- ================================================================= -->
+    <div id="posSlipView" class="pos-receipt pos-container-80 bg-white p-3 sm:p-4 rounded-2xl shadow-2xl border border-slate-300 transition-all duration-200 print-shadow-none text-black leading-snug">
         
         <!-- Store Header -->
-        <div class="text-center space-y-1">
+        <div class="text-center space-y-0.5">
             <div class="flex justify-center mb-1">
-                <img src="/static/images/logo.png" alt="Pickpickles" class="w-12 h-12 rounded-full object-cover filter grayscale contrast-150 border border-gray-900/30">
+                <img src="/static/images/logo.png" alt="Pickpickles" class="w-11 h-11 rounded-full object-cover border-2 border-black contrast-125 shadow-xs mx-auto">
             </div>
-            <h1 class="text-xl font-black tracking-tight uppercase leading-none text-black">PICKPICKLES</h1>
-            <p class="text-[11px] font-bold text-gray-700">100% Homemade Fresh Pickles</p>
-            <p class="text-[10px] text-gray-600">Hotline: 01794271523 • Dhaka</p>
-            <p class="text-[10px] text-gray-500 font-mono">www.pickpickles.com</p>
+            <h1 class="brand-font text-lg font-black tracking-tight uppercase leading-none text-black">PICKPICKLES</h1>
+            <p class="text-[10px] font-black text-black">100% Homemade Fresh Pickles</p>
+            <p class="text-[9.5px] text-black font-extrabold">Hotline: 01794271523 • Dhaka</p>
+            <p class="text-[9.5px] text-black font-black mono-num">www.pickpickles.xyz</p>
         </div>
 
         <!-- Dashed Divider -->
-        <div class="thermal-dashed my-2.5"></div>
+        <div class="thermal-dashed my-1.5"></div>
 
         <!-- Order Metadata -->
-        <div class="text-[11px] space-y-1">
-            <div class="flex justify-between items-center font-bold">
-                <span>ORDER #:</span>
-                <span class="text-sm font-black text-black">#{{ order.order_number }}</span>
+        <div class="text-[11px] space-y-0.5 font-bold text-black">
+            <div class="flex justify-between items-center">
+                <span class="font-black text-black">ORDER #:</span>
+                <span class="text-xs font-black text-black mono-num tracking-tight">#{{ order.order_number }}</span>
             </div>
-            <div class="flex justify-between items-center text-gray-600 text-[10px]">
-                <span>DATE:</span>
-                <span class="mono-num">{{ order.created_at|date:"d M Y • h:i A" }}</span>
+            <div class="flex justify-between items-center text-black">
+                <span class="font-black">DATE:</span>
+                <span class="mono-num font-bold text-black text-[10px]">{{ order.created_at|date:"d M Y • h:i A" }}</span>
             </div>
-            <div class="flex justify-between items-center text-gray-600 text-[10px]">
-                <span>FULFILLMENT:</span>
-                <span class="font-extrabold uppercase text-black">{{ order.get_order_status_display }}</span>
+            <div class="flex justify-between items-center text-black">
+                <span class="font-black text-[10px]">STATUS:</span>
+                <span class="font-black uppercase text-black text-[10px]">{{ order.get_order_status_display }}</span>
             </div>
         </div>
 
         <!-- Dashed Divider -->
-        <div class="thermal-dashed my-2.5"></div>
+        <div class="thermal-dashed my-1.5"></div>
 
-        <!-- Customer & Delivery Info (Crucial for Rider) -->
-        <div class="text-[11px] space-y-1">
-            <span class="text-[9px] font-black uppercase tracking-wider text-gray-500 block">DELIVER TO:</span>
-            <div class="font-black text-sm text-black leading-tight">{{ order.customer_name }}</div>
-            <div class="font-black text-xs text-black mono-num tracking-wide">
-                <i class="fa-solid fa-phone text-[10px] mr-0.5 no-print"></i>
+        <!-- Customer Info -->
+        <div class="text-[11px] space-y-0.5 text-black">
+            <span class="text-[8.5px] font-black uppercase tracking-wider text-black block">CUSTOMER:</span>
+            <div class="font-black text-xs text-black leading-tight">{{ order.customer_name }}</div>
+            <div class="font-black text-[11px] text-black mono-num tracking-wide mt-0.5">
+                <i class="fa-solid fa-phone text-[9px] mr-0.5 no-print"></i>
                 {{ order.customer_phone }}
-            </div>
-            <div class="text-[11px] text-gray-800 leading-snug mt-1 font-medium">
-                {{ order.delivery_address }}
-            </div>
-            <div class="text-[10px] font-bold text-black uppercase mt-0.5">
-                {{ order.delivery_city }} ({{ order.get_delivery_zone_display }})
             </div>
 
             {% if order.customer_notes %}
-            <div class="mt-1.5 p-1.5 bg-gray-100 rounded border border-gray-300 text-[10px] font-bold text-gray-900 leading-tight">
-                <span class="uppercase text-[9px] block text-gray-600">Rider Note:</span>
+            <div class="mt-1 p-1.5 rounded-lg border-2 border-black text-[9.5px] font-black text-black leading-tight bg-white">
+                <span class="uppercase text-[8.5px] block font-black border-b border-black pb-0.5 mb-0.5">RIDER NOTE:</span>
                 {{ order.customer_notes }}
             </div>
             {% endif %}
         </div>
 
         <!-- Dashed Divider -->
-        <div class="thermal-dashed my-2.5"></div>
+        <div class="thermal-dashed my-1.5"></div>
 
         <!-- Items Table -->
-        <div class="space-y-1.5 text-[11px]">
-            <div class="flex justify-between text-[10px] font-black uppercase text-gray-500 pb-0.5 border-b border-gray-200">
+        <div class="space-y-1 text-[11px] text-black">
+            <div class="flex justify-between text-[9.5px] font-black uppercase text-black pb-0.5 border-b-2 border-black">
                 <span>ITEM</span>
                 <span class="text-right">TOTAL</span>
             </div>
 
             {% for item in order.items.all %}
-            <div class="py-1 border-b border-gray-100/80">
-                <div class="font-bold text-black leading-tight flex justify-between gap-1">
-                    <span class="break-words">{{ item.product_name }}</span>
-                    <span class="mono-num font-black text-right shrink-0">৳{{ item.total_price|floatformat:0 }}</span>
+            <div class="py-0.5 border-b border-black">
+                <div class="font-black text-black leading-tight flex justify-between gap-1">
+                    <span class="break-words text-[10.5px] font-black text-black">{{ item.product_name }}</span>
+                    <span class="mono-num font-black text-xs text-right shrink-0 text-black">Tk {{ item.total_price|floatformat:0 }}</span>
                 </div>
-                <div class="flex justify-between items-center text-[10px] text-gray-500 mono-num mt-0.5">
+                <div class="flex justify-between items-center text-[9px] text-black mono-num mt-0.5 font-bold">
                     <span>{{ item.jar_weight_grams }}g jar</span>
-                    <span>{{ item.quantity }} x ৳{{ item.unit_price|floatformat:0 }}</span>
+                    <span>{{ item.quantity }} x Tk {{ item.unit_price|floatformat:0 }}</span>
                 </div>
             </div>
             {% empty %}
-            <div class="text-[10px] italic text-gray-400 py-1">No items found</div>
+            <div class="text-[10px] font-bold text-black py-1">No items recorded</div>
             {% endfor %}
         </div>
 
         <!-- Summary & Totals -->
-        <div class="thermal-dashed my-2.5"></div>
+        <div class="thermal-dashed my-1.5"></div>
 
-        <div class="space-y-1 text-[11px] mono-num">
-            <div class="flex justify-between text-gray-600">
-                <span>Jars ({{ order.total_items_count }} items):</span>
-                <span>৳{{ order.subtotal|floatformat:0 }}</span>
+        <div class="space-y-0.5 text-[10.5px] mono-num font-bold text-black">
+            <div class="flex justify-between text-black">
+                <span class="font-bold">Jars ({{ order.total_items_count }} items):</span>
+                <span class="font-black text-black">Tk {{ order.subtotal|floatformat:0 }}</span>
             </div>
-            <div class="flex justify-between text-gray-600">
-                <span>Delivery ({{ order.delivery_zone }}):</span>
-                <span>৳{{ order.delivery_fee|floatformat:0 }}</span>
+            <div class="flex justify-between text-black">
+                <span class="font-bold">Delivery ({{ order.delivery_city }}):</span>
+                <span class="font-black text-black">Tk {{ order.delivery_fee|floatformat:0 }}</span>
             </div>
             
             <!-- Grand Total -->
-            <div class="thermal-double py-1.5 my-1.5 flex justify-between items-center text-sm font-black text-black">
-                <span class="tracking-tight">GRAND TOTAL:</span>
-                <span class="text-base">৳{{ order.total_amount|floatformat:0 }}</span>
+            <div class="thermal-double py-1 my-1 flex justify-between items-center text-xs font-black text-black">
+                <span class="tracking-tight uppercase">GRAND TOTAL:</span>
+                <span class="text-sm text-black font-black">Tk {{ order.total_amount|floatformat:0 }}</span>
             </div>
         </div>
 
-        <!-- Payment Mode Box -->
-        <div class="mt-2 text-center p-2 rounded border border-gray-300 {% if order.payment_status == 'PAID' %}bg-gray-50{% else %}bg-gray-100{% endif %}">
-            <div class="text-[10px] font-bold uppercase text-gray-500">PAYMENT DETAILS</div>
-            <div class="font-black text-xs uppercase text-black mt-0.5">
+        <!-- Payment Mode Box (High Contrast Pure Black Border) -->
+        <div class="mt-1.5 text-center p-2 rounded-xl border-2 border-black bg-white text-black">
+            <div class="text-[9px] font-black uppercase text-black">PAYMENT DETAILS</div>
+            <div class="font-black text-[10.5px] uppercase text-black mt-0.5">
                 {{ order.get_payment_method_display }}
             </div>
-            <div class="mt-0.5 font-black text-xs {% if order.payment_status == 'PAID' %}text-black{% else %}text-black underline{% endif %}">
+            <div class="mt-0.5 font-black text-[10px] text-black border-t border-black pt-0.5">
                 {% if order.payment_status == 'PAID' %}
-                    [ PAID IN FULL ]
+                    [ PAID IN FULL - NO CASH NEEDED ]
                 {% else %}
-                    [ CASH ON DELIVERY: PLEASE COLLECT ৳{{ order.total_amount|floatformat:0 }} ]
+                    [ CASH ON DELIVERY: PLEASE COLLECT TK {{ order.total_amount|floatformat:0 }} ]
                 {% endif %}
             </div>
             {% if order.payment_trx_id %}
-            <div class="text-[9px] font-mono text-gray-600 mt-0.5">
+            <div class="text-[8.5px] mono-num font-bold text-black mt-0.5">
                 TrxID: {{ order.payment_trx_id }}
             </div>
             {% endif %}
         </div>
 
         <!-- Barcode / Order Identifier -->
-        <div class="mt-3 text-center">
-            <!-- Simulated High-Contrast Barcode for POS -->
-            <div class="inline-flex items-center justify-center gap-[2px] h-9 px-2 overflow-hidden">
+        <div class="mt-2 text-center">
+            <div class="inline-flex items-center justify-center gap-[2px] h-7 px-2 overflow-hidden bg-white">
                 <span class="w-[2px] h-full bg-black"></span>
                 <span class="w-[1px] h-full bg-black"></span>
                 <span class="w-[3px] h-full bg-black"></span>
@@ -249,43 +457,626 @@
                 <span class="w-[3px] h-full bg-black"></span>
                 <span class="w-[2px] h-full bg-black"></span>
                 <span class="w-[1px] h-full bg-black"></span>
-                <span class="w-[3px] h-full bg-black"></span>
-                <span class="w-[2px] h-full bg-black"></span>
                 <span class="w-[4px] h-full bg-black"></span>
-                <span class="w-[1px] h-full bg-black"></span>
                 <span class="w-[2px] h-full bg-black"></span>
             </div>
-            <div class="font-mono text-[10px] font-black tracking-widest text-black mt-0.5">
+            <div class="mono-num text-[9.5px] font-black tracking-widest text-black mt-0.5">
                 *{{ order.order_number }}*
             </div>
         </div>
 
         <!-- Footer Note -->
-        <div class="thermal-dashed mt-3 pt-2 text-center text-[9px] text-gray-600 space-y-0.5">
-            <p class="font-bold">Thank you for choosing Pickpickles! 🥒</p>
-            <p>Keep refrigerated after opening for maximum crunch.</p>
+        <div class="thermal-dashed mt-2 pt-1.5 text-center text-[10px] text-black space-y-0.5 font-bold">
+            <p class="font-black">Thank you for choosing Pickpickles!</p>
+            <p class="text-[8.5px] font-bold">Keep refrigerated after opening for maximum crunch.</p>
         </div>
 
     </div>
 
-    <!-- Client-side helper script -->
-    <script>
-        function setReceiptWidth(size) {
-            const container = document.getElementById('receiptContainer');
-            const btn80 = document.getElementById('btn80');
-            const btn58 = document.getElementById('btn58');
+
+    <!-- ================================================================= -->
+    <!-- 2. STANDARD A4 INVOICE & PACKING SLIP VIEW                        -->
+    <!-- ================================================================= -->
+    <div id="a4InvoiceView" class="hidden a4-container bg-white p-6 sm:p-10 rounded-3xl shadow-2xl border border-slate-200 transition-all duration-200 print-shadow-none">
+        
+        <!-- Header: Pickpickles Branding & Invoice Meta -->
+        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b-2 border-emerald-900/20">
+            <!-- Brand Logo & Details -->
+            <div class="flex items-start gap-4">
+                <img src="/static/images/logo.png" alt="Pickpickles Logo" class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-emerald-800/30 shadow-md">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="brand-font text-2xl sm:text-3xl font-black tracking-tight text-emerald-900 uppercase leading-none">
+                            PICKPICKLES
+                        </h1>
+                        <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black tracking-wide border border-emerald-300">
+                            FRESH
+                        </span>
+                    </div>
+                    <p class="text-xs font-bold text-slate-700 mt-1">100% Homemade Fresh Pickles • Handcrafted in Bangladesh</p>
+                    <div class="flex flex-wrap items-center gap-y-1 gap-x-3 text-[11px] text-slate-600 font-semibold mt-1">
+                        <span><i class="fa-solid fa-phone text-emerald-700 mr-1"></i>01794271523</span>
+                        <span>•</span>
+                        <span><i class="fa-solid fa-location-dot text-emerald-700 mr-1"></i>Dhaka, Bangladesh</span>
+                        <span>•</span>
+                        <span class="text-emerald-800 font-bold">www.pickpickles.xyz</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Invoice Title & Order Tag -->
+            <div class="sm:text-right space-y-1 shrink-0">
+                <div class="inline-block px-3 py-1 rounded-xl bg-emerald-900 text-white text-[11px] font-black uppercase tracking-wider">
+                    Official Invoice & Packing Slip
+                </div>
+                <div class="text-2xl sm:text-3xl font-black text-slate-950 mono-num tracking-tight">
+                    #{{ order.order_number }}
+                </div>
+                <p class="text-xs font-bold text-slate-700">
+                    Date: <strong class="text-slate-900">{{ order.created_at|date:"d M, Y • h:i A" }}</strong>
+                </p>
+                <div class="mt-1">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-extrabold uppercase border {{ order.badge_color }}">
+                        <i class="fa-solid fa-circle text-[6px]"></i>
+                        <span>{{ order.get_order_status_display }}</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2-Column Information Grid: Customer & Delivery vs Payment & Financials -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 my-6">
             
-            if (size === '58') {
-                container.classList.remove('pos-container-80');
-                container.classList.add('pos-container-58');
-                btn58.className = 'px-2.5 py-1 rounded-lg bg-emerald-600 text-white transition';
-                btn80.className = 'px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition';
+            <!-- Customer & Delivery Card -->
+            <div class="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-300 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-emerald-900 flex items-center gap-1.5">
+                            <i class="fa-solid fa-truck-fast text-emerald-700"></i>
+                            <span>CUSTOMER DETAILS</span>
+                        </span>
+                        <span class="px-2 py-0.5 rounded-md bg-emerald-100/90 text-emerald-900 text-[10px] font-extrabold border border-emerald-300">
+                            {% if order.delivery_zone == 'INSIDE_DHAKA' %}Inside Dhaka{% else %}Outside Dhaka{% endif %}
+                        </span>
+                    </div>
+
+                    <h3 class="text-base font-black text-slate-950">{{ order.customer_name }}</h3>
+                    
+                    <div class="text-sm font-black text-emerald-950 mono-num mt-1 flex items-center gap-1.5">
+                        <i class="fa-solid fa-phone text-emerald-700 text-xs"></i>
+                        <span>{{ order.customer_phone }}</span>
+                    </div>
+
+                    <div class="text-xs text-slate-800 font-medium mt-1">
+                        <span class="font-bold text-slate-900">City:</span> {{ order.delivery_city }}
+                    </div>
+                </div>
+
+                {% if order.customer_notes %}
+                <div class="mt-3 p-3 bg-amber-50 rounded-xl border-2 border-amber-300 text-xs text-amber-950">
+                    <span class="font-black text-[10px] uppercase tracking-wider block text-amber-900 flex items-center gap-1">
+                        <i class="fa-solid fa-triangle-exclamation text-amber-700"></i>
+                        <span>Rider Special Note:</span>
+                    </span>
+                    <p class="font-bold mt-0.5">{{ order.customer_notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Payment & Order Overview Card -->
+            <div class="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-300 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-700 flex items-center gap-1.5">
+                            <i class="fa-solid fa-credit-card text-slate-600"></i>
+                            <span>PAYMENT OVERVIEW</span>
+                        </span>
+                        
+                        {% if order.payment_status == 'PAID' %}
+                        <span class="px-2.5 py-0.5 rounded-lg bg-emerald-600 text-white text-[11px] font-black tracking-wide flex items-center gap-1 shadow-xs">
+                            <i class="fa-solid fa-check"></i>
+                            <span>PAID IN FULL</span>
+                        </span>
+                        {% else %}
+                        <span class="px-2.5 py-0.5 rounded-lg bg-amber-500 text-slate-950 text-[11px] font-black tracking-wide flex items-center gap-1 shadow-xs">
+                            <i class="fa-solid fa-hand-holding-dollar"></i>
+                            <span>CASH ON DELIVERY</span>
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="space-y-2 mt-3 text-xs font-semibold">
+                        <div class="flex justify-between items-center py-1.5 border-b border-slate-200">
+                            <span class="text-slate-700">Payment Method:</span>
+                            <span class="font-black text-slate-950">{{ order.get_payment_method_display }}</span>
+                        </div>
+                        <div class="flex justify-between items-center py-1.5 border-b border-slate-200">
+                            <span class="text-slate-700">Payment Status:</span>
+                            <span class="font-black {% if order.payment_status == 'PAID' %}text-emerald-800{% else %}text-amber-900{% endif %}">
+                                {{ order.get_payment_status_display }}
+                            </span>
+                        </div>
+                        {% if order.payment_trx_id %}
+                        <div class="flex justify-between items-center py-1.5 border-b border-slate-200">
+                            <span class="text-slate-700">Transaction ID:</span>
+                            <span class="font-black text-slate-950 mono-num">{{ order.payment_trx_id }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="flex justify-between items-center py-1.5">
+                            <span class="text-slate-700">Total Pickle Jars:</span>
+                            <span class="font-black text-slate-950 mono-num">{{ order.total_items_count }} jars</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Prominent Collection Directive Box -->
+                <div class="mt-4 p-3 rounded-xl border-2 {% if order.payment_status == 'PAID' %}bg-emerald-50 border-emerald-400 text-emerald-950{% else %}bg-amber-100 border-amber-400 text-amber-950{% endif %} text-center">
+                    {% if order.payment_status == 'PAID' %}
+                        <div class="text-xs font-black uppercase tracking-wider text-emerald-900">
+                            <i class="fa-solid fa-circle-check text-emerald-700 mr-1"></i>
+                            NO PAYMENT NEEDED
+                        </div>
+                        <p class="text-[11px] font-bold text-emerald-950 mt-0.5">Payment verified in advance. Handover package safely.</p>
+                    {% else %}
+                        <div class="text-[10px] font-black uppercase tracking-wider text-amber-900">
+                            COLLECT CASH FROM CUSTOMER
+                        </div>
+                        <div class="text-lg font-black text-slate-950 mono-num mt-0.5">
+                            Tk {{ order.total_amount|floatformat:0 }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Items Table -->
+        <div class="my-6">
+            <div class="overflow-x-auto rounded-2xl border-2 border-slate-300">
+                <table class="w-full text-xs text-left border-collapse">
+                    <thead>
+                        <tr class="bg-emerald-900 text-white font-black uppercase text-[11px] tracking-wider">
+                            <th class="py-3 px-4">#</th>
+                            <th class="py-3 px-4">Pickle Variety / Item Description</th>
+                            <th class="py-3 px-3 text-center">Jar Weight</th>
+                            <th class="py-3 px-3 text-center">Qty</th>
+                            <th class="py-3 px-4 text-right">Unit Price</th>
+                            <th class="py-3 px-4 text-right">Total Price</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200 bg-white">
+                        {% for item in order.items.all %}
+                        <tr class="hover:bg-slate-50/80 transition-colors">
+                            <td class="py-3 px-4 text-slate-500 font-bold mono-num">{{ forloop.counter }}</td>
+                            <td class="py-3 px-4">
+                                <div class="font-black text-slate-950 text-sm">{{ item.product_name }}</div>
+                                <div class="text-[11px] text-slate-600 font-semibold">Authentic Homemade Recipe</div>
+                            </td>
+                            <td class="py-3 px-3 text-center">
+                                <span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-900 font-bold mono-num text-xs border border-slate-300">
+                                    {{ item.jar_weight_grams }}g Jar
+                                </span>
+                            </td>
+                            <td class="py-3 px-3 text-center">
+                                <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-50 text-emerald-950 font-black text-sm mono-num border border-emerald-300">
+                                    {{ item.quantity }}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4 text-right text-slate-800 font-bold mono-num">
+                                Tk {{ item.unit_price|floatformat:0 }}
+                            </td>
+                            <td class="py-3 px-4 text-right font-black text-slate-950 mono-num text-sm">
+                                Tk {{ item.total_price|floatformat:0 }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="py-6 text-center text-slate-500 font-bold italic">No order items recorded.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Financial Calculation Summary (Right Aligned Box) -->
+        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 my-6 pt-2">
+            <!-- Left: Delivery Guarantee & Instructions -->
+            <div class="sm:max-w-xs space-y-2 text-xs text-slate-700">
+                <div class="p-3 bg-emerald-50/80 rounded-xl border border-emerald-300">
+                    <span class="font-bold text-emerald-950 flex items-center gap-1.5 mb-1">
+                        <i class="fa-solid fa-leaf text-emerald-700"></i>
+                        <span>Freshness Guarantee</span>
+                    </span>
+                    <p class="text-[11px] leading-relaxed text-slate-700 font-medium">
+                        100% natural homemade pickles without chemical preservatives. Keep jars tightly closed & refrigerated for long-lasting crispness.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Right: Subtotal, Delivery & Grand Total -->
+            <div class="w-full sm:w-72 bg-slate-50 p-4 rounded-2xl border-2 border-slate-300 space-y-2 text-xs mono-num font-bold">
+                <div class="flex justify-between items-center text-slate-700 pb-1.5 border-b border-slate-200">
+                    <span>Subtotal ({{ order.total_items_count }} items):</span>
+                    <span class="font-black text-slate-950">Tk {{ order.subtotal|floatformat:0 }}</span>
+                </div>
+                <div class="flex justify-between items-center text-slate-700 pb-1.5 border-b border-slate-200">
+                    <span>Delivery Fee ({{ order.delivery_city }}):</span>
+                    <span class="font-black text-slate-950">Tk {{ order.delivery_fee|floatformat:0 }}</span>
+                </div>
+                <div class="flex justify-between items-center pt-1 text-emerald-950">
+                    <span class="font-black text-sm uppercase tracking-tight">Total Amount:</span>
+                    <span class="text-xl font-black text-emerald-950">Tk {{ order.total_amount|floatformat:0 }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Official Barcode & Courier Acknowledgement -->
+        <div class="mt-8 pt-6 border-t-2 border-dashed border-slate-400">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-6">
+                <!-- Barcode for Courier Scanning -->
+                <div class="text-center sm:text-left">
+                    <div class="inline-flex items-center gap-[2px] h-10 px-3 bg-white border border-slate-400 rounded-lg overflow-hidden">
+                        <span class="w-[2px] h-full bg-black"></span>
+                        <span class="w-[1px] h-full bg-black"></span>
+                        <span class="w-[3px] h-full bg-black"></span>
+                        <span class="w-[1px] h-full bg-black"></span>
+                        <span class="w-[2px] h-full bg-black"></span>
+                        <span class="w-[4px] h-full bg-black"></span>
+                        <span class="w-[1px] h-full bg-black"></span>
+                        <span class="w-[2px] h-full bg-black"></span>
+                        <span class="w-[3px] h-full bg-black"></span>
+                        <span class="w-[1px] h-full bg-black"></span>
+                        <span class="w-[4px] h-full bg-black"></span>
+                        <span class="w-[2px] h-full bg-black"></span>
+                        <span class="w-[1px] h-full bg-black"></span>
+                        <span class="w-[3px] h-full bg-black"></span>
+                        <span class="w-[2px] h-full bg-black"></span>
+                        <span class="w-[1px] h-full bg-black"></span>
+                        <span class="w-[4px] h-full bg-black"></span>
+                        <span class="w-[2px] h-full bg-black"></span>
+                    </div>
+                    <div class="mono-num text-xs font-black tracking-widest text-slate-950 mt-1">
+                        *{{ order.order_number }}*
+                    </div>
+                </div>
+
+                <!-- Signatures for Delivery Handover -->
+                <div class="flex items-center gap-8 text-center text-xs text-slate-600">
+                    <div>
+                        <div class="w-36 border-b-2 border-slate-400 mb-1.5"></div>
+                        <span class="font-black text-[10px] uppercase tracking-wider text-slate-800">Prepared By</span>
+                    </div>
+                    <div>
+                        <div class="w-36 border-b-2 border-slate-400 mb-1.5"></div>
+                        <span class="font-black text-[10px] uppercase tracking-wider text-slate-800">Received By (Customer / Rider)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center text-[11px] font-bold text-slate-600 mt-6">
+                Thank you for choosing Pickpickles! Questions? Call us at <strong>01794271523</strong> or visit <strong>www.pickpickles.xyz</strong>
+            </div>
+        </div>
+
+    </div>
+
+
+    <!-- Client-side script for Format Switching & Zero-Shift Print Handling -->
+    <script>
+        function setInvoiceFormat(format) {
+            const a4View = document.getElementById('a4InvoiceView');
+            const posView = document.getElementById('posSlipView');
+            const btnA4 = document.getElementById('btnFormatA4');
+            const btn80 = document.getElementById('btnFormat80');
+            const btn72 = document.getElementById('btnFormat72');
+            const btn58 = document.getElementById('btnFormat58');
+            const dynamicStyle = document.getElementById('dynamicPrintStyle');
+
+            // Button styling helper
+            const inactiveClass = 'px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5';
+            const inactiveClassMini = 'px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1';
+            const activeClass = 'px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-extrabold transition flex items-center gap-1.5 shadow-sm';
+            const activeClassMini = 'px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white font-extrabold transition flex items-center gap-1 shadow-sm';
+
+            if (btnA4) btnA4.className = inactiveClass;
+            if (btn80) btn80.className = inactiveClass;
+            if (btn72) btn72.className = inactiveClassMini;
+            if (btn58) btn58.className = inactiveClassMini;
+
+            if (format === 'a4') {
+                // A4 Full Page
+                if (posView) posView.classList.add('hidden');
+                if (a4View) a4View.classList.remove('hidden');
+                if (btnA4) btnA4.className = activeClass;
+
+                if (dynamicStyle) {
+                    dynamicStyle.innerHTML = `
+                        @media print {
+                            @page {
+                                size: A4 portrait !important;
+                                margin: 10mm 12mm !important;
+                            }
+                            html, body {
+                                width: 100% !important;
+                                max-width: 100% !important;
+                                margin: 0 !important;
+                                padding: 0 !important;
+                                background: #ffffff !important;
+                            }
+                            #posSlipView { display: none !important; }
+                            #a4InvoiceView {
+                                display: block !important;
+                                max-width: 100% !important;
+                                width: 100% !important;
+                                margin: 0 !important;
+                                padding: 0 !important;
+                                border: none !important;
+                                box-shadow: none !important;
+                            }
+                        }
+                    `;
+                }
+            } else if (format === '72') {
+                // POS 72mm fit (Strictly 72mm width to prevent roll overflow)
+                if (a4View) a4View.classList.add('hidden');
+                if (posView) {
+                    posView.classList.remove('hidden');
+                    posView.className = 'pos-receipt pos-container-72 bg-white p-3 sm:p-4 rounded-2xl shadow-2xl border border-slate-300 transition-all duration-200 print-shadow-none text-black leading-snug';
+                }
+                if (btn72) btn72.className = activeClassMini;
+
+                if (dynamicStyle) {
+                    dynamicStyle.innerHTML = `
+                        @media print {
+                            @page {
+                                size: auto;
+                                margin: 0mm !important;
+                            }
+                            html, body {
+                                width: 72mm !important;
+                                max-width: 72mm !important;
+                                margin: 0 auto !important;
+                                padding: 0 !important;
+                                background: #ffffff !important;
+                            }
+                            #a4InvoiceView { display: none !important; }
+                            #posSlipView {
+                                display: block !important;
+                                width: 72mm !important;
+                                max-width: 72mm !important;
+                                margin: 0 auto !important;
+                                padding: 1mm 2mm !important;
+                                box-sizing: border-box !important;
+                                border: none !important;
+                                box-shadow: none !important;
+                            }
+                            #posSlipView, 
+                            #posSlipView * {
+                                color: #000000 !important;
+                                border-color: #000000 !important;
+                                -webkit-text-stroke: 0.18px #000000 !important;
+                            }
+                        }
+                    `;
+                }
+            } else if (format === '58') {
+                // POS 58mm mini roll
+                if (a4View) a4View.classList.add('hidden');
+                if (posView) {
+                    posView.classList.remove('hidden');
+                    posView.className = 'pos-receipt pos-container-58 bg-white p-2 sm:p-3 rounded-2xl shadow-2xl border border-slate-300 transition-all duration-200 print-shadow-none text-black leading-snug';
+                }
+                if (btn58) btn58.className = activeClassMini;
+
+                if (dynamicStyle) {
+                    dynamicStyle.innerHTML = `
+                        @media print {
+                            @page {
+                                size: auto;
+                                margin: 0mm !important;
+                            }
+                            html, body {
+                                width: 58mm !important;
+                                max-width: 58mm !important;
+                                margin: 0 auto !important;
+                                padding: 0 !important;
+                                background: #ffffff !important;
+                            }
+                            #a4InvoiceView { display: none !important; }
+                            #posSlipView {
+                                display: block !important;
+                                width: 58mm !important;
+                                max-width: 58mm !important;
+                                margin: 0 auto !important;
+                                padding: 1mm 2mm !important;
+                                box-sizing: border-box !important;
+                                border: none !important;
+                                box-shadow: none !important;
+                            }
+                            #posSlipView, 
+                            #posSlipView * {
+                                color: #000000 !important;
+                                border-color: #000000 !important;
+                                -webkit-text-stroke: 0.18px #000000 !important;
+                            }
+                        }
+                    `;
+                }
             } else {
-                container.classList.remove('pos-container-58');
-                container.classList.add('pos-container-80');
-                btn80.className = 'px-2.5 py-1 rounded-lg bg-emerald-600 text-white transition';
-                btn58.className = 'px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition';
+                // Default: POS 80mm Full Roll (100% width, zero offset, deep black)
+                if (a4View) a4View.classList.add('hidden');
+                if (posView) {
+                    posView.classList.remove('hidden');
+                    posView.className = 'pos-receipt pos-container-80 bg-white p-3 sm:p-4 rounded-2xl shadow-2xl border border-slate-300 transition-all duration-200 print-shadow-none text-black leading-snug';
+                }
+                if (btn80) btn80.className = activeClass;
+
+                if (dynamicStyle) {
+                    dynamicStyle.innerHTML = `
+                        @media print {
+                            @page {
+                                size: auto;
+                                margin: 0mm !important;
+                            }
+                            html, body {
+                                width: 100% !important;
+                                max-width: 100% !important;
+                                min-width: 100% !important;
+                                margin: 0 !important;
+                                padding: 0 !important;
+                                background: #ffffff !important;
+                            }
+                            #a4InvoiceView { display: none !important; }
+                            #posSlipView {
+                                display: block !important;
+                                width: 100% !important;
+                                max-width: 100% !important;
+                                margin: 0 !important;
+                                padding: 2mm 3mm !important;
+                                box-sizing: border-box !important;
+                                border: none !important;
+                                box-shadow: none !important;
+                            }
+                            #posSlipView, 
+                            #posSlipView * {
+                                color: #000000 !important;
+                                border-color: #000000 !important;
+                                -webkit-text-stroke: 0.18px #000000 !important;
+                            }
+                        }
+                    `;
+                }
             }
+
+            try {
+                localStorage.setItem('pickpickles_invoice_format', format);
+            } catch (e) {}
+        }
+
+        // Helper function for user-controlled font size scaling
+        function setReceiptFontSize(size) {
+            const posView = document.getElementById('posSlipView');
+            const btnCompact = document.getElementById('btnFontCompact');
+            const btnNormal = document.getElementById('btnFontNormal');
+            const btnLarge = document.getElementById('btnFontLarge');
+
+            const activeBtn = 'px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-bold transition shadow-xs';
+            const inactiveBtn = 'px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition';
+
+            if (btnCompact) btnCompact.className = inactiveBtn;
+            if (btnNormal) btnNormal.className = inactiveBtn;
+            if (btnLarge) btnLarge.className = inactiveBtn;
+
+            if (size === 'compact') {
+                if (posView) posView.style.zoom = '0.9';
+                if (btnCompact) btnCompact.className = activeBtn;
+            } else if (size === 'large') {
+                if (posView) posView.style.zoom = '1.1';
+                if (btnLarge) btnLarge.className = activeBtn;
+            } else {
+                if (posView) posView.style.zoom = '1.0';
+                if (btnNormal) btnNormal.className = activeBtn;
+            }
+
+            try {
+                localStorage.setItem('pickpickles_receipt_font_size', size);
+            } catch (e) {}
+        }
+
+        // Initialize on page load (Defaults to '80' for POS thermal printer)
+        window.addEventListener('DOMContentLoaded', () => {
+            let savedFormat = '80'; // Default is POS 80mm
+            try {
+                const stored = localStorage.getItem('pickpickles_invoice_format');
+                if (stored === '80' || stored === '72' || stored === '58' || stored === 'a4') {
+                    savedFormat = stored;
+                }
+            } catch (e) {}
+
+            // Check URL parameter override (e.g. ?format=80 or ?format=a4)
+            const urlParams = new URLSearchParams(window.location.search);
+            const paramFormat = urlParams.get('format');
+            if (paramFormat && ['80', '72', '58', 'a4'].includes(paramFormat)) {
+                savedFormat = paramFormat;
+            }
+
+            setInvoiceFormat(savedFormat);
+
+            let savedFontSize = 'normal';
+            try {
+                savedFontSize = localStorage.getItem('pickpickles_receipt_font_size') || 'normal';
+            } catch (e) {}
+            setReceiptFontSize(savedFontSize);
+
+            // Support ?autoprint=1
+            if (urlParams.get('autoprint') === '1') {
+                setTimeout(() => {
+                    window.print();
+                }, 400);
+            }
+        });
+
+        // Driver Modal & Direct Launch handlers
+        function openDriverModal() {
+            const modal = document.getElementById('driverModal');
+            if (modal) modal.classList.remove('hidden');
+        }
+        function closeDriverModal() {
+            const modal = document.getElementById('driverModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function launchDriverOnPC() {
+            const btnToolbar = document.getElementById('btnToolbarLaunch');
+            const btnModal = document.getElementById('btnModalLaunchDriver');
+            
+            const loadingHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i><span>Launching...</span>';
+            const defaultToolbarHTML = '<i class="fa-solid fa-play text-xs"></i><span>Install POS Driver</span>';
+            const defaultModalHTML = '<i class="fa-solid fa-play text-xs"></i><span>Run Driver Setup</span>';
+
+            if (btnToolbar) { btnToolbar.innerHTML = loadingHTML; btnToolbar.disabled = true; }
+            if (btnModal) { btnModal.innerHTML = loadingHTML; btnModal.disabled = true; }
+
+            fetch("{% url 'dashboard:api_launch_pos_driver' %}")
+                .then(async res => {
+                    const data = await res.json();
+                    if (!res.ok || data.status === 'error') {
+                        throw new Error(data.message || 'Could not launch installer');
+                    }
+                    return data;
+                })
+                .then(data => {
+                    showToast(data.message || 'Installer window opened! Please check your Windows taskbar or screen.', false);
+                    if (btnToolbar) {
+                        btnToolbar.innerHTML = '<i class="fa-solid fa-check text-xs"></i><span>Installer Opened!</span>';
+                        setTimeout(() => { btnToolbar.innerHTML = defaultToolbarHTML; btnToolbar.disabled = false; }, 4000);
+                    }
+                    if (btnModal) {
+                        btnModal.innerHTML = '<i class="fa-solid fa-check text-xs"></i><span>Installer Opened!</span>';
+                        setTimeout(() => { btnModal.innerHTML = defaultModalHTML; btnModal.disabled = false; }, 4000);
+                    }
+                })
+                .catch(err => {
+                    showToast(err.message || 'Could not launch installer. Check Windows permissions.', true);
+                    if (btnToolbar) { btnToolbar.innerHTML = defaultToolbarHTML; btnToolbar.disabled = false; }
+                    if (btnModal) { btnModal.innerHTML = defaultModalHTML; btnModal.disabled = false; }
+                });
+        }
+
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('driverToast');
+            const toastTitle = document.getElementById('toastTitle');
+            const toastMsg = document.getElementById('toastMsg');
+            if (!toast) return;
+
+            if (toastTitle) toastTitle.textContent = isError ? 'Installer Notice' : 'Driver Installer Launched!';
+            if (toastMsg) toastMsg.textContent = message;
+
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 6000);
         }
     </script>
 </body>

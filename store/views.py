@@ -325,15 +325,26 @@ def order_track(request):
     query = request.GET.get('q', '').strip()
     
     if query:
-        # Search by order_number or customer_phone
-        order = Order.objects.filter(
-            order_number__iexact=query
-        ).first() or Order.objects.filter(
-            customer_phone__icontains=query
-        ).first()
+        import re
+        clean_q = query.lstrip('#').strip()
+        num_match = re.search(r'(\d+)', clean_q)
+        q_filter = (
+            Q(order_number__iexact=query) |
+            Q(order_number__iexact=clean_q) |
+            Q(order_number__icontains=clean_q) |
+            Q(customer_phone__icontains=query)
+        )
+        if num_match:
+            try:
+                padded_val = f"PKP-{int(num_match.group(1)):04d}"
+                q_filter |= Q(order_number__iexact=padded_val)
+            except Exception:
+                pass
+
+        order = Order.objects.filter(q_filter).first()
         
         if not order:
-            messages.error(request, f'No order found matching "{query}". Please verify your Order ID (e.g. PKP-12345) or Phone number.')
+            messages.error(request, f'No order found matching "{query}". Please verify your Order ID (e.g. PKP-0001) or Phone number.')
 
     return render(request, 'store/order_track.html', {'order': order, 'query': query})
 

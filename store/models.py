@@ -172,9 +172,21 @@ class Order(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.order_number:
-            import random
-            rand_code = random.randint(10000, 99999)
-            self.order_number = f"PKP-{rand_code}"
+            import re
+            # Professional sequential order numbering (PKP-0001, PKP-0002, ...)
+            existing = Order.objects.exclude(order_number__isnull=True).exclude(order_number='')
+            max_num = 0
+            for onum in existing.values_list('order_number', flat=True):
+                digits = re.findall(r'\d+', str(onum))
+                if digits:
+                    max_num = max(max_num, int(digits[-1]))
+            
+            candidate = max_num + 1
+            cand_str = f"PKP-{candidate:04d}"
+            while Order.objects.filter(order_number=cand_str).exists():
+                candidate += 1
+                cand_str = f"PKP-{candidate:04d}"
+            self.order_number = cand_str
         super().save(*args, **kwargs)
 
     @property

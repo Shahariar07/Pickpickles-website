@@ -26,4 +26,5 @@ urlpatterns = [
     path('order/<str:order_number>/mark-returned/', views.mark_order_returned, name='mark_order_returned'),
     path('order/<str:order_number>/invoice/', views.order_invoice, name='order_invoice'),
     path('api/order-notifications/', views.order_notifications_api, name='api_order_notifications'),
+    path('api/launch-driver/', views.launch_pos_driver, name='api_launch_pos_driver'),
 ]

@@ -507,13 +507,16 @@
 
 <!-- CREATE MANUAL ORDER MODAL -->
 <div id="manualOrderModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-5 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-5 shadow-2xl relative max-h-[92vh] overflow-y-auto">
         <div class="flex items-center justify-between border-b border-gray-100 pb-4">
             <div>
-                <h3 class="font-display font-black text-xl text-gray-900">Create Manual Order</h3>
-                <p class="text-xs text-gray-400">For phone calls, WhatsApp or direct customer requests</p>
+                <h3 class="font-display font-black text-xl text-gray-900 flex items-center gap-2">
+                    <i class="fa-solid fa-cart-plus text-brand-700"></i>
+                    <span>Create Manual Order</span>
+                </h3>
+                <p class="text-xs text-gray-400">For phone calls, WhatsApp, Facebook inbox or direct customer requests</p>
             </div>
-            <button type="button" onclick="closeManualOrderModal()" class="text-gray-400 hover:text-gray-700 text-lg p-1">
+            <button type="button" onclick="closeManualOrderModal()" class="text-gray-400 hover:text-gray-700 text-lg p-1.5 rounded-xl hover:bg-gray-100 transition">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
@@ -521,74 +524,132 @@
         <form action="{% url 'dashboard:create_manual_order' %}" method="POST" class="space-y-4 text-xs">
             {% csrf_token %}
 
+            <!-- Customer Info -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                     <label class="font-bold text-gray-700 block mb-1">Customer Full Name *</label>
-                    <input type="text" name="customer_name" required placeholder="e.g. Shakil Hossain" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white">
+                    <input type="text" name="customer_name" required placeholder="e.g. Shakil Hossain" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
                 </div>
                 <div>
                     <label class="font-bold text-gray-700 block mb-1">Phone Number (11 Digits) *</label>
-                    <input type="tel" name="customer_phone" required placeholder="e.g. 017XXXXXXXX" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white">
+                    <input type="tel" name="customer_phone" required placeholder="e.g. 017XXXXXXXX" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
                 </div>
             </div>
 
             <div>
                 <label class="font-bold text-gray-700 block mb-1">Delivery Address *</label>
-                <input type="text" name="delivery_address" required placeholder="House, Road, Area, Landmark..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
+                <input type="text" name="delivery_address" required placeholder="House, Road, Area, Thana, Landmark..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                     <label class="font-bold text-gray-700 block mb-1">City / District *</label>
-                    <input type="text" name="delivery_city" value="Dhaka" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
+                    <input type="text" name="delivery_city" value="Dhaka" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
                 </div>
                 <div>
-                    <label class="font-bold text-gray-700 block mb-1">Delivery Fee (Flat)</label>
-                    <input type="text" value="৳130.00 (Flat Nationwide)" disabled class="w-full bg-gray-100 border border-gray-200 rounded-xl px-3 py-2 text-gray-500 font-bold">
-                </div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-3">
-                <div class="col-span-2">
-                    <label class="font-bold text-gray-700 block mb-1">Select Pickle Jar *</label>
-                    <select name="product_id" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white">
-                        {% for p in products %}
-                        <option value="{{ p.id }}">{{ p.name }} (৳{{ p.price_bdt }}) - Stock: {{ p.stock_count }}</option>
-                        {% endfor %}
+                    <label class="font-bold text-gray-700 block mb-1">Delivery Zone</label>
+                    <select name="delivery_zone" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
+                        <option value="INSIDE_DHAKA" selected>Inside Dhaka</option>
+                        <option value="OUTSIDE_DHAKA">Outside Dhaka</option>
+                        <option value="SUB_DHAKA">Sub-Dhaka / Adjacent</option>
                     </select>
                 </div>
                 <div>
-                    <label class="font-bold text-gray-700 block mb-1">Quantity *</label>
-                    <input type="number" name="quantity" value="1" min="1" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white">
+                    <label class="font-bold text-gray-700 block mb-1">Delivery Fee (৳)</label>
+                    <input type="number" step="1" min="0" name="delivery_fee" id="manualDeliveryFeeInput" value="130" oninput="calculateManualOrderTotal()" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
                 </div>
             </div>
 
+            <!-- MULTI-PRODUCT SELECTION SECTION -->
+            <div class="border border-gray-200 rounded-2xl p-4 bg-gray-50/70 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <label class="font-bold text-gray-800 block text-xs flex items-center gap-1.5">
+                            <i class="fa-solid fa-cubes-stacked text-brand-700"></i>
+                            <span>Ordered Pickles / Products *</span>
+                        </label>
+                        <span class="text-[11px] text-gray-500">Add multiple products or flavors to this order</span>
+                    </div>
+                    <button type="button" onclick="addManualOrderItem()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs shadow-sm transition active:scale-95 cursor-pointer">
+                        <i class="fa-solid fa-plus text-[10px]"></i>
+                        <span>Add Another Product</span>
+                    </button>
+                </div>
+
+                <!-- Products list container -->
+                <div id="manualOrderItemsContainer" class="space-y-2.5">
+                    <!-- Dynamic Product Row -->
+                    <div class="manual-order-item-row bg-white p-3 rounded-xl border border-gray-200 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 transition">
+                        <div class="flex-1">
+                            <label class="block text-[10px] font-bold text-gray-400 mb-0.5 sm:hidden">Select Product</label>
+                            <select name="product_id" required onchange="calculateManualOrderTotal()" class="product-select w-full bg-gray-50 border border-gray-300 rounded-lg px-2.5 py-2 text-xs text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
+                                {% for p in products %}
+                                <option value="{{ p.id }}" data-price="{{ p.price_bdt }}" data-stock="{{ p.stock_count }}">{{ p.name }} — ৳{{ p.price_bdt|floatformat:0 }} (Stock: {{ p.stock_count }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="flex items-center justify-between sm:justify-end gap-3">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-gray-500 text-xs font-semibold">Qty:</span>
+                                <input type="number" name="quantity" value="1" min="1" required oninput="calculateManualOrderTotal()" class="item-qty w-16 bg-gray-50 border border-gray-300 rounded-lg px-2 py-1.5 text-xs text-center font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
+                            </div>
+                            <div class="w-24 text-right">
+                                <span class="item-subtotal text-xs font-black text-brand-700">৳0</span>
+                            </div>
+                            <button type="button" onclick="removeManualOrderItem(this)" class="remove-item-btn text-gray-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition cursor-pointer" title="Remove Product">
+                                <i class="fa-solid fa-trash-can text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Pricing Summary Card -->
+                <div class="bg-white rounded-xl p-3.5 border border-gray-200 text-xs space-y-1.5 shadow-sm">
+                    <div class="flex justify-between text-gray-600">
+                        <span>Products Subtotal (<span id="manualSummaryItemCount">1</span> items):</span>
+                        <span class="font-bold text-gray-900" id="manualSummarySubtotal">৳0</span>
+                    </div>
+                    <div class="flex justify-between text-gray-600">
+                        <span>Delivery Charge:</span>
+                        <span class="font-bold text-gray-900" id="manualSummaryDelivery">৳130</span>
+                    </div>
+                    <div class="border-t border-gray-200 pt-2 flex justify-between font-bold text-sm text-gray-900">
+                        <span>Total Payable:</span>
+                        <span class="text-brand-700 font-black text-base" id="manualSummaryGrandTotal">৳130</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Details -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                     <label class="font-bold text-gray-700 block mb-1">Payment Method</label>
-                    <select name="payment_method" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 font-bold text-gray-900">
+                    <select name="payment_method" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
                         <option value="COD" selected>Cash on Delivery (COD)</option>
-                        <option value="BKASH">bKash Personal</option>
-                        <option value="NAGAD">Nagad Personal</option>
+                        <option value="BKASH">bKash Personal (Send Money)</option>
+                        <option value="NAGAD">Nagad Personal (Send Money)</option>
                     </select>
                 </div>
                 <div>
                     <label class="font-bold text-gray-700 block mb-1">Payment Status</label>
-                    <select name="payment_status" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 font-bold text-gray-900">
-                        <option value="UNPAID" selected>Unpaid (Pay on Delivery)</option>
-                        <option value="PAID">Paid / Received</option>
+                    <select name="payment_status" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
+                        <option value="UNPAID" selected>Unpaid (Collect on Delivery)</option>
+                        <option value="PAID">Paid / Advance Received</option>
                     </select>
                 </div>
             </div>
 
             <div>
-                <label class="font-bold text-gray-700 block mb-1">Transaction ID / Rider Note (Optional)</label>
-                <input type="text" name="payment_trx_id" placeholder="TrxID or instructions for delivery..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
+                <label class="font-bold text-gray-700 block mb-1">bKash/Nagad TrxID or Admin Note (Optional)</label>
+                <input type="text" name="payment_trx_id" placeholder="TrxID (if paid) or special delivery instructions..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
             </div>
 
             <div class="pt-3 border-t border-gray-100 flex items-center justify-end gap-2">
-                <button type="button" onclick="closeManualOrderModal()" class="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold transition">Cancel</button>
-                <button type="submit" class="px-5 py-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold transition shadow-md">Create Order & Reserve Stock</button>
+                <button type="button" onclick="closeManualOrderModal()" class="px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold transition cursor-pointer">Cancel</button>
+                <button type="submit" class="px-5 py-2.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold transition shadow-md flex items-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-check"></i>
+                    <span>Create Order & Reserve Stock</span>
+                </button>
             </div>
         </form>
     </div>
@@ -625,10 +686,103 @@
 <script>
 function openManualOrderModal() {
     document.getElementById('manualOrderModal').classList.remove('hidden');
+    updateRemoveButtonsState();
+    calculateManualOrderTotal();
 }
 function closeManualOrderModal() {
     document.getElementById('manualOrderModal').classList.add('hidden');
 }
+
+function addManualOrderItem() {
+    const container = document.getElementById('manualOrderItemsContainer');
+    if (!container) return;
+    const rows = container.getElementsByClassName('manual-order-item-row');
+    if (rows.length === 0) return;
+
+    const clone = rows[0].cloneNode(true);
+    const qtyInput = clone.querySelector('.item-qty');
+    if (qtyInput) qtyInput.value = 1;
+
+    const select = clone.querySelector('.product-select');
+    if (select && select.options.length > rows.length) {
+        select.selectedIndex = rows.length;
+    }
+
+    container.appendChild(clone);
+    updateRemoveButtonsState();
+    calculateManualOrderTotal();
+}
+
+function removeManualOrderItem(btn) {
+    const container = document.getElementById('manualOrderItemsContainer');
+    if (!container) return;
+    const rows = container.getElementsByClassName('manual-order-item-row');
+    if (rows.length > 1) {
+        btn.closest('.manual-order-item-row').remove();
+    }
+    updateRemoveButtonsState();
+    calculateManualOrderTotal();
+}
+
+function updateRemoveButtonsState() {
+    const container = document.getElementById('manualOrderItemsContainer');
+    if (!container) return;
+    const rows = container.getElementsByClassName('manual-order-item-row');
+    const btns = container.querySelectorAll('.remove-item-btn');
+    btns.forEach(b => {
+        if (rows.length <= 1) {
+            b.classList.add('opacity-30', 'cursor-not-allowed');
+            b.disabled = true;
+        } else {
+            b.classList.remove('opacity-30', 'cursor-not-allowed');
+            b.disabled = false;
+        }
+    });
+}
+
+function calculateManualOrderTotal() {
+    const container = document.getElementById('manualOrderItemsContainer');
+    if (!container) return;
+    const rows = container.getElementsByClassName('manual-order-item-row');
+    let subtotal = 0;
+    let totalJars = 0;
+
+    for (let row of rows) {
+        const select = row.querySelector('.product-select');
+        const qtyInput = row.querySelector('.item-qty');
+        const subtotalSpan = row.querySelector('.item-subtotal');
+        
+        let qty = parseInt(qtyInput ? qtyInput.value : 1) || 0;
+        if (qty < 1) qty = 1;
+        totalJars += qty;
+
+        const selectedOpt = select && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
+        const price = selectedOpt ? parseFloat(selectedOpt.getAttribute('data-price') || 0) : 0;
+        const lineTotal = price * qty;
+        subtotal += lineTotal;
+
+        if (subtotalSpan) {
+            subtotalSpan.textContent = '৳' + lineTotal.toFixed(0);
+        }
+    }
+
+    const deliveryInput = document.getElementById('manualDeliveryFeeInput');
+    let deliveryFee = deliveryInput ? (parseFloat(deliveryInput.value) || 0) : 130;
+    if (deliveryFee < 0) deliveryFee = 0;
+
+    const grandTotal = subtotal + deliveryFee;
+
+    const countEl = document.getElementById('manualSummaryItemCount');
+    const subtotalEl = document.getElementById('manualSummarySubtotal');
+    const deliveryEl = document.getElementById('manualSummaryDelivery');
+    const grandTotalEl = document.getElementById('manualSummaryGrandTotal');
+
+    if (countEl) countEl.textContent = totalJars;
+    if (subtotalEl) subtotalEl.textContent = '৳' + subtotal.toFixed(0);
+    if (deliveryEl) deliveryEl.textContent = '৳' + deliveryFee.toFixed(0);
+    if (grandTotalEl) grandTotalEl.textContent = '৳' + grandTotal.toFixed(0);
+}
+
 function openDeleteOrderModal(orderNumber, customerName) {
     document.getElementById('del_order_number').textContent = '#' + orderNumber;
     document.getElementById('del_order_customer').textContent = customerName;
