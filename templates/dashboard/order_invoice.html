@@ -121,8 +121,8 @@
             #posSlipView {
                 display: block !important;
                 width: 100% !important;
-                max-width: 100% !important;
-                margin: 0 !important;
+                max-width: 76mm !important;
+                margin: 0 auto !important;
                 padding: 2mm 3mm !important;
                 box-sizing: border-box !important;
                 border: none !important;
@@ -140,34 +140,34 @@
 <body class="min-h-screen py-5 px-2.5 sm:px-4 flex flex-col items-center justify-start text-slate-900 antialiased">
 
     <!-- Top Action Toolbar (Hidden during Print) -->
-    <div class="no-print w-full max-w-2xl mb-4 flex flex-col gap-3 bg-slate-900/95 backdrop-blur-md p-4 rounded-2xl border border-slate-700 shadow-2xl text-white">
+    <div class="no-print w-full max-w-4xl mb-4 flex flex-col gap-3 bg-slate-900/95 backdrop-blur-md p-4 rounded-2xl border border-slate-700 shadow-2xl text-white">
         
-        <!-- Row 1: Nav & Format Chooser & Print CTA -->
-        <div class="flex flex-wrap items-center justify-between gap-2.5">
+        <!-- Row 1: Navigation & Action Buttons (Aligned Right) -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             
-            <!-- Navigation Links -->
-            <div class="flex items-center gap-2">
-                <a href="{% url 'dashboard:orders' %}" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold transition flex items-center gap-1.5 text-slate-200 hover:text-white">
+            <!-- Left: Navigation Links -->
+            <div class="flex items-center gap-2 shrink-0">
+                <a href="{% url 'dashboard:orders' %}" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold transition flex items-center gap-1.5 text-slate-200 hover:text-white">
                     <i class="fa-solid fa-arrow-left text-[11px]"></i>
                     <span>Orders</span>
                 </a>
-                <a href="{% url 'dashboard:order_detail' order.order_number %}" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold transition flex items-center gap-1.5 text-slate-200 hover:text-white">
+                <a href="{% url 'dashboard:order_detail' order.order_number %}" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold transition flex items-center gap-1.5 text-slate-200 hover:text-white">
                     <i class="fa-solid fa-file-lines text-[11px]"></i>
                     <span>#{{ order.order_number }}</span>
                 </a>
             </div>
 
-            <!-- Action Buttons -->
-            <div class="flex items-center gap-2">
-                <button type="button" id="btnToolbarLaunch" onclick="launchDriverOnPC()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black transition flex items-center gap-2 shadow-md cursor-pointer active:scale-95 ring-2 ring-emerald-400/40" title="Click to run RongTa POS printer driver installer on your Windows PC">
-                    <i class="fa-solid fa-play text-xs"></i>
+            <!-- Right: Action Buttons (Right-aligned, never stranded on the left) -->
+            <div class="flex items-center gap-2 justify-end sm:ml-auto flex-wrap sm:flex-nowrap">
+                <button type="button" id="btnToolbarLaunch" onclick="launchDriverOnPC()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-emerald-500/50 text-emerald-400 hover:text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-95 whitespace-nowrap" title="Click to run RongTa POS printer driver installer on Windows">
+                    <i class="fa-solid fa-play text-xs text-emerald-400"></i>
                     <span>Install POS Driver</span>
                 </button>
-                <button type="button" onclick="openDriverModal()" title="Driver setup files & manual" class="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-bold transition flex items-center gap-1 text-slate-300 hover:text-white cursor-pointer shadow-xs">
+                <button type="button" onclick="openDriverModal()" title="Driver setup files & manual" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white cursor-pointer shadow-xs whitespace-nowrap">
                     <i class="fa-solid fa-gear text-slate-400"></i>
-                    <span class="hidden sm:inline">Setup</span>
+                    <span>Setup</span>
                 </button>
-                <button onclick="window.print()" class="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition shadow-lg flex items-center gap-2 active:scale-95 cursor-pointer">
+                <button onclick="window.print()" class="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition shadow-lg flex items-center gap-2 active:scale-95 cursor-pointer whitespace-nowrap">
                     <i class="fa-solid fa-print text-sm"></i>
                     <span>Print Receipt (Ctrl + P)</span>
                 </button>
@@ -931,8 +931,8 @@
                             #posSlipView {
                                 display: block !important;
                                 width: 100% !important;
-                                max-width: 100% !important;
-                                margin: 0 !important;
+                                max-width: 76mm !important;
+                                margin: 0 auto !important;
                                 padding: 2mm 3mm !important;
                                 box-sizing: border-box !important;
                                 border: none !important;
