@@ -32,7 +32,10 @@
             </div>
             <div class="sm:text-right">
                 <span class="text-xs text-gray-400 font-semibold block">Estimated Delivery</span>
-                <span class="text-sm font-bold text-gray-800">24-72 Hours (Standard Delivery)</span>
+                <span class="text-sm font-black text-brand-800 flex sm:justify-end items-center gap-1.5">
+                    <i class="fa-solid fa-truck-fast text-brand-600"></i> 5 to 6 Days
+                </span>
+                <span class="text-[11px] text-gray-500 font-medium block mt-0.5">3 Days Fresh Brining + 2–3 Days Transit</span>
             </div>
         </div>
 
@@ -43,6 +46,14 @@
                 <p class="font-bold text-gray-900">{{ order.customer_name }}</p>
                 <p class="text-gray-700">{{ order.customer_phone }}</p>
                 <p class="text-gray-600 mt-1">{{ order.delivery_address }}, {{ order.delivery_city }}</p>
+                <div class="mt-2.5 pt-2 border-t border-gray-200 flex items-center justify-between text-xs">
+                    <span class="text-gray-600 font-semibold flex items-center gap-1">
+                        <i class="fa-solid fa-truck text-gray-400"></i> Delivery Charge:
+                    </span>
+                    <span class="font-black text-brand-700 bg-white px-2 py-0.5 rounded-md border border-gray-200">
+                        ৳{{ order.delivery_fee }} (Flat Nationwide)
+                    </span>
+                </div>
             </div>
 
             <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100">
@@ -85,21 +96,63 @@
         </div>
         {% endif %}
 
-        <!-- Ordered Jars Table -->
+        <!-- Fresh Preparation & Delivery Timeline Card -->
+        <div class="bg-amber-50/90 border border-amber-200 rounded-2xl p-4 text-xs space-y-2.5">
+            <div class="flex items-center gap-2 font-bold text-amber-950 text-sm">
+                <i class="fa-solid fa-clock-rotate-left text-amber-600"></i>
+                <span>Fresh Batch Preparation & Delivery Timeline (5 to 6 Days)</span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-amber-900">
+                <div class="flex items-start gap-2.5 bg-white/90 p-3 rounded-xl border border-amber-100/90 shadow-2xs">
+                    <span class="text-lg">🥒</span>
+                    <div>
+                        <strong class="font-black text-amber-950 block">Fresh Batch Brining (3 Days)</strong>
+                        <span class="text-[11px] text-amber-800 leading-tight block mt-0.5">Handcrafted upon order. Requires 3 days of natural brining & infusion for that signature crunchy snap.</span>
+                    </div>
+                </div>
+                <div class="flex items-start gap-2.5 bg-white/90 p-3 rounded-xl border border-amber-100/90 shadow-2xs">
+                    <span class="text-lg">🚚</span>
+                    <div>
+                        <strong class="font-black text-amber-950 block">Courier Transit (2–3 Days)</strong>
+                        <span class="text-[11px] text-amber-800 leading-tight block mt-0.5">Bubble-wrapped securely and delivered right to your doorstep nationwide (Flat ৳130 delivery).</span>
+                    </div>
+                </div>
+            </div>
+            <p class="text-[11px] text-amber-800 font-semibold pt-0.5 flex items-center gap-1.5">
+                <i class="fa-solid fa-circle-info text-amber-600"></i>
+                Total estimated time from order confirmation to your doorstep is <strong>5 to 6 days</strong>.
+            </p>
+        </div>
+
+        <!-- Ordered Jars Table & Cost Breakdown -->
         <div>
-            <h4 class="font-bold text-xs text-gray-400 uppercase tracking-wider mb-2">Ordered Jars</h4>
-            <div class="space-y-2">
+            <h4 class="font-bold text-xs text-gray-400 uppercase tracking-wider mb-2">Ordered Jars & Pricing Breakdown</h4>
+            <div class="space-y-2 mb-3">
                 {% for item in order.items.all %}
-                <div class="flex items-center justify-between text-xs py-1 border-b border-gray-50">
+                <div class="flex items-center justify-between text-xs py-1.5 border-b border-gray-50">
                     <span class="font-semibold text-gray-800">{{ item.quantity }}x {{ item.product_name }} ({{ item.jar_weight_grams }}g)</span>
                     <span class="font-bold text-gray-900">৳{{ item.total_price }}</span>
                 </div>
                 {% endfor %}
             </div>
 
-            <div class="pt-3 flex justify-between items-baseline text-sm font-bold border-t border-gray-200 mt-3">
-                <span>Grand Total (with Delivery)</span>
-                <span class="font-display font-black text-xl text-brand-700">৳{{ order.total_amount }}</span>
+            <!-- Detailed Cost Breakdown -->
+            <div class="border-t border-gray-200 pt-3 space-y-2 text-xs">
+                <div class="flex justify-between items-center text-gray-600 font-semibold">
+                    <span>Items Subtotal</span>
+                    <span class="font-black text-gray-900 text-sm">৳{{ order.subtotal }}</span>
+                </div>
+                <div class="flex justify-between items-center text-gray-600 font-semibold">
+                    <span class="flex items-center gap-1.5">
+                        <span>Delivery Fee</span>
+                        <span class="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">Flat Nationwide</span>
+                    </span>
+                    <span class="font-black text-gray-900 text-sm">৳{{ order.delivery_fee }}</span>
+                </div>
+                <div class="border-t-2 border-gray-200 pt-3 flex justify-between items-baseline text-sm font-bold">
+                    <span class="font-black text-gray-900 text-base">Grand Total</span>
+                    <span class="font-display font-black text-2xl text-brand-700">৳{{ order.total_amount }}</span>
+                </div>
             </div>
         </div>
 

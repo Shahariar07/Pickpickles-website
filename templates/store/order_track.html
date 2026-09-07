@@ -116,7 +116,7 @@
         </div>
 
         <!-- Details Summary -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs border-t border-gray-100 pt-4">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs border-t border-gray-100 pt-4">
             <div>
                 <span class="text-gray-400 font-bold block mb-1">Delivery Destination</span>
                 <p class="font-bold text-gray-900">{{ order.customer_name }}</p>
@@ -126,6 +126,13 @@
                 <span class="text-gray-400 font-bold block mb-1">Payment & Total</span>
                 <p class="font-bold text-gray-900">{{ order.get_payment_method_display }} ({{ order.get_payment_status_display }})</p>
                 <p class="font-display font-black text-brand-700 text-sm mt-0.5">৳{{ order.total_amount }} BDT</p>
+            </div>
+            <div>
+                <span class="text-gray-400 font-bold block mb-1">Delivery Timeline</span>
+                <p class="font-bold text-gray-900 flex items-center gap-1">
+                    <i class="fa-solid fa-truck-fast text-brand-600"></i> 5 to 6 Days
+                </p>
+                <p class="text-gray-500 text-[11px] mt-0.5">3 days fresh brining + 2–3 days courier</p>
             </div>
         </div>
 
