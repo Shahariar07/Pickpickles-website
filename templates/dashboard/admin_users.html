@@ -162,10 +162,12 @@
                                 </button>
                             </form>
 
+                            {% if request.user.is_superuser %}
                             <!-- Delete User -->
                             <button type="button" onclick="openDeleteUserModal('{{ u.id }}', '{{ u.username|escapejs }}')" class="px-2 py-1 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold text-[11px] transition cursor-pointer" title="Delete User">
                                 <i class="fa-solid fa-trash-can"></i>
                             </button>
+                            {% endif %}
                             {% endif %}
                         </td>
                     </tr>
@@ -258,6 +260,7 @@
     </div>
 </div>
 
+{% if request.user.is_superuser %}
 <!-- DELETE USER CONFIRMATION MODAL -->
 <div id="deleteUserModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative text-center">
@@ -287,6 +290,7 @@
 
     </div>
 </div>
+{% endif %}
 
 <script>
 function openUserModal() {

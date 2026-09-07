@@ -313,9 +313,11 @@
                     <a href="{% url 'dashboard:order_detail' order.order_number %}" title="View Order Details" class="p-2.5 rounded-xl bg-white hover:bg-brand-50 hover:text-brand-700 text-gray-700 border border-gray-200 transition shadow-2xs flex items-center justify-center">
                         <i class="fa-solid fa-eye text-xs"></i>
                     </a>
+                    {% if request.user.is_superuser %}
                     <button type="button" onclick="openDeleteOrderModal('{{ order.order_number }}', '{{ order.customer_name|escapejs }}')" title="Delete Order" class="p-2.5 rounded-xl bg-white hover:bg-rose-50 text-gray-400 hover:text-rose-600 border border-gray-200 transition shadow-2xs flex items-center justify-center cursor-pointer">
                         <i class="fa-solid fa-trash-can text-xs"></i>
                     </button>
+                    {% endif %}
                 </div>
 
             </div>
@@ -473,6 +475,7 @@
                                 >
                                     <i class="fa-solid fa-print text-[10px]"></i>
                                 </a>
+                                {% if request.user.is_superuser %}
                                 <button 
                                     type="button" 
                                     onclick="openDeleteOrderModal('{{ order.order_number }}', '{{ order.customer_name|escapejs }}')"
@@ -481,6 +484,7 @@
                                 >
                                     <i class="fa-solid fa-trash-can text-xs"></i>
                                 </button>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -655,6 +659,7 @@
     </div>
 </div>
 
+{% if request.user.is_superuser %}
 <!-- DELETE ORDER CONFIRMATION MODAL -->
 <div id="deleteOrderModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative text-center">
@@ -682,6 +687,7 @@
 
     </div>
 </div>
+{% endif %}
 
 <script>
 function openManualOrderModal() {

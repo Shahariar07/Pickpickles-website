@@ -146,7 +146,7 @@ def seed():
     # 5. Demo Orders in Admin Dashboard
     orders_data = [
         {
-            'order_number': 'PKP-89214',
+            'order_number': 'PKP-0001',
             'customer_name': 'Tanvir Ahmed',
             'customer_phone': '01711223344',
             'customer_email': 'tanvir@gmail.com',
@@ -168,7 +168,7 @@ def seed():
             ]
         },
         {
-            'order_number': 'PKP-89215',
+            'order_number': 'PKP-0002',
             'customer_name': 'Nabila Karim',
             'customer_phone': '01899887766',
             'customer_email': 'nabila.k@outlook.com',
@@ -187,7 +187,7 @@ def seed():
             ]
         },
         {
-            'order_number': 'PKP-89216',
+            'order_number': 'PKP-0003',
             'customer_name': 'Sadman Sakib',
             'customer_phone': '01655443322',
             'customer_email': 'sadman@yahoo.com',
@@ -207,7 +207,7 @@ def seed():
             ]
         },
         {
-            'order_number': 'PKP-89217',
+            'order_number': 'PKP-0004',
             'customer_name': 'Rafiul Islam',
             'customer_phone': '01911002233',
             'customer_email': '',
@@ -228,7 +228,7 @@ def seed():
             ]
         },
         {
-            'order_number': 'PKP-89218',
+            'order_number': 'PKP-0005',
             'customer_name': 'Samira Hossain',
             'customer_phone': '01755667788',
             'customer_email': 'samira.h@gmail.com',

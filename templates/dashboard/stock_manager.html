@@ -213,6 +213,7 @@
                                     </button>
                                 </form>
 
+                                {% if request.user.is_superuser %}
                                 <!-- Delete Button (Opens Confirmation Modal) -->
                                 <button type="button" 
                                     onclick="openDeleteModal('{{ product.id }}', '{{ product.name|escapejs }}')"
@@ -220,6 +221,7 @@
                                     title="Delete product">
                                     <i class="fa-solid fa-trash-can"></i>
                                 </button>
+                                {% endif %}
 
                             </div>
                         </td>
@@ -540,6 +542,7 @@
     </div>
 </div>
 
+{% if request.user.is_superuser %}
 <!-- ========================================================================= -->
 <!-- 3. DELETE PRODUCT CONFIRMATION MODAL -->
 <!-- ========================================================================= -->
@@ -572,6 +575,7 @@
 
     </div>
 </div>
+{% endif %}
 
 <!-- ========================================================================= -->
 <!-- JAVASCRIPT MODAL HANDLERS -->

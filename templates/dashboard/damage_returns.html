@@ -257,7 +257,8 @@
                         </td>
                         <td class="py-3 px-3 text-right font-display font-black text-rose-700 text-sm">
                             -৳{{ log.total_loss_bdt|floatformat:0 }}
-                        </td>
+                        <td class="py-3 px-3 text-right">
+                            {% if request.user.is_superuser %}
                             <button 
                                 type="button" 
                                 onclick="openDeleteDamageModal('{{ log.id }}', '{{ log.product.name|escapejs }}', '{{ log.quantity_damaged }}')"
@@ -266,6 +267,7 @@
                             >
                                 <i class="fa-solid fa-trash-can"></i>
                             </button>
+                            {% endif %}
                         </td>
                     </tr>
                     {% empty %}
@@ -469,6 +471,7 @@
     </div>
 </div>
 
+{% if request.user.is_superuser %}
 <!-- DELETE DAMAGE CONFIRMATION MODAL -->
 <div id="deleteDamageModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative text-center">
@@ -498,6 +501,7 @@
 
     </div>
 </div>
+{% endif %}
 
 <script>
 function openDamageModal() {

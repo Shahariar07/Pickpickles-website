@@ -250,14 +250,16 @@
                                     <span>Edit</span>
                                 </button>
 
+                                {% if request.user.is_superuser %}
                                 <button 
-                                    type="button"
+                                    type="button" 
                                     onclick="openDeleteExpenseModal('{{ exp.id }}', '{{ exp.title|escapejs }}', '{{ exp.amount }}')"
                                     class="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition"
                                     title="Delete expense record"
                                 >
                                     <i class="fa-solid fa-trash-can text-xs"></i>
                                 </button>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -476,6 +478,7 @@
     </div>
 </div>
 
+{% if request.user.is_superuser %}
 <!-- ========================================================================= -->
 <!-- 3. DELETE EXPENSE CONFIRMATION MODAL -->
 <!-- ========================================================================= -->
@@ -511,6 +514,7 @@
 
     </div>
 </div>
+{% endif %}
 
 <script>
     // Modal Helpers

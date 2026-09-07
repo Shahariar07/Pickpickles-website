@@ -445,6 +445,10 @@ def create_manual_order(request):
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def delete_order(request, order_number):
+    if not request.user.is_superuser:
+        messages.error(request, 'Permission Denied: Staff accounts are restricted from deleting orders. Only Administrator can delete.')
+        return redirect('dashboard:orders')
+
     if request.method == 'POST':
         order = get_object_or_404(Order, order_number=order_number)
         o_num = order.order_number
@@ -485,6 +489,9 @@ def stock_manager(request):
 
         # 1. DELETE PRODUCT
         if action == 'delete_product' or 'delete_product' in request.POST:
+            if not request.user.is_superuser:
+                messages.error(request, 'Permission Denied: Staff accounts are restricted from deleting products. Only Administrator can delete.')
+                return redirect('dashboard:stock_manager')
             product = get_object_or_404(Product, id=product_id)
             prod_name = product.name
             product.delete()
@@ -621,6 +628,9 @@ def stock_manager(request):
 
         # 7. DELETE CATEGORY
         elif action == 'delete_category' or 'delete_category' in request.POST:
+            if not request.user.is_superuser:
+                messages.error(request, 'Permission Denied: Staff accounts are restricted from deleting categories. Only Administrator can delete.')
+                return redirect('dashboard:stock_manager')
             cat_id = request.POST.get('category_id')
             cat = get_object_or_404(Category, id=cat_id)
             c_name = cat.name
@@ -691,6 +701,9 @@ def damage_returns_manager(request):
 
         # 2. DELETE DAMAGE LOG
         elif action == 'delete_damage':
+            if not request.user.is_superuser:
+                messages.error(request, 'Permission Denied: Staff accounts are restricted from deleting damage logs. Only Administrator can delete.')
+                return redirect('dashboard:damage_returns')
             damage_id = request.POST.get('damage_id')
             log = get_object_or_404(DamageLog, id=damage_id)
             log.delete()
@@ -868,6 +881,9 @@ def reviews_manager(request):
 
         # 2. Delete Review
         elif action == 'delete_review':
+            if not request.user.is_superuser:
+                messages.error(request, 'Permission Denied: Staff accounts are restricted from deleting reviews. Only Administrator can delete.')
+                return redirect('dashboard:reviews')
             review = get_object_or_404(Review, id=review_id)
             r_name = review.reviewer_name
             review.delete()
@@ -958,6 +974,9 @@ def expense_manager(request):
 
         # 3. DELETE EXPENSE
         elif action == 'delete_expense' or 'delete_expense' in request.POST:
+            if not request.user.is_superuser:
+                messages.error(request, 'Permission Denied: Staff accounts are restricted from deleting expense records. Only Administrator can delete.')
+                return redirect('dashboard:expenses')
             expense = get_object_or_404(Expense, id=expense_id)
             title = expense.title
             amount = expense.amount
@@ -1325,6 +1344,10 @@ def financial_statement_print(request):
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def admin_users_manager(request):
+    if not request.user.is_superuser:
+        messages.error(request, 'Permission Denied: Only Administrator has access to Staff & Admin user management.')
+        return redirect('dashboard:index')
+
     users = User.objects.all().order_by('-date_joined')
 
     if request.method == 'POST':
@@ -1379,6 +1402,9 @@ def admin_users_manager(request):
 
         # 4. DELETE USER
         elif action == 'delete_user':
+            if not request.user.is_superuser:
+                messages.error(request, 'Permission Denied: Staff accounts are restricted from deleting users. Only Administrator can delete.')
+                return redirect('dashboard:admin_users')
             target_user = get_object_or_404(User, id=user_id)
             if target_user == request.user:
                 messages.error(request, 'You cannot delete your own account.')
@@ -1433,6 +1459,9 @@ def pickle_categories_manager(request):
 
         # 3. Delete Category
         elif action == 'delete_category':
+            if not request.user.is_superuser:
+                messages.error(request, 'Permission Denied: Staff accounts are restricted from deleting categories. Only Administrator can delete.')
+                return redirect('dashboard:pickle_categories')
             cat = get_object_or_404(Category, id=cat_id)
             c_name = cat.name
             cat.delete()
@@ -1493,6 +1522,9 @@ def expense_categories_manager(request):
 
         # 3. Delete Category
         elif action == 'delete_category':
+            if not request.user.is_superuser:
+                messages.error(request, 'Permission Denied: Staff accounts are restricted from deleting categories. Only Administrator can delete.')
+                return redirect('dashboard:expense_categories')
             cat = get_object_or_404(ExpenseCategory, id=cat_id)
             c_name = cat.name
             cat.delete()

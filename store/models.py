@@ -173,13 +173,16 @@ class Order(models.Model):
     def save(self, *args, **kwargs):
         if not self.order_number:
             import re
-            # Professional sequential order numbering (PKP-0001, PKP-0002, ...)
-            existing = Order.objects.exclude(order_number__isnull=True).exclude(order_number='')
+            # Sequential periodical order numbering starting from PKP-0001 (e.g. PKP-0001, PKP-0002, ...)
+            existing_pks = Order.objects.filter(order_number__startswith='PKP-').values_list('order_number', flat=True)
             max_num = 0
-            for onum in existing.values_list('order_number', flat=True):
-                digits = re.findall(r'\d+', str(onum))
-                if digits:
-                    max_num = max(max_num, int(digits[-1]))
+            for onum in existing_pks:
+                match = re.search(r'^PKP-(\d+)$', str(onum).strip())
+                if match:
+                    try:
+                        max_num = max(max_num, int(match.group(1)))
+                    except ValueError:
+                        pass
             
             candidate = max_num + 1
             cand_str = f"PKP-{candidate:04d}"
