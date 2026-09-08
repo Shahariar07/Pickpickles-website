@@ -1,7 +1,7 @@
 import json
 from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseServerError
 from django.urls import reverse
 from django.utils import timezone
 from django.contrib import messages
@@ -438,4 +438,47 @@ Disallow: /order/
 Sitemap: {domain}/sitemap.xml
 """
     return HttpResponse(content.strip() + '\n', content_type='text/plain')
+
+
+def custom_404_view(request, exception=None):
+    """
+    Custom 404 Page Not Found error handler.
+    """
+    return render(request, '404.html', status=404)
+
+
+def custom_500_view(request):
+    """
+    Custom 500 Internal Server Error handler with resilient emergency fallback.
+    """
+    try:
+        return render(request, '500.html', status=500)
+    except Exception:
+        return HttpResponseServerError(
+            """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>500 - Server Error | Pickpickles</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #092d18; color: #ffffff; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; text-align: center; }
+        .card { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 24px; padding: 40px; max-width: 480px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+        h1 { color: #86efac; font-size: 2.2rem; margin: 15px 0 10px; }
+        p { color: #d1d5db; line-height: 1.6; font-size: 1rem; margin-bottom: 25px; }
+        .btn { display: inline-block; background: #16a34a; color: #fff; text-decoration: none; padding: 12px 28px; border-radius: 12px; font-weight: 700; transition: background 0.2s; }
+        .btn:hover { background: #15803d; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div style="font-size: 3.5rem;">🥒💥</div>
+        <h1>500 - Server Error</h1>
+        <p>Our pickle kitchen hit an unexpected snag! Please refresh the page or head back to the home page.</p>
+        <a href="/" class="btn">Return to Home</a>
+    </div>
+</body>
+</html>""",
+            content_type="text/html"
+        )
 

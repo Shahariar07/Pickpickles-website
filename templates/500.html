@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}500 - Kitchen Hiccup | Pickpickles Bangladesh{% endblock %}
+
+{% block meta_description %}Something went temporarily sour in our pickle kitchen. Our artisanal team is already fixing it.{% endblock %}
+
+{% block content %}
+<section class="min-h-[75vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+    <!-- Ambient Blur Backgrounds -->
+    <div class="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 bg-rose-200/30 rounded-full blur-3xl pointer-events-none -z-10"></div>
+    <div class="absolute bottom-10 left-10 w-80 h-80 bg-amber-100/40 rounded-full blur-3xl pointer-events-none -z-10"></div>
+
+    <div class="max-w-2xl w-full text-center mx-auto">
+        <!-- Animated Visual Icon -->
+        <div class="relative inline-block mb-6">
+            <div class="w-32 h-32 sm:w-40 sm:h-40 mx-auto rounded-3xl bg-gradient-to-br from-amber-50 via-rose-50 to-brand-50 border-2 border-amber-200/80 shadow-xl shadow-amber-900/5 flex items-center justify-center relative animate-pulse-gentle">
+                <span class="text-6xl sm:text-7xl filter drop-shadow-md select-none">🥒</span>
+                <!-- Small badge on the icon -->
+                <span class="absolute -top-2 -right-2 bg-rose-600 text-white font-display font-extrabold text-xs px-2.5 py-1 rounded-full shadow-md border border-white">
+                    500
+                </span>
+                <!-- Tool/wrench badge overlay -->
+                <span class="absolute -bottom-2 -right-2 bg-amber-500 text-white w-9 h-9 rounded-full shadow-md flex items-center justify-center border-2 border-white text-sm">
+                    <i class="fa-solid fa-wrench"></i>
+                </span>
+            </div>
+        </div>
+
+        <!-- 500 Badge -->
+        <div class="inline-flex items-center gap-2 bg-amber-100/80 border border-amber-300/70 text-amber-900 text-xs sm:text-sm font-extrabold px-3.5 py-1.5 rounded-full mb-3 shadow-xs">
+            <i class="fa-solid fa-circle-exclamation text-amber-600"></i>
+            <span>Internal Server Error • সাময়িক কারিগরি ত্রুটি</span>
+        </div>
+
+        <h1 class="font-display font-black text-3xl sm:text-5xl text-gray-900 tracking-tight leading-tight mb-3">
+            Our Pickle Kitchen Hit a Snag!
+        </h1>
+
+        <p class="text-sm sm:text-base text-gray-600 max-w-lg mx-auto leading-relaxed mb-8">
+            The brine bubbled over a bit and caused an unexpected hiccup on our server. Don't worry, our pickling engineers are already on it and your cart is completely safe!
+        </p>
+
+        <!-- Primary Action CTAs -->
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-10">
+            <button onclick="window.location.reload()" 
+                    class="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-brand-600 hover:bg-brand-700 text-white font-display font-bold text-sm sm:text-base px-6 py-3.5 rounded-2xl shadow-lg shadow-brand-600/25 transition-all hover:-translate-y-0.5 active:translate-y-0 cursor-pointer">
+                <i class="fa-solid fa-arrow-rotate-right"></i>
+                <span>Try Refreshing Page</span>
+            </button>
+
+            <a href="{% url 'store:index' %}" 
+               class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-800 font-display font-bold text-sm sm:text-base px-6 py-3.5 rounded-2xl border border-gray-200 shadow-sm transition-all hover:-translate-y-0.5 active:translate-y-0">
+                <i class="fa-solid fa-house text-gray-500"></i>
+                <span>Back to Homepage</span>
+            </a>
+        </div>
+
+        <!-- Emergency Support Card -->
+        <div class="bg-white/80 backdrop-blur-md rounded-3xl border border-gray-200/80 p-5 sm:p-6 shadow-sm text-left max-w-lg mx-auto">
+            <div class="flex items-center justify-between mb-3 border-b border-gray-100 pb-3">
+                <span class="font-display font-bold text-xs uppercase tracking-wider text-gray-500">Urgent Assistance</span>
+                <span class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> Live Support
+                </span>
+            </div>
+
+            <p class="text-xs sm:text-sm text-gray-600 mb-4 leading-relaxed">
+                If you were in the middle of placing an order or need immediate assistance with your pickle jar delivery, reach out to us directly:
+            </p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs sm:text-sm font-semibold">
+                <a href="https://wa.me/8801794271523?text=Hi%20Pickpickles,%20I%20hit%20an%20error%20on%20your%20website" target="_blank" rel="noopener noreferrer" 
+                   class="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold transition shadow-xs">
+                    <i class="fa-brands fa-whatsapp text-base"></i>
+                    <span>Chat on WhatsApp</span>
+                </a>
+
+                <a href="tel:+8801794271523" 
+                   class="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold transition border border-gray-200">
+                    <i class="fa-solid fa-phone text-xs"></i>
+                    <span>01794-271523</span>
+                </a>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<style>
+    @keyframes pulseGentle {
+        0%, 100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.03);
+        }
+    }
+    .animate-pulse-gentle {
+        animation: pulseGentle 2.5s ease-in-out infinite;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}404 - Jar Not Found | Pickpickles Bangladesh{% endblock %}
+
+{% block meta_description %}Oops! We couldn't find that pickle jar. Explore our crunchy American-style deli pickles handcrafted in Dhaka, Bangladesh.{% endblock %}
+
+{% block content %}
+<section class="min-h-[75vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+    <!-- Subtle Background Ambient Glows -->
+    <div class="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 bg-brand-200/40 rounded-full blur-3xl pointer-events-none -z-10"></div>
+    <div class="absolute bottom-10 right-10 w-80 h-80 bg-amber-100/40 rounded-full blur-3xl pointer-events-none -z-10"></div>
+
+    <div class="max-w-2xl w-full text-center mx-auto">
+        <!-- Animated Visual Emblem -->
+        <div class="relative inline-block mb-6">
+            <div class="w-32 h-32 sm:w-40 sm:h-40 mx-auto rounded-3xl bg-gradient-to-br from-brand-100 via-brand-50 to-amber-50 border-2 border-brand-200/80 shadow-xl shadow-brand-900/5 flex items-center justify-center relative animate-float">
+                <span class="text-6xl sm:text-7xl filter drop-shadow-md select-none">🥒</span>
+                <!-- Small badge on the icon -->
+                <span class="absolute -top-2 -right-2 bg-brand-accent text-brand-950 font-display font-extrabold text-xs px-2.5 py-1 rounded-full shadow-md border border-white">
+                    404
+                </span>
+                <!-- Magnifying glass icon overlay -->
+                <span class="absolute -bottom-2 -left-2 bg-white text-brand-700 w-9 h-9 rounded-full shadow-md flex items-center justify-center border border-gray-100 text-sm">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </span>
+            </div>
+        </div>
+
+        <!-- Big 404 Headline & Subtext -->
+        <div class="inline-flex items-center gap-2 bg-brand-100/80 border border-brand-300/60 text-brand-900 text-xs sm:text-sm font-extrabold px-3.5 py-1.5 rounded-full mb-3 shadow-xs">
+            <i class="fa-solid fa-triangle-exclamation text-brand-600"></i>
+            <span>Page Not Found • পাতাটি পাওয়া যায়নি</span>
+        </div>
+
+        <h1 class="font-display font-black text-3xl sm:text-5xl text-gray-900 tracking-tight leading-tight mb-3">
+            Oops! Crunch Lost in the Pantry!
+        </h1>
+
+        <p class="text-sm sm:text-base text-gray-600 max-w-lg mx-auto leading-relaxed mb-8">
+            The page or pickle jar you are looking for might have been eaten, moved, or never fermented in the first place. Don't let your cravings wait!
+        </p>
+
+        <!-- Primary Action CTAs -->
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-10">
+            <a href="{% url 'store:index' %}#pickle-menu" 
+               class="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-brand-600 hover:bg-brand-700 text-white font-display font-bold text-sm sm:text-base px-6 py-3.5 rounded-2xl shadow-lg shadow-brand-600/25 transition-all hover:-translate-y-0.5 active:translate-y-0">
+                <i class="fa-solid fa-jar text-brand-200"></i>
+                <span>Explore Pickle Jars</span>
+            </a>
+
+            <a href="{% url 'store:index' %}" 
+               class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-800 font-display font-bold text-sm sm:text-base px-6 py-3.5 rounded-2xl border border-gray-200 shadow-sm transition-all hover:-translate-y-0.5 active:translate-y-0">
+                <i class="fa-solid fa-house text-gray-500"></i>
+                <span>Back to Homepage</span>
+            </a>
+        </div>
+
+        <!-- Helpful Shortcuts Card -->
+        <div class="bg-white/80 backdrop-blur-md rounded-3xl border border-gray-200/80 p-5 sm:p-6 shadow-sm text-left max-w-lg mx-auto">
+            <div class="flex items-center justify-between mb-4 border-b border-gray-100 pb-3">
+                <span class="font-display font-bold text-xs uppercase tracking-wider text-gray-500">Quick Shortcuts</span>
+                <a href="https://wa.me/8801794271523" target="_blank" rel="noopener noreferrer" 
+                   class="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1">
+                    <i class="fa-brands fa-whatsapp text-emerald-500 text-sm"></i> WhatsApp Support
+                </a>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2.5 text-xs sm:text-sm font-semibold">
+                <a href="{% url 'store:order_track' %}" 
+                   class="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-brand-50 text-gray-700 hover:text-brand-800 transition border border-transparent hover:border-brand-200">
+                    <i class="fa-solid fa-truck-fast text-brand-500"></i>
+                    <span>Track Your Order</span>
+                </a>
+                <a href="{% url 'store:cart_view' %}" 
+                   class="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-brand-50 text-gray-700 hover:text-brand-800 transition border border-transparent hover:border-brand-200">
+                    <i class="fa-solid fa-basket-shopping text-brand-500"></i>
+                    <span>View Jar Bag</span>
+                </a>
+                <a href="{% url 'store:about_story' %}" 
+                   class="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-brand-50 text-gray-700 hover:text-brand-800 transition border border-transparent hover:border-brand-200">
+                    <i class="fa-solid fa-book-open text-brand-500"></i>
+                    <span>Our Story & FAQ</span>
+                </a>
+                <a href="https://wa.me/8801794271523" target="_blank" rel="noopener noreferrer" 
+                   class="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-brand-50 text-gray-700 hover:text-brand-800 transition border border-transparent hover:border-brand-200">
+                    <i class="fa-solid fa-headset text-brand-500"></i>
+                    <span>Contact Team</span>
+                </a>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<style>
+    @keyframes floatAnimation {
+        0%, 100% {
+            transform: translateY(0px) rotate(0deg);
+        }
+        50% {
+            transform: translateY(-8px) rotate(2deg);
+        }
+    }
+    .animate-float {
+        animation: floatAnimation 3.5s ease-in-out infinite;
+    }
+</style>
+{% endblock %}

@@ -16,5 +16,7 @@ urlpatterns = [
     path('story-and-faq/', views.about_story, name='about_story'),
     path('sitemap.xml', views.sitemap_xml, name='sitemap_xml'),
     path('robots.txt', views.robots_txt, name='robots_txt'),
+    path('404/', views.custom_404_view, name='custom_404'),
+    path('500/', views.custom_500_view, name='custom_500'),
 ]
 
