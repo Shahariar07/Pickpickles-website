@@ -30,7 +30,7 @@ class Expense(models.Model):
     CATEGORY_CHOICES = [
         ('RAW_MATERIAL', 'Fresh Cucumbers & Veggies 🥒'),
         ('PACKAGING', 'Glass Jars, Lids & Labels 🫙'),
-        ('SPICES_BRINE', 'Vinegar, Garlic, Dill & Spices 🌿'),
+        ('SPICES_BRINE', 'Vinegar, Garlic & Whole Spices 🌿'),
         ('LOGISTICS', 'Courier & Rider Delivery Cost 🚚'),
         ('MARKETING', 'Digital Ads & Marketing 📢'),
         ('UTILITIES', 'Gas, Electricity & Kitchen Rent ⚡'),

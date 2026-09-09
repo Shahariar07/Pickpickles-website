@@ -578,7 +578,7 @@ def stock_manager(request):
                     is_featured=is_featured,
                     image_url=image_url or "/static/images/pickle_default.png",
                     ingredients=ingredients or "Fresh Local Cucumbers, Pure Cane Vinegar, Himalayan Pink Salt, Garlic, Spices.",
-                    flavor_profile=flavor_profile or "Crisp, Tangy, Garlic, Dill",
+                    flavor_profile=flavor_profile or "Crisp, Tangy, Garlic & Whole Spices",
                     pairing_suggestions=pairing_suggestions or "Burgers, Sandwiches, Snacks"
                 )
                 if 'image' in request.FILES:
@@ -1015,7 +1015,7 @@ def expense_manager(request):
         default_seed = [
             ('Fresh Cucumbers & Veggies 🥒', 'RAW_MATERIAL', 'fa-carrot', 'Fresh cucumbers, garlic cloves, peppers, and raw produce.'),
             ('Glass Jars, Lids & Labels 🫙', 'PACKAGING', 'fa-jar', 'Food-grade glass jars, airtight gold metal lids, and stickers.'),
-            ('Vinegar, Garlic, Dill & Spices 🌿', 'SPICES_BRINE', 'fa-leaf', 'Pure cane vinegar, pickling salt, dill seed, mustard seeds, and brine spices.'),
+            ('Vinegar, Garlic & Whole Spices 🌿', 'SPICES_BRINE', 'fa-leaf', 'Pure cane vinegar, pickling salt, bay leaf, mustard seeds, and brine spices.'),
             ('Courier & Rider Delivery Cost 🚚', 'LOGISTICS', 'fa-truck-fast', 'Courier parcel shipping fees and direct delivery rider charges.'),
             ('Digital Ads & Marketing 📢', 'MARKETING', 'fa-bullhorn', 'Facebook page sponsored ads, boost campaigns, and promotion.'),
             ('Gas, Electricity & Kitchen Rent ⚡', 'UTILITIES', 'fa-bolt', 'Kitchen utilities, gas cylinders, and production space rent.'),
@@ -1482,7 +1482,7 @@ def expense_categories_manager(request):
         default_seed = [
             ('Fresh Cucumbers & Veggies 🥒', 'RAW_MATERIAL', 'fa-carrot', 'Fresh cucumbers, garlic cloves, peppers, and raw produce.'),
             ('Glass Jars, Lids & Labels 🫙', 'PACKAGING', 'fa-jar', 'Food-grade glass jars, airtight gold metal lids, and stickers.'),
-            ('Vinegar, Garlic, Dill & Spices 🌿', 'SPICES_BRINE', 'fa-leaf', 'Pure cane vinegar, pickling salt, dill seed, mustard seeds, and brine spices.'),
+            ('Vinegar, Garlic & Whole Spices 🌿', 'SPICES_BRINE', 'fa-leaf', 'Pure cane vinegar, pickling salt, bay leaf, mustard seeds, and brine spices.'),
             ('Courier & Rider Delivery Cost 🚚', 'LOGISTICS', 'fa-truck-fast', 'Courier parcel shipping fees and direct delivery rider charges.'),
             ('Digital Ads & Marketing 📢', 'MARKETING', 'fa-bullhorn', 'Facebook page sponsored ads, boost campaigns, and promotion.'),
             ('Gas, Electricity & Kitchen Rent ⚡', 'UTILITIES', 'fa-bolt', 'Kitchen utilities, gas cylinders, and production space rent.'),

@@ -7,13 +7,13 @@ from decimal import Decimal
 class CartTests(TestCase):
     def setUp(self):
         self.client = Client()
-        self.category = Category.objects.create(name="Classic Dill", slug="classic-dill")
+        self.category = Category.objects.create(name="Classic Crisp", slug="classic-crisp")
         self.product = Product.objects.create(
-            name="Kosher Dill Spears",
-            slug="kosher-dill-spears",
+            name="Classic Garlic Spears",
+            slug="classic-garlic-spears",
             category=self.category,
             tagline="Crisp deli pickles",
-            description="NYC style garlic dill spears",
+            description="Garlic and herb spiced spears",
             price_bdt=Decimal("380.00"),
             jar_weight_grams=500,
             is_in_stock=True

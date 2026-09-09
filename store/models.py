@@ -40,11 +40,11 @@ class Product(models.Model):
     name = models.CharField(max_length=200)
     slug = models.SlugField(unique=True, blank=True)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name='products')
-    tagline = models.CharField(max_length=255, help_text="Catchy tagline, e.g., 'Classic NYC Deli Crunch with Garlic & Fresh Dill'")
+    tagline = models.CharField(max_length=255, help_text="Catchy tagline, e.g., 'Classic Artisanal Deli Crunch with Garlic & Whole Spices'")
     description = models.TextField()
-    flavor_profile = models.CharField(max_length=255, default="Garlic, Dill Weed, Peppercorn, Mustard Seed")
+    flavor_profile = models.CharField(max_length=255, default="Garlic, Bay Leaf, Peppercorn, Mustard Seed")
     pairing_suggestions = models.CharField(max_length=255, default="Smash Burgers, Fried Chicken, Shawarma, Beef Tehari, Biryani, Bhuna Khichuri, Daal-Rice")
-    cut_style = models.CharField(max_length=20, choices=CUT_CHOICES, default='SPEARS')
+    cut_style = models.CharField(max_length=20, choices=CUT_CHOICES, default='CHIPS')
     spice_level = models.CharField(max_length=20, choices=SPICE_CHOICES, default='MILD')
     crunch_rating = models.PositiveSmallIntegerField(default=5, help_text="Rating out of 5")
     jar_weight_grams = models.PositiveIntegerField(default=500, help_text="Weight in grams (e.g. 500g)")
@@ -59,7 +59,7 @@ class Product(models.Model):
     is_in_stock = models.BooleanField(default=True)
     stock_count = models.PositiveIntegerField(default=50)
     
-    ingredients = models.TextField(default="Fresh Cucumbers, Filtered Water, Pure Cane Vinegar, Himalayan Pink Salt, Fresh Garlic, Dill Weed, Mustard Seeds, Coriander, Black Peppercorn.")
+    ingredients = models.TextField(default="Fresh Cucumbers, Filtered Water, Pure Cane Vinegar, Himalayan Pink Salt, Fresh Garlic, Bay Leaf (Tejpata), Mustard Seeds, Coriander, Black Peppercorn.")
     shelf_life = models.CharField(max_length=150, default="Always keep refrigerated for maximum crunch. Best enjoyed within 2–3 months.")
     
     created_at = models.DateTimeField(auto_now_add=True)

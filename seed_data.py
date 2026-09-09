@@ -21,7 +21,7 @@ def seed():
     # 2. Categories
     cat_dill, _ = Category.objects.get_or_create(
         name="Classic Dill Pickles",
-        defaults={'description': 'Crisp garlic dill spears and crinkle chips brined in vinegar.', 'icon': 'fa-seedling'}
+        defaults={'description': 'Authentic American-style kosher garlic dill spears, whole dills, and chips.', 'icon': 'fa-seedling'}
     )
     cat_sweet, _ = Category.objects.get_or_create(
         name="Sweet & Tangy Pickles",
@@ -97,6 +97,26 @@ def seed():
             'stock_count': 50,
             'ingredients': 'Fresh Local Green Chillies / Peppers, Filtered Water, Pure Cane Vinegar, Himalayan Pink Salt, Fresh Garlic Cloves, Bay Leaf (Tejpata), Yellow Mustard Seeds, Black Peppercorn.',
             'shelf_life': 'Always keep refrigerated for maximum crunch. Best enjoyed within 2–3 months.'
+        },
+        {
+            'name': 'Pickled Beetroot',
+            'category': cat_sweet,
+            'tagline': 'Earthy, Crisp Ruby Beetroot Slices Infused with Spices & Tangy Cane Vinegar Brine!',
+            'description': 'Handcrafted with fresh local ruby-red beetroot slices steeped in an artisanal spiced cane vinegar brine with whole garlic cloves, yellow mustard seeds, black peppercorns, and fragrant whole spices. Boasting an intense ruby-crimson hue, clean sweet-earthy tang, and a crisp bite — perfect for smash burgers, fresh salads, shawarma, beef tehari, and rice bowls with zero heavy oils.',
+            'flavor_profile': 'Sweet Tang, Earthy Richness, Mustard Seed Snap & Garlic Infusion',
+            'pairing_suggestions': 'Smash Burgers, Fresh Green Salads, Grilled Meats, Shawarma, Beef Tehari, Khichuri & Cheese Sandwiches',
+            'cut_style': 'CHIPS',
+            'spice_level': 'MILD',
+            'crunch_rating': 5,
+            'jar_weight_grams': 500,
+            'price_bdt': Decimal('260.00'),
+            'original_price_bdt': Decimal('300.00'),
+            'image_url': '/media/products/pickled_beetroot.jpg',
+            'is_featured': True,
+            'is_in_stock': True,
+            'stock_count': 50,
+            'ingredients': 'Fresh Local Beetroots, Filtered Water, Pure Cane Vinegar, Himalayan Pink Salt, Brown Cane Sugar, Fresh Garlic Cloves, Bay Leaf (Tejpata), Yellow Mustard Seeds, Black Peppercorn.',
+            'shelf_life': 'Always keep refrigerated for maximum crunch. Best enjoyed within 2–3 months.'
         }
     ]
 
@@ -117,7 +137,7 @@ def seed():
             'reviewer_name': 'Zuhair Rahman',
             'reviewer_location': 'Gulshan 2, Dhaka',
             'rating': 5,
-            'comment': 'Finally, proper crunchy deli-style dill pickles in Dhaka! The crunch is unbelievable. Put two slices in my homemade smash burger and it gave that pure diner feel.'
+            'comment': 'Finally, proper crunchy deli-style pickles in Dhaka! The crunch is unbelievable. Put two slices in my homemade smash burger and it gave that pure diner feel.'
         },
         {
             'product': created_products[1],
@@ -132,6 +152,13 @@ def seed():
             'reviewer_location': 'Banani, Dhaka',
             'rating': 5,
             'comment': 'The Spicy Fire Habanero is fire! It has that ultra crisp snap with a serious spicy kick that pairs amazingly with crispy fried chicken.'
+        },
+        {
+            'product': created_products[3],
+            'reviewer_name': 'Tasnim Anjum',
+            'reviewer_location': 'Uttara, Dhaka',
+            'rating': 5,
+            'comment': 'The pickled beetroot is magnificent! The vibrant ruby color and crisp texture elevated my salads and burger nights completely. Truly artisanal.'
         },
     ]
 
