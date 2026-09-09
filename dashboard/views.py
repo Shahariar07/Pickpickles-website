@@ -271,6 +271,36 @@ def orders_list(request):
     return render(request, 'dashboard/orders_list.html', context)
 
 
+ACCEPTED_ORDER_STATUSES = {'CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'}
+
+def adjust_inventory_for_order_status_change(order, old_status, new_status):
+    """
+    Deducts stock when an order is accepted/confirmed (transitions from PENDING/CANCELLED to CONFIRMED/PACKING/etc.).
+    Restores stock when an accepted order is cancelled or reverted (transitions to CANCELLED/PENDING).
+    """
+    was_accepted = old_status in ACCEPTED_ORDER_STATUSES
+    now_accepted = new_status in ACCEPTED_ORDER_STATUSES
+
+    if not was_accepted and now_accepted:
+        # Deduct stock when accepted
+        for itm in order.items.all():
+            if itm.product:
+                if itm.product.stock_count >= itm.quantity:
+                    itm.product.stock_count -= itm.quantity
+                else:
+                    itm.product.stock_count = 0
+                if itm.product.stock_count == 0:
+                    itm.product.is_in_stock = False
+                itm.product.save()
+    elif was_accepted and not now_accepted:
+        # Restore stock when cancelled or reverted
+        for itm in order.items.all():
+            if itm.product:
+                itm.product.stock_count += itm.quantity
+                itm.product.is_in_stock = True
+                itm.product.save()
+
+
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def order_detail(request, order_number):
     order = get_object_or_404(Order.objects.prefetch_related('items'), order_number=order_number)
@@ -280,11 +310,15 @@ def order_detail(request, order_number):
         new_payment_status = request.POST.get('payment_status')
         admin_notes = request.POST.get('admin_notes')
         
-        if new_status:
+        if new_status and new_status != order.order_status:
+            # Adjust inventory based on acceptance / cancellation transition
+            adjust_inventory_for_order_status_change(order, order.order_status, new_status)
+
             order.order_status = new_status
             # Auto-mark payment as collected/PAID when delivered
             if new_status == 'DELIVERED' and not new_payment_status and order.payment_status == 'UNPAID':
                 order.payment_status = 'PAID'
+
         if new_payment_status:
             order.payment_status = new_payment_status
         if admin_notes is not None:
@@ -302,13 +336,16 @@ def update_order_status_quick(request, order_number):
     if request.method == 'POST':
         order = get_object_or_404(Order, order_number=order_number)
         new_status = request.POST.get('status')
-        if new_status in dict(Order.ORDER_STATUS_CHOICES):
+        if new_status in dict(Order.ORDER_STATUS_CHOICES) and new_status != order.order_status:
+            # Adjust inventory based on acceptance / cancellation transition
+            adjust_inventory_for_order_status_change(order, order.order_status, new_status)
+
             order.order_status = new_status
             # When marked as DELIVERED, automatically mark money as collected (PAID)
             if new_status == 'DELIVERED' and order.payment_status == 'UNPAID':
                 order.payment_status = 'PAID'
             order.save()
-            messages.success(request, f'Order #{order.order_number} status changed to {order.get_order_status_display()} (Payment collected & Dashboard updated)')
+            messages.success(request, f'Order #{order.order_number} status changed to {order.get_order_status_display()}')
             
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'success': True, 'new_status': new_status, 'status_display': order.get_order_status_display()})
@@ -429,6 +466,8 @@ def create_manual_order(request):
                     prod.stock_count -= qty
                 else:
                     prod.stock_count = 0
+                if prod.stock_count == 0:
+                    prod.is_in_stock = False
                 prod.save()
 
             total_jars = sum(itm['quantity'] for itm in valid_items)
@@ -452,6 +491,12 @@ def delete_order(request, order_number):
     if request.method == 'POST':
         order = get_object_or_404(Order, order_number=order_number)
         o_num = order.order_number
+        if order.order_status in ACCEPTED_ORDER_STATUSES:
+            for itm in order.items.all():
+                if itm.product:
+                    itm.product.stock_count += itm.quantity
+                    itm.product.is_in_stock = True
+                    itm.product.save()
         order.delete()
         messages.success(request, f'Order #{o_num} has been permanently deleted.')
         return redirect('dashboard:orders')

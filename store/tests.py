@@ -49,3 +49,48 @@ class CartTests(TestCase):
         data = response.json()
         self.assertTrue(data['success'])
         self.assertEqual(data['item_quantity'], 2)
+
+    def test_stock_deduction_on_order_acceptance(self):
+        from store.models import Order
+        from dashboard.views import adjust_inventory_for_order_status_change
+        
+        # Initial stock count is default 50
+        self.assertEqual(self.product.stock_count, 50)
+        
+        # Add 3 jars to cart and checkout
+        self.client.post(reverse('store:cart_add', args=[self.product.id]), {'quantity': 3})
+        checkout_data = {
+            'customer_name': 'Sakib Al Hasan',
+            'customer_phone': '01711223344',
+            'customer_email': 'sakib@gmail.com',
+            'delivery_address': 'House 10, Road 5, Mirpur DOHS',
+            'delivery_city': 'Dhaka',
+            'delivery_zone': 'INSIDE_DHAKA',
+            'payment_method': 'COD',
+        }
+        response = self.client.post(reverse('store:checkout'), checkout_data)
+        self.assertEqual(response.status_code, 302)
+        
+        order = Order.objects.latest('created_at')
+        self.assertEqual(order.order_status, 'PENDING')
+        
+        # At PENDING stage, stock is NOT deducted yet
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock_count, 50)
+        
+        # 1. When staff accepts/confirms order -> Stock is deducted
+        adjust_inventory_for_order_status_change(order, 'PENDING', 'CONFIRMED')
+        order.order_status = 'CONFIRMED'
+        order.save()
+        
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock_count, 47)
+        self.assertTrue(self.product.is_in_stock)
+        
+        # 2. When order is cancelled -> Stock is restored
+        adjust_inventory_for_order_status_change(order, 'CONFIRMED', 'CANCELLED')
+        order.order_status = 'CANCELLED'
+        order.save()
+        
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock_count, 50)
