@@ -11,3 +11,5 @@ python-dotenv>=1.0.0
 sqlparse>=0.4.4
 asgiref>=3.7.0
 tzdata>=2024.1; sys_platform == 'win32'
+whitenoise>=6.0.0
+gunicorn>=21.0.0

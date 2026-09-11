@@ -1,0 +1,20 @@
+[Unit]
+Description=Gunicorn daemon for Pickpickles Django Web Application
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/pickpickles
+ExecStart=/var/www/pickpickles/venv/bin/gunicorn \
+          --access-logfile /var/log/gunicorn/pickpickles_access.log \
+          --error-logfile /var/log/gunicorn/pickpickles_error.log \
+          --workers 3 \
+          --bind unix:/run/gunicorn_pickpickles.sock \
+          pickpickles_project.wsgi:application
+
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
