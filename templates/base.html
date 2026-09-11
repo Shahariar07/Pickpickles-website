@@ -56,8 +56,8 @@
         }
     </script>
 
-    <!-- Main Custom CSS -->
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <!-- Main Custom CSS with Auto Versioning (Cache Busting) -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v={{ STATIC_VERSION }}">
     <meta name="csrf-token" content="{{ csrf_token }}">
     {% block extra_head %}{% endblock %}
 </head>
@@ -426,8 +426,8 @@
         <span class="hidden sm:inline font-bold text-xs">WhatsApp Order</span>
     </a>
 
-    <!-- Main JavaScript -->
-    <script src="{% static 'js/main.js' %}?v=1.1"></script>
+    <!-- Main JavaScript with Auto Versioning (Cache Busting) -->
+    <script src="{% static 'js/main.js' %}?v={{ STATIC_VERSION }}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 
