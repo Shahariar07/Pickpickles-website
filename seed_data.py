@@ -39,6 +39,26 @@ def seed():
     # 3. Products
     products_data = [
         {
+            'name': 'Classic Dill Pickles',
+            'category': cat_dill,
+            'tagline': 'Authentic American-Style Kosher Garlic Dill Pickles with Aromatic Herbs & Whole Spices',
+            'description': 'Handcrafted with fresh crisp local cucumbers, whole garlic cloves, fragrant dill herbs, bay leaves, yellow mustard seeds, and black peppercorns in an artisanal cold vinegar brine. Loud audible crunch and authentic deli flavor with zero heavy oils.',
+            'flavor_profile': 'Garlic Infused, Tangy Deli Brine, Aromatic Dill & Mustard Seed',
+            'pairing_suggestions': 'Smash Burgers, Fried Chicken, Sandwiches, Shawarma, Beef Tehari & Daal-Rice',
+            'cut_style': 'CHIPS',
+            'spice_level': 'MILD',
+            'crunch_rating': 5,
+            'jar_weight_grams': 500,
+            'price_bdt': Decimal('350.00'),
+            'original_price_bdt': Decimal('400.00'),
+            'image_url': '/media/products/classic_dill_pickles.webp',
+            'is_featured': True,
+            'is_in_stock': True,
+            'stock_count': 50,
+            'ingredients': 'Fresh Local Cucumbers, Filtered Water, Pure Cane Vinegar, Himalayan Pink Salt, Fresh Garlic Cloves, Dill Herbs, Bay Leaf, Yellow Mustard Seeds, Black Peppercorn.',
+            'shelf_life': 'Always keep refrigerated for maximum crunch. Best enjoyed within 2–3 months.'
+        },
+        {
             'name': 'Pickled Mixed Veggies',
             'category': cat_sweet,
             'tagline': 'Crisp Cucumbers, Sweet Carrots & Bell Peppers with a Tangy-Sweet Snap!',
