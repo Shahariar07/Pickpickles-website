@@ -422,13 +422,13 @@ def create_manual_order(request):
                 return redirect('dashboard:orders')
 
             # Delivery Fee
-            delivery_fee_str = request.POST.get('delivery_fee', '130.00').strip()
+            delivery_fee_str = request.POST.get('delivery_fee', '150.00').strip()
             try:
                 delivery_fee = Decimal(delivery_fee_str)
                 if delivery_fee < 0:
                     delivery_fee = Decimal('0.00')
             except Exception:
-                delivery_fee = Decimal('130.00')
+                delivery_fee = Decimal('150.00')
 
             total_amount = subtotal + delivery_fee
 

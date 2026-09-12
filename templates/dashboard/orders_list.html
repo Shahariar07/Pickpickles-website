@@ -560,7 +560,7 @@
                 </div>
                 <div>
                     <label class="font-bold text-gray-700 block mb-1">Delivery Fee (৳)</label>
-                    <input type="number" step="1" min="0" name="delivery_fee" id="manualDeliveryFeeInput" value="130" oninput="calculateManualOrderTotal()" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
+                    <input type="number" step="1" min="0" name="delivery_fee" id="manualDeliveryFeeInput" value="150" oninput="calculateManualOrderTotal()" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
                 </div>
             </div>
 
@@ -615,11 +615,11 @@
                     </div>
                     <div class="flex justify-between text-gray-600">
                         <span>Delivery Charge:</span>
-                        <span class="font-bold text-gray-900" id="manualSummaryDelivery">৳130</span>
+                        <span class="font-bold text-gray-900" id="manualSummaryDelivery">৳150</span>
                     </div>
                     <div class="border-t border-gray-200 pt-2 flex justify-between font-bold text-sm text-gray-900">
                         <span>Total Payable:</span>
-                        <span class="text-brand-700 font-black text-base" id="manualSummaryGrandTotal">৳130</span>
+                        <span class="text-brand-700 font-black text-base" id="manualSummaryGrandTotal">৳150</span>
                     </div>
                 </div>
             </div>
@@ -773,7 +773,7 @@ function calculateManualOrderTotal() {
     }
 
     const deliveryInput = document.getElementById('manualDeliveryFeeInput');
-    let deliveryFee = deliveryInput ? (parseFloat(deliveryInput.value) || 0) : 130;
+    let deliveryFee = deliveryInput ? (parseFloat(deliveryInput.value) || 0) : 150;
     if (deliveryFee < 0) deliveryFee = 0;
 
     const grandTotal = subtotal + deliveryFee;

@@ -66,7 +66,7 @@ class Cart:
         return sum(Decimal(str(item.get('price', '0'))) * int(item.get('quantity', 0)) for item in self.cart.values())
 
     def get_delivery_fee(self, zone='INSIDE_DHAKA'):
-        return Decimal('130.00')
+        return Decimal('150.00')
 
     def get_total_price(self, zone='INSIDE_DHAKA'):
         return self.get_subtotal() + self.get_delivery_fee(zone)

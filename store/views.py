@@ -66,7 +66,7 @@ def product_detail(request, slug):
 def cart_view(request):
     cart = Cart(request)
     subtotal = cart.get_subtotal()
-    delivery_fee = Decimal('130.00')
+    delivery_fee = Decimal('150.00')
     grand_total = subtotal + delivery_fee
     return render(request, 'store/cart.html', {
         'cart': cart,
@@ -213,7 +213,7 @@ def checkout(request):
             
             subtotal = cart.get_subtotal()
             delivery_zone = form.cleaned_data['delivery_zone']
-            delivery_fee = Decimal('130.00')
+            delivery_fee = Decimal('150.00')
             total = subtotal + delivery_fee
             
             order.subtotal = subtotal
@@ -254,7 +254,7 @@ def checkout(request):
         form = CheckoutForm(initial={'delivery_zone': 'INSIDE_DHAKA', 'payment_method': 'COD'})
 
     subtotal = cart.get_subtotal()
-    delivery_fee = Decimal('130.00')
+    delivery_fee = Decimal('150.00')
     total = subtotal + delivery_fee
 
     context = {

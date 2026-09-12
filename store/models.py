@@ -60,7 +60,7 @@ class Product(models.Model):
     stock_count = models.PositiveIntegerField(default=50)
     
     ingredients = models.TextField(default="Fresh Cucumbers, Filtered Water, Pure Cane Vinegar, Himalayan Pink Salt, Fresh Garlic, Bay Leaf (Tejpata), Mustard Seeds, Coriander, Black Peppercorn.")
-    shelf_life = models.CharField(max_length=150, default="Always keep refrigerated for maximum crunch. Best enjoyed within 2–3 months.")
+    shelf_life = models.CharField(max_length=150, default="Always keep refrigerated for maximum crunch. Best enjoyed within 1 month.")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -106,8 +106,8 @@ class Product(models.Model):
 
 class Order(models.Model):
     ZONE_CHOICES = [
-        ('INSIDE_DHAKA', 'Inside Dhaka (৳130 Delivery)'),
-        ('OUTSIDE_DHAKA', 'Outside Dhaka / Nationwide (৳130 Courier)'),
+        ('INSIDE_DHAKA', 'Inside Dhaka (৳150 Delivery)'),
+        ('OUTSIDE_DHAKA', 'Outside Dhaka / Nationwide (৳150 Courier)'),
     ]
 
     PAYMENT_METHOD_CHOICES = [
@@ -148,7 +148,7 @@ class Order(models.Model):
     delivery_zone = models.CharField(max_length=20, choices=ZONE_CHOICES, default='INSIDE_DHAKA')
     
     # Financials in BDT
-    delivery_fee = models.DecimalField(max_digits=8, decimal_places=2, default=130.00)
+    delivery_fee = models.DecimalField(max_digits=8, decimal_places=2, default=150.00)
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     
