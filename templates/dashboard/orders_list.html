@@ -131,6 +131,10 @@
             <a href="?status=CANCELLED&zone={{ zone_filter }}&q={{ search_query }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition {% if status_filter == 'CANCELLED' %}bg-rose-600 text-white{% else %}bg-rose-50 text-rose-800 hover:bg-rose-100{% endif %}">
                 Cancelled ({{ cancelled_count }})
             </a>
+            <a href="{% url 'dashboard:orders_trash' %}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition bg-rose-50/80 text-rose-700 hover:bg-rose-100 hover:text-rose-900 ml-auto flex items-center gap-1.5 border border-dashed border-rose-300 font-extrabold shadow-2xs">
+                <i class="fa-solid fa-trash-can text-rose-600"></i>
+                <span>Trash Archive ({{ trash_count }})</span>
+            </a>
         </div>
     </div>
 
@@ -669,9 +673,9 @@
         </div>
 
         <div>
-            <h3 class="font-display font-black text-lg text-gray-900">Delete Order?</h3>
+            <h3 class="font-display font-black text-lg text-gray-900">Move Order to Trash?</h3>
             <p class="text-xs text-gray-500 mt-1">
-                Are you sure you want to permanently delete order <strong id="del_order_number" class="text-gray-900">#ORD</strong> (<span id="del_order_customer"></span>)? This action cannot be undone.
+                Order <strong id="del_order_number" class="text-gray-900">#ORD</strong> (<span id="del_order_customer"></span>) will be removed from the active queue and safely moved to the <strong>Trash Archive</strong>. You can restore it anytime!
             </p>
         </div>
 
@@ -680,8 +684,9 @@
             <button type="button" onclick="closeDeleteOrderModal()" class="w-1/2 px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs transition cursor-pointer">
                 Cancel
             </button>
-            <button type="submit" class="w-1/2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition shadow-md cursor-pointer">
-                Yes, Delete
+            <button type="submit" class="w-1/2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition shadow-md cursor-pointer flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-trash-can"></i>
+                <span>Move to Trash</span>
             </button>
         </form>
 

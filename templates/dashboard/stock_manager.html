@@ -186,6 +186,7 @@
                                         categoryId: '{{ product.category.id|default:'' }}',
                                         cutStyle: '{{ product.cut_style }}',
                                         spiceLevel: '{{ product.spice_level }}',
+                                        crunchRating: '{{ product.crunch_rating|default:5 }}',
                                         jarWeight: '{{ product.jar_weight_grams }}',
                                         price: '{{ product.price_bdt }}',
                                         origPrice: '{{ product.original_price_bdt|default:'' }}',
@@ -301,6 +302,17 @@
                         {% for code, label in spice_choices %}
                         <option value="{{ code }}">{{ label }}</option>
                         {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Crunch Rating / Level (ক্রাঞ্চ মাত্রা)</label>
+                    <select id="edit_crunch_rating" name="crunch_rating" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white">
+                        <option value="5">⭐⭐⭐⭐⭐ 5/5 - Maximum Super Crunch</option>
+                        <option value="4">⭐⭐⭐⭐ 4/5 - Crisp & Zesty Snap</option>
+                        <option value="3">⭐⭐⭐ 3/5 - Balanced Medium Crunch</option>
+                        <option value="2">⭐⭐ 2/5 - Mild Tender Crunch</option>
+                        <option value="1">⭐ 1/5 - Soft Cut / Relish</option>
                     </select>
                 </div>
 
@@ -457,6 +469,17 @@
                 </div>
 
                 <div>
+                    <label class="font-bold text-gray-700 block mb-1">Crunch Rating / Level (ক্রাঞ্চ মাত্রা)</label>
+                    <select name="crunch_rating" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white">
+                        <option value="5" selected>⭐⭐⭐⭐⭐ 5/5 - Maximum Super Crunch</option>
+                        <option value="4">⭐⭐⭐⭐ 4/5 - Crisp & Zesty Snap</option>
+                        <option value="3">⭐⭐⭐ 3/5 - Balanced Medium Crunch</option>
+                        <option value="2">⭐⭐ 2/5 - Mild Tender Crunch</option>
+                        <option value="1">⭐ 1/5 - Soft Cut / Relish</option>
+                    </select>
+                </div>
+
+                <div>
                     <label class="font-bold text-gray-700 block mb-1">Jar Net Weight (Grams) *</label>
                     <input type="number" name="jar_weight_grams" value="500" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white">
                 </div>
@@ -603,6 +626,7 @@ function openEditModal(prod) {
     document.getElementById('edit_category_id').value = prod.categoryId || '';
     document.getElementById('edit_cut_style').value = prod.cutStyle || 'SPEARS';
     document.getElementById('edit_spice_level').value = prod.spiceLevel || 'MILD';
+    document.getElementById('edit_crunch_rating').value = prod.crunchRating || 5;
     document.getElementById('edit_jar_weight').value = prod.jarWeight || 500;
     document.getElementById('edit_price').value = prod.price || '';
     document.getElementById('edit_orig_price').value = prod.origPrice || '';

@@ -11,12 +11,28 @@ from .cart import Cart
 from .forms import CheckoutForm, ReviewForm
 
 
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Sum, Value, IntegerField
+from django.db.models.functions import Coalesce
 
 
 def index(request):
+    # Auto-calculate best seller product based on total ordered units (excluding cancelled and soft-deleted orders)
+    best_seller = Product.objects.filter(is_in_stock=True).annotate(
+        total_sold=Coalesce(
+            Sum('order_items__quantity', filter=Q(order_items__order__is_deleted=False) & ~Q(order_items__order__order_status='CANCELLED')),
+            Value(0),
+            output_field=IntegerField()
+        )
+    ).order_by('-total_sold', '-is_featured', 'id').first()
+
     featured_products = Product.objects.filter(is_in_stock=True, is_featured=True).order_by('id')
-    all_products = Product.objects.filter(is_in_stock=True).order_by('id')
+    all_products = Product.objects.filter(is_in_stock=True).annotate(
+        total_sold=Coalesce(
+            Sum('order_items__quantity', filter=Q(order_items__order__is_deleted=False) & ~Q(order_items__order__order_status='CANCELLED')),
+            Value(0),
+            output_field=IntegerField()
+        )
+    ).order_by('id')
     total_products_count = all_products.count()
     categories = Category.objects.annotate(
         product_count=Count('products', filter=Q(products__is_in_stock=True))
@@ -29,6 +45,7 @@ def index(request):
         all_products = all_products.filter(category__slug=selected_cat)
 
     context = {
+        'best_seller': best_seller,
         'featured_products': featured_products,
         'all_products': all_products,
         'total_products_count': total_products_count,
@@ -45,6 +62,16 @@ def product_detail(request, slug):
     reviews = product.reviews.filter(is_approved=True)
     review_form = ReviewForm()
 
+    best_seller = Product.objects.filter(is_in_stock=True).annotate(
+        total_sold=Coalesce(
+            Sum('order_items__quantity', filter=Q(order_items__order__is_deleted=False) & ~Q(order_items__order__order_status='CANCELLED')),
+            Value(0),
+            output_field=IntegerField()
+        )
+    ).order_by('-total_sold', '-is_featured', 'id').first()
+
+    is_best_seller = (best_seller and best_seller.id == product.id)
+
     if request.method == 'POST':
         review_form = ReviewForm(request.POST)
         if review_form.is_valid():
@@ -56,6 +83,8 @@ def product_detail(request, slug):
 
     context = {
         'product': product,
+        'is_best_seller': is_best_seller,
+        'best_seller': best_seller,
         'related_products': related_products,
         'reviews': reviews,
         'review_form': review_form,

@@ -57,36 +57,51 @@
                 </div>
             </div>
 
-            <!-- Right Hero Visual Card -->
+            <!-- Right Hero Visual Card (Auto Best Seller Pickle) -->
             <div class="lg:col-span-5 relative flex justify-center">
+                {% with hero_pickle=best_seller|default:featured_products.0 %}
                 <div class="relative w-full max-w-sm sm:max-w-md p-6 rounded-3xl shadow-2xl border-2 border-emerald-400" style="background-color: #082816;">
                     <!-- Featured Jar showcase image -->
-                    <div class="relative aspect-square rounded-2xl overflow-hidden bg-black/60 border border-emerald-500/40 mb-5 flex items-center justify-center">
-                        <img src="{% if featured_products.0.image %}{{ featured_products.0.image.url }}{% elif featured_products.0.image_url %}{{ featured_products.0.image_url }}{% else %}/static/images/pickle_hero.png{% endif %}" alt="Artisanal Handcrafted Pickles" class="w-full h-full object-cover transform hover:scale-105 transition-transform duration-500" loading="eager" fetchpriority="high" decoding="async" width="500" height="500">
-                        <div class="absolute top-3 left-3 bg-amber-400 text-slate-950 text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-md">
-                            Best Seller 🔥
+                    <div class="relative aspect-square rounded-2xl overflow-hidden bg-black/60 border border-emerald-500/40 mb-5 flex items-center justify-center group">
+                        <a href="{% if hero_pickle %}{% url 'store:product_detail' hero_pickle.slug %}{% else %}#pickle-menu{% endif %}" class="w-full h-full block">
+                            <img src="{% if hero_pickle.image %}{{ hero_pickle.image.url }}{% elif hero_pickle.image_url %}{{ hero_pickle.image_url }}{% else %}/static/images/pickle_hero.png{% endif %}" alt="{% if hero_pickle %}{{ hero_pickle.name }}{% else %}Artisanal Handcrafted Pickles{% endif %}" class="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500" loading="eager" fetchpriority="high" decoding="async" width="500" height="500">
+                        </a>
+                        <div class="absolute top-3 left-3 bg-amber-400 text-slate-950 text-xs font-black px-3.5 py-1.5 rounded-full uppercase tracking-wider shadow-lg flex items-center gap-1.5 ring-2 ring-amber-400/40">
+                            <i class="fa-solid fa-fire text-rose-600"></i>
+                            <span>#1 Best Seller</span>
                         </div>
                         <div class="absolute bottom-3 right-3 bg-slate-950/90 text-white text-xs font-black px-3 py-1.5 rounded-xl border border-white/30 flex items-center gap-1">
-                            {% if featured_products.0.reviews_count > 0 %}
-                            <span>⭐ {{ featured_products.0.average_rating }}/5 ({{ featured_products.0.reviews_count }} Review{{ featured_products.0.reviews_count|pluralize }})</span>
+                            {% if hero_pickle.reviews_count > 0 %}
+                            <span>⭐ {{ hero_pickle.average_rating }}/5 ({{ hero_pickle.reviews_count }} Review{{ hero_pickle.reviews_count|pluralize }})</span>
                             {% else %}
-                            <span>⭐ {{ featured_products.0.crunch_rating|default:5 }}/5 Crunch Rating</span>
+                            <span>⭐ {{ hero_pickle.crunch_rating|default:5 }}/5 Crunch Rating</span>
                             {% endif %}
                         </div>
                     </div>
 
                     <div class="text-center space-y-2">
-                        <h3 class="font-display font-black text-2xl text-white">{% if featured_products.0 %}{{ featured_products.0.name }}{% else %}Pickled Mixed Veggies{% endif %}</h3>
-                        <p class="text-xs text-emerald-100 font-semibold">{% if featured_products.0 %}{{ featured_products.0.tagline }}{% else %}Crisp cucumbers & sweet carrots in tangy-sweet vinegar brine.{% endif %}</p>
+                        <h3 class="font-display font-black text-2xl text-white">
+                            <a href="{% if hero_pickle %}{% url 'store:product_detail' hero_pickle.slug %}{% else %}#pickle-menu{% endif %}" class="hover:text-amber-300 transition">
+                                {% if hero_pickle %}{{ hero_pickle.name }}{% else %}Pickled Mixed Veggies{% endif %}
+                            </a>
+                        </h3>
+                        <p class="text-xs text-emerald-100 font-semibold">{% if hero_pickle %}{{ hero_pickle.tagline }}{% else %}Crisp cucumbers & sweet carrots in tangy-sweet vinegar brine.{% endif %}</p>
                         <div class="flex items-center justify-center gap-3 pt-2">
-                            <span class="font-display font-black text-3xl text-amber-300">৳{% if featured_products.0 %}{{ featured_products.0.price_bdt|floatformat:0 }}{% else %}380{% endif %}</span>
-                            {% if featured_products.0.original_price_bdt %}
-                            <span class="text-sm text-emerald-300/80 line-through font-bold">৳{{ featured_products.0.original_price_bdt|floatformat:0 }}</span>
-                            <span class="bg-rose-600 text-white font-black text-xs px-2.5 py-0.5 rounded-full">Save {{ featured_products.0.discount_percent }}%</span>
+                            <span class="font-display font-black text-3xl text-amber-300">৳{% if hero_pickle %}{{ hero_pickle.price_bdt|floatformat:0 }}{% else %}380{% endif %}</span>
+                            {% if hero_pickle.original_price_bdt %}
+                            <span class="text-sm text-emerald-300/80 line-through font-bold">৳{{ hero_pickle.original_price_bdt|floatformat:0 }}</span>
+                            <span class="bg-rose-600 text-white font-black text-xs px-2.5 py-0.5 rounded-full">Save {{ hero_pickle.discount_percent }}%</span>
                             {% endif %}
+                        </div>
+                        <div class="pt-2">
+                            <a href="{% if hero_pickle %}{% url 'store:product_detail' hero_pickle.slug %}{% else %}#pickle-menu{% endif %}" class="inline-flex items-center gap-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black px-5 py-2.5 rounded-xl shadow-md transition active:scale-95">
+                                <span>Order Best Seller Jar</span>
+                                <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                            </a>
                         </div>
                     </div>
                 </div>
+                {% endwith %}
             </div>
 
         </div>
@@ -174,10 +189,17 @@
                     <img src="{{ product.primary_image_url }}" alt="{{ product.name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" decoding="async" width="600" height="450">
                 </a>
                 
-                <!-- Spice Level Badge -->
+                <!-- Best Seller / Spice Level Badge -->
+                {% if best_seller and product.id == best_seller.id %}
+                <div class="absolute top-3 left-3 bg-amber-400 text-slate-950 text-xs font-black px-3 py-1 rounded-full shadow-lg border border-amber-300 flex items-center gap-1.5 ring-2 ring-amber-400/40 z-10">
+                    <i class="fa-solid fa-fire text-rose-600"></i>
+                    <span>Best Seller</span>
+                </div>
+                {% else %}
                 <div class="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full text-xs font-black text-slate-900 shadow-md border border-slate-300 flex items-center gap-1">
                     {{ product.get_spice_level_display }}
                 </div>
+                {% endif %}
 
                 <!-- Weight badge -->
                 <div class="absolute top-3 right-3 bg-slate-900 text-white px-3 py-1 rounded-full text-xs font-black shadow-md border border-slate-700">

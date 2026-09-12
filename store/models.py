@@ -104,6 +104,21 @@ class Product(models.Model):
         return f"{self.name} ({self.jar_weight_grams}g) - ৳{self.price_bdt}"
 
 
+class ActiveOrderManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_deleted=False)
+
+
+class AllOrderManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset()
+
+
+class TrashOrderManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_deleted=True)
+
+
 class Order(models.Model):
     ZONE_CHOICES = [
         ('INSIDE_DHAKA', 'Inside Dhaka (৳150 Delivery)'),
@@ -164,17 +179,38 @@ class Order(models.Model):
     customer_notes = models.TextField(blank=True, help_text="Customer special request")
     admin_notes = models.TextField(blank=True, help_text="Internal notes / rider info")
     
+    # Soft Delete / Safety Fields
+    is_deleted = models.BooleanField(default=False, db_index=True, help_text="Soft deleted / moved to trash")
+    deleted_at = models.DateTimeField(null=True, blank=True, help_text="Timestamp when moved to trash")
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Managers
+    objects = ActiveOrderManager()
+    all_objects = AllOrderManager()
+    trash_objects = TrashOrderManager()
+
     class Meta:
         ordering = ['-created_at']
+        base_manager_name = 'all_objects'
+
+    def soft_delete(self):
+        from django.utils import timezone
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.save(update_fields=['is_deleted', 'deleted_at'])
+
+    def restore(self):
+        self.is_deleted = False
+        self.deleted_at = None
+        self.save(update_fields=['is_deleted', 'deleted_at'])
 
     def save(self, *args, **kwargs):
         if not self.order_number:
             import re
             # Sequential periodical order numbering starting from PKP-0001 (e.g. PKP-0001, PKP-0002, ...)
-            existing_pks = Order.objects.filter(order_number__startswith='PKP-').values_list('order_number', flat=True)
+            existing_pks = Order.all_objects.filter(order_number__startswith='PKP-').values_list('order_number', flat=True)
             max_num = 0
             for onum in existing_pks:
                 match = re.search(r'^PKP-(\d+)$', str(onum).strip())
@@ -186,7 +222,7 @@ class Order(models.Model):
             
             candidate = max_num + 1
             cand_str = f"PKP-{candidate:04d}"
-            while Order.objects.filter(order_number=cand_str).exists():
+            while Order.all_objects.filter(order_number=cand_str).exists():
                 candidate += 1
                 cand_str = f"PKP-{candidate:04d}"
             self.order_number = cand_str

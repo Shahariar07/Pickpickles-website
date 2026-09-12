@@ -261,6 +261,7 @@ def orders_list(request):
         'out_for_delivery_count': out_for_delivery_count,
         'delivered_count': delivered_count,
         'cancelled_count': cancelled_count,
+        'trash_count': Order.trash_objects.count(),
         'status_filter': status_filter,
         'zone_filter': zone_filter,
         'search_query': search_query,
@@ -485,11 +486,71 @@ def create_manual_order(request):
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def delete_order(request, order_number):
     if not request.user.is_superuser:
-        messages.error(request, 'Permission Denied: Staff accounts are restricted from deleting orders. Only Administrator can delete.')
+        messages.error(request, 'Permission Denied: Staff accounts are restricted from moving orders to trash. Only Administrator can delete.')
         return redirect('dashboard:orders')
 
     if request.method == 'POST':
         order = get_object_or_404(Order, order_number=order_number)
+        o_num = order.order_number
+        order.soft_delete()
+        messages.success(request, f'Order #{o_num} moved to Trash (Soft Deleted). You can restore it anytime from the Trash tab.')
+        return redirect('dashboard:orders')
+    return redirect('dashboard:order_detail', order_number=order_number)
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def orders_trash(request):
+    trash_orders = Order.trash_objects.all().prefetch_related('items').order_by('-deleted_at')
+    trash_count = trash_orders.count()
+    search_query = request.GET.get('q', '').strip()
+
+    if search_query:
+        import re
+        clean_search = search_query.lstrip('#').strip()
+        num_match = re.search(r'(\d+)', clean_search)
+        
+        s_filter = (
+            Q(order_number__icontains=search_query) |
+            Q(order_number__icontains=clean_search) |
+            Q(customer_name__icontains=search_query) |
+            Q(customer_phone__icontains=search_query) |
+            Q(delivery_city__icontains=search_query) |
+            Q(payment_trx_id__icontains=search_query)
+        )
+        if num_match:
+            try:
+                padded_search = f"PKP-{int(num_match.group(1)):04d}"
+                s_filter |= Q(order_number__iexact=padded_search)
+            except Exception:
+                pass
+        trash_orders = trash_orders.filter(s_filter)
+
+    context = {
+        'orders': trash_orders[:200],
+        'trash_count': trash_count,
+        'search_query': search_query,
+    }
+    return render(request, 'dashboard/orders_trash.html', context)
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def restore_order(request, order_number):
+    if request.method == 'POST':
+        order = get_object_or_404(Order.trash_objects, order_number=order_number)
+        order.restore()
+        messages.success(request, f'Order #{order.order_number} for {order.customer_name} has been successfully restored!')
+        return redirect('dashboard:orders_trash')
+    return redirect('dashboard:orders_trash')
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def permanent_delete_order(request, order_number):
+    if not request.user.is_superuser:
+        messages.error(request, 'Permission Denied: Staff accounts are restricted from permanently deleting orders. Only Administrator can delete.')
+        return redirect('dashboard:orders_trash')
+
+    if request.method == 'POST':
+        order = get_object_or_404(Order.trash_objects, order_number=order_number)
         o_num = order.order_number
         if order.order_status in ACCEPTED_ORDER_STATUSES:
             for itm in order.items.all():
@@ -498,9 +559,9 @@ def delete_order(request, order_number):
                     itm.product.is_in_stock = True
                     itm.product.save()
         order.delete()
-        messages.success(request, f'Order #{o_num} has been permanently deleted.')
-        return redirect('dashboard:orders')
-    return redirect('dashboard:order_detail', order_number=order_number)
+        messages.success(request, f'Order #{o_num} has been permanently deleted from the database.')
+        return redirect('dashboard:orders_trash')
+    return redirect('dashboard:orders_trash')
 
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
@@ -559,6 +620,7 @@ def stock_manager(request):
                     
                 product.cut_style = request.POST.get('cut_style', product.cut_style)
                 product.spice_level = request.POST.get('spice_level', product.spice_level)
+                product.crunch_rating = int(request.POST.get('crunch_rating', product.crunch_rating or 5))
                 product.jar_weight_grams = int(request.POST.get('jar_weight_grams', product.jar_weight_grams))
                 product.price_bdt = float(request.POST.get('price_bdt', product.price_bdt))
                 
@@ -596,6 +658,7 @@ def stock_manager(request):
                 category = Category.objects.filter(id=cat_id).first() if cat_id else None
                 cut_style = request.POST.get('cut_style', 'SPEARS')
                 spice_level = request.POST.get('spice_level', 'MILD')
+                crunch_rating = int(request.POST.get('crunch_rating', 5))
                 jar_weight_grams = int(request.POST.get('jar_weight_grams', 500))
                 price_bdt = float(request.POST.get('price_bdt', 380))
                 orig_price = request.POST.get('original_price_bdt')
@@ -615,6 +678,7 @@ def stock_manager(request):
                     category=category,
                     cut_style=cut_style,
                     spice_level=spice_level,
+                    crunch_rating=crunch_rating,
                     jar_weight_grams=jar_weight_grams,
                     price_bdt=price_bdt,
                     original_price_bdt=original_price_bdt,

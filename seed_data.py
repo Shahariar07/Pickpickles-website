@@ -127,7 +127,7 @@ def seed():
             'pairing_suggestions': 'Smash Burgers, Fresh Green Salads, Grilled Meats, Shawarma, Beef Tehari, Khichuri & Cheese Sandwiches',
             'cut_style': 'CHIPS',
             'spice_level': 'MILD',
-            'crunch_rating': 5,
+            'crunch_rating': 4,
             'jar_weight_grams': 500,
             'price_bdt': Decimal('260.00'),
             'original_price_bdt': Decimal('300.00'),

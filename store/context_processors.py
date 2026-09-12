@@ -12,6 +12,14 @@ def cart_context(request):
     static_version = int(time.time()) if getattr(settings, 'DEBUG', False) else _SERVER_START_TIME
     meta_pixel_id = getattr(settings, 'META_PIXEL_ID', '')
     
+    trash_orders_count = 0
+    try:
+        if hasattr(request, 'user') and request.user.is_authenticated and request.user.is_staff:
+            from .models import Order
+            trash_orders_count = Order.trash_objects.count()
+    except Exception:
+        trash_orders_count = 0
+        
     try:
         if not hasattr(request, 'session'):
             return {
@@ -21,6 +29,7 @@ def cart_context(request):
                 'site_categories': [],
                 'STATIC_VERSION': static_version,
                 'META_PIXEL_ID': meta_pixel_id,
+                'global_trash_count': trash_orders_count,
             }
         cart = Cart(request)
         return {
@@ -30,6 +39,7 @@ def cart_context(request):
             'site_categories': Category.objects.all(),
             'STATIC_VERSION': static_version,
             'META_PIXEL_ID': meta_pixel_id,
+            'global_trash_count': trash_orders_count,
         }
     except Exception:
         return {
@@ -39,4 +49,5 @@ def cart_context(request):
             'site_categories': [],
             'STATIC_VERSION': static_version,
             'META_PIXEL_ID': meta_pixel_id,
+            'global_trash_count': trash_orders_count,
         }

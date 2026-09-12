@@ -205,6 +205,15 @@
                                 <i class="fa-solid fa-star text-brand-accent text-sm w-4 text-center"></i>
                                 <span>Customer Reviews</span>
                             </a>
+
+                            <!-- Orders Trash & Archive -->
+                            <a href="{% url 'dashboard:orders_trash' %}" class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'orders_trash' %}bg-rose-700 text-white shadow-md shadow-rose-700/30 font-extrabold{% else %}text-rose-200/80 hover:text-white hover:bg-rose-900/40{% endif %}">
+                                <i class="fa-solid fa-trash-can text-rose-400 text-sm w-4 text-center"></i>
+                                <span>Orders Trash Bin</span>
+                                <span class="ml-auto px-2 py-0.5 text-[10px] font-black {% if global_trash_count > 0 %}bg-rose-500 text-white animate-pulse{% else %}bg-rose-950/60 text-rose-300{% endif %} rounded-full shadow-2xs">
+                                    {{ global_trash_count }}
+                                </span>
+                            </a>
                         </nav>
                     </div>
 
