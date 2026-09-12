@@ -237,5 +237,18 @@ function adjustProductQty(delta) {
     if (current > 20) current = 20;
     input.value = current;
 }
+
+// Meta Pixel ViewContent Tracking
+{% if META_PIXEL_ID %}
+if (typeof fbq === 'function') {
+    fbq('track', 'ViewContent', {
+        content_name: '{{ product.name|escapejs }}',
+        content_ids: ['{{ product.id }}'],
+        content_type: 'product',
+        value: {{ product.price_bdt|floatformat:2 }},
+        currency: 'BDT'
+    });
+}
+{% endif %}
 </script>
 {% endblock %}

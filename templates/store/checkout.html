@@ -594,5 +594,16 @@
     document.addEventListener('DOMContentLoaded', function () {
         updateDeliveryFee();
     });
+
+    // Meta Pixel InitiateCheckout Tracking
+    {% if META_PIXEL_ID %}
+    if (typeof fbq === 'function') {
+        fbq('track', 'InitiateCheckout', {
+            value: {{ cart_subtotal|default:0|floatformat:2 }},
+            currency: 'BDT',
+            num_items: {{ cart_total_items|default:0 }}
+        });
+    }
+    {% endif %}
 </script>
 {% endblock %}

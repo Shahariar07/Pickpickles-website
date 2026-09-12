@@ -171,3 +171,22 @@
 
 </div>
 {% endblock %}
+
+{% block extra_js %}
+{% if META_PIXEL_ID %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof fbq === 'function') {
+        fbq('track', 'Purchase', {
+            value: {{ order.total_amount|floatformat:2 }},
+            currency: 'BDT',
+            content_type: 'product',
+            order_id: '{{ order.order_number|escapejs }}',
+            num_items: {{ order.items.count|default:1 }}
+        });
+    }
+});
+</script>
+{% endif %}
+{% endblock %}
+

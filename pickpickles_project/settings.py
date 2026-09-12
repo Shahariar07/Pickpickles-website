@@ -172,4 +172,7 @@ STORAGES = {
 # Email backend for development (outputs emails to console)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
+# Meta / Facebook Pixel
+META_PIXEL_ID = os.environ.get('META_PIXEL_ID', '2165451210680943')
+
 

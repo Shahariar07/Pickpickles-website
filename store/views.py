@@ -106,6 +106,12 @@ def cart_add(request, product_id):
             'cart_total_items': len(cart),
             'cart_subtotal': float(cart.get_subtotal()),
             'items': items_data,
+            'added_product': {
+                'id': product.id,
+                'name': product.name,
+                'price': float(product.price_bdt),
+                'quantity': quantity,
+            }
         })
         
     messages.success(request, f'Added "{product.name}" to your jar cart!')

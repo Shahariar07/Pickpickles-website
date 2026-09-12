@@ -139,6 +139,15 @@ async function ajaxAddToCart(productId, quantity = 1) {
 
         const data = await response.json();
         if (data.success) {
+            if (typeof fbq === 'function' && data.added_product) {
+                fbq('track', 'AddToCart', {
+                    content_name: data.added_product.name,
+                    content_ids: [String(data.added_product.id)],
+                    content_type: 'product',
+                    value: (data.added_product.price * (data.added_product.quantity || 1)),
+                    currency: 'BDT'
+                });
+            }
             updateCartBadges(data.cart_total_items, data.cart_subtotal);
             if (data.items) {
                 renderCartDrawer(data.items, data.cart_subtotal);
