@@ -5,7 +5,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pickpickles_project.settings')
 django.setup()
 
 from django.contrib.auth.models import User
-from store.models import Category, Product, Order, OrderItem, Review
+from store.models import Category, Product, Order, OrderItem
 from decimal import Decimal
 
 def seed():
@@ -140,182 +140,121 @@ def seed():
         }
     ]
 
-    created_products = []
+    product_map = {}
     for p_data in products_data:
         p, _ = Product.objects.update_or_create(
             name=p_data['name'],
             defaults=p_data
         )
-        created_products.append(p)
+        product_map[p.name] = p
 
-    print(f"Populated {len(created_products)} products.")
+    print(f"Populated {len(product_map)} products.")
 
-    # 4. Customer Reviews
-    reviews_data = [
-        {
-            'product': created_products[0],
-            'reviewer_name': 'Zuhair Rahman',
-            'reviewer_location': 'Gulshan 2, Dhaka',
-            'rating': 5,
-            'comment': 'Finally, proper crunchy deli-style pickles in Dhaka! The crunch is unbelievable. Put two slices in my homemade smash burger and it gave that pure diner feel.'
-        },
-        {
-            'product': created_products[1],
-            'reviewer_name': 'Ayesha Farzana',
-            'reviewer_location': 'Dhanmondi, Dhaka',
-            'rating': 5,
-            'comment': 'The Bread & Butter chips have that perfect sweet and tangy balance without being oily. My whole family finished half the jar in one evening with grilled cheese!'
-        },
-        {
-            'product': created_products[2],
-            'reviewer_name': 'Mahir Chowdhury',
-            'reviewer_location': 'Banani, Dhaka',
-            'rating': 5,
-            'comment': 'The Spicy Fire Habanero is fire! It has that ultra crisp snap with a serious spicy kick that pairs amazingly with crispy fried chicken.'
-        },
-        {
-            'product': created_products[3],
-            'reviewer_name': 'Tasnim Anjum',
-            'reviewer_location': 'Uttara, Dhaka',
-            'rating': 5,
-            'comment': 'The pickled beetroot is magnificent! The vibrant ruby color and crisp texture elevated my salads and burger nights completely. Truly artisanal.'
-        },
-    ]
-
-    for r_data in reviews_data:
-        Review.objects.get_or_create(
-            product=r_data['product'],
-            reviewer_name=r_data['reviewer_name'],
-            defaults=r_data
-        )
-    print("Populated customer reviews.")
-
-    # 5. Demo Orders in Admin Dashboard
+    # 4. Actual 4 Orders from Dashboard
     orders_data = [
         {
-            'order_number': 'PKP-0001',
-            'customer_name': 'Tanvir Ahmed',
-            'customer_phone': '01711223344',
-            'customer_email': 'tanvir@gmail.com',
-            'delivery_address': 'House 14, Road 7, Sector 3, Uttara',
-            'delivery_city': 'Dhaka',
-            'delivery_zone': 'INSIDE_DHAKA',
-            'delivery_fee': Decimal('60.00'),
-            'subtotal': Decimal('740.00'),
-            'total_amount': Decimal('800.00'),
-            'payment_method': 'BKASH',
+            'order_number': 'PKP-52854',
+            'customer_name': 'Shahariar Imtiaz',
+            'customer_phone': '01739804566',
+            'customer_email': 'shahariar07@hotmail.com',
+            'delivery_address': '7/C,City Tower ,south jiltuly , Faridpur',
+            'delivery_city': 'Faridpur',
+            'delivery_zone': 'OUTSIDE_DHAKA',
+            'delivery_fee': Decimal('150.00'),
+            'subtotal': Decimal('350.00'),
+            'total_amount': Decimal('500.00'),
+            'payment_method': 'COD',
             'payment_status': 'PAID',
-            'payment_sender_number': '01711223344',
-            'payment_trx_id': 'BKT9812401',
-            'order_status': 'CONFIRMED',
-            'customer_notes': 'Please deliver after 4 PM if possible.',
+            'order_status': 'DELIVERED',
+            'customer_notes': '',
+            'admin_notes': '',
             'items': [
-                {'product': created_products[0], 'qty': 1, 'price': Decimal('380.00')},
-                {'product': created_products[1], 'qty': 1, 'price': Decimal('360.00')},
+                {'product': product_map['Pickled Mixed Veggies'], 'qty': 1, 'price': Decimal('350.00')},
             ]
         },
         {
-            'order_number': 'PKP-0002',
-            'customer_name': 'Nabila Karim',
-            'customer_phone': '01899887766',
-            'customer_email': 'nabila.k@outlook.com',
-            'delivery_address': 'Flat 4B, Concord Tower, Road 11, Banani',
+            'order_number': 'PKP-52855',
+            'customer_name': 'Ameena Mortoza',
+            'customer_phone': '01339511158',
+            'customer_email': None,
+            'delivery_address': 'House 51, Road 2, Park house (2ns floor), Old Dohs Banani, Kakoli, Dhaka',
             'delivery_city': 'Dhaka',
             'delivery_zone': 'INSIDE_DHAKA',
-            'delivery_fee': Decimal('60.00'),
-            'subtotal': Decimal('390.00'),
-            'total_amount': Decimal('450.00'),
+            'delivery_fee': Decimal('150.00'),
+            'subtotal': Decimal('470.00'),
+            'total_amount': Decimal('620.00'),
             'payment_method': 'COD',
             'payment_status': 'UNPAID',
-            'order_status': 'PENDING',
-            'customer_notes': 'Call when rider reaches the building gate.',
+            'order_status': 'CONFIRMED',
+            'customer_notes': '',
+            'admin_notes': 'Manual order created by staff',
             'items': [
-                {'product': created_products[2], 'qty': 1, 'price': Decimal('390.00')},
+                {'product': product_map['Pickled Deshi Onions'], 'qty': 1, 'price': Decimal('220.00')},
+                {'product': product_map['Pickled Green Peppers'], 'qty': 1, 'price': Decimal('250.00')},
             ]
         },
         {
-            'order_number': 'PKP-0003',
-            'customer_name': 'Sadman Sakib',
-            'customer_phone': '01655443322',
-            'customer_email': 'sadman@yahoo.com',
-            'delivery_address': 'GEC Circle, Nasirabad',
+            'order_number': 'PKP-52856',
+            'customer_name': 'Yasir Ahmed',
+            'customer_phone': '01817169889',
+            'customer_email': None,
+            'delivery_address': '93 Chatteswari road. Chowdhury Nibash. Flat 5A. Chawkbazar',
             'delivery_city': 'Chattogram',
-            'delivery_zone': 'OUTSIDE_DHAKA',
-            'delivery_fee': Decimal('120.00'),
-            'subtotal': Decimal('760.00'),
-            'total_amount': Decimal('880.00'),
-            'payment_method': 'BKASH',
-            'payment_status': 'PAID',
-            'payment_sender_number': '01655443322',
-            'payment_trx_id': 'BKT6710492',
-            'order_status': 'PACKING',
-            'items': [
-                {'product': created_products[0], 'qty': 2, 'price': Decimal('380.00')},
-            ]
-        },
-        {
-            'order_number': 'PKP-0004',
-            'customer_name': 'Rafiul Islam',
-            'customer_phone': '01911002233',
-            'customer_email': '',
-            'delivery_address': 'House 8, Road 2, Block A, Bashundhara R/A',
-            'delivery_city': 'Dhaka',
             'delivery_zone': 'INSIDE_DHAKA',
-            'delivery_fee': Decimal('60.00'),
-            'subtotal': Decimal('1130.00'),
-            'total_amount': Decimal('1190.00'),
+            'delivery_fee': Decimal('150.00'),
+            'subtotal': Decimal('350.00'),
+            'total_amount': Decimal('500.00'),
             'payment_method': 'COD',
             'payment_status': 'UNPAID',
             'order_status': 'OUT_FOR_DELIVERY',
-            'admin_notes': 'Handed over to Pathao Rider #982',
+            'customer_notes': '',
+            'admin_notes': '',
             'items': [
-                {'product': created_products[0], 'qty': 1, 'price': Decimal('380.00')},
-                {'product': created_products[1], 'qty': 1, 'price': Decimal('360.00')},
-                {'product': created_products[2], 'qty': 1, 'price': Decimal('390.00')},
+                {'product': product_map['Pickled Mixed Veggies'], 'qty': 1, 'price': Decimal('350.00')},
             ]
         },
         {
-            'order_number': 'PKP-0005',
-            'customer_name': 'Samira Hossain',
-            'customer_phone': '01755667788',
-            'customer_email': 'samira.h@gmail.com',
-            'delivery_address': 'Apartment 6A, Road 27, Dhanmondi',
+            'order_number': 'PKP-52857',
+            'customer_name': 'Shahariar Imtiaz',
+            'customer_phone': '01739804566',
+            'customer_email': 'shahariar07@hotmail.com',
+            'delivery_address': '7/C,City Tower ,south jiltuly , Faridpur',
             'delivery_city': 'Dhaka',
             'delivery_zone': 'INSIDE_DHAKA',
-            'delivery_fee': Decimal('60.00'),
-            'subtotal': Decimal('740.00'),
-            'total_amount': Decimal('800.00'),
-            'payment_method': 'NAGAD',
-            'payment_status': 'PAID',
-            'payment_sender_number': '01755667788',
-            'payment_trx_id': 'NGD3910842',
-            'order_status': 'DELIVERED',
+            'delivery_fee': Decimal('150.00'),
+            'subtotal': Decimal('250.00'),
+            'total_amount': Decimal('400.00'),
+            'payment_method': 'COD',
+            'payment_status': 'UNPAID',
+            'order_status': 'PENDING',
+            'customer_notes': '',
+            'admin_notes': '',
             'items': [
-                {'product': created_products[0], 'qty': 1, 'price': Decimal('380.00')},
-                {'product': created_products[1], 'qty': 1, 'price': Decimal('360.00')},
+                {'product': product_map['Pickled Green Peppers'], 'qty': 1, 'price': Decimal('250.00')},
             ]
         }
     ]
 
     for o_info in orders_data:
         items_data = o_info.pop('items')
-        order, created = Order.objects.get_or_create(
+        order, created = Order.objects.update_or_create(
             order_number=o_info['order_number'],
             defaults=o_info
         )
-        if created:
-            for item in items_data:
-                OrderItem.objects.create(
-                    order=order,
-                    product=item['product'],
-                    product_name=item['product'].name,
-                    jar_weight_grams=item['product'].jar_weight_grams,
-                    unit_price=item['price'],
-                    quantity=item['qty'],
-                    total_price=item['price'] * item['qty']
-                )
+        # Re-sync items
+        order.items.all().delete()
+        for item in items_data:
+            OrderItem.objects.create(
+                order=order,
+                product=item['product'],
+                product_name=item['product'].name,
+                jar_weight_grams=item['product'].jar_weight_grams,
+                unit_price=item['price'],
+                quantity=item['qty'],
+                total_price=item['price'] * item['qty']
+            )
 
-    print("Populated demo orders for admin dashboard.")
+    print(f"Populated {len(orders_data)} dashboard orders.")
     print("Database seeding completed successfully!")
 
 if __name__ == '__main__':
