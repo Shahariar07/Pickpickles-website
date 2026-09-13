@@ -27,7 +27,11 @@ urlpatterns = [
     path('order/<str:order_number>/edit-customer/', views.edit_order_customer, name='edit_order_customer'),
     path('order/<str:order_number>/quick-status/', views.update_order_status_quick, name='update_order_status_quick'),
     path('order/<str:order_number>/mark-returned/', views.mark_order_returned, name='mark_order_returned'),
+    path('orders/sync-pathao/', views.sync_all_pathao_orders, name='sync_all_pathao_orders'),
+    path('order/<str:order_number>/sync-pathao/', views.sync_single_pathao_order, name='sync_single_pathao_order'),
+    path('order/<str:order_number>/dispatch-pathao/', views.dispatch_order_to_pathao, name='dispatch_order_to_pathao'),
     path('order/<str:order_number>/invoice/', views.order_invoice, name='order_invoice'),
     path('api/order-notifications/', views.order_notifications_api, name='api_order_notifications'),
+    path('api/customer-insights/', views.customer_insights_api, name='api_customer_insights'),
     path('api/launch-driver/', views.launch_pos_driver, name='api_launch_pos_driver'),
 ]

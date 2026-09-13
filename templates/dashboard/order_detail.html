@@ -4,198 +4,499 @@
 {% block title %}Order #{{ order.order_number }} | Pickpickles Admin{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto space-y-6">
+<div class="max-w-6xl mx-auto space-y-4">
 
-    <!-- Top Action Bar -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div class="min-w-0">
-            <div class="flex items-center gap-2 flex-wrap">
-                <a href="{% url 'dashboard:orders' %}" class="text-xs font-bold text-gray-500 hover:text-gray-900 flex items-center gap-1 shrink-0">
-                    <i class="fa-solid fa-arrow-left"></i> All Orders
-                </a>
-                <span class="text-gray-300">•</span>
-                <span class="text-xs text-gray-400">Placed on {{ order.created_at|date:"F d, Y at h:i A" }}</span>
-            </div>
-            <h1 class="font-display font-black text-xl sm:text-2xl lg:text-3xl text-gray-900 mt-1.5 break-words leading-tight">
-                Order #{{ order.order_number }}
+    <!-- Top Action Bar (Compact Single-Line Header) -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white px-5 py-3.5 rounded-2xl border border-gray-200 shadow-2xs">
+        <!-- Left: Back + Order # + Badges + Date -->
+        <div class="flex items-center gap-2.5 flex-wrap min-w-0">
+            <a href="{% url 'dashboard:orders' %}" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition shrink-0" title="Back to Orders">
+                <i class="fa-solid fa-arrow-left text-[11px]"></i>
+                <span>Orders</span>
+            </a>
+
+            <h1 class="font-display font-black text-xl text-gray-900 shrink-0">
+                #{{ order.order_number }}
             </h1>
+
+            <!-- Order Status Badge -->
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black border {{ order.badge_color }} shrink-0 shadow-2xs">
+                <span class="w-2 h-2 rounded-full bg-current animate-pulse"></span>
+                <span>{{ order.get_order_status_display }}</span>
+            </span>
+
+            <!-- Payment Status Badge -->
+            {% if order.payment_status == 'PAID' %}
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300 shrink-0">
+                <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                <span>Paid</span>
+            </span>
+            {% elif order.payment_status == 'UNPAID' %}
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-black bg-amber-100 text-amber-900 border border-amber-300 shrink-0">
+                <i class="fa-solid fa-hand-holding-dollar text-amber-700"></i>
+                <span>COD ৳{{ order.total_amount }}</span>
+            </span>
+            {% else %}
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-gray-100 text-gray-800 border border-gray-300 shrink-0">
+                {{ order.get_payment_status_display }}
+            </span>
+            {% endif %}
+
+            <span class="text-xs text-gray-400 font-medium hidden md:inline shrink-0">
+                • {{ order.created_at|date:"M d, Y • h:i A" }} ({{ order.created_at|timesince }} ago)
+            </span>
         </div>
 
-        <div class="flex items-center gap-2 flex-wrap">
-            <button type="button" onclick="openMarkReturnModal()" class="bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold px-3.5 py-2.5 rounded-xl border border-amber-300 flex items-center gap-1.5 transition">
-                <i class="fa-solid fa-rotate-left text-amber-600"></i>
-                <span>Log Return</span>
-            </button>
-            <a href="{% url 'dashboard:order_invoice' order.order_number %}" target="_blank" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-800 text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs flex items-center gap-2 transition">
-                <i class="fa-solid fa-print text-gray-500"></i>
-                <span>Print Packing Slip</span>
+        <!-- Right: Primary Actions (Single Pathao Button) -->
+        <div class="flex items-center gap-2 flex-wrap shrink-0">
+            <!-- Pathao Dispatch / Track Button (Only 1 Single Instance) -->
+            {% if order.pathao_consignment_id %}
+            <a href="https://merchant.pathao.com/tracking?consignment_id={{ order.pathao_consignment_id }}" target="_blank" class="bg-red-50 hover:bg-red-100 text-red-700 text-xs font-black px-4 py-2 rounded-xl border border-red-200 flex items-center gap-1.5 transition shadow-2xs" title="Track on Pathao Courier">
+                <i class="fa-solid fa-truck-fast text-red-600"></i>
+                <span>Pathao Track</span>
             </a>
-            <button type="button" id="btnInstallDriverDetail" onclick="launchDriverInstaller()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-2 transition cursor-pointer active:scale-95" title="Click to run POS Printer Driver Installer on this PC">
-                <i class="fa-solid fa-play text-xs"></i>
-                <span>Install POS Driver</span>
+            {% elif order.order_status != 'CANCELLED' %}
+            <button type="button" onclick="openPathaoModal()" class="bg-[#ea1d24] hover:bg-[#c9141a] text-white text-xs font-black px-4 py-2 rounded-xl shadow-xs flex items-center gap-2 transition cursor-pointer active:scale-95">
+                <i class="fa-solid fa-paper-plane"></i>
+                <span>Send to Pathao</span>
             </button>
+            {% endif %}
+
+            <a href="{% url 'dashboard:order_invoice' order.order_number %}" target="_blank" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-800 text-xs font-bold px-3.5 py-2 rounded-xl shadow-2xs flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-print text-gray-500"></i>
+                <span>Print Slip</span>
+            </a>
+
+            <button type="button" onclick="openMarkReturnModal()" class="bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold px-3 py-2 rounded-xl border border-amber-300 flex items-center gap-1.5 transition cursor-pointer" title="Log Return">
+                <i class="fa-solid fa-rotate-left text-amber-600"></i>
+                <span class="hidden sm:inline">Return</span>
+            </button>
+
             {% if request.user.is_superuser %}
-            <button type="button" onclick="openDeleteOrderModal()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold px-3.5 py-2.5 rounded-xl border border-rose-200 flex items-center gap-1.5 transition cursor-pointer">
+            <button type="button" onclick="openDeleteOrderModal()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold px-3 py-2 rounded-xl border border-rose-200 flex items-center gap-1.5 transition cursor-pointer" title="Move to Trash">
                 <i class="fa-solid fa-trash-can"></i>
-                <span>Move to Trash</span>
             </button>
             {% endif %}
         </div>
     </div>
 
-    <!-- Status Editor Form -->
-    <form method="POST" class="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm space-y-6">
-        {% csrf_token %}
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-xs font-bold text-gray-700 mb-1">Order Fulfillment Status</label>
-                <select name="order_status" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500">
-                    <option value="PENDING" {% if order.order_status == 'PENDING' %}selected{% endif %}>Pending Confirmation</option>
-                    <option value="CONFIRMED" {% if order.order_status == 'CONFIRMED' %}selected{% endif %}>Confirmed & In Queue</option>
-                    <option value="PACKING" {% if order.order_status == 'PACKING' %}selected{% endif %}>Packing Fresh Jars</option>
-                    <option value="OUT_FOR_DELIVERY" {% if order.order_status == 'OUT_FOR_DELIVERY' %}selected{% endif %}>Out for Delivery / Shipped</option>
-                    <option value="DELIVERED" {% if order.order_status == 'DELIVERED' %}selected{% endif %}>Delivered 🎉</option>
-                    <option value="CANCELLED" {% if order.order_status == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
-                </select>
-            </div>
-
-            <div>
-                <label class="block text-xs font-bold text-gray-700 mb-1">Payment Verification Status</label>
-                <select name="payment_status" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500">
-                    <option value="UNPAID" {% if order.payment_status == 'UNPAID' %}selected{% endif %}>Unpaid (Cash on Delivery)</option>
-                    <option value="PENDING_VERIFICATION" {% if order.payment_status == 'PENDING_VERIFICATION' %}selected{% endif %}>Pending bKash/Nagad Check</option>
-                    <option value="PAID" {% if order.payment_status == 'PAID' %}selected{% endif %}>Payment Received & Verified</option>
-                    <option value="REFUNDED" {% if order.payment_status == 'REFUNDED' %}selected{% endif %}>Refunded</option>
-                </select>
-            </div>
-        </div>
-
-        <div>
-            <label class="block text-xs font-bold text-gray-700 mb-1">Internal Admin / Rider Dispatch Notes</label>
-            <textarea name="admin_notes" rows="2" placeholder="e.g. Verified bKash TrxID, handed over to Pathao/Steadfast Courier tracking #12345" class="w-full bg-gray-50 border border-gray-300 rounded-xl p-3 text-xs text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500">{{ order.admin_notes }}</textarea>
-        </div>
-
-        <button type="submit" class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-6 py-3 rounded-xl shadow-md transition">
-            Save Status & Notes
-        </button>
-    </form>
-
-    <!-- Customer & Destination Details Card -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- ⭐ COMPACT NEXT-STEP GUIDANCE STRIP ("কী করতে হবে") -->
+    <div class="rounded-2xl px-4 py-2.5 border shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5
+        {% if order.order_status == 'PENDING' %}bg-amber-50/90 border-amber-200 text-amber-950
+        {% elif order.order_status == 'CONFIRMED' %}bg-blue-50/90 border-blue-200 text-blue-950
+        {% elif order.order_status == 'PACKING' %}bg-purple-50/90 border-purple-200 text-purple-950
+        {% elif order.order_status == 'OUT_FOR_DELIVERY' %}bg-indigo-50/90 border-indigo-200 text-indigo-950
+        {% elif order.order_status == 'DELIVERED' %}bg-emerald-50/90 border-emerald-200 text-emerald-950
+        {% else %}bg-gray-50 border-gray-200 text-gray-800{% endif %}">
         
-        <div class="bg-white p-6 rounded-3xl border border-gray-200 shadow-xs space-y-3">
-            <div class="flex items-center justify-between border-b border-gray-100 pb-2">
-                <h3 class="font-display font-bold text-base text-gray-900 flex items-center gap-2">
-                    <i class="fa-solid fa-user text-brand-600"></i> Customer & Shipping Info
-                </h3>
-                <button type="button" onclick="openEditCustomerModal()" class="text-xs font-bold text-brand-600 hover:text-brand-800 underline">
-                    Edit Info
+        <div class="flex items-center gap-2 text-xs min-w-0">
+            <span class="font-extrabold shrink-0 flex items-center gap-1.5 text-xs sm:text-sm">
+                {% if order.order_status == 'PENDING' %}<i class="fa-solid fa-phone-volume text-amber-600"></i> Step 1: Call Customer & Confirm
+                {% elif order.order_status == 'CONFIRMED' %}<i class="fa-solid fa-box-open text-blue-600"></i> Step 2: Pack {{ order.total_items_count }} Jars ({{ order.total_weight_kg }}kg)
+                {% elif order.order_status == 'PACKING' %}<i class="fa-solid fa-tape text-purple-600"></i> Step 3: Hand Parcel to Rider
+                {% elif order.order_status == 'OUT_FOR_DELIVERY' %}<i class="fa-solid fa-truck-fast text-indigo-600"></i> Step 4: Parcel in Transit with Rider
+                {% elif order.order_status == 'DELIVERED' %}<i class="fa-solid fa-circle-check text-emerald-600"></i> Completed & Delivered 🎉
+                {% else %}<i class="fa-solid fa-ban text-rose-600"></i> Order Cancelled{% endif %}
+            </span>
+            <span class="text-gray-600 text-xs truncate hidden md:inline">
+                • {% if order.order_status == 'PENDING' %}Call {{ order.customer_name }} ({{ order.customer_phone }}) to confirm delivery in {{ order.delivery_city }}.
+                {% elif order.order_status == 'CONFIRMED' %}Bubble wrap {{ order.total_items_count }} jars. Then click 'Send to Pathao' above.
+                {% elif order.order_status == 'PACKING' %}Parcel packed with address label. Hand over to delivery rider.
+                {% elif order.order_status == 'OUT_FOR_DELIVERY' %}Rider delivering to {{ order.delivery_city }}.
+                {% elif order.order_status == 'DELIVERED' %}Delivered. ৳{{ order.total_amount }} verified.
+                {% else %}Stock returned to inventory.{% endif %}
+            </span>
+        </div>
+
+        <!-- Inline Step Actions (No duplicate Pathao button) -->
+        <div class="flex items-center gap-2 shrink-0">
+            {% if order.order_status == 'PENDING' %}
+            <form action="{% url 'dashboard:update_order_status_quick' order.order_number %}" method="POST" class="inline-block">
+                {% csrf_token %}
+                <input type="hidden" name="status" value="CONFIRMED">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-2xs flex items-center gap-1.5 transition cursor-pointer">
+                    <i class="fa-solid fa-check text-[10px]"></i>
+                    <span>Confirm Order</span>
                 </button>
-            </div>
-            <div class="space-y-1.5 text-xs">
-                <p><span class="text-gray-400 font-bold">Name:</span> <strong class="text-gray-900">{{ order.customer_name }}</strong></p>
-                <p class="flex items-center gap-2">
-                    <span class="text-gray-400 font-bold">Phone:</span>
-                    <a href="tel:{{ order.customer_phone }}" class="text-emerald-700 font-bold hover:underline bg-emerald-50 px-2 py-0.5 rounded">
-                        <i class="fa-solid fa-phone text-[10px]"></i> {{ order.customer_phone }}
-                    </a>
-                </p>
-                {% if order.customer_email %}
-                <p><span class="text-gray-400 font-bold">Email:</span> <span class="text-gray-800">{{ order.customer_email }}</span></p>
-                {% endif %}
-            </div>
-        </div>
+            </form>
+            <a href="https://wa.me/880{{ order.customer_phone|slice:'-10:' }}?text=Hello%20{{ order.customer_name|urlencode }},%20from%20Pickpickles%20regarding%20order%20#{{ order.order_number }}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-2xs flex items-center gap-1.5 transition">
+                <i class="fa-brands fa-whatsapp text-sm"></i>
+                <span>WhatsApp</span>
+            </a>
 
-        <div class="bg-white p-6 rounded-3xl border border-gray-200 shadow-xs space-y-3">
-            <h3 class="font-display font-bold text-base text-gray-900 border-b border-gray-100 pb-2 flex items-center gap-2">
-                <i class="fa-solid fa-location-dot text-brand-600"></i> Delivery Address
-            </h3>
-            <div class="space-y-1.5 text-xs text-gray-700">
-                <p class="font-bold text-gray-900">{{ order.delivery_address }}</p>
-                <p><span class="text-gray-400 font-bold">City / District:</span> {{ order.delivery_city }}</p>
-                <p><span class="text-gray-400 font-bold">Zone:</span> <span class="bg-gray-100 px-2 py-0.5 rounded font-semibold">{{ order.get_delivery_zone_display }}</span></p>
-                {% if order.customer_notes %}
-                <p class="text-amber-800 bg-amber-50 p-2 rounded-xl mt-2"><strong class="block">Customer Instructions:</strong> {{ order.customer_notes }}</p>
-                {% endif %}
-            </div>
-        </div>
+            {% elif order.order_status == 'CONFIRMED' %}
+            <form action="{% url 'dashboard:update_order_status_quick' order.order_number %}" method="POST" class="inline-block">
+                {% csrf_token %}
+                <input type="hidden" name="status" value="PACKING">
+                <button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-2xs flex items-center gap-1.5 transition cursor-pointer">
+                    <i class="fa-solid fa-box text-[11px]"></i>
+                    <span>Mark as Packing</span>
+                </button>
+            </form>
 
+            {% elif order.order_status == 'PACKING' %}
+            <form action="{% url 'dashboard:update_order_status_quick' order.order_number %}" method="POST" class="inline-block">
+                {% csrf_token %}
+                <input type="hidden" name="status" value="OUT_FOR_DELIVERY">
+                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-2xs flex items-center gap-1.5 transition cursor-pointer">
+                    <i class="fa-solid fa-truck-fast text-[11px]"></i>
+                    <span>Mark Out for Delivery</span>
+                </button>
+            </form>
+
+            {% elif order.order_status == 'OUT_FOR_DELIVERY' %}
+            <form action="{% url 'dashboard:update_order_status_quick' order.order_number %}" method="POST" class="inline-block">
+                {% csrf_token %}
+                <input type="hidden" name="status" value="DELIVERED">
+                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl shadow-2xs flex items-center gap-1.5 transition cursor-pointer">
+                    <i class="fa-solid fa-circle-check text-[11px]"></i>
+                    <span>Mark Delivered 🎉</span>
+                </button>
+            </form>
+            {% endif %}
+        </div>
     </div>
 
-    <!-- Ordered Items Card -->
-    <div class="bg-white p-6 rounded-3xl border border-gray-200 shadow-xs space-y-4">
-        <h3 class="font-display font-bold text-base text-gray-900 border-b border-gray-100 pb-3 flex items-center gap-2">
-            <i class="fa-solid fa-jar text-brand-600"></i> Ordered Pickle Jars ({{ order.total_items_count }})
-        </h3>
+    <!-- ⭐ FIRST-VIEW 2-COLUMN COMMAND CENTER GRID -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+        
+        <!-- LEFT COLUMN (5 Cols): STATUS & CONTROLS FIRST, THEN CUSTOMER & ADDRESS BELOW -->
+        <div class="lg:col-span-5 space-y-3.5">
+            
+            <!-- 1. Quick Status & Payment Control Card (AT THE TOP) -->
+            <form method="POST" class="bg-white p-4 sm:p-5 rounded-3xl border border-gray-200 shadow-xs space-y-3 text-xs">
+                {% csrf_token %}
+                <div class="flex items-center justify-between border-b border-gray-100 pb-1.5">
+                    <h3 class="font-display font-black text-xs text-gray-900 flex items-center gap-1.5">
+                        <i class="fa-solid fa-sliders text-brand-600"></i> Change Order & Payment Status
+                    </h3>
+                </div>
 
-        <div class="divide-y divide-gray-100">
-            {% for item in order.items.all %}
-            <div class="py-3 flex items-center justify-between text-xs">
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="block text-[11px] font-bold text-gray-700 mb-1">Order Status</label>
+                        <select name="order_status" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-2.5 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-1 focus:ring-brand-500">
+                            <option value="PENDING" {% if order.order_status == 'PENDING' %}selected{% endif %}>Pending Confirmation</option>
+                            <option value="CONFIRMED" {% if order.order_status == 'CONFIRMED' %}selected{% endif %}>Confirmed</option>
+                            <option value="PACKING" {% if order.order_status == 'PACKING' %}selected{% endif %}>Packing</option>
+                            <option value="OUT_FOR_DELIVERY" {% if order.order_status == 'OUT_FOR_DELIVERY' %}selected{% endif %}>Out for Delivery</option>
+                            <option value="DELIVERED" {% if order.order_status == 'DELIVERED' %}selected{% endif %}>Delivered 🎉</option>
+                            <option value="CANCELLED" {% if order.order_status == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-bold text-gray-700 mb-1">Payment Status</label>
+                        <select name="payment_status" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-2.5 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-1 focus:ring-brand-500">
+                            <option value="UNPAID" {% if order.payment_status == 'UNPAID' %}selected{% endif %}>Unpaid (COD)</option>
+                            <option value="PAID" {% if order.payment_status == 'PAID' %}selected{% endif %}>Paid & Verified</option>
+                            <option value="PENDING_VERIFICATION" {% if order.payment_status == 'PENDING_VERIFICATION' %}selected{% endif %}>Pending Check</option>
+                            <option value="REFUNDED" {% if order.payment_status == 'REFUNDED' %}selected{% endif %}>Refunded</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div>
-                    <h4 class="font-bold text-gray-900 text-sm">{{ item.product_name }}</h4>
-                    <span class="text-gray-500">{{ item.jar_weight_grams }}g Jar • ৳{{ item.unit_price }} each</span>
+                    <input type="text" name="admin_notes" value="{{ order.admin_notes|default:'' }}" placeholder="Internal dispatch / rider note..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs text-gray-900 focus:bg-white focus:ring-1 focus:ring-brand-500">
                 </div>
-                <div class="text-right">
-                    <span class="text-gray-500">{{ item.quantity }} x ৳{{ item.unit_price }}</span>
-                    <span class="font-black text-gray-900 text-sm block">৳{{ item.total_price }}</span>
+
+                <button type="submit" class="w-full bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs py-2 rounded-xl shadow-xs transition cursor-pointer">
+                    Update Status & Notes
+                </button>
+            </form>
+
+            <!-- 2. Customer Profile & Fraud Check Card (MIDDLE) -->
+            <div class="bg-white p-5 rounded-3xl border border-gray-200 shadow-xs space-y-3">
+                <div class="flex items-center justify-between border-b border-gray-100 pb-2">
+                    <h3 class="font-display font-black text-sm text-gray-900 flex items-center gap-2">
+                        <i class="fa-solid fa-user text-brand-600"></i> Customer Profile
+                    </h3>
+                    <button type="button" onclick="openEditCustomerModal()" class="text-xs font-bold text-brand-600 hover:text-brand-800 underline cursor-pointer">
+                        Edit Info
+                    </button>
+                </div>
+
+                <!-- Recipient Info -->
+                <div class="space-y-2 text-xs">
+                    <div class="flex items-center justify-between gap-2 flex-wrap">
+                        <strong class="text-gray-900 font-black text-base">{{ order.customer_name }}</strong>
+                        <span class="text-[11px] font-bold px-2 py-0.5 rounded-md border {{ order.customer_score.badge_class }}">
+                            {{ order.customer_score.short_label|default:order.customer_score.label }}
+                        </span>
+                    </div>
+                    
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <a href="tel:{{ order.customer_phone }}" class="text-emerald-700 font-bold hover:underline bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 inline-flex items-center gap-1.5">
+                            <i class="fa-solid fa-phone text-[10px]"></i> <span>{{ order.customer_phone }}</span>
+                        </a>
+                        <a href="https://wa.me/880{{ order.customer_phone|slice:'-10:' }}?text=Hello%20{{ order.customer_name|urlencode }},%20from%20Pickpickles%20regarding%20order%20#{{ order.order_number }}" target="_blank" class="text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-200 font-bold inline-flex items-center gap-1.5">
+                            <i class="fa-brands fa-whatsapp text-sm text-emerald-600"></i> <span>WhatsApp</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- ⭐ Customer Website Order History & Fraud Check Intelligence Box -->
+                <div class="p-3 rounded-2xl border text-xs {{ order.customer_score.badge_class }} space-y-2">
+                    <div class="flex items-center justify-between gap-2 flex-wrap">
+                        <span class="font-extrabold flex items-center gap-1.5 text-xs">
+                            <i class="{{ order.customer_score.icon }}"></i>
+                            <span>{{ order.customer_score.risk_title }}</span>
+                        </span>
+                        <span class="text-[10px] font-black uppercase tracking-wider bg-white/90 px-2 py-0.5 rounded shadow-2xs">
+                            {{ order.customer_score.rate }} Success Rate
+                        </span>
+                    </div>
+
+                    <!-- 3-Pill Order Stats Grid -->
+                    <div class="grid grid-cols-3 gap-1.5 text-center">
+                        <div class="bg-white/85 p-1.5 rounded-xl border border-current/10 shadow-2xs">
+                            <span class="text-[10px] opacity-75 block font-bold">Total Orders</span>
+                            <strong class="text-sm font-black text-gray-900">{{ order.customer_score.total_orders }}</strong>
+                        </div>
+                        <div class="bg-white/85 p-1.5 rounded-xl border border-current/10 shadow-2xs">
+                            <span class="text-[10px] text-emerald-700 block font-bold">Delivered</span>
+                            <strong class="text-sm font-black text-emerald-700">{{ order.customer_score.delivered_count }}</strong>
+                        </div>
+                        <div class="bg-white/85 p-1.5 rounded-xl border border-current/10 shadow-2xs">
+                            <span class="text-[10px] text-rose-700 block font-bold">Return/Cancel</span>
+                            <strong class="text-sm font-black text-rose-700">{{ order.customer_score.returned_count }}</strong>
+                        </div>
+                    </div>
+
+                    <!-- 1-Click External Fraud Verification -->
+                    <div class="pt-1.5 border-t border-current/15 flex items-center justify-between gap-2 flex-wrap">
+                        <span class="text-[11px] font-bold opacity-85 flex items-center gap-1">
+                            <i class="fa-solid fa-shield-halved text-amber-500"></i> Fraud Check:
+                        </span>
+                        <div class="flex items-center gap-1.5">
+                            <a href="https://couriercheck.com/?phone={{ order.customer_phone }}" target="_blank" class="bg-slate-900 hover:bg-slate-800 text-white font-bold text-[11px] px-2 py-1 rounded-lg transition inline-flex items-center gap-1 shadow-2xs" title="BD Couriers Fraud History">
+                                <i class="fa-solid fa-shield-halved text-amber-400 text-[10px]"></i> <span>CourierCheck</span>
+                            </a>
+                            <a href="https://merchant.pathao.com/parcels?search={{ order.customer_phone }}" target="_blank" class="bg-[#ea1d24] hover:bg-[#c9141a] text-white font-bold text-[11px] px-2 py-1 rounded-lg transition inline-flex items-center gap-1 shadow-2xs" title="Search on Pathao Merchant">
+                                <i class="fa-solid fa-truck-fast text-[10px]"></i> <span>Pathao</span>
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
-            {% endfor %}
+
+            <!-- 3. Delivery Destination & Address Card (AT THE BOTTOM / NISE) -->
+            <div class="bg-white p-5 rounded-3xl border border-gray-200 shadow-xs space-y-3">
+                <div class="flex items-center justify-between border-b border-gray-100 pb-2">
+                    <h3 class="font-display font-black text-sm text-gray-900 flex items-center gap-2">
+                        <i class="fa-solid fa-location-dot text-brand-600"></i> Delivery Address & Zone
+                    </h3>
+                    <button type="button" onclick="openEditCustomerModal()" class="text-xs font-bold text-brand-600 hover:text-brand-800 underline cursor-pointer">
+                        Edit Address
+                    </button>
+                </div>
+
+                <!-- Address Box -->
+                <div class="bg-gray-50 p-3 rounded-2xl border border-gray-100 space-y-1 text-xs">
+                    <span class="text-gray-400 font-bold block text-[10px] uppercase tracking-wider">Street Address</span>
+                    <p class="font-bold text-gray-900 text-sm leading-snug">{{ order.delivery_address }}</p>
+                    <div class="flex items-center justify-between text-xs text-gray-600 pt-1 border-t border-gray-200/60">
+                        <span>City: <strong class="text-gray-900">{{ order.delivery_city }}</strong></span>
+                        <span class="font-extrabold {% if order.delivery_zone == 'INSIDE_DHAKA' %}text-emerald-700{% else %}text-blue-700{% endif %}">
+                            {{ order.get_delivery_zone_display|default:order.delivery_zone }} (৳{{ order.delivery_fee }})
+                        </span>
+                    </div>
+                </div>
+
+                {% if order.customer_notes %}
+                <div class="text-amber-900 bg-amber-50 px-3 py-2 rounded-xl border border-amber-200 text-xs leading-tight">
+                    <strong class="block text-[10px] uppercase font-bold text-amber-700">Customer Delivery Note:</strong>
+                    <span>{{ order.customer_notes }}</span>
+                </div>
+                {% endif %}
+
+                <!-- Pathao Live Consignment Bar (if active) -->
+                {% if order.pathao_consignment_id %}
+                <div class="flex items-center justify-between text-xs bg-red-50/80 p-2.5 rounded-xl border border-red-200">
+                    <div class="flex items-center gap-1.5">
+                        <i class="fa-solid fa-truck-fast text-[#ea1d24]"></i>
+                        <span class="text-gray-500 font-bold">Pathao:</span>
+                        <strong class="font-mono text-gray-900 font-bold bg-white px-1.5 py-0.5 rounded border border-red-200">{{ order.pathao_tracking_code|default:order.pathao_consignment_id }}</strong>
+                    </div>
+                    <div class="flex items-center gap-2 font-bold text-xs">
+                        <a href="{% url 'dashboard:sync_single_pathao_order' order.order_number %}" class="text-indigo-700 hover:text-indigo-900 underline" title="Sync Live Status">Sync</a>
+                        <a href="https://merchant.pathao.com/tracking?consignment_id={{ order.pathao_consignment_id }}" target="_blank" class="text-red-600 hover:text-red-800 underline">Track</a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
         </div>
 
-        <div class="border-t border-gray-200 pt-4 space-y-2 text-xs">
-            <div class="flex justify-between text-gray-600">
-                <span>Subtotal</span>
-                <span class="font-bold text-gray-900">৳{{ order.subtotal }}</span>
+        <!-- RIGHT COLUMN (7 Cols): ORDERED PICKLE JARS & FINANCIAL SUMMARY ("dan a order dao") -->
+        <div class="lg:col-span-7 bg-white p-5 sm:p-6 rounded-3xl border border-gray-200 shadow-xs space-y-4">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                <h3 class="font-display font-black text-base text-gray-900 flex items-center gap-2">
+                    <span class="w-8 h-8 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center text-sm font-black">🫙</span>
+                    <span>Ordered Pickle Jars ({{ order.total_items_count }} Jars • {{ order.total_weight_kg }} kg)</span>
+                </h3>
+                <span class="text-xs font-bold text-gray-500 bg-gray-100 px-3 py-1 rounded-xl">
+                    600g Standard Jar
+                </span>
             </div>
-            <div class="flex justify-between text-gray-600">
-                <span>Delivery Fee ({{ order.get_delivery_zone_display }})</span>
-                <span class="font-bold text-gray-900">৳{{ order.delivery_fee }}</span>
+
+            <!-- Jars Cards List -->
+            <div class="space-y-2.5">
+                {% for item in order.items.all %}
+                <div class="p-3.5 rounded-2xl bg-gray-50 hover:bg-gray-50/80 border border-gray-100 flex items-center justify-between gap-3 transition">
+                    <div class="flex items-center gap-3.5 min-w-0">
+                        <!-- Product Image / Thumbnail -->
+                        <div class="w-14 h-14 rounded-2xl bg-white border border-gray-200 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
+                            {% if item.product and item.product.image %}
+                            <img src="{{ item.product.image.url }}" alt="{{ item.product_name }}" class="w-full h-full object-cover">
+                            {% else %}
+                            <span class="text-2xl">🥒</span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Product Name & Weight -->
+                        <div class="min-w-0 space-y-1">
+                            <h4 class="font-display font-black text-base text-gray-900 truncate">
+                                {{ item.product_name }}
+                            </h4>
+                            <div class="flex items-center gap-2 flex-wrap text-xs text-gray-600">
+                                <span class="font-bold text-gray-700 bg-white px-2 py-0.5 rounded-md border border-gray-200 text-[11px]">
+                                    {{ item.jar_weight_grams }}g Jar
+                                </span>
+                                <span>•</span>
+                                <span class="font-bold text-gray-900">৳{{ item.unit_price }} each</span>
+                                <span>•</span>
+                                <span class="font-black text-brand-700 bg-brand-50 px-2 py-0.5 rounded-md border border-brand-200 text-[11px]">
+                                    Qty: {{ item.quantity }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Line Total -->
+                    <div class="text-right shrink-0">
+                        <span class="text-xs text-gray-400 block font-medium">{{ item.quantity }} × ৳{{ item.unit_price }}</span>
+                        <span class="font-display font-black text-lg text-gray-900">৳{{ item.total_price }}</span>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
-            <div class="border-t border-gray-200 pt-3 flex justify-between items-baseline text-base font-bold">
-                <span>Grand Total</span>
-                <span class="font-display font-black text-2xl text-brand-700">৳{{ order.total_amount }} BDT</span>
+
+            <!-- Financial Summary & Total Breakdown -->
+            <div class="bg-gray-50 rounded-2xl p-4 sm:p-5 border border-gray-100 space-y-2.5 text-xs">
+                <div class="flex justify-between text-gray-600 text-xs sm:text-sm">
+                    <span>Items Subtotal ({{ order.total_items_count }} Jars):</span>
+                    <strong class="text-gray-900">৳{{ order.subtotal }}</strong>
+                </div>
+                <div class="flex justify-between text-gray-600 text-xs sm:text-sm">
+                    <span>Delivery Fee ({{ order.get_delivery_zone_display|default:order.delivery_zone }} • {{ order.total_weight_kg }} kg):</span>
+                    <strong class="text-gray-900">৳{{ order.delivery_fee }}</strong>
+                </div>
+                
+                <div class="border-t border-gray-200/80 pt-3.5 flex items-center justify-between flex-wrap gap-3">
+                    <div>
+                        <span class="text-xs font-bold text-gray-500 block">Total Payable Amount:</span>
+                        <span class="font-display font-black text-2xl sm:text-3xl text-brand-700">৳{{ order.total_amount }} BDT</span>
+                    </div>
+
+                    <!-- Payment Status Highlight -->
+                    <div>
+                        {% if order.payment_status == 'PAID' %}
+                        <div class="bg-emerald-100 text-emerald-800 border border-emerald-300 px-3.5 py-1.5 rounded-xl text-right">
+                            <span class="font-black text-xs sm:text-sm block"><i class="fa-solid fa-circle-check"></i> Already Paid (৳0 COD)</span>
+                            <span class="text-[10px] opacity-80">Do not collect extra cash</span>
+                        </div>
+                        {% else %}
+                        <div class="bg-amber-100 text-amber-900 border border-amber-300 px-3.5 py-1.5 rounded-xl text-right">
+                            <span class="font-black text-xs sm:text-sm block"><i class="fa-solid fa-hand-holding-dollar"></i> Collect ৳{{ order.total_amount }} COD</span>
+                            <span class="text-[10px] opacity-80">Cash to be collected by Pathao</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
         </div>
+
     </div>
 
 </div>
 
 <!-- EDIT CUSTOMER MODAL -->
 <div id="editCustomerModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 space-y-4 shadow-2xl relative max-h-[92vh] overflow-y-auto">
         <div class="flex items-center justify-between border-b border-gray-100 pb-3">
-            <h3 class="font-display font-black text-lg text-gray-900">Edit Customer & Destination</h3>
-            <button type="button" onclick="closeEditCustomerModal()" class="text-gray-400 hover:text-gray-700 text-lg p-1">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center font-black">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                </div>
+                <div>
+                    <h3 class="font-display font-black text-lg text-gray-900">Edit Customer & Delivery Address</h3>
+                    <p class="text-[11px] text-gray-400">Order #{{ order.order_number }}</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeEditCustomerModal()" class="text-gray-400 hover:text-gray-700 text-lg p-1 cursor-pointer">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
 
-        <form action="{% url 'dashboard:edit_order_customer' order.order_number %}" method="POST" class="space-y-3 text-xs">
+        <form action="{% url 'dashboard:edit_order_customer' order.order_number %}" method="POST" class="space-y-3.5 text-xs">
             {% csrf_token %}
-            <div>
-                <label class="font-bold text-gray-700 block mb-1">Customer Name</label>
-                <input type="text" name="customer_name" value="{{ order.customer_name }}" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Customer Name *</label>
+                    <input type="text" name="customer_name" value="{{ order.customer_name }}" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500">
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Phone Number *</label>
+                    <input type="tel" name="customer_phone" value="{{ order.customer_phone }}" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500">
+                </div>
             </div>
 
             <div>
-                <label class="font-bold text-gray-700 block mb-1">Phone Number</label>
-                <input type="tel" name="customer_phone" value="{{ order.customer_phone }}" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white">
+                <label class="font-bold text-gray-700 block mb-1">Street Address (House, Road, Area, Landmark) *</label>
+                <textarea name="delivery_address" rows="2" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-medium focus:bg-white focus:ring-2 focus:ring-brand-500">{{ order.delivery_address }}</textarea>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">City / District *</label>
+                    <input type="text" name="delivery_city" value="{{ order.delivery_city }}" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500">
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Delivery Zone *</label>
+                    <select name="delivery_zone" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500">
+                        <option value="INSIDE_DHAKA" {% if order.delivery_zone == 'INSIDE_DHAKA' %}selected{% endif %}>Inside Dhaka City</option>
+                        <option value="OUTSIDE_DHAKA" {% if order.delivery_zone == 'OUTSIDE_DHAKA' %}selected{% endif %}>Outside Dhaka (Nationwide)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Delivery Fee (৳)</label>
+                    <input type="number" step="0.01" name="delivery_fee" value="{{ order.delivery_fee }}" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500">
+                    <span class="text-[10px] text-gray-400">Default: Inside Dhaka ৳70, Outside Dhaka ৳130+</span>
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Customer Email</label>
+                    <input type="email" name="customer_email" value="{{ order.customer_email|default:'' }}" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500">
+                </div>
             </div>
 
             <div>
-                <label class="font-bold text-gray-700 block mb-1">Delivery Address</label>
-                <input type="text" name="delivery_address" value="{{ order.delivery_address }}" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
+                <label class="font-bold text-gray-700 block mb-1">Customer Delivery Instructions / Notes</label>
+                <textarea name="customer_notes" rows="2" placeholder="e.g. Call before delivery, leave with guard..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500">{{ order.customer_notes }}</textarea>
             </div>
 
-            <div>
-                <label class="font-bold text-gray-700 block mb-1">City / District</label>
-                <input type="text" name="delivery_city" value="{{ order.delivery_city }}" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
-            </div>
-
-            <div class="pt-2 flex items-center justify-end gap-2">
-                <button type="button" onclick="closeEditCustomerModal()" class="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold transition">Cancel</button>
-                <button type="submit" class="px-5 py-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold transition shadow-md">Update Details</button>
+            <div class="pt-3 flex items-center justify-end gap-2 border-t border-gray-100">
+                <button type="button" onclick="closeEditCustomerModal()" class="px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold transition cursor-pointer">Cancel</button>
+                <button type="submit" class="px-5 py-2.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold transition shadow-md cursor-pointer flex items-center gap-1.5">
+                    <i class="fa-solid fa-check"></i>
+                    <span>Save Address & Info</span>
+                </button>
             </div>
         </form>
     </div>
@@ -285,14 +586,86 @@
     </div>
 </div>
 
-<!-- Toast Notification for Driver Installer -->
-<div id="driverToastDetail" class="fixed top-6 right-6 z-50 bg-slate-900 border-2 border-emerald-500 text-white px-5 py-4 rounded-2xl shadow-2xl hidden flex items-center gap-3 transition-all duration-200">
-    <div class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-black shrink-0">
-        <i class="fa-solid fa-check text-base"></i>
-    </div>
-    <div>
-        <div class="text-xs font-black text-white" id="toastTitleDetail">Driver Installer Launched!</div>
-        <div class="text-[11px] text-slate-300" id="toastMsgDetail">Check your Windows screen/taskbar to run the setup.</div>
+<!-- PATHAO DISPATCH CONFIRMATION MODAL -->
+<div id="pathaoDispatchModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+            <div class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-2xl bg-[#ea1d24]/10 text-[#ea1d24] flex items-center justify-center text-lg font-black">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </div>
+                <div>
+                    <h3 class="font-display font-black text-base text-gray-900">Dispatch with Pathao</h3>
+                    <p class="text-[11px] text-gray-500 font-medium">Pathao Merchant Courier Service</p>
+                </div>
+            </div>
+            <button type="button" onclick="closePathaoModal()" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 flex items-center justify-center transition cursor-pointer">
+                <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+        </div>
+
+        <!-- Order Summary Card inside Modal -->
+        <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100 space-y-2.5 text-xs">
+            <div class="flex items-center justify-between pb-2 border-b border-gray-200/60">
+                <span class="text-gray-500">Order Number:</span>
+                <strong class="text-brand-800 font-bold font-mono">#{{ order.order_number }}</strong>
+            </div>
+            
+            <div class="flex items-center justify-between">
+                <span class="text-gray-500">Recipient Name:</span>
+                <strong class="text-gray-900 font-bold">{{ order.customer_name }}</strong>
+            </div>
+
+            <div class="flex items-center justify-between">
+                <span class="text-gray-500">Contact Phone:</span>
+                <strong class="text-gray-900 font-mono font-bold">{{ order.customer_phone }}</strong>
+            </div>
+
+            <div class="flex items-start justify-between gap-3">
+                <span class="text-gray-500 shrink-0">Delivery Address:</span>
+                <span class="text-gray-800 text-right font-medium">{{ order.delivery_address }}{% if order.delivery_city %}, {{ order.delivery_city }}{% endif %}</span>
+            </div>
+
+            <div class="flex items-center justify-between">
+                <span class="text-gray-500">Delivery Zone:</span>
+                <span class="font-bold text-gray-800">{{ order.get_delivery_zone_display|default:order.delivery_zone }}</span>
+            </div>
+
+            <div class="flex items-center justify-between pt-2 border-t border-gray-200/60">
+                <span class="text-gray-500">Parcel Content:</span>
+                <span class="text-gray-900 font-bold">{{ order.total_items_count }} Jar(s) ({{ order.total_weight_kg }} kg)</span>
+            </div>
+
+            <div class="flex items-center justify-between bg-white p-2.5 rounded-xl border border-gray-200">
+                <span class="font-bold text-gray-700">Cash on Delivery (COD):</span>
+                <div class="text-right">
+                    {% if order.payment_status == 'PAID' %}
+                    <span class="font-display font-black text-sm text-emerald-600">৳0 (Already Paid)</span>
+                    <span class="text-[10px] block font-bold text-gray-500">Payment: PAID</span>
+                    {% else %}
+                    <span class="font-display font-black text-sm text-[#ea1d24]">৳{{ order.total_amount }}</span>
+                    <span class="text-[10px] block font-bold text-gray-500">Payment: UNPAID (Collect COD)</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Submission -->
+        <form method="POST" action="{% url 'dashboard:dispatch_order_to_pathao' order.order_number %}">
+            {% csrf_token %}
+            <div class="flex items-center justify-end gap-2.5 pt-2">
+                <button type="button" onclick="closePathaoModal()" class="px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs transition cursor-pointer">
+                    Cancel
+                </button>
+                <button type="submit" class="px-5 py-2.5 rounded-xl bg-[#ea1d24] hover:bg-[#c9141a] text-white font-bold text-xs transition shadow-md cursor-pointer flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-paper-plane"></i>
+                    <span>Confirm & Send to Pathao</span>
+                </button>
+            </div>
+        </form>
+
     </div>
 </div>
 
@@ -303,12 +676,14 @@ function openEditCustomerModal() {
 function closeEditCustomerModal() {
     document.getElementById('editCustomerModal').classList.add('hidden');
 }
+
 function openMarkReturnModal() {
     document.getElementById('markReturnModal').classList.remove('hidden');
 }
 function closeMarkReturnModal() {
     document.getElementById('markReturnModal').classList.add('hidden');
 }
+
 function openDeleteOrderModal() {
     document.getElementById('deleteOrderModal').classList.remove('hidden');
 }
@@ -316,52 +691,12 @@ function closeDeleteOrderModal() {
     document.getElementById('deleteOrderModal').classList.add('hidden');
 }
 
-function launchDriverInstaller() {
-    const btn = document.getElementById('btnInstallDriverDetail');
-    const defaultHtml = '<i class="fa-solid fa-play text-xs"></i><span>Install POS Driver</span>';
-    if (btn) {
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i><span>Launching...</span>';
-        btn.disabled = true;
-    }
-
-    fetch("{% url 'dashboard:api_launch_pos_driver' %}")
-        .then(async (res) => {
-            const data = await res.json();
-            if (!res.ok || data.status === 'error') {
-                throw new Error(data.message || 'Failed to start installer');
-            }
-            return data;
-        })
-        .then(data => {
-            showDriverToastDetail('Installer opened! Please check your Windows taskbar or screen.', false);
-            if (btn) {
-                btn.innerHTML = '<i class="fa-solid fa-check text-xs"></i><span>Installer Opened!</span>';
-                setTimeout(() => {
-                    btn.innerHTML = defaultHtml;
-                    btn.disabled = false;
-                }, 4000);
-            }
-        })
-        .catch(err => {
-            showDriverToastDetail(err.message || 'Could not launch installer automatically.', true);
-            if (btn) {
-                btn.innerHTML = defaultHtml;
-                btn.disabled = false;
-            }
-        });
+function openPathaoModal() {
+    document.getElementById('pathaoDispatchModal').classList.remove('hidden');
 }
-
-function showDriverToastDetail(msg, isError) {
-    const toast = document.getElementById('driverToastDetail');
-    const title = document.getElementById('toastTitleDetail');
-    const text = document.getElementById('toastMsgDetail');
-    if (!toast) return;
-    if (title) title.textContent = isError ? 'Installer Notice' : 'Driver Installer Launched!';
-    if (text) text.textContent = msg;
-    toast.classList.remove('hidden');
-    setTimeout(() => {
-        toast.classList.add('hidden');
-    }, 5000);
+function closePathaoModal() {
+    document.getElementById('pathaoDispatchModal').classList.add('hidden');
 }
 </script>
+
 {% endblock %}

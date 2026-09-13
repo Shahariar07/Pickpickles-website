@@ -11,7 +11,8 @@ from django.utils import timezone
 from django.http import HttpResponse, JsonResponse
 from decimal import Decimal
 from django.contrib.auth.models import User
-from store.models import Order, OrderItem, Product, Category, Review
+from store.models import Order, OrderItem, Product, Category, Review, calculate_pathao_delivery_fee
+from store.pathao import PathaoCourierService
 from .models import Expense, ExpenseCategory, DamageLog, OrderReturn
 
 
@@ -246,8 +247,9 @@ def orders_list(request):
         )
         if num_match:
             try:
-                padded_search = f"PKP-{int(num_match.group(1)):04d}"
-                s_filter |= Q(order_number__iexact=padded_search)
+                num_val = int(num_match.group(1))
+                s_filter |= Q(order_number__iexact=f"PKP-{num_val:05d}")
+                s_filter |= Q(order_number__iexact=f"PKP-{num_val:04d}")
             except Exception:
                 pass
         orders = orders.filter(s_filter)
@@ -304,7 +306,7 @@ def adjust_inventory_for_order_status_change(order, old_status, new_status):
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def order_detail(request, order_number):
-    order = get_object_or_404(Order.objects.prefetch_related('items'), order_number=order_number)
+    order = get_object_or_404(Order.objects.prefetch_related('items__product'), order_number=order_number)
     
     if request.method == 'POST':
         new_status = request.POST.get('order_status')
@@ -355,9 +357,131 @@ def update_order_status_quick(request, order_number):
 
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
+def edit_order_customer(request, order_number):
+    """
+    Allows admin to edit customer name, phone, address, city, zone, and recalculate delivery fee.
+    """
+    order = get_object_or_404(Order, order_number=order_number)
+    if request.method == 'POST':
+        name = request.POST.get('customer_name', '').strip()
+        phone = request.POST.get('customer_phone', '').strip()
+        address = request.POST.get('delivery_address', '').strip()
+        city = request.POST.get('delivery_city', '').strip()
+        zone = request.POST.get('delivery_zone', '').strip()
+        email = request.POST.get('customer_email', '').strip()
+        notes = request.POST.get('customer_notes', '').strip()
+        custom_fee = request.POST.get('delivery_fee', '').strip()
+
+        if name:
+            order.customer_name = name
+        if phone:
+            order.customer_phone = phone
+        if address:
+            order.delivery_address = address
+        if city:
+            order.delivery_city = city
+        if email:
+            order.customer_email = email
+        if notes is not None:
+            order.customer_notes = notes
+
+        if zone and zone in dict(Order.ZONE_CHOICES):
+            order.delivery_zone = zone
+            
+        if custom_fee:
+            try:
+                order.delivery_fee = Decimal(str(custom_fee))
+            except Exception:
+                pass
+        elif zone:
+            from store.models import calculate_pathao_delivery_fee
+            order.delivery_fee = calculate_pathao_delivery_fee(order.total_weight_grams, order.delivery_zone)
+
+        order.total_amount = order.subtotal + order.delivery_fee
+        order.save()
+        messages.success(request, f"Customer & Delivery Address details updated for Order #{order.order_number}!")
+
+    return redirect('dashboard:order_detail', order_number=order.order_number)
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
 def order_invoice(request, order_number):
     order = get_object_or_404(Order.objects.prefetch_related('items'), order_number=order_number)
     return render(request, 'dashboard/order_invoice.html', {'order': order})
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def dispatch_order_to_pathao(request, order_number):
+    order = get_object_or_404(Order, order_number=order_number)
+    fallback_url = request.META.get('HTTP_REFERER') or reverse('dashboard:order_detail', kwargs={'order_number': order_number})
+    
+    if request.method == 'POST':
+        pathao_service = PathaoCourierService()
+        
+        if not pathao_service.is_configured():
+            messages.warning(request, "Pathao API is not configured. Please add PATHAO_CLIENT_ID, PATHAO_CLIENT_SECRET, PATHAO_USERNAME, PATHAO_PASSWORD, and PATHAO_STORE_ID in your environment or settings.")
+            return redirect(fallback_url)
+            
+        result = pathao_service.create_order(order)
+        if result.get('success'):
+            # Automatically confirm order and adjust inventory if currently pending
+            if order.order_status == 'PENDING':
+                adjust_inventory_for_order_status_change(order, 'PENDING', 'CONFIRMED')
+                order.order_status = 'CONFIRMED'
+                order.save(update_fields=['order_status'])
+                
+            messages.success(request, result.get('message', f'Order #{order.order_number} dispatched to Pathao Courier!'))
+        else:
+            messages.error(request, result.get('message', 'Failed to dispatch to Pathao.'))
+            
+    return redirect(fallback_url)
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def sync_all_pathao_orders(request):
+    """
+    1-Click Bulk Sync: Query Pathao Courier API for all active orders with consignment IDs.
+    Automatically marks orders as DELIVERED and payment as PAID when delivered.
+    """
+    active_orders = Order.objects.filter(
+        pathao_consignment_id__isnull=False,
+        order_status__in=['PENDING', 'CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY']
+    )
+    synced_count = 0
+    delivered_count = 0
+
+    for order in active_orders:
+        old_status = order.order_status
+        new_status = order.sync_pathao_status()
+        if new_status:
+            synced_count += 1
+            if old_status != 'DELIVERED' and order.order_status == 'DELIVERED':
+                delivered_count += 1
+
+    if synced_count > 0:
+        messages.success(request, f"Synced {synced_count} active Pathao orders. {delivered_count} newly marked as Delivered 🎉")
+    else:
+        messages.info(request, "No active Pathao orders needed syncing, or Pathao API is not configured.")
+
+    return redirect(request.META.get('HTTP_REFERER') or 'dashboard:orders')
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def sync_single_pathao_order(request, order_number):
+    """
+    1-Click Single Order Sync with Pathao Courier API.
+    """
+    order = get_object_or_404(Order, order_number=order_number)
+    if not order.pathao_consignment_id:
+        messages.warning(request, f"Order #{order.order_number} has not been dispatched to Pathao yet.")
+    else:
+        status = order.sync_pathao_status()
+        if status:
+            messages.success(request, f"Pathao status updated: {order.pathao_order_status} (Order status: {order.get_order_status_display()})")
+        else:
+            messages.info(request, "Could not fetch updated status from Pathao Courier API.")
+            
+    return redirect('dashboard:order_detail', order_number=order.order_number)
 
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
@@ -367,8 +491,8 @@ def create_manual_order(request):
             customer_name = request.POST.get('customer_name', '').strip()
             customer_phone = request.POST.get('customer_phone', '').strip()
             delivery_address = request.POST.get('delivery_address', '').strip()
-            delivery_city = request.POST.get('delivery_city', 'Dhaka').strip()
-            delivery_zone = request.POST.get('delivery_zone', 'INSIDE_DHAKA')
+            delivery_city = request.POST.get('delivery_city', 'Faridpur').strip()
+            delivery_zone = request.POST.get('delivery_zone', 'INSIDE_FARIDPUR')
             payment_method = request.POST.get('payment_method', 'COD')
             payment_status = request.POST.get('payment_status', 'UNPAID')
             payment_trx_id = request.POST.get('payment_trx_id', '').strip()
@@ -422,14 +546,16 @@ def create_manual_order(request):
                 messages.error(request, 'None of the selected products were found in the database.')
                 return redirect('dashboard:orders')
 
-            # Delivery Fee
-            delivery_fee_str = request.POST.get('delivery_fee', '150.00').strip()
+            # Delivery Fee based on Pathao weight calculation
+            total_weight_grams = sum(itm['jar_weight_grams'] * itm['quantity'] for itm in valid_items)
+            default_fee = calculate_pathao_delivery_fee(total_weight_grams, delivery_zone)
+            delivery_fee_str = request.POST.get('delivery_fee', '').strip()
             try:
-                delivery_fee = Decimal(delivery_fee_str)
+                delivery_fee = Decimal(delivery_fee_str) if delivery_fee_str else default_fee
                 if delivery_fee < 0:
                     delivery_fee = Decimal('0.00')
             except Exception:
-                delivery_fee = Decimal('150.00')
+                delivery_fee = default_fee
 
             total_amount = subtotal + delivery_fee
 
@@ -485,15 +611,11 @@ def create_manual_order(request):
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def delete_order(request, order_number):
-    if not request.user.is_superuser:
-        messages.error(request, 'Permission Denied: Staff accounts are restricted from moving orders to trash. Only Administrator can delete.')
-        return redirect('dashboard:orders')
-
     if request.method == 'POST':
         order = get_object_or_404(Order, order_number=order_number)
         o_num = order.order_number
         order.soft_delete()
-        messages.success(request, f'Order #{o_num} moved to Trash (Soft Deleted). You can restore it anytime from the Trash tab.')
+        messages.success(request, f'Order #{o_num} moved to Trash. You can restore it anytime from the Trash tab.')
         return redirect('dashboard:orders')
     return redirect('dashboard:order_detail', order_number=order_number)
 
@@ -519,8 +641,9 @@ def orders_trash(request):
         )
         if num_match:
             try:
-                padded_search = f"PKP-{int(num_match.group(1)):04d}"
-                s_filter |= Q(order_number__iexact=padded_search)
+                num_val = int(num_match.group(1))
+                s_filter |= Q(order_number__iexact=f"PKP-{num_val:05d}")
+                s_filter |= Q(order_number__iexact=f"PKP-{num_val:04d}")
             except Exception:
                 pass
         trash_orders = trash_orders.filter(s_filter)
@@ -659,7 +782,7 @@ def stock_manager(request):
                 cut_style = request.POST.get('cut_style', 'SPEARS')
                 spice_level = request.POST.get('spice_level', 'MILD')
                 crunch_rating = int(request.POST.get('crunch_rating', 5))
-                jar_weight_grams = int(request.POST.get('jar_weight_grams', 500))
+                jar_weight_grams = int(request.POST.get('jar_weight_grams', 600))
                 price_bdt = float(request.POST.get('price_bdt', 380))
                 orig_price = request.POST.get('original_price_bdt')
                 original_price_bdt = float(orig_price) if orig_price else None
@@ -1752,3 +1875,124 @@ def launch_pos_driver(request):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': f'Could not launch installer: {str(e)}'}, status=500)
     return JsonResponse({'status': 'error', 'message': 'Driver installer file not found in static/driver/'}, status=404)
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def customer_insights_api(request):
+    """
+    Returns order and courier statistics for a given customer phone number with live Pathao courier status.
+    """
+    from decimal import Decimal
+    from django.db.models import Sum
+    from store.pathao import PathaoCourierService
+    
+    phone = request.GET.get('phone', '').strip()
+    if not phone:
+        return JsonResponse({'status': 'error', 'message': 'Phone number required'}, status=400)
+    
+    clean_digits = ''.join(c for c in phone if c.isdigit())
+    last_10 = clean_digits[-10:] if len(clean_digits) >= 10 else clean_digits
+    
+    # Query orders matching this phone
+    matching_orders = Order.all_objects.filter(customer_phone__icontains=last_10)
+    total_orders = matching_orders.count()
+    delivered_count = matching_orders.filter(order_status='DELIVERED').count()
+    cancelled_count = matching_orders.filter(order_status='CANCELLED').count()
+    pending_count = matching_orders.filter(order_status__in=['PENDING', 'CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY']).count()
+    
+    total_spent = matching_orders.filter(order_status='DELIVERED').aggregate(Sum('total_amount'))['total_amount__sum'] or Decimal('0.00')
+    all_spent = matching_orders.aggregate(Sum('total_amount'))['total_amount__sum'] or Decimal('0.00')
+    
+    first_order = matching_orders.order_by('created_at').first()
+    latest_order = matching_orders.order_by('-created_at').first()
+    
+    success_rate = round((delivered_count / total_orders * 100), 1) if total_orders > 0 else 0
+    formatted_phone = f"0{last_10}" if len(last_10) == 10 else phone
+    
+    # Live Pathao Tracking check on latest consignment
+    pathao_svc = PathaoCourierService()
+    pathao_consignments = []
+    
+    orders_data = []
+    for o in matching_orders.order_by('-created_at')[:8]:
+        p_status = o.pathao_order_status or ''
+        # If order has consignment ID, check live info from Pathao
+        if o.pathao_consignment_id and pathao_svc.is_configured():
+            try:
+                info_res = pathao_svc.get_order_info(o.pathao_consignment_id)
+                if info_res.get('success'):
+                    p_info = info_res.get('data', {})
+                    p_status = p_info.get('order_status') or p_info.get('delivery_status') or p_status
+                    pathao_consignments.append({
+                        'consignment_id': o.pathao_consignment_id,
+                        'order_number': o.order_number,
+                        'status': p_status,
+                    })
+            except Exception:
+                pass
+
+        orders_data.append({
+            'order_number': o.order_number,
+            'status': o.get_order_status_display(),
+            'status_code': o.order_status,
+            'total_amount': float(o.total_amount),
+            'created_at': o.created_at.strftime('%d %b, %Y'),
+            'pathao_id': o.pathao_consignment_id or '',
+            'pathao_status': p_status,
+        })
+    
+    # Trust & Risk Evaluation
+    if cancelled_count > 0:
+        trust_level = 'RISK'
+        trust_title = '⚠️ সতর্ক থাকুন (রিটার্ন/ক্যানসেল রেকর্ড আছে)'
+        trust_badge_class = 'bg-rose-100 text-rose-800 border-rose-200'
+        trust_desc = f'পূর্বে এই নম্বর থেকে {cancelled_count}টি অর্ডার ক্যানসেল বা রিটার্ন হয়েছে। পার্সেল পাঠানোর আগে ফোনে কথা বলে বা ডেলিভারি চার্জ অগ্রিম নিয়ে নিশ্চিত হওয়া নিরাপদ।'
+    elif total_orders >= 2:
+        trust_level = 'TRUSTED'
+        trust_title = '🟢 বিশ্বস্ত ও নিয়মিত কাস্টমার (Safe)'
+        trust_badge_class = 'bg-emerald-100 text-emerald-800 border-emerald-200'
+        trust_desc = f'পূর্বে {total_orders}টি সফল অর্ডার সম্পন্ন হয়েছে (মোট খরচ: ৳{total_spent:,.0f})। কোনো রিটার্ন নেই, নিশ্চিন্তে পার্সেল পাঠাতে পারেন।'
+    elif total_orders == 1:
+        trust_level = 'NEW'
+        trust_title = '🔵 নতুন কাস্টমার (১ম অর্ডার)'
+        trust_badge_class = 'bg-blue-100 text-blue-800 border-blue-200'
+        trust_desc = 'পিকপিকলসে এটি কাস্টমারের ১ম অর্ডার। কোনো খারাপ রেকর্ড নেই। ডেলিভারি লোকেশন ও ফোন নম্বর চেক করে পাঠিয়ে দিন।'
+    else:
+        trust_level = 'CLEAN'
+        trust_title = '⚪ ফ্রেশ নম্বর (কোনো ব্যাড হিস্ট্রি নেই)'
+        trust_badge_class = 'bg-slate-100 text-slate-800 border-slate-200'
+    pathao_api_info = {
+        'connected': pathao_svc.is_configured(),
+        'store_id': pathao_svc.store_id or '446187',
+        'store_name': 'Pick pickles',
+        'hub_name': 'Faridpur Hub',
+        'api_host': pathao_svc.base_url,
+        'consignments_checked': len(pathao_consignments),
+        'consignments': pathao_consignments,
+    }
+
+    return JsonResponse({
+        'status': 'success',
+        'phone': phone,
+        'clean_phone': formatted_phone,
+        'total_orders': total_orders,
+        'delivered_count': delivered_count,
+        'cancelled_count': cancelled_count,
+        'pending_count': pending_count,
+        'success_rate': success_rate,
+        'total_spent': float(total_spent),
+        'all_spent': float(all_spent),
+        'first_order_date': first_order.created_at.strftime('%b %d, %Y') if first_order else None,
+        'latest_order_number': latest_order.order_number if latest_order else None,
+        'is_repeat_customer': total_orders > 1,
+        'trust_level': trust_level,
+        'trust_title': trust_title,
+        'trust_badge_class': trust_badge_class,
+        'trust_desc': trust_desc,
+        'pathao_api_info': pathao_api_info,
+        'pathao_consignments': pathao_consignments,
+        'recent_orders': orders_data,
+    })
+
+
+

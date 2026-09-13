@@ -71,19 +71,54 @@
                     </div>
 
                     <div class="space-y-4">
-                        <!-- Delivery Fee Badge -->
-                        <div class="bg-emerald-50/80 border border-emerald-200/90 rounded-2xl p-4 flex items-center justify-between shadow-xs">
+                        <!-- Weight & Pathao Pricing Banner -->
+                        <div class="bg-amber-50/90 border-2 border-amber-200/90 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
                             <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-xl bg-emerald-700 text-white flex items-center justify-center text-base shadow-xs flex-shrink-0">
-                                    <i class="fa-solid fa-truck-fast"></i>
+                                <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center text-base shadow-xs flex-shrink-0">
+                                    <i class="fa-solid fa-weight-hanging"></i>
                                 </div>
                                 <div>
-                                    <span class="font-black text-xs text-slate-950 block">Delivery Charge</span>
-                                    <span class="text-[11px] text-slate-600 font-semibold">Standard nationwide delivery (Fresh brining & doorstep drop)</span>
+                                    <span class="font-black text-xs text-slate-950 block">Parcel Weight (Pathao Rates)</span>
+                                    <span class="text-[11px] text-slate-700 font-semibold" id="checkoutWeightDetail">
+                                        Total <strong class="text-amber-900 font-black"><span id="checkoutWeightKg">{{ total_weight_kg }}</span> kg</strong> (<span id="checkoutWeightGrams">{{ total_weight_grams }}</span>g) • Billed at <strong class="text-amber-900 font-black"><span id="checkoutBillingTier">{{ billing_weight_kg }}</span> kg tier</strong>
+                                    </span>
                                 </div>
                             </div>
-                            <span class="font-display font-black text-base text-emerald-900">৳150</span>
-                            <input type="hidden" name="delivery_zone" id="delivery_zone" value="INSIDE_DHAKA">
+                            <span class="inline-flex items-center gap-1.5 text-[11px] font-black bg-white text-emerald-800 border border-emerald-300 px-3 py-1 rounded-full shadow-2xs self-start sm:self-center">
+                                <i class="fa-solid fa-truck-fast text-emerald-600"></i>
+                                <span>Pathao Courier</span>
+                            </span>
+                        </div>
+
+                        <!-- Delivery Zone Selection -->
+                        <div>
+                            <label class="block text-xs font-black text-slate-900 mb-2">Select Delivery Location *</label>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5" id="deliveryZoneOptions">
+                                
+                                <!-- Inside Dhaka -->
+                                <label class="zone-option border-2 border-emerald-600 bg-emerald-50/80 p-3.5 rounded-2xl cursor-pointer flex items-center justify-between transition-all" id="zone_inside_label">
+                                    <div class="flex items-center gap-3">
+                                        <input type="radio" name="delivery_zone" value="INSIDE_DHAKA" checked class="text-emerald-600 focus:ring-emerald-500 w-4 h-4" onchange="onZoneChange('INSIDE_DHAKA')">
+                                        <div>
+                                            <span class="font-black text-xs text-slate-950 block">Inside Dhaka City</span>
+                                            <span class="text-[11px] text-slate-600 font-medium">Fast door-to-door delivery via Pathao</span>
+                                        </div>
+                                    </div>
+                                    <span class="font-display font-black text-sm text-emerald-900" id="zone_inside_price">৳{{ delivery_fee_inside }}</span>
+                                </label>
+
+                                <!-- Outside Dhaka (Nationwide) -->
+                                <label class="zone-option border-2 border-slate-300 bg-white p-3.5 rounded-2xl cursor-pointer flex items-center justify-between transition-all hover:border-emerald-400" id="zone_outside_label">
+                                    <div class="flex items-center gap-3">
+                                        <input type="radio" name="delivery_zone" value="OUTSIDE_DHAKA" class="text-emerald-600 focus:ring-emerald-500 w-4 h-4" onchange="onZoneChange('OUTSIDE_DHAKA')">
+                                        <div>
+                                            <span class="font-black text-xs text-slate-950 block">Outside Dhaka (Nationwide)</span>
+                                            <span class="text-[11px] text-slate-600 font-medium">All 64 districts courier via Pathao</span>
+                                        </div>
+                                    </div>
+                                    <span class="font-display font-black text-sm text-slate-800" id="zone_outside_price">৳{{ delivery_fee_outside }}</span>
+                                </label>
+                            </div>
                         </div>
 
                         <div>
@@ -383,9 +418,52 @@
 
 <script>
     const subtotalValue = parseFloat("{{ cart_subtotal }}");
+    const totalWeightGrams = parseInt("{{ total_weight_grams|default:600 }}");
+    const feeInside = parseFloat("{{ delivery_fee_inside|default:130 }}");
+    const feeOutside = parseFloat("{{ delivery_fee_outside|default:145 }}");
+
+    function calculatePathaoFee(weightGrams, zone) {
+        if (zone === 'OUTSIDE_DHAKA') {
+            return feeOutside;
+        }
+        return feeInside;
+    }
+
+    function onZoneChange(selectedZone) {
+        const insideLabel = document.getElementById('zone_inside_label');
+        const outsideLabel = document.getElementById('zone_outside_label');
+
+        [insideLabel, outsideLabel].forEach(el => {
+            if (el) {
+                el.classList.remove('border-emerald-600', 'bg-emerald-50/80');
+                el.classList.add('border-slate-300', 'bg-white');
+            }
+        });
+
+        if (selectedZone === 'INSIDE_DHAKA' && insideLabel) {
+            insideLabel.classList.remove('border-slate-300', 'bg-white');
+            insideLabel.classList.add('border-emerald-600', 'bg-emerald-50/80');
+        } else if (selectedZone === 'OUTSIDE_DHAKA' && outsideLabel) {
+            outsideLabel.classList.remove('border-slate-300', 'bg-white');
+            outsideLabel.classList.add('border-emerald-600', 'bg-emerald-50/80');
+        }
+
+        updateDeliveryFee();
+    }
 
     function updateDeliveryFee() {
-        const fee = 150.00;
+        const selectedZone = document.querySelector('input[name="delivery_zone"]:checked')?.value || 'INSIDE_DHAKA';
+        
+        // Update all zone price tags with accurate weight-based fee
+        const insidePrice = calculatePathaoFee(totalWeightGrams, 'INSIDE_DHAKA');
+        const outsidePrice = calculatePathaoFee(totalWeightGrams, 'OUTSIDE_DHAKA');
+
+        const insidePriceEl = document.getElementById('zone_inside_price');
+        const outsidePriceEl = document.getElementById('zone_outside_price');
+        if (insidePriceEl) insidePriceEl.innerText = `৳${insidePrice}`;
+        if (outsidePriceEl) outsidePriceEl.innerText = `৳${outsidePrice}`;
+
+        const fee = calculatePathaoFee(totalWeightGrams, selectedZone);
         const total = subtotalValue + fee;
 
         const feeEl = document.getElementById('checkoutDeliveryFee');
@@ -394,8 +472,11 @@
         const totalEl = document.getElementById('checkoutTotal');
         if (totalEl) totalEl.innerText = total.toFixed(2);
 
-        const mfsDue = document.getElementById('mfsDueAmount');
-        if (mfsDue) mfsDue.innerText = total.toFixed(2);
+        const bkashDue = document.getElementById('bkashDueAmount');
+        if (bkashDue) bkashDue.innerText = total.toFixed(2);
+
+        const nagadDue = document.getElementById('nagadDueAmount');
+        if (nagadDue) nagadDue.innerText = total.toFixed(2);
 
         // Refresh button text amount
         const currentMethod = document.querySelector('input[name="payment_method"]:checked')?.value || 'COD';

@@ -63,9 +63,14 @@
                     <span class="font-bold text-gray-900">৳<span id="pageCartSubtotal">{{ cart_subtotal }}</span></span>
                 </div>
                 <div class="flex justify-between text-gray-600">
-                    <span>Delivery Fee (Nationwide)</span>
-                    <span class="font-bold text-gray-900">৳150.00</span>
+                    <span>Total Weight</span>
+                    <span class="font-bold text-amber-900"><span id="pageCartWeightKg">{{ total_weight_kg }}</span> kg</span>
                 </div>
+                <div class="flex justify-between text-gray-600">
+                    <span>Delivery (Pathao from ৳70)</span>
+                    <span class="font-bold text-emerald-800" id="pageCartDeliveryFee">৳{{ delivery_fee }}</span>
+                </div>
+                <p class="text-[11px] text-gray-400">Exact delivery fee depends on Inside/Outside Dhaka at checkout.</p>
             </div>
 
             <div class="border-t border-gray-100 pt-3 flex justify-between items-baseline">

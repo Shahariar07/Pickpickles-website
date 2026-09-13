@@ -210,12 +210,24 @@ async function ajaxUpdateCart(productId, action) {
                 }
             }
 
-            // Update subtotal texts
+            // Update subtotal & total texts on cart page
             const pageSub = document.getElementById('pageCartSubtotal');
             if (pageSub) pageSub.innerText = parseFloat(data.cart_subtotal).toFixed(2);
 
+            const deliveryFee = data.delivery_fee !== undefined ? parseFloat(data.delivery_fee) : 70.00;
+            const pageDelivery = document.getElementById('pageCartDeliveryFee');
+            if (pageDelivery) pageDelivery.innerText = `৳${deliveryFee.toFixed(2)}`;
+
             const pageTot = document.getElementById('pageCartTotal');
-            if (pageTot) pageTot.innerText = (parseFloat(data.cart_subtotal) + 150.00).toFixed(2);
+            if (pageTot) {
+                const total = data.grand_total !== undefined ? parseFloat(data.grand_total) : (parseFloat(data.cart_subtotal) + deliveryFee);
+                pageTot.innerText = total.toFixed(2);
+            }
+
+            const pageWeight = document.getElementById('pageCartWeightKg');
+            if (pageWeight && data.total_weight_kg !== undefined) {
+                pageWeight.innerText = data.total_weight_kg;
+            }
         }
     } catch (err) {
         console.error('Error updating cart:', err);

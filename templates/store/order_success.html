@@ -48,10 +48,10 @@
                 <p class="text-gray-600 mt-1">{{ order.delivery_address }}, {{ order.delivery_city }}</p>
                 <div class="mt-2.5 pt-2 border-t border-gray-200 flex items-center justify-between text-xs">
                     <span class="text-gray-600 font-semibold flex items-center gap-1">
-                        <i class="fa-solid fa-truck text-gray-400"></i> Delivery Charge:
+                        <i class="fa-solid fa-truck text-gray-400"></i> Delivery Zone & Fee:
                     </span>
                     <span class="font-black text-brand-700 bg-white px-2 py-0.5 rounded-md border border-gray-200">
-                        ৳{{ order.delivery_fee }} (Flat Nationwide)
+                        ৳{{ order.delivery_fee }} ({{ order.get_delivery_zone_display|default:order.delivery_zone }})
                     </span>
                 </div>
             </div>
@@ -145,7 +145,7 @@
                 <div class="flex justify-between items-center text-gray-600 font-semibold">
                     <span class="flex items-center gap-1.5">
                         <span>Delivery Fee</span>
-                        <span class="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">Flat Nationwide</span>
+                        <span class="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">{{ order.get_delivery_zone_display|default:order.delivery_zone }}</span>
                     </span>
                     <span class="font-black text-gray-900 text-sm">৳{{ order.delivery_fee }}</span>
                 </div>

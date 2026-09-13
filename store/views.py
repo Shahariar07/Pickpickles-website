@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.contrib import messages
 from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
 from .models import Product, Category, Order, OrderItem, Review
 from .cart import Cart
 from .forms import CheckoutForm, ReviewForm
@@ -92,14 +93,24 @@ def product_detail(request, slug):
     return render(request, 'store/product_detail.html', context)
 
 
+from .models import Product, Category, Order, OrderItem, Review, calculate_pathao_delivery_fee
+from .pathao import PathaoCourierService
+
+
 def cart_view(request):
     cart = Cart(request)
     subtotal = cart.get_subtotal()
-    delivery_fee = Decimal('150.00')
+    total_weight_grams = cart.get_total_weight_grams()
+    total_weight_kg = cart.get_total_weight_kg()
+    billing_weight_kg = cart.get_billing_weight_kg()
+    delivery_fee = cart.get_delivery_fee('INSIDE_DHAKA')
     grand_total = subtotal + delivery_fee
     return render(request, 'store/cart.html', {
         'cart': cart,
         'cart_subtotal': subtotal,
+        'total_weight_grams': total_weight_grams,
+        'total_weight_kg': total_weight_kg,
+        'billing_weight_kg': billing_weight_kg,
         'delivery_fee': delivery_fee,
         'grand_total': grand_total,
     })
@@ -134,6 +145,11 @@ def cart_add(request, product_id):
             'message': f'Added {product.name} to your pickle jar bag!',
             'cart_total_items': len(cart),
             'cart_subtotal': float(cart.get_subtotal()),
+            'total_weight_grams': cart.get_total_weight_grams(),
+            'total_weight_kg': cart.get_total_weight_kg(),
+            'billing_weight_kg': cart.get_billing_weight_kg(),
+            'delivery_fee': float(cart.get_delivery_fee('INSIDE_DHAKA')),
+            'grand_total': float(cart.get_total_price('INSIDE_DHAKA')),
             'items': items_data,
             'added_product': {
                 'id': product.id,
@@ -172,6 +188,11 @@ def cart_remove(request, product_id):
             'success': True,
             'cart_total_items': len(cart),
             'cart_subtotal': float(cart.get_subtotal()),
+            'total_weight_grams': cart.get_total_weight_grams(),
+            'total_weight_kg': cart.get_total_weight_kg(),
+            'billing_weight_kg': cart.get_billing_weight_kg(),
+            'delivery_fee': float(cart.get_delivery_fee('INSIDE_DHAKA')),
+            'grand_total': float(cart.get_total_price('INSIDE_DHAKA')),
             'items': items_data,
         })
 
@@ -186,6 +207,7 @@ def cart_update_ajax(request):
         data = json.loads(request.body)
         product_id = data.get('product_id')
         action = data.get('action') # 'increase', 'decrease', 'remove'
+        zone = data.get('zone', 'INSIDE_DHAKA')
         
         product = get_object_or_404(Product, id=product_id)
         current_qty = cart.cart.get(str(product_id), {}).get('quantity', 0)
@@ -217,10 +239,19 @@ def cart_update_ajax(request):
             for item in cart
         ]
 
+        delivery_fee = float(cart.get_delivery_fee(zone))
+        subtotal = float(cart.get_subtotal())
+        grand_total = subtotal + delivery_fee
+
         return JsonResponse({
             'success': True,
             'cart_total_items': len(cart),
-            'cart_subtotal': float(cart.get_subtotal()),
+            'cart_subtotal': subtotal,
+            'total_weight_grams': cart.get_total_weight_grams(),
+            'total_weight_kg': cart.get_total_weight_kg(),
+            'billing_weight_kg': cart.get_billing_weight_kg(),
+            'delivery_fee': delivery_fee,
+            'grand_total': grand_total,
             'item_quantity': item_qty,
             'item_total': item_total,
             'items': items_data,
@@ -229,11 +260,37 @@ def cart_update_ajax(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 
+def shipping_calc_ajax(request):
+    cart = Cart(request)
+    zone = request.GET.get('zone', 'INSIDE_DHAKA')
+    weight_grams = cart.get_total_weight_grams()
+    weight_kg = cart.get_total_weight_kg()
+    
+    delivery_fee = calculate_pathao_delivery_fee(weight_grams, zone)
+    subtotal = cart.get_subtotal()
+    total = subtotal + delivery_fee
+    
+    return JsonResponse({
+        'success': True,
+        'zone': zone,
+        'total_weight_grams': weight_grams,
+        'total_weight_kg': weight_kg,
+        'billing_weight_kg': cart.get_billing_weight_kg(),
+        'delivery_fee': float(delivery_fee),
+        'subtotal': float(subtotal),
+        'total': float(total),
+    })
+
+
 def checkout(request):
     cart = Cart(request)
     if len(cart) == 0:
         messages.warning(request, 'Your cart is empty. Pick some crunch first!')
         return redirect('store:index')
+
+    total_weight_grams = cart.get_total_weight_grams()
+    total_weight_kg = cart.get_total_weight_kg()
+    billing_weight_kg = cart.get_billing_weight_kg()
 
     if request.method == 'POST':
         form = CheckoutForm(request.POST)
@@ -241,8 +298,8 @@ def checkout(request):
             order = form.save(commit=False)
             
             subtotal = cart.get_subtotal()
-            delivery_zone = form.cleaned_data['delivery_zone']
-            delivery_fee = Decimal('150.00')
+            delivery_zone = form.cleaned_data.get('delivery_zone') or 'INSIDE_DHAKA'
+            delivery_fee = cart.get_delivery_fee(delivery_zone)
             total = subtotal + delivery_fee
             
             order.subtotal = subtotal
@@ -282,15 +339,24 @@ def checkout(request):
     else:
         form = CheckoutForm(initial={'delivery_zone': 'INSIDE_DHAKA', 'payment_method': 'COD'})
 
+    selected_zone = request.GET.get('zone', 'INSIDE_DHAKA')
+    delivery_fee_inside = calculate_pathao_delivery_fee(total_weight_grams, 'INSIDE_DHAKA')
+    delivery_fee_outside = calculate_pathao_delivery_fee(total_weight_grams, 'OUTSIDE_DHAKA')
+    
+    delivery_fee = delivery_fee_inside if selected_zone == 'INSIDE_DHAKA' else delivery_fee_outside
     subtotal = cart.get_subtotal()
-    delivery_fee = Decimal('150.00')
     total = subtotal + delivery_fee
 
     context = {
         'cart': cart,
         'form': form,
         'cart_subtotal': subtotal,
+        'total_weight_grams': total_weight_grams,
+        'total_weight_kg': total_weight_kg,
+        'billing_weight_kg': billing_weight_kg,
         'delivery_fee': delivery_fee,
+        'delivery_fee_inside': delivery_fee_inside,
+        'delivery_fee_outside': delivery_fee_outside,
         'grand_total': total,
         'total_amount': total,
     }
@@ -318,15 +384,22 @@ def order_track(request):
         )
         if num_match:
             try:
-                padded_val = f"PKP-{int(num_match.group(1)):04d}"
-                q_filter |= Q(order_number__iexact=padded_val)
+                num_val = int(num_match.group(1))
+                q_filter |= Q(order_number__iexact=f"PKP-{num_val:05d}")
+                q_filter |= Q(order_number__iexact=f"PKP-{num_val:04d}")
             except Exception:
                 pass
 
         order = Order.objects.filter(q_filter).first()
         
-        if not order:
-            messages.error(request, f'No order found matching "{query}". Please verify your Order ID (e.g. PKP-0001) or Phone number.')
+        if order:
+            if order.pathao_consignment_id:
+                try:
+                    order.sync_pathao_status()
+                except Exception:
+                    pass
+        else:
+            messages.error(request, f'No order found matching "{query}". Please verify your Order ID (e.g. PKP-00001) or Phone number.')
 
     return render(request, 'store/order_track.html', {'order': order, 'query': query})
 
@@ -463,4 +536,77 @@ def custom_500_view(request):
 </html>""",
             content_type="text/html"
         )
+
+
+@csrf_exempt
+def pathao_webhook(request):
+    """
+    Pathao Courier Webhook Endpoint.
+    Receives instant parcel status updates from Pathao.
+    Automatically marks orders as DELIVERED and payment as PAID upon delivery.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Only POST method is accepted'}, status=405)
+    
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        data = request.POST.dict()
+
+    consignment_id = str(data.get('consignment_id') or '').strip()
+    merchant_order_id = str(data.get('merchant_order_id') or '').strip()
+    raw_status = str(data.get('order_status') or data.get('delivery_status') or data.get('event') or '').strip()
+
+    if not consignment_id and not merchant_order_id:
+        return JsonResponse({'status': 'error', 'message': 'consignment_id or merchant_order_id required'}, status=400)
+
+    order = None
+    if merchant_order_id:
+        order = Order.all_objects.filter(order_number=merchant_order_id).first()
+    if not order and consignment_id:
+        order = Order.all_objects.filter(pathao_consignment_id=consignment_id).first()
+
+    if not order:
+        return JsonResponse({'status': 'error', 'message': 'Order not found in database'}, status=404)
+
+    if raw_status:
+        order.pathao_order_status = raw_status
+        clean = raw_status.lower().replace('-', '_').replace(' ', '_')
+        
+        status_map = {
+            'pending': 'PENDING',
+            'created': 'PENDING',
+            'draft': 'PENDING',
+            'pickup_requested': 'PENDING',
+            'pickup_assigned': 'CONFIRMED',
+            'assigned_for_pickup': 'CONFIRMED',
+            'picked_up': 'PACKING',
+            'received_at_hub': 'PACKING',
+            'in_transit': 'OUT_FOR_DELIVERY',
+            'sent_to_hub': 'OUT_FOR_DELIVERY',
+            'out_for_delivery': 'OUT_FOR_DELIVERY',
+            'assigned_for_delivery': 'OUT_FOR_DELIVERY',
+            'delivered': 'DELIVERED',
+            'partial_delivery': 'DELIVERED',
+            'returned': 'CANCELLED',
+            'return_in_progress': 'CANCELLED',
+            'cancelled': 'CANCELLED',
+            'delivery_failed': 'CANCELLED',
+        }
+        
+        if clean in status_map:
+            mapped = status_map[clean]
+            order.order_status = mapped
+            if mapped == 'DELIVERED' and order.payment_status == 'UNPAID':
+                order.payment_status = 'PAID'
+        
+        order.save(update_fields=['pathao_order_status', 'order_status', 'payment_status'])
+        
+    return JsonResponse({
+        'status': 'success',
+        'order_number': order.order_number,
+        'order_status': order.order_status,
+        'payment_status': order.payment_status,
+        'pathao_order_status': order.pathao_order_status,
+    })
 

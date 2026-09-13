@@ -48,7 +48,7 @@ def seed():
             'cut_style': 'CHIPS',
             'spice_level': 'MILD',
             'crunch_rating': 5,
-            'jar_weight_grams': 500,
+            'jar_weight_grams': 600,
             'price_bdt': Decimal('350.00'),
             'original_price_bdt': Decimal('400.00'),
             'image_url': '/media/products/classic_dill_pickles.webp',
@@ -68,7 +68,7 @@ def seed():
             'cut_style': 'CHIPS',
             'spice_level': 'MILD',
             'crunch_rating': 5,
-            'jar_weight_grams': 500,
+            'jar_weight_grams': 600,
             'price_bdt': Decimal('350.00'),
             'original_price_bdt': Decimal('400.00'),
             'image_url': '/media/products/pickled_mixed_veggies.webp',
@@ -88,7 +88,7 @@ def seed():
             'cut_style': 'CHIPS',
             'spice_level': 'MEDIUM',
             'crunch_rating': 4,
-            'jar_weight_grams': 500,
+            'jar_weight_grams': 600,
             'price_bdt': Decimal('220.00'),
             'original_price_bdt': Decimal('260.00'),
             'image_url': '/media/products/pickled_deshi_onions.webp',
@@ -108,7 +108,7 @@ def seed():
             'cut_style': 'CHIPS',
             'spice_level': 'HOT',
             'crunch_rating': 4,
-            'jar_weight_grams': 500,
+            'jar_weight_grams': 600,
             'price_bdt': Decimal('250.00'),
             'original_price_bdt': Decimal('300.00'),
             'image_url': '/media/products/pickled_green_peppers.webp',
@@ -128,7 +128,7 @@ def seed():
             'cut_style': 'CHIPS',
             'spice_level': 'MILD',
             'crunch_rating': 4,
-            'jar_weight_grams': 500,
+            'jar_weight_grams': 600,
             'price_bdt': Decimal('260.00'),
             'original_price_bdt': Decimal('300.00'),
             'image_url': '/media/products/pickled_beetroot.webp',
@@ -153,7 +153,7 @@ def seed():
     # 4. Actual 4 Orders from Dashboard
     orders_data = [
         {
-            'order_number': 'PKP-52854',
+            'order_number': 'PKP-0001',
             'customer_name': 'Shahariar Imtiaz',
             'customer_phone': '01739804566',
             'customer_email': 'shahariar07@hotmail.com',
@@ -173,7 +173,7 @@ def seed():
             ]
         },
         {
-            'order_number': 'PKP-52855',
+            'order_number': 'PKP-0002',
             'customer_name': 'Ameena Mortoza',
             'customer_phone': '01339511158',
             'customer_email': None,
@@ -194,7 +194,7 @@ def seed():
             ]
         },
         {
-            'order_number': 'PKP-52856',
+            'order_number': 'PKP-0003',
             'customer_name': 'Yasir Ahmed',
             'customer_phone': '01817169889',
             'customer_email': None,
@@ -214,7 +214,7 @@ def seed():
             ]
         },
         {
-            'order_number': 'PKP-52857',
+            'order_number': 'PKP-0004',
             'customer_name': 'Shahariar Imtiaz',
             'customer_phone': '01739804566',
             'customer_email': 'shahariar07@hotmail.com',

@@ -35,19 +35,35 @@
     {% if order %}
     <div class="bg-white p-6 sm:p-8 rounded-3xl border border-gray-200 shadow-lg space-y-6">
         
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-gray-100 gap-2">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-gray-100 gap-3">
             <div>
                 <span class="text-xs text-gray-400 font-bold block">Order Number</span>
-                <span class="font-display font-black text-2xl text-brand-800">{{ order.order_number }}</span>
+                <span class="font-display font-black text-2xl text-brand-800">#{{ order.order_number }}</span>
             </div>
-            <div>
-                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black border {{ order.badge_color }}">
-                    <span class="w-2 h-2 rounded-full bg-current"></span>
+            <div class="flex items-center gap-2 flex-wrap">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black border {{ order.badge_color }}">
+                    <span class="w-2 h-2 rounded-full bg-current animate-pulse"></span>
                     {{ order.get_order_status_display }}
                 </span>
+                {% if order.pathao_order_status %}
+                <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200">
+                    <i class="fa-solid fa-truck-fast text-[11px] text-red-600"></i>
+                    <span>Pathao: {{ order.pathao_order_status }}</span>
+                </span>
+                {% endif %}
             </div>
         </div>
 
+        {% if order.order_status == 'CANCELLED' %}
+        <!-- Cancelled / Returned Banner -->
+        <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200 flex items-start gap-3 text-rose-800">
+            <i class="fa-solid fa-circle-xmark text-xl text-rose-600 mt-0.5 shrink-0"></i>
+            <div class="text-xs">
+                <strong class="text-sm font-bold block text-rose-900 mb-0.5">This order has been cancelled or returned.</strong>
+                <p class="text-rose-700">If you have any questions or would like to re-order, please contact our support team on WhatsApp.</p>
+            </div>
+        </div>
+        {% else %}
         <!-- Progress Step Timeline -->
         <div class="py-4">
             <div class="relative">
@@ -62,14 +78,14 @@
                             <i class="fa-solid fa-check"></i>
                         </div>
                         <div>
-                            <span class="text-xs font-bold text-gray-900 block">Placed</span>
+                            <span class="text-xs font-bold text-gray-900 block">Order Placed</span>
                             <span class="text-[10px] text-gray-400">{{ order.created_at|date:"M d, H:i" }}</span>
                         </div>
                     </div>
 
                     <!-- Step 2: Confirmed -->
                     <div class="flex sm:flex-col items-center sm:text-center gap-3 sm:gap-2">
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold {% if order.order_status in 'CONFIRMED,PACKING,OUT_FOR_DELIVERY,DELIVERED' %}bg-emerald-600 text-white{% else %}bg-gray-100 text-gray-400{% endif %}">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold {% if order.order_status in 'CONFIRMED,PACKING,OUT_FOR_DELIVERY,DELIVERED' %}bg-emerald-600 text-white shadow-md{% else %}bg-gray-100 text-gray-400{% endif %}">
                             <i class="fa-solid fa-file-circle-check"></i>
                         </div>
                         <div>
@@ -80,23 +96,23 @@
 
                     <!-- Step 3: Packing -->
                     <div class="flex sm:flex-col items-center sm:text-center gap-3 sm:gap-2">
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold {% if order.order_status in 'PACKING,OUT_FOR_DELIVERY,DELIVERED' %}bg-emerald-600 text-white{% else %}bg-gray-100 text-gray-400{% endif %}">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold {% if order.order_status in 'PACKING,OUT_FOR_DELIVERY,DELIVERED' %}bg-emerald-600 text-white shadow-md{% else %}bg-gray-100 text-gray-400{% endif %}">
                             <i class="fa-solid fa-box-open"></i>
                         </div>
                         <div>
                             <span class="text-xs font-bold {% if order.order_status in 'PACKING,OUT_FOR_DELIVERY,DELIVERED' %}text-gray-900{% else %}text-gray-400{% endif %} block">Packing</span>
-                            <span class="text-[10px] text-gray-400">Fresh jars secured</span>
+                            <span class="text-[10px] text-gray-400">Fresh jars prepared</span>
                         </div>
                     </div>
 
-                    <!-- Step 4: Out for Delivery -->
+                    <!-- Step 4: Pathao Courier / Out for Delivery -->
                     <div class="flex sm:flex-col items-center sm:text-center gap-3 sm:gap-2">
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold {% if order.order_status in 'OUT_FOR_DELIVERY,DELIVERED' %}bg-emerald-600 text-white{% else %}bg-gray-100 text-gray-400{% endif %}">
-                            <i class="fa-solid fa-motorcycle"></i>
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold {% if order.order_status in 'OUT_FOR_DELIVERY,DELIVERED' %}bg-emerald-600 text-white shadow-md{% else %}bg-gray-100 text-gray-400{% endif %}">
+                            <i class="fa-solid fa-truck-fast"></i>
                         </div>
                         <div>
-                            <span class="text-xs font-bold {% if order.order_status in 'OUT_FOR_DELIVERY,DELIVERED' %}text-gray-900{% else %}text-gray-400{% endif %} block">On The Way</span>
-                            <span class="text-[10px] text-gray-400">With rider / courier</span>
+                            <span class="text-xs font-bold {% if order.order_status in 'OUT_FOR_DELIVERY,DELIVERED' %}text-gray-900{% else %}text-gray-400{% endif %} block">Pathao Courier</span>
+                            <span class="text-[10px] text-gray-400">On the way to you</span>
                         </div>
                     </div>
 
@@ -114,6 +130,28 @@
                 </div>
             </div>
         </div>
+        {% endif %}
+
+        {% if order.pathao_consignment_id %}
+        <!-- Pathao Courier Live Tracking Info Box -->
+        <div class="bg-gradient-to-r from-red-50 via-white to-amber-50 p-4 sm:p-5 rounded-2xl border border-red-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-[#ea1d24] text-white flex items-center justify-center text-lg shrink-0 shadow-xs">
+                    <i class="fa-solid fa-truck-fast"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold text-gray-900 text-sm">Dispatched via Pathao Courier</h4>
+                    <p class="text-gray-500 mt-0.5">
+                        Tracking: <strong class="font-mono text-gray-900 bg-white px-2 py-0.5 rounded border border-gray-200">{{ order.pathao_tracking_code|default:order.pathao_consignment_id }}</strong>
+                    </p>
+                </div>
+            </div>
+            <a href="https://merchant.pathao.com/tracking?consignment_id={{ order.pathao_consignment_id }}" target="_blank" class="bg-[#ea1d24] hover:bg-[#c9141a] text-white font-bold px-4 py-2.5 rounded-xl shadow-xs inline-flex items-center justify-center gap-1.5 transition whitespace-nowrap">
+                <span>Track on Pathao</span>
+                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+            </a>
+        </div>
+        {% endif %}
 
         <!-- Details Summary -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs border-t border-gray-100 pt-4">

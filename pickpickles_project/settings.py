@@ -64,13 +64,13 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
 ROOT_URLCONF = 'pickpickles_project.urls'
@@ -162,7 +162,7 @@ STORAGES = {
     },
     "staticfiles": {
         "BACKEND": (
-            "whitenoise.storage.CompressedManifestStaticFilesStorage"
+            "whitenoise.storage.CompressedStaticFilesStorage"
             if not DEBUG
             else "django.contrib.staticfiles.storage.StaticFilesStorage"
         ),
@@ -174,5 +174,14 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # Meta / Facebook Pixel
 META_PIXEL_ID = os.environ.get('META_PIXEL_ID', '2165451210680943')
+
+# Pathao Courier Merchant API Configuration
+PATHAO_BASE_URL = os.environ.get('PATHAO_BASE_URL', 'https://api-hermes.pathao.com')
+PATHAO_CLIENT_ID = os.environ.get('PATHAO_CLIENT_ID', '')
+PATHAO_CLIENT_SECRET = os.environ.get('PATHAO_CLIENT_SECRET', '')
+PATHAO_USERNAME = os.environ.get('PATHAO_USERNAME', '')
+PATHAO_PASSWORD = os.environ.get('PATHAO_PASSWORD', '')
+PATHAO_STORE_ID = os.environ.get('PATHAO_STORE_ID', '')
+
 
 

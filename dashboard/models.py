@@ -44,7 +44,7 @@ class Expense(models.Model):
         ('BANK', 'Bank Transfer'),
     ]
 
-    title = models.CharField(max_length=200, help_text="e.g. 200pcs 500g Glass Jars with Gold Lids")
+    title = models.CharField(max_length=200, help_text="e.g. 200pcs 600g Glass Jars with Gold Lids")
     category = models.CharField(max_length=100, choices=CATEGORY_CHOICES, default='RAW_MATERIAL')
     amount = models.DecimalField(max_digits=10, decimal_places=2, help_text="Cost amount in BDT (৳)")
     expense_date = models.DateField(default=timezone.now)

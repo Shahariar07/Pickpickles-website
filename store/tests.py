@@ -1,6 +1,6 @@
 from django.test import TestCase, Client
 from django.urls import reverse
-from store.models import Category, Product
+from store.models import Category, Product, calculate_pathao_delivery_fee
 from decimal import Decimal
 
 
@@ -15,9 +15,38 @@ class CartTests(TestCase):
             tagline="Crisp deli pickles",
             description="Garlic and herb spiced spears",
             price_bdt=Decimal("380.00"),
-            jar_weight_grams=500,
+            jar_weight_grams=600,
             is_in_stock=True
         )
+
+    def test_pathao_delivery_fee_calculation(self):
+        from django.test import override_settings
+
+        with override_settings(PATHAO_CLIENT_ID=''):
+            # 1 jar (600g -> 1kg tier)
+            self.assertEqual(calculate_pathao_delivery_fee(600, 'INSIDE_DHAKA'), Decimal('70.00'))
+            self.assertEqual(calculate_pathao_delivery_fee(600, 'OUTSIDE_DHAKA'), Decimal('130.00'))
+
+            # 2 jars (1200g -> 2kg tier: +1 extra kg)
+            self.assertEqual(calculate_pathao_delivery_fee(1200, 'INSIDE_DHAKA'), Decimal('90.00'))
+            self.assertEqual(calculate_pathao_delivery_fee(1200, 'OUTSIDE_DHAKA'), Decimal('155.00'))
+
+            # 3 jars (1800g -> 2kg tier: +1 extra kg)
+            self.assertEqual(calculate_pathao_delivery_fee(1800, 'INSIDE_DHAKA'), Decimal('90.00'))
+            self.assertEqual(calculate_pathao_delivery_fee(1800, 'OUTSIDE_DHAKA'), Decimal('155.00'))
+
+            # 4 jars (2400g -> 3kg tier: +2 extra kg)
+            self.assertEqual(calculate_pathao_delivery_fee(2400, 'INSIDE_DHAKA'), Decimal('110.00'))
+            self.assertEqual(calculate_pathao_delivery_fee(2400, 'OUTSIDE_DHAKA'), Decimal('180.00'))
+
+    def test_pathao_service_structure(self):
+        from store.pathao import PathaoCourierService
+        from django.test import override_settings
+
+        with override_settings(PATHAO_CLIENT_ID='', PATHAO_CLIENT_SECRET=''):
+            service = PathaoCourierService()
+            self.assertFalse(service.is_configured())
+            self.assertIsNone(service.calculate_price(1.2))
 
     def test_cart_add_ajax(self):
         url = reverse('store:cart_add', args=[self.product.id])
