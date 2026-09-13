@@ -123,41 +123,12 @@ import math
 from decimal import Decimal
 
 
-def calculate_pathao_delivery_fee(weight_grams: int, zone: str = 'INSIDE_DHAKA') -> Decimal:
+def calculate_pathao_delivery_fee(weight_grams: int = 600, zone: str = 'INSIDE_DHAKA') -> Decimal:
     """
-    Calculates delivery fee based on total weight in grams and delivery zone according to Pathao Courier pricing.
-    - Inside Dhaka: Base ৳70 (up to 1kg) + ৳20/extra kg
-    - Outside Dhaka / Nationwide: Base ৳130 (up to 1kg) + ৳25/extra kg
+    Calculates delivery fee.
+    Flat ৳150 nationwide across Bangladesh (Inside & Outside Dhaka).
     """
-    if not weight_grams or weight_grams <= 0:
-        weight_grams = 600
-        
-    weight_kg = weight_grams / 1000.0
-    zone = (zone or 'INSIDE_DHAKA').upper()
-
-    # 1. Attempt live Pathao Courier API calculation if credentials configured
-    try:
-        from store.pathao import PathaoCourierService
-        service = PathaoCourierService()
-        if service.is_configured():
-            api_fee = service.calculate_price(weight_kg=weight_kg, zone=zone)
-            if api_fee is not None:
-                return api_fee
-    except Exception:
-        pass
-
-    # 2. Exact Pathao rate card fallback
-    billing_weight_kg = max(1, math.ceil(weight_kg))
-    extra_kg = max(0, billing_weight_kg - 1)
-    
-    if zone in ['INSIDE_DHAKA', 'INSIDE_FARIDPUR']:
-        base_fee = Decimal('70.00')
-        extra_fee_per_kg = Decimal('20.00')
-    else:  # OUTSIDE_DHAKA / NATIONWIDE / DHAKA_CITY
-        base_fee = Decimal('130.00')
-        extra_fee_per_kg = Decimal('25.00')
-        
-    return base_fee + (Decimal(str(extra_kg)) * extra_fee_per_kg)
+    return Decimal('150.00')
 
 
 class Order(models.Model):
@@ -204,7 +175,7 @@ class Order(models.Model):
     delivery_zone = models.CharField(max_length=30, choices=ZONE_CHOICES, default='INSIDE_DHAKA')
     
     # Financials in BDT
-    delivery_fee = models.DecimalField(max_digits=8, decimal_places=2, default=70.00)
+    delivery_fee = models.DecimalField(max_digits=8, decimal_places=2, default=150.00)
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     

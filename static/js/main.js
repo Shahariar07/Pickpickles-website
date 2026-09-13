@@ -214,7 +214,7 @@ async function ajaxUpdateCart(productId, action) {
             const pageSub = document.getElementById('pageCartSubtotal');
             if (pageSub) pageSub.innerText = parseFloat(data.cart_subtotal).toFixed(2);
 
-            const deliveryFee = data.delivery_fee !== undefined ? parseFloat(data.delivery_fee) : 70.00;
+            const deliveryFee = data.delivery_fee !== undefined ? parseFloat(data.delivery_fee) : 150.00;
             const pageDelivery = document.getElementById('pageCartDeliveryFee');
             if (pageDelivery) pageDelivery.innerText = `৳${deliveryFee.toFixed(2)}`;
 
