@@ -107,6 +107,14 @@ class CartTests(TestCase):
         self.product.refresh_from_db()
         self.assertEqual(self.product.stock_count, 47)
         self.assertTrue(self.product.is_in_stock)
+
+        # Verify StockLog for order confirmation
+        from dashboard.models import StockLog
+        confirm_log = StockLog.objects.filter(product=self.product, log_type='ORDER_CONFIRMED').first()
+        self.assertIsNotNone(confirm_log)
+        self.assertEqual(confirm_log.quantity_delta, -3)
+        self.assertEqual(confirm_log.previous_stock, 50)
+        self.assertEqual(confirm_log.resulting_stock, 47)
         
         # 2. When order is cancelled -> Stock is restored
         adjust_inventory_for_order_status_change(order, 'CONFIRMED', 'CANCELLED')
@@ -115,3 +123,10 @@ class CartTests(TestCase):
         
         self.product.refresh_from_db()
         self.assertEqual(self.product.stock_count, 50)
+
+        # Verify StockLog for order cancellation
+        cancel_log = StockLog.objects.filter(product=self.product, log_type='ORDER_CANCELLED').first()
+        self.assertIsNotNone(cancel_log)
+        self.assertEqual(cancel_log.quantity_delta, 3)
+        self.assertEqual(cancel_log.previous_stock, 47)
+        self.assertEqual(cancel_log.resulting_stock, 50)

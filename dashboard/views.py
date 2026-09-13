@@ -13,7 +13,7 @@ from decimal import Decimal
 from django.contrib.auth.models import User
 from store.models import Order, OrderItem, Product, Category, Review, calculate_pathao_delivery_fee
 from store.pathao import PathaoCourierService
-from .models import Expense, ExpenseCategory, DamageLog, OrderReturn
+from .models import Expense, ExpenseCategory, DamageLog, OrderReturn, StockLog
 
 
 def is_staff_user(user):
@@ -276,10 +276,11 @@ def orders_list(request):
 
 ACCEPTED_ORDER_STATUSES = {'CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'}
 
-def adjust_inventory_for_order_status_change(order, old_status, new_status):
+def adjust_inventory_for_order_status_change(order, old_status, new_status, user=None):
     """
     Deducts stock when an order is accepted/confirmed (transitions from PENDING/CANCELLED to CONFIRMED/PACKING/etc.).
     Restores stock when an accepted order is cancelled or reverted (transitions to CANCELLED/PENDING).
+    Automatically creates detailed StockLog ledger records.
     """
     was_accepted = old_status in ACCEPTED_ORDER_STATUSES
     now_accepted = new_status in ACCEPTED_ORDER_STATUSES
@@ -288,20 +289,47 @@ def adjust_inventory_for_order_status_change(order, old_status, new_status):
         # Deduct stock when accepted
         for itm in order.items.all():
             if itm.product:
-                if itm.product.stock_count >= itm.quantity:
-                    itm.product.stock_count -= itm.quantity
-                else:
-                    itm.product.stock_count = 0
-                if itm.product.stock_count == 0:
+                prev_stock = itm.product.stock_count
+                deduct_qty = itm.quantity
+                new_stock = max(0, prev_stock - deduct_qty)
+                itm.product.stock_count = new_stock
+                if new_stock == 0:
                     itm.product.is_in_stock = False
                 itm.product.save()
+
+                StockLog.objects.create(
+                    product=itm.product,
+                    log_type='ORDER_CONFIRMED',
+                    quantity_delta=-deduct_qty,
+                    previous_stock=prev_stock,
+                    resulting_stock=new_stock,
+                    order=order,
+                    reference=f"Order #{order.order_number}",
+                    notes=f"Order #{order.order_number} confirmed ({old_status} -> {new_status}). Customer: {order.customer_name}",
+                    created_by=user if getattr(user, 'is_authenticated', False) else None
+                )
     elif was_accepted and not now_accepted:
         # Restore stock when cancelled or reverted
         for itm in order.items.all():
             if itm.product:
-                itm.product.stock_count += itm.quantity
+                prev_stock = itm.product.stock_count
+                restore_qty = itm.quantity
+                new_stock = prev_stock + restore_qty
+                itm.product.stock_count = new_stock
                 itm.product.is_in_stock = True
                 itm.product.save()
+
+                StockLog.objects.create(
+                    product=itm.product,
+                    log_type='ORDER_CANCELLED',
+                    quantity_delta=restore_qty,
+                    previous_stock=prev_stock,
+                    resulting_stock=new_stock,
+                    order=order,
+                    reference=f"Order #{order.order_number}",
+                    notes=f"Order #{order.order_number} cancelled ({old_status} -> {new_status}). Stock restored to inventory.",
+                    created_by=user if getattr(user, 'is_authenticated', False) else None
+                )
 
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
@@ -849,15 +877,66 @@ def stock_manager(request):
             product = get_object_or_404(Product, id=product_id)
             try:
                 new_price = request.POST.get('price_bdt')
-                new_stock = request.POST.get('stock_count')
+                new_stock_str = request.POST.get('stock_count')
+                note = request.POST.get('stock_note', '').strip()
                 if new_price:
                     product.price_bdt = float(new_price)
-                if new_stock:
-                    product.stock_count = int(new_stock)
+                if new_stock_str is not None and new_stock_str != '':
+                    new_stock = int(new_stock_str)
+                    prev_stock = product.stock_count
+                    delta = new_stock - prev_stock
+                    product.stock_count = new_stock
+                    if new_stock > 0 and not product.is_in_stock:
+                        product.is_in_stock = True
+                    elif new_stock == 0:
+                        product.is_in_stock = False
+                    
+                    if delta != 0:
+                        StockLog.objects.create(
+                            product=product,
+                            log_type='RESTOCK' if delta > 0 else 'MANUAL_ADJUSTMENT',
+                            quantity_delta=delta,
+                            previous_stock=prev_stock,
+                            resulting_stock=new_stock,
+                            reference='Manual Stock Adjustment' if not note else note,
+                            notes=note or f"Stock count updated from {prev_stock} to {new_stock}",
+                            created_by=request.user if request.user.is_authenticated else None
+                        )
                 product.save()
                 messages.success(request, f'Updated price & inventory for "{product.name}".')
             except ValueError:
                 messages.error(request, 'Invalid price or stock count format.')
+            return redirect('dashboard:stock_manager')
+
+        # 5B. RESTOCK / PRODUCTION BATCH ADD
+        elif action == 'restock_batch' or 'restock_batch' in request.POST:
+            product = get_object_or_404(Product, id=product_id)
+            try:
+                add_qty = int(request.POST.get('quantity', 0))
+                batch_ref = request.POST.get('batch_reference', '').strip() or 'Production Batch'
+                notes = request.POST.get('notes', '').strip()
+                if add_qty > 0:
+                    prev_stock = product.stock_count
+                    new_stock = prev_stock + add_qty
+                    product.stock_count = new_stock
+                    product.is_in_stock = True
+                    product.save()
+
+                    StockLog.objects.create(
+                        product=product,
+                        log_type='RESTOCK',
+                        quantity_delta=add_qty,
+                        previous_stock=prev_stock,
+                        resulting_stock=new_stock,
+                        reference=batch_ref,
+                        notes=notes or f"Restocked +{add_qty} jars (Batch: {batch_ref})",
+                        created_by=request.user if request.user.is_authenticated else None
+                    )
+                    messages.success(request, f'Successfully added +{add_qty} jars to "{product.name}" stock (Current total: {new_stock} jars).')
+                else:
+                    messages.error(request, 'Please enter a valid positive quantity to add.')
+            except ValueError:
+                messages.error(request, 'Invalid quantity format.')
             return redirect('dashboard:stock_manager')
 
         # 6. CREATE CATEGORY
@@ -898,6 +977,130 @@ def stock_manager(request):
 
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
+def stock_ledger(request):
+    """
+    Comprehensive Stock History & Ledger Audit Trail.
+    Allows filtering by Product, Transaction Type, Date Range, and Search keywords.
+    """
+    product_filter = request.GET.get('product', '')
+    type_filter = request.GET.get('type', '')
+    date_filter = request.GET.get('date_range', '30days')
+    search_query = request.GET.get('q', '').strip()
+    export_csv = request.GET.get('export') == 'csv'
+
+    logs_qs = StockLog.objects.select_related('product', 'order', 'created_by').all()
+
+    # 1. Product Filter
+    selected_product = None
+    if product_filter:
+        try:
+            prod_id = int(product_filter)
+            logs_qs = logs_qs.filter(product_id=prod_id)
+            selected_product = Product.objects.filter(id=prod_id).first()
+        except ValueError:
+            pass
+
+    # 2. Type Filter
+    if type_filter and type_filter in dict(StockLog.LOG_TYPE_CHOICES):
+        logs_qs = logs_qs.filter(log_type=type_filter)
+
+    # 3. Search Query
+    if search_query:
+        logs_qs = logs_qs.filter(
+            Q(product__name__icontains=search_query) |
+            Q(reference__icontains=search_query) |
+            Q(notes__icontains=search_query) |
+            Q(order__order_number__icontains=search_query)
+        )
+
+    # 4. Date Range Filter
+    now = timezone.now()
+    today = now.date()
+
+    if date_filter == 'today':
+        logs_qs = logs_qs.filter(created_at__date=today)
+    elif date_filter == '7days':
+        start_date = today - datetime.timedelta(days=7)
+        logs_qs = logs_qs.filter(created_at__date__gte=start_date)
+    elif date_filter == '30days':
+        start_date = today - datetime.timedelta(days=30)
+        logs_qs = logs_qs.filter(created_at__date__gte=start_date)
+    elif date_filter == 'this_month':
+        start_date = today.replace(day=1)
+        logs_qs = logs_qs.filter(created_at__date__gte=start_date)
+    elif date_filter == 'custom':
+        custom_from = request.GET.get('from')
+        custom_to = request.GET.get('to')
+        if custom_from:
+            try:
+                f_date = datetime.datetime.strptime(custom_from, '%Y-%m-%d').date()
+                logs_qs = logs_qs.filter(created_at__date__gte=f_date)
+            except ValueError:
+                pass
+        if custom_to:
+            try:
+                t_date = datetime.datetime.strptime(custom_to, '%Y-%m-%d').date()
+                logs_qs = logs_qs.filter(created_at__date__lte=t_date)
+            except ValueError:
+                pass
+
+    # 5. Handle CSV Export
+    if export_csv:
+        response = HttpResponse(content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = f'attachment; filename="pickpickles_stock_ledger_{today.strftime("%Y%m%d")}.csv"'
+        response.write('\ufeff'.encode('utf8')) # UTF-8 BOM for Excel
+        writer = csv.writer(response)
+        writer.writerow(['Date & Time', 'Product', 'Type', 'Delta Quantity', 'Previous Stock', 'Resulting Stock', 'Reference', 'Order #', 'User', 'Notes'])
+        for log in logs_qs.order_by('-created_at'):
+            writer.writerow([
+                log.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                log.product.name if log.product else 'N/A',
+                log.get_log_type_display(),
+                f"{'+' if log.quantity_delta > 0 else ''}{log.quantity_delta}",
+                log.previous_stock,
+                log.resulting_stock,
+                log.reference,
+                log.order.order_number if log.order else '',
+                log.created_by.username if log.created_by else 'System',
+                log.notes
+            ])
+        return response
+
+    # 6. Statistics Calculations
+    total_in = logs_qs.filter(quantity_delta__gt=0).aggregate(Sum('quantity_delta'))['quantity_delta__sum'] or 0
+    total_out = abs(logs_qs.filter(quantity_delta__lt=0).aggregate(Sum('quantity_delta'))['quantity_delta__sum'] or 0)
+    net_movement = total_in - total_out
+    current_inventory_total = Product.objects.aggregate(Sum('stock_count'))['stock_count__sum'] or 0
+
+    all_products = Product.objects.all().order_by('name')
+    logs = logs_qs.order_by('-created_at')[:300]
+
+    context = {
+        'logs': logs,
+        'all_products': all_products,
+        'selected_product': selected_product,
+        'product_filter': product_filter,
+        'type_filter': type_filter,
+        'date_filter': date_filter,
+        'search_query': search_query,
+        'total_logs_count': logs_qs.count(),
+        'total_jars_in': total_in,
+        'total_jars_out': total_out,
+        'net_movement': net_movement,
+        'current_inventory_total': current_inventory_total,
+        'log_type_choices': StockLog.LOG_TYPE_CHOICES,
+    }
+    return render(request, 'dashboard/stock_ledger.html', context)
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def product_stock_ledger(request, product_id):
+    """Direct shortcut to view ledger of a specific product"""
+    product = get_object_or_404(Product, id=product_id)
+    return redirect(f"{reverse('dashboard:stock_ledger')}?product={product.id}&date_range=all")
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
 def damage_returns_manager(request):
     """Manager for recording broken/damaged pickle jars and courier returned parcels."""
     now = timezone.now()
@@ -926,10 +1129,23 @@ def damage_returns_manager(request):
 
                 # Deduct from product stock if requested
                 if deduct_stock and product.stock_count >= quantity:
-                    product.stock_count = max(0, product.stock_count - quantity)
-                    if product.stock_count == 0:
+                    prev_stock = product.stock_count
+                    new_stock = max(0, prev_stock - quantity)
+                    product.stock_count = new_stock
+                    if new_stock == 0:
                         product.is_in_stock = False
                     product.save()
+
+                    StockLog.objects.create(
+                        product=product,
+                        log_type='DAMAGE_LOSS',
+                        quantity_delta=-quantity,
+                        previous_stock=prev_stock,
+                        resulting_stock=new_stock,
+                        reference=f"Damage Loss: {reason}" if not order_ref else f"Damage (Order #{order_ref})",
+                        notes=notes or f"{quantity} jar(s) recorded as damaged/broken",
+                        created_by=request.user if request.user.is_authenticated else None
+                    )
 
                 DamageLog.objects.create(
                     product=product,
@@ -972,9 +1188,23 @@ def damage_returns_manager(request):
                     # Restock ordered items back to products
                     for item in order.items.all():
                         if item.product:
-                            item.product.stock_count += item.quantity
+                            prev_stock = item.product.stock_count
+                            new_stock = prev_stock + item.quantity
+                            item.product.stock_count = new_stock
                             item.product.is_in_stock = True
                             item.product.save()
+
+                            StockLog.objects.create(
+                                product=item.product,
+                                log_type='RETURN_RESTOCKED',
+                                quantity_delta=item.quantity,
+                                previous_stock=prev_stock,
+                                resulting_stock=new_stock,
+                                order=order,
+                                reference=f"Return #{order.order_number}",
+                                notes=f"Customer return restocked ({return_reason})",
+                                created_by=request.user if request.user.is_authenticated else None
+                            )
                     is_restocked = True
 
                 # If received damaged, log as damage loss automatically
@@ -1022,9 +1252,23 @@ def damage_returns_manager(request):
                 if new_status == 'RECEIVED_INTACT' and not ret.is_restocked:
                     for item in ret.order.items.all():
                         if item.product:
-                            item.product.stock_count += item.quantity
+                            prev_stock = item.product.stock_count
+                            new_stock = prev_stock + item.quantity
+                            item.product.stock_count = new_stock
                             item.product.is_in_stock = True
                             item.product.save()
+
+                            StockLog.objects.create(
+                                product=item.product,
+                                log_type='RETURN_RESTOCKED',
+                                quantity_delta=item.quantity,
+                                previous_stock=prev_stock,
+                                resulting_stock=new_stock,
+                                order=ret.order,
+                                reference=f"Return #{ret.order.order_number}",
+                                notes="Received intact and restocked from courier return",
+                                created_by=request.user if request.user.is_authenticated else None
+                            )
                     ret.is_restocked = True
 
                 # If marking as received damaged

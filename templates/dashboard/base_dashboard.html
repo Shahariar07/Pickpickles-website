@@ -153,6 +153,12 @@
                                 <span>Inventory & Stock</span>
                             </a>
 
+                            <!-- Stock Ledger Link -->
+                            <a href="{% url 'dashboard:stock_ledger' %}" class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'stock_ledger' or request.resolver_match.url_name == 'product_stock_ledger' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
+                                <i class="fa-solid fa-clock-rotate-left text-brand-accent text-sm w-4 text-center"></i>
+                                <span>Stock Ledger / History</span>
+                            </a>
+
                             <!-- Damage & Returns Link -->
                             <a href="{% url 'dashboard:damage_returns' %}" class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'damage_returns' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
                                 <i class="fa-solid fa-triangle-exclamation text-amber-400 text-sm w-4 text-center"></i>

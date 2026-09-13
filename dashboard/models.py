@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
@@ -133,3 +134,41 @@ class OrderReturn(models.Model):
 
     def __str__(self):
         return f"Return for #{self.order.order_number} ({self.get_return_status_display()})"
+
+
+class StockLog(models.Model):
+    LOG_TYPE_CHOICES = [
+        ('RESTOCK', 'Production / Restocked 🥒 (+)'),
+        ('ORDER_CONFIRMED', 'Order Confirmed / Sold 📦 (-)'),
+        ('ORDER_CANCELLED', 'Order Cancelled / Restored 🔄 (+)'),
+        ('DAMAGE_LOSS', 'Breakage / Spoilage Loss 💥 (-)'),
+        ('RETURN_RESTOCKED', 'Customer Return Restocked 🔙 (+)'),
+        ('MANUAL_ADJUSTMENT', 'Manual Adjustment ✏️'),
+    ]
+
+    product = models.ForeignKey('store.Product', on_delete=models.CASCADE, related_name='stock_logs')
+    log_type = models.CharField(max_length=30, choices=LOG_TYPE_CHOICES, default='MANUAL_ADJUSTMENT')
+    quantity_delta = models.IntegerField(help_text="Stock difference e.g. +50 or -3")
+    previous_stock = models.IntegerField(default=0)
+    resulting_stock = models.IntegerField(default=0)
+    order = models.ForeignKey('store.Order', on_delete=models.SET_NULL, null=True, blank=True, related_name='stock_logs')
+    reference = models.CharField(max_length=150, blank=True, help_text="e.g. Batch #4, Order #ORD-2026-001, Damage Log #5")
+    notes = models.TextField(blank=True, help_text="Extra details or remarks")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='stock_logs')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    @property
+    def is_addition(self):
+        return self.quantity_delta > 0
+
+    @property
+    def is_deduction(self):
+        return self.quantity_delta < 0
+
+    def __str__(self):
+        sign = '+' if self.quantity_delta > 0 else ''
+        return f"{self.product.name}: {sign}{self.quantity_delta} ({self.get_log_type_display()}) -> Stock: {self.resulting_stock}"
+
