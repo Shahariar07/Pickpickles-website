@@ -93,7 +93,14 @@
 
                         <!-- Customer Details -->
                         <td class="p-4 align-top max-w-xs">
-                            <div class="font-bold text-gray-900">{{ order.customer_name }}</div>
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <span class="font-bold text-gray-900">{{ order.customer_name }}</span>
+                                {% if order.customer_notes %}
+                                <span class="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs" title="Special Instruction: {{ order.customer_notes }}">
+                                    <i class="fa-solid fa-note-sticky text-amber-600 text-[8px]"></i> Instruction
+                                </span>
+                                {% endif %}
+                            </div>
                             <div class="text-xs text-brand-700 font-mono mt-0.5">
                                 <a href="tel:{{ order.customer_phone }}" class="hover:underline flex items-center gap-1">
                                     <i class="fa-solid fa-phone text-[10px]"></i>
@@ -104,6 +111,12 @@
                                 <i class="fa-solid fa-location-dot text-gray-400 mr-0.5"></i>
                                 {{ order.delivery_address }}, {{ order.delivery_city }}
                             </div>
+                            {% if order.customer_notes %}
+                            <div class="mt-1.5 flex items-start gap-1 bg-amber-50 border border-amber-200/90 rounded-md p-1.5 text-[10px] text-amber-950 font-medium">
+                                <i class="fa-solid fa-clipboard-list text-amber-600 text-[9px] shrink-0 mt-0.5"></i>
+                                <span class="break-words"><strong>Note:</strong> {{ order.customer_notes }}</span>
+                            </div>
+                            {% endif %}
                         </td>
 
                         <!-- Items -->

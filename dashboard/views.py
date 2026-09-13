@@ -496,6 +496,7 @@ def create_manual_order(request):
             payment_method = request.POST.get('payment_method', 'COD')
             payment_status = request.POST.get('payment_status', 'UNPAID')
             payment_trx_id = request.POST.get('payment_trx_id', '').strip()
+            customer_notes = request.POST.get('customer_notes', '').strip()
             admin_notes = request.POST.get('admin_notes', 'Manual order created by staff').strip()
 
             # Retrieve multiple products and quantities
@@ -572,6 +573,7 @@ def create_manual_order(request):
                 payment_status=payment_status,
                 payment_trx_id=payment_trx_id,
                 order_status='CONFIRMED',
+                customer_notes=customer_notes,
                 admin_notes=admin_notes
             )
 
@@ -611,6 +613,10 @@ def create_manual_order(request):
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def delete_order(request, order_number):
+    if not request.user.is_superuser:
+        messages.error(request, 'Permission Denied: Staff accounts are restricted from deleting orders. Only Administrator can delete orders.')
+        return redirect('dashboard:orders')
+
     if request.method == 'POST':
         order = get_object_or_404(Order, order_number=order_number)
         o_num = order.order_number
@@ -622,6 +628,10 @@ def delete_order(request, order_number):
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def orders_trash(request):
+    if not request.user.is_superuser:
+        messages.error(request, 'Permission Denied: Staff accounts cannot access the Trash Archive. Administrator privileges required.')
+        return redirect('dashboard:orders')
+
     trash_orders = Order.trash_objects.all().prefetch_related('items').order_by('-deleted_at')
     trash_count = trash_orders.count()
     search_query = request.GET.get('q', '').strip()
@@ -658,6 +668,10 @@ def orders_trash(request):
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def restore_order(request, order_number):
+    if not request.user.is_superuser:
+        messages.error(request, 'Permission Denied: Only Administrator can restore orders from Trash.')
+        return redirect('dashboard:orders')
+
     if request.method == 'POST':
         order = get_object_or_404(Order.trash_objects, order_number=order_number)
         order.restore()

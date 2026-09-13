@@ -304,9 +304,16 @@
                 </div>
 
                 {% if order.customer_notes %}
-                <div class="text-amber-900 bg-amber-50 px-3 py-2 rounded-xl border border-amber-200 text-xs leading-tight">
-                    <strong class="block text-[10px] uppercase font-bold text-amber-700">Customer Delivery Note:</strong>
-                    <span>{{ order.customer_notes }}</span>
+                <div class="text-amber-950 bg-gradient-to-r from-amber-50 to-orange-50/70 p-3.5 rounded-2xl border-2 border-amber-300 text-xs shadow-xs space-y-1.5">
+                    <div class="flex items-center gap-1.5 text-amber-800 font-black text-[11px] uppercase tracking-wider">
+                        <span class="w-5 h-5 rounded-md bg-amber-500 text-white flex items-center justify-center text-[10px]">
+                            <i class="fa-solid fa-clipboard-list"></i>
+                        </span>
+                        <span>Special Instruction / Delivery Note:</span>
+                    </div>
+                    <p class="font-bold text-gray-900 text-sm leading-relaxed pl-6">
+                        "{{ order.customer_notes }}"
+                    </p>
                 </div>
                 {% endif %}
 
@@ -557,6 +564,7 @@
     </div>
 </div>
 
+{% if request.user.is_superuser %}
 <!-- DELETE ORDER CONFIRMATION MODAL -->
 <div id="deleteOrderModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative text-center">
@@ -585,6 +593,7 @@
 
     </div>
 </div>
+{% endif %}
 
 <!-- PATHAO DISPATCH CONFIRMATION MODAL -->
 <div id="pathaoDispatchModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">

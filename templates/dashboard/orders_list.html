@@ -135,26 +135,34 @@
             <a href="?status=CANCELLED&zone={{ zone_filter }}&q={{ search_query }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition {% if status_filter == 'CANCELLED' %}bg-rose-600 text-white{% else %}bg-rose-50 text-rose-800 hover:bg-rose-100{% endif %}">
                 Cancelled ({{ cancelled_count }})
             </a>
+            {% if request.user.is_superuser %}
             <a href="{% url 'dashboard:orders_trash' %}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition bg-rose-50/80 text-rose-700 hover:bg-rose-100 hover:text-rose-900 ml-auto flex items-center gap-1.5 border border-dashed border-rose-300 font-extrabold shadow-2xs">
                 <i class="fa-solid fa-trash-can text-rose-600"></i>
                 <span>Trash Archive ({{ trash_count }})</span>
             </a>
+            {% endif %}
         </div>
     </div>
 
     <!-- 1. Orders Queue Cards View (Minimal, Fast & Actionable) -->
     <div id="ordersCardsView" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {% for order in orders %}
-        <div class="bg-white rounded-2xl border border-gray-200 hover:border-brand-500/50 transition shadow-2xs hover:shadow-sm p-4 flex flex-col justify-between space-y-3 relative {% if order.order_status == 'PENDING' %}ring-2 ring-amber-400/40 border-amber-300{% endif %}">
+        <div class="bg-white rounded-2xl border {% if order.customer_notes %}border-amber-300 ring-1 ring-amber-300/60 bg-gradient-to-b from-amber-50/25 to-white{% else %}border-gray-200{% endif %} hover:border-brand-500/50 transition shadow-2xs hover:shadow-sm p-4 flex flex-col justify-between space-y-3 relative {% if order.order_status == 'PENDING' %}ring-2 ring-amber-400/50 border-amber-300{% endif %}">
             
-            <!-- Top Line: Order Number, Time & Status Dropdown -->
+            <!-- Top Line: Order Number, Time, Special Instruction Badge & Status Dropdown -->
             <div class="flex items-center justify-between gap-2">
-                <div class="flex items-center gap-1.5 min-w-0">
+                <div class="flex items-center gap-1.5 min-w-0 flex-wrap">
                     <a href="{% url 'dashboard:order_detail' order.order_number %}" class="font-display font-black text-sm text-gray-900 hover:text-brand-700 transition">
                         #{{ order.order_number }}
                     </a>
                     {% if order.order_status == 'PENDING' %}
                     <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" title="New Pending Order"></span>
+                    {% endif %}
+                    {% if order.customer_notes %}
+                    <span class="inline-flex items-center gap-1 text-[10px] font-black px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300 shrink-0 shadow-2xs" title="Special Instruction: {{ order.customer_notes }}">
+                        <i class="fa-solid fa-note-sticky text-amber-600 text-[9px]"></i>
+                        <span>Instruction</span>
+                    </span>
                     {% endif %}
                     <span class="text-[11px] text-gray-400 font-medium truncate">• {{ order.created_at|timesince }} ago</span>
                 </div>
@@ -187,6 +195,25 @@
                     <span class="text-gray-600">{{ order.delivery_city }}</span>
                 </div>
             </div>
+
+            <!-- Special Instruction / Customer Notes Box (Highlighted Details) -->
+            {% if order.customer_notes %}
+            <div class="bg-gradient-to-r from-amber-50 to-orange-50/60 border border-amber-200/90 rounded-xl p-2.5 text-xs text-amber-950 flex items-start gap-2 shadow-2xs">
+                <span class="inline-flex items-center justify-center w-5 h-5 rounded-lg bg-amber-500 text-white text-[10px] shrink-0 mt-0.5 shadow-2xs">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                </span>
+                <div class="min-w-0 flex-1">
+                    <div class="text-[10px] font-black uppercase tracking-wider text-amber-800 flex items-center justify-between gap-1 mb-0.5">
+                        <span class="flex items-center gap-1">
+                            <i class="fa-solid fa-bell text-amber-600 text-[9px]"></i> Special Instruction
+                        </span>
+                    </div>
+                    <p class="text-[11px] font-semibold text-amber-950 leading-snug break-words">
+                        "{{ order.customer_notes }}"
+                    </p>
+                </div>
+            </div>
+            {% endif %}
 
             <!-- Order Summary Line: Jars & Total Amount -->
             <div class="flex items-center justify-between pt-2 border-t border-gray-100 text-xs">
@@ -230,9 +257,11 @@
                     <i class="fa-brands fa-whatsapp"></i>
                 </a>
 
+                {% if request.user.is_superuser %}
                 <button type="button" onclick="openDeleteOrderModal('{{ order.order_number }}', '{{ order.customer_name|escapejs }}')" title="Delete Order" class="p-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs transition flex items-center justify-center cursor-pointer">
                     <i class="fa-solid fa-trash-can"></i>
                 </button>
+                {% endif %}
             </div>
 
         </div>
@@ -282,15 +311,26 @@
 
                         <!-- Customer -->
                         <td class="py-3 px-4 align-middle">
-                            <div class="flex items-center gap-1.5">
+                            <div class="flex items-center gap-1.5 flex-wrap">
                                 <span class="font-bold text-gray-900 truncate">{{ order.customer_name }}</span>
-                                <span class="text-[9px] font-bold px-1.5 py-0.2 rounded border {{ order.customer_score.badge_class }} shrink-0">
+                                <span class="text-[9px] font-bold px-1.5 py-0.2 rounded border {{ order.customer_score.badge_class }} shrink-0" title="{{ order.customer_score.text }}">
                                     {{ order.customer_score.short_label }}
                                 </span>
+                                {% if order.customer_notes %}
+                                <span class="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs shrink-0" title="Special Instruction: {{ order.customer_notes }}">
+                                    <i class="fa-solid fa-note-sticky text-amber-600 text-[8px]"></i> Instruction
+                                </span>
+                                {% endif %}
                             </div>
                             <div class="text-[11px] text-gray-400">
                                 {{ order.customer_phone }} • {{ order.delivery_city }}
                             </div>
+                            {% if order.customer_notes %}
+                            <div class="mt-1 flex items-start gap-1.5 bg-amber-50/90 border border-amber-200/90 rounded-lg px-2 py-1 text-[11px] text-amber-950 font-medium max-w-xs sm:max-w-sm" title="{{ order.customer_notes }}">
+                                <i class="fa-solid fa-clipboard-list text-amber-600 text-[10px] shrink-0 mt-0.5"></i>
+                                <span class="line-clamp-2 break-words"><strong>Note:</strong> {{ order.customer_notes }}</span>
+                            </div>
+                            {% endif %}
                         </td>
 
                         <!-- Items -->
@@ -358,6 +398,7 @@
                                 >
                                     <i class="fa-solid fa-print"></i>
                                 </a>
+                                {% if request.user.is_superuser %}
                                 <button 
                                     type="button" 
                                     onclick="openDeleteOrderModal('{{ order.order_number }}', '{{ order.customer_name|escapejs }}')"
@@ -366,6 +407,7 @@
                                 >
                                     <i class="fa-solid fa-trash-can"></i>
                                 </button>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -545,6 +587,7 @@
     </div>
 </div>
 
+{% if request.user.is_superuser %}
 <!-- DELETE ORDER CONFIRMATION MODAL -->
 <div id="deleteOrderModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative text-center">
@@ -573,6 +616,7 @@
 
     </div>
 </div>
+{% endif %}
 
 <!-- PATHAO DISPATCH CONFIRMATION MODAL -->
 <div id="pathaoDispatchModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
