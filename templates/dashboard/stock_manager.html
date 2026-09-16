@@ -24,27 +24,35 @@
             </p>
         </div>
         
-        <div class="flex items-center gap-2 flex-wrap">
-            <a href="{% url 'dashboard:stock_ledger' %}" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-bold text-xs px-3.5 py-2.5 rounded-xl border border-indigo-200 flex items-center gap-2 transition active:scale-95">
-                <i class="fa-solid fa-clock-rotate-left text-indigo-600"></i>
-                <span>Stock Ledger</span>
-            </a>
-            <button type="button" onclick="openRestockModal()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl shadow-xs flex items-center gap-2 transition active:scale-95 cursor-pointer">
-                <i class="fa-solid fa-plus-circle text-emerald-200"></i>
-                <span>Add Batch Stock</span>
-            </button>
-            <a href="{% url 'dashboard:damage_returns' %}" class="bg-rose-50 hover:bg-rose-100 text-rose-800 font-bold text-xs px-3.5 py-2.5 rounded-xl border border-rose-200 flex items-center gap-2 transition active:scale-95">
-                <i class="fa-solid fa-triangle-exclamation text-rose-600"></i>
-                <span>Damage & Returns</span>
-            </a>
-            <a href="{% url 'dashboard:pickle_categories' %}" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs px-3.5 py-2.5 rounded-xl border border-gray-300 flex items-center gap-2 transition active:scale-95">
-                <i class="fa-solid fa-tags text-brand-600"></i>
-                <span>Categories</span>
-            </a>
-            <button type="button" onclick="openAddModal()" class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md flex items-center gap-2 transition active:scale-95 cursor-pointer">
-                <i class="fa-solid fa-circle-plus text-brand-accent"></i>
-                <span>Add New Pickle</span>
-            </button>
+        <!-- 2-Line Action Buttons -->
+        <div class="flex flex-col items-start sm:items-end gap-2.5 shrink-0">
+            <!-- Line 1: Management & Audit Links -->
+            <div class="flex items-center gap-2 flex-wrap">
+                <a href="{% url 'dashboard:stock_ledger' %}" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-bold text-xs px-3.5 py-2 rounded-xl border border-indigo-200 flex items-center gap-1.5 transition active:scale-95">
+                    <i class="fa-solid fa-clock-rotate-left text-indigo-600"></i>
+                    <span>Stock Ledger</span>
+                </a>
+                <a href="{% url 'dashboard:damage_returns' %}" class="bg-rose-50 hover:bg-rose-100 text-rose-800 font-bold text-xs px-3.5 py-2 rounded-xl border border-rose-200 flex items-center gap-1.5 transition active:scale-95">
+                    <i class="fa-solid fa-triangle-exclamation text-rose-600"></i>
+                    <span>Damage & Returns</span>
+                </a>
+                <a href="{% url 'dashboard:pickle_categories' %}" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs px-3.5 py-2 rounded-xl border border-gray-300 flex items-center gap-1.5 transition active:scale-95">
+                    <i class="fa-solid fa-tags text-brand-600"></i>
+                    <span>Categories</span>
+                </a>
+            </div>
+
+            <!-- Line 2: Primary Actions -->
+            <div class="flex items-center gap-2 flex-wrap">
+                <button type="button" onclick="openRestockModal()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
+                    <i class="fa-solid fa-plus-circle text-emerald-200"></i>
+                    <span>Add Batch Stock</span>
+                </button>
+                <button type="button" onclick="openAddModal()" class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
+                    <i class="fa-solid fa-circle-plus text-brand-accent"></i>
+                    <span>Add New Pickle</span>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -182,7 +190,7 @@
 
                         <!-- Col 5: Actions Column (History, Restock, Edit, Toggle Stock, Delete) -->
                         <td class="p-4 text-right">
-                            <div class="flex items-center justify-end gap-1.5 flex-wrap">
+                            <div class="flex items-center justify-end gap-1.5 whitespace-nowrap">
                                 
                                 <!-- Stock History / Ledger Button -->
                                 <a href="{% url 'dashboard:product_stock_ledger' product.id %}" class="p-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold transition" title="View Stock History / Ledger for {{ product.name }}">
@@ -554,7 +562,25 @@
 
                 <div class="sm:col-span-2">
                     <label class="font-bold text-gray-700 block mb-1">Description</label>
-                    <textarea name="description" rows="3" placeholder="Describe the flavor, brine ingredients, and crunchiness..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white"></textarea>
+                    <textarea name="description" rows="2" placeholder="Describe the handcrafted pickle, brine process, and deli flavor..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white"></textarea>
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label class="font-bold text-gray-700 block mb-1 flex items-center justify-between">
+                        <span>Ingredients (উপাদানসমূহ)</span>
+                        <span class="text-[10px] text-gray-400 font-normal">Comma-separated</span>
+                    </label>
+                    <input type="text" name="ingredients" placeholder="e.g. Fresh Local Cucumbers, Pure Cane Vinegar, Himalayan Pink Salt, Fresh Garlic, Bay Leaves, Mustard Seeds, Black Peppercorns." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Flavor Profile (স্বাদের বিবরণ)</label>
+                    <input type="text" name="flavor_profile" placeholder="e.g. Garlic Infused, Tangy Deli Brine, Aromatic Herbs" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Best Paired With (পেয়ারিং সাজেশন)</label>
+                    <input type="text" name="pairing_suggestions" placeholder="e.g. Smash Burgers, Fried Chicken, Shawarma, Tehari & Sandwiches" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
                 </div>
 
                 <div class="sm:col-span-2 flex items-center gap-6 pt-2">

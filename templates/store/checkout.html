@@ -360,7 +360,7 @@
                     <div class="flex items-center justify-between gap-3 text-xs pt-2">
                         <div class="flex items-center gap-2.5 min-w-0">
                             <img src="{{ item.product.primary_image_url }}" alt="{{ item.product.name }}"
-                                class="w-12 h-12 object-cover rounded-xl border border-slate-200 flex-shrink-0">
+                                class="w-12 h-12 object-cover rounded-xl border border-slate-200 flex-shrink-0" loading="lazy" decoding="async" width="48" height="48">
                             <div class="truncate">
                                 <h4 class="font-black text-slate-950 truncate">{{ item.product.name }}</h4>
                                 <span class="text-slate-600 font-semibold">{{ item.quantity }}x • {{ item.product.jar_weight_grams }}g</span>

@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -159,10 +160,10 @@
 
             <!-- Right: Action Buttons (Right-aligned, never stranded on the left) -->
             <div class="flex items-center gap-2 justify-end sm:ml-auto flex-wrap sm:flex-nowrap">
-                <button type="button" id="btnToolbarLaunch" onclick="launchDriverOnPC()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-emerald-500/50 text-emerald-400 hover:text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-95 whitespace-nowrap" title="Click to run RongTa POS printer driver installer on Windows">
-                    <i class="fa-solid fa-play text-xs text-emerald-400"></i>
-                    <span>Install POS Driver</span>
-                </button>
+                <a href="{% static 'driver/driver.zip' %}" download="driver.zip" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-emerald-500/50 text-emerald-400 hover:text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-95 whitespace-nowrap" title="Download POS Thermal Printer Driver Package (driver.zip)">
+                    <i class="fa-solid fa-file-zipper text-xs text-emerald-400"></i>
+                    <span>Download driver.zip</span>
+                </a>
                 <button type="button" onclick="openDriverModal()" title="Driver setup files & manual" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white cursor-pointer shadow-xs whitespace-nowrap">
                     <i class="fa-solid fa-gear text-slate-400"></i>
                     <span>Setup</span>
@@ -236,10 +237,10 @@
             <div class="flex items-center justify-between pb-3 border-b border-slate-800">
                 <div class="flex items-center gap-2.5">
                     <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                        <i class="fa-solid fa-print text-lg"></i>
+                        <i class="fa-solid fa-download text-lg"></i>
                     </div>
                     <div>
-                        <h3 class="text-base font-black text-white">POS Printer Driver Installer</h3>
+                        <h3 class="text-base font-black text-white">POS Printer Driver Download</h3>
                         <p class="text-xs text-slate-400">RongTa & 80mm/58mm Thermal Receipt Printers</p>
                     </div>
                 </div>
@@ -250,21 +251,53 @@
 
             <!-- Driver Installer Action Card -->
             <div class="space-y-3">
-                <!-- Main Driver -->
-                <div class="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 hover:border-emerald-500/50 transition flex items-center justify-between gap-3">
+                <!-- Complete ZIP Package -->
+                <div class="p-4 rounded-2xl bg-emerald-950/40 border-2 border-emerald-500/50 hover:border-emerald-400 transition flex items-center justify-between gap-3 shadow-lg">
                     <div class="space-y-0.5">
                         <div class="flex items-center gap-2">
-                            <span class="font-extrabold text-sm text-white">RongTa Driver V2.70</span>
-                            <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-black border border-emerald-500/30">Ready on PC</span>
+                            <span class="font-black text-sm text-white">All Drivers & Manual (driver.zip)</span>
+                            <span class="px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 text-[10px] font-black">Recommended</span>
                         </div>
-                        <p class="text-xs text-slate-400">File is downloaded in project. Click button to launch installer.</p>
+                        <p class="text-xs text-slate-300">Complete package containing RongTa 80mm/58mm Driver, ARM64 installer & PDF setup guide (ZIP • 58 MB)</p>
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
-                        <button type="button" onclick="launchDriverOnPC()" id="btnModalLaunchDriver" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs transition flex items-center gap-2 shadow-md cursor-pointer active:scale-95">
-                            <i class="fa-solid fa-play text-xs"></i>
-                            <span>Run Driver Setup</span>
-                        </button>
+                        <a href="{% static 'driver/driver.zip' %}" download="driver.zip" class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition flex items-center gap-2 shadow-lg cursor-pointer active:scale-95">
+                            <i class="fa-solid fa-file-zipper text-sm"></i>
+                            <span>Download driver.zip</span>
+                        </a>
                     </div>
+                </div>
+
+                <!-- Main Driver (x86/x64) -->
+                <div class="p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800 hover:border-slate-700 transition flex items-center justify-between gap-3">
+                    <div class="space-y-0.5">
+                        <div class="flex items-center gap-2">
+                            <span class="font-extrabold text-sm text-white">RongTa Driver V2.70 (.exe)</span>
+                            <span class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px] font-bold border border-slate-700">Windows PC</span>
+                        </div>
+                        <p class="text-xs text-slate-400">Direct 32/64-bit installer file (24 MB)</p>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <a href="{% static 'driver/RongTaDriverInstall_V2.70.exe' %}" download="RongTaDriverInstall_V2.70.exe" class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 hover:text-white font-bold text-xs transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-download text-xs"></i>
+                            <span>Download .exe</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- ARM64 Driver -->
+                <div class="p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800 hover:border-slate-700 transition flex items-center justify-between gap-3">
+                    <div class="space-y-0.5">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-xs text-white">ARM64 Driver V1.03</span>
+                            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px] font-bold">ARM Windows</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400">For Surface Pro / Snapdragon ARM devices (5.4 MB)</p>
+                    </div>
+                    <a href="{% static 'driver/DriverInstallArm64_V1.03.exe' %}" download="DriverInstallArm64_V1.03.exe" class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 hover:text-white font-bold text-xs transition flex items-center gap-1.5 shrink-0">
+                        <i class="fa-solid fa-download text-xs"></i>
+                        <span>Download ARM</span>
+                    </a>
                 </div>
 
                 <!-- PDF Manual -->
@@ -273,7 +306,7 @@
                         <span class="font-bold text-xs text-white">Installation Instructions (PDF Guide)</span>
                         <p class="text-[11px] text-slate-400">Step-by-step setup manual with screenshots</p>
                     </div>
-                    <a href="/static/driver/80mm_Thermal_Printer_Driver_Guide.pdf" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 hover:text-white font-bold text-xs transition flex items-center gap-1.5 shrink-0">
+                    <a href="{% static 'driver/80mm_Thermal_Printer_Driver_Guide.pdf' %}" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 hover:text-white font-bold text-xs transition flex items-center gap-1.5 shrink-0">
                         <i class="fa-solid fa-file-pdf text-rose-400"></i>
                         <span>View PDF</span>
                     </a>
@@ -284,14 +317,13 @@
             <div class="p-3.5 rounded-2xl bg-emerald-950/20 border border-emerald-500/20 text-xs space-y-1.5">
                 <span class="font-bold text-emerald-400 flex items-center gap-1.5">
                     <i class="fa-solid fa-lightbulb"></i>
-                    <span>How to complete installation:</span>
+                    <span>How to install after downloading:</span>
                 </span>
                 <ol class="text-[11px] text-slate-300 list-decimal list-inside space-y-1 ml-1 leading-relaxed">
-                    <li>Click <strong>Install POS Driver</strong> (or Run Driver Setup above).</li>
-                    <li>Check your Windows taskbar or screen for the RongTa Installer window (or UAC permission prompt).</li>
-                    <li>In the installer window, select <strong>80mm Series</strong> and <strong>USB</strong> port.</li>
-                    <li>Click <strong>Install</strong> to complete setup.</li>
-                    <li>When printing invoices, set <strong>Margins: None</strong> and <strong>Paper: 80mm</strong>.</li>
+                    <li>Click <strong>Download (.exe)</strong> and run the downloaded file on your computer.</li>
+                    <li>In the setup wizard, select <strong>80mm Series</strong> (or 58mm) and <strong>USB</strong> port.</li>
+                    <li>Click <strong>Install</strong> to complete printer driver setup.</li>
+                    <li>When printing invoices with <code>Ctrl + P</code>, select your POS Printer, set <strong>Margins: None</strong> and <strong>Paper: 80mm</strong>.</li>
                 </ol>
             </div>
 
@@ -302,17 +334,6 @@
                 </button>
             </div>
 
-        </div>
-    </div>
-
-    <!-- Driver Launcher Floating Toast Notification -->
-    <div id="driverToast" class="no-print fixed top-6 right-6 z-50 bg-slate-900 border-2 border-emerald-500 text-white px-5 py-3.5 rounded-2xl shadow-2xl hidden flex items-center gap-3 transition-all duration-200">
-        <div class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-black shrink-0">
-            <i class="fa-solid fa-check text-sm"></i>
-        </div>
-        <div>
-            <div class="text-xs font-black text-white" id="toastTitle">Driver Installer Launched!</div>
-            <div class="text-[11px] text-slate-300" id="toastMsg">Check your Windows screen/taskbar to complete installation.</div>
         </div>
     </div>
 
@@ -1017,7 +1038,7 @@
             }
         });
 
-        // Driver Modal & Direct Launch handlers
+        // Driver Modal handlers
         function openDriverModal() {
             const modal = document.getElementById('driverModal');
             if (modal) modal.classList.remove('hidden');
@@ -1025,58 +1046,6 @@
         function closeDriverModal() {
             const modal = document.getElementById('driverModal');
             if (modal) modal.classList.add('hidden');
-        }
-
-        function launchDriverOnPC() {
-            const btnToolbar = document.getElementById('btnToolbarLaunch');
-            const btnModal = document.getElementById('btnModalLaunchDriver');
-            
-            const loadingHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i><span>Launching...</span>';
-            const defaultToolbarHTML = '<i class="fa-solid fa-play text-xs"></i><span>Install POS Driver</span>';
-            const defaultModalHTML = '<i class="fa-solid fa-play text-xs"></i><span>Run Driver Setup</span>';
-
-            if (btnToolbar) { btnToolbar.innerHTML = loadingHTML; btnToolbar.disabled = true; }
-            if (btnModal) { btnModal.innerHTML = loadingHTML; btnModal.disabled = true; }
-
-            fetch("{% url 'dashboard:api_launch_pos_driver' %}")
-                .then(async res => {
-                    const data = await res.json();
-                    if (!res.ok || data.status === 'error') {
-                        throw new Error(data.message || 'Could not launch installer');
-                    }
-                    return data;
-                })
-                .then(data => {
-                    showToast(data.message || 'Installer window opened! Please check your Windows taskbar or screen.', false);
-                    if (btnToolbar) {
-                        btnToolbar.innerHTML = '<i class="fa-solid fa-check text-xs"></i><span>Installer Opened!</span>';
-                        setTimeout(() => { btnToolbar.innerHTML = defaultToolbarHTML; btnToolbar.disabled = false; }, 4000);
-                    }
-                    if (btnModal) {
-                        btnModal.innerHTML = '<i class="fa-solid fa-check text-xs"></i><span>Installer Opened!</span>';
-                        setTimeout(() => { btnModal.innerHTML = defaultModalHTML; btnModal.disabled = false; }, 4000);
-                    }
-                })
-                .catch(err => {
-                    showToast(err.message || 'Could not launch installer. Check Windows permissions.', true);
-                    if (btnToolbar) { btnToolbar.innerHTML = defaultToolbarHTML; btnToolbar.disabled = false; }
-                    if (btnModal) { btnModal.innerHTML = defaultModalHTML; btnModal.disabled = false; }
-                });
-        }
-
-        function showToast(message, isError = false) {
-            const toast = document.getElementById('driverToast');
-            const toastTitle = document.getElementById('toastTitle');
-            const toastMsg = document.getElementById('toastMsg');
-            if (!toast) return;
-
-            if (toastTitle) toastTitle.textContent = isError ? 'Installer Notice' : 'Driver Installer Launched!';
-            if (toastMsg) toastMsg.textContent = message;
-
-            toast.classList.remove('hidden');
-            setTimeout(() => {
-                toast.classList.add('hidden');
-            }, 6000);
         }
     </script>
 </body>

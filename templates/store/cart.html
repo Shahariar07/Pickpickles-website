@@ -23,7 +23,7 @@
         <div class="lg:col-span-8 space-y-4">
             {% for item in cart %}
             <div class="bg-white p-4 sm:p-5 rounded-3xl border border-gray-200 shadow-xs flex flex-col sm:flex-row items-center gap-4 sm:gap-6" id="cart-page-item-{{ item.product.id }}">
-                <img src="{{ item.product.primary_image_url }}" alt="{{ item.product.name }}" class="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-2xl border border-gray-100 flex-shrink-0">
+                <img src="{{ item.product.primary_image_url }}" alt="{{ item.product.name }}" class="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-2xl border border-gray-100 flex-shrink-0" loading="lazy" decoding="async" width="96" height="96">
                 
                 <div class="flex-1 text-center sm:text-left min-w-0">
                     <h3 class="font-display font-extrabold text-base sm:text-lg text-gray-900">

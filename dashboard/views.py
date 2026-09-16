@@ -309,7 +309,12 @@ def adjust_inventory_for_order_status_change(order, old_status, new_status, user
                     created_by=user if getattr(user, 'is_authenticated', False) else None
                 )
     elif was_accepted and not now_accepted:
-        # Restore stock when cancelled or reverted
+        # If this order has an OrderReturn associated, return logic (sync_order_return_state) dictates stock
+        # (Only intact returns get restocked. Damaged returns represent destroyed loss and are NEVER restocked).
+        if hasattr(order, 'returns') and order.returns.exists():
+            return
+
+        # Restore stock when cancelled or reverted before shipping
         for itm in order.items.all():
             if itm.product:
                 prev_stock = itm.product.stock_count
@@ -483,6 +488,8 @@ def sync_all_pathao_orders(request):
         new_status = order.sync_pathao_status()
         if new_status:
             synced_count += 1
+            if old_status != order.order_status:
+                adjust_inventory_for_order_status_change(order, old_status, order.order_status, user=request.user)
             if old_status != 'DELIVERED' and order.order_status == 'DELIVERED':
                 delivered_count += 1
 
@@ -503,12 +510,18 @@ def sync_single_pathao_order(request, order_number):
     if not order.pathao_consignment_id:
         messages.warning(request, f"Order #{order.order_number} has not been dispatched to Pathao yet.")
     else:
+        old_status = order.order_status
         status = order.sync_pathao_status()
         if status:
+            if old_status != order.order_status:
+                adjust_inventory_for_order_status_change(order, old_status, order.order_status, user=request.user)
             messages.success(request, f"Pathao status updated: {order.pathao_order_status} (Order status: {order.get_order_status_display()})")
         else:
-            messages.info(request, "Could not fetch updated status from Pathao Courier API.")
+            messages.info(request, "Could not fetch updated status from Pathao Courier API or no new status update.")
             
+    referer = request.META.get('HTTP_REFERER')
+    if referer:
+        return redirect(referer)
     return redirect('dashboard:order_detail', order_number=order.order_number)
 
 
@@ -1100,12 +1113,134 @@ def product_stock_ledger(request, product_id):
     return redirect(f"{reverse('dashboard:stock_ledger')}?product={product.id}&date_range=all")
 
 
+def sync_order_return_state(order_return, new_status, courier_fee=None, notes=None, restock_if_intact=True, user=None):
+    """
+    Synchronizes an OrderReturn with Product stock, StockLog ledger, and DamageLog records.
+    - If RECEIVED_INTACT: restocks inventory (if restock_if_intact and not already restocked),
+      removes any auto-generated DamageLogs for this order.
+    - If RECEIVED_DAMAGED: reverses any previous restock, creates accurate DamageLog records
+      for all order items using real unit prices, and logs stock deduction.
+    - If RETURNING: reverses any previous restock and removes auto-generated DamageLogs until
+      final inspection upon receipt.
+    """
+    order = order_return.order
+    today = timezone.now().date()
+
+    if courier_fee is not None:
+        order_return.courier_return_fee = courier_fee
+    if notes is not None:
+        order_return.notes = notes
+
+    order_return.return_status = new_status
+
+    # Always ensure order status is CANCELLED when returned
+    if order.order_status != 'CANCELLED':
+        order.order_status = 'CANCELLED'
+        order.save(update_fields=['order_status'])
+
+    # 1. Handling RECEIVED_INTACT (Jars returned intact and safe to resell)
+    if new_status == 'RECEIVED_INTACT':
+        # Remove any damage logs previously recorded for this returned order
+        DamageLog.objects.filter(order_ref=order.order_number, reason='RETURN_DAMAGED').delete()
+
+        # Restock items if requested and not already restocked
+        if restock_if_intact and not order_return.is_restocked:
+            for item in order.items.all():
+                if item.product:
+                    prev_stock = item.product.stock_count
+                    new_stock = prev_stock + item.quantity
+                    item.product.stock_count = new_stock
+                    item.product.is_in_stock = True
+                    item.product.save(update_fields=['stock_count', 'is_in_stock'])
+
+                    StockLog.objects.create(
+                        product=item.product,
+                        log_type='RETURN_RESTOCKED',
+                        quantity_delta=item.quantity,
+                        previous_stock=prev_stock,
+                        resulting_stock=new_stock,
+                        order=order,
+                        reference=f"Return #{order.order_number}",
+                        notes=f"Customer return restocked intact ({order_return.get_return_reason_display()})",
+                        created_by=user if getattr(user, 'is_authenticated', False) else None
+                    )
+            order_return.is_restocked = True
+
+    # 2. Handling RECEIVED_DAMAGED (Jars returned broken/ruined and cannot be resold)
+    elif new_status == 'RECEIVED_DAMAGED':
+        # If it was previously restocked as intact, revert the restocked inventory
+        if order_return.is_restocked:
+            for item in order.items.all():
+                if item.product:
+                    prev_stock = item.product.stock_count
+                    new_stock = max(0, prev_stock - item.quantity)
+                    item.product.stock_count = new_stock
+                    if new_stock == 0:
+                        item.product.is_in_stock = False
+                    item.product.save(update_fields=['stock_count', 'is_in_stock'])
+
+                    StockLog.objects.create(
+                        product=item.product,
+                        log_type='DAMAGE_LOSS',
+                        quantity_delta=-item.quantity,
+                        previous_stock=prev_stock,
+                        resulting_stock=new_stock,
+                        order=order,
+                        reference=f"Damaged Return #{order.order_number}",
+                        notes=f"Return damaged in transit - stock deducted ({order_return.get_return_reason_display()})",
+                        created_by=user if getattr(user, 'is_authenticated', False) else None
+                    )
+            order_return.is_restocked = False
+
+        # Ensure accurate DamageLog records exist for each product item using real unit prices
+        DamageLog.objects.filter(order_ref=order.order_number, reason='RETURN_DAMAGED').delete()
+        for item in order.items.all():
+            if item.product:
+                unit_cost = float(item.unit_price) if item.unit_price else float(item.product.price_bdt)
+                DamageLog.objects.create(
+                    product=item.product,
+                    quantity=item.quantity,
+                    estimated_cost_per_jar=unit_cost,
+                    reason='RETURN_DAMAGED',
+                    incident_date=order_return.return_date or today,
+                    order_ref=order.order_number,
+                    notes=f"Returned damaged/broken parcel: Order #{order.order_number} ({order_return.get_return_reason_display()})"
+                )
+
+    # 3. Handling RETURNING (In transit with courier)
+    elif new_status == 'RETURNING':
+        # Remove damage logs since parcel is still in courier transit
+        DamageLog.objects.filter(order_ref=order.order_number, reason='RETURN_DAMAGED').delete()
+
+        # If it was previously marked restocked, revert stock
+        if order_return.is_restocked:
+            for item in order.items.all():
+                if item.product:
+                    prev_stock = item.product.stock_count
+                    new_stock = max(0, prev_stock - item.quantity)
+                    item.product.stock_count = new_stock
+                    if new_stock == 0:
+                        item.product.is_in_stock = False
+                    item.product.save(update_fields=['stock_count', 'is_in_stock'])
+            order_return.is_restocked = False
+
+    order_return.save()
+    return order_return
+
+
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def damage_returns_manager(request):
     """Manager for recording broken/damaged pickle jars and courier returned parcels."""
     now = timezone.now()
     today = now.date()
-    
+
+    # Automatically ensure historical returned damaged orders have synchronized DamageLog records
+    damaged_returns_without_logs = OrderReturn.objects.filter(return_status='RECEIVED_DAMAGED')
+    for ret in damaged_returns_without_logs:
+        existing_log_count = DamageLog.objects.filter(order_ref=ret.order.order_number, reason='RETURN_DAMAGED').count()
+        if existing_log_count == 0:
+            sync_order_return_state(ret, 'RECEIVED_DAMAGED', user=request.user)
+
     damage_logs = DamageLog.objects.all().select_related('product').order_by('-incident_date', '-created_at')
     order_returns = OrderReturn.objects.all().select_related('order').prefetch_related('order__items').order_by('-created_at')
     products = Product.objects.all().order_by('name')
@@ -1120,7 +1255,9 @@ def damage_returns_manager(request):
                 prod_id = request.POST.get('product_id')
                 product = get_object_or_404(Product, id=prod_id)
                 quantity = int(request.POST.get('quantity', 1))
-                estimated_cost = float(request.POST.get('estimated_cost_per_jar', 200.00))
+                default_price = float(product.price_bdt)
+                cost_input = request.POST.get('estimated_cost_per_jar')
+                estimated_cost = float(cost_input) if cost_input and float(cost_input) > 0 else default_price
                 reason = request.POST.get('reason', 'TRANSIT_BREAKAGE')
                 incident_date = request.POST.get('incident_date') or today
                 order_ref = request.POST.get('order_ref', '').strip()
@@ -1134,7 +1271,7 @@ def damage_returns_manager(request):
                     product.stock_count = new_stock
                     if new_stock == 0:
                         product.is_in_stock = False
-                    product.save()
+                    product.save(update_fields=['stock_count', 'is_in_stock'])
 
                     StockLog.objects.create(
                         product=product,
@@ -1156,7 +1293,7 @@ def damage_returns_manager(request):
                     order_ref=order_ref,
                     notes=notes
                 )
-                messages.success(request, f'Logged {quantity}x {product.name} damage. Stock updated.')
+                messages.success(request, f'Logged {quantity}x {product.name} damage (৳{estimated_cost * quantity:,.0f} loss). Stock updated.')
             except Exception as e:
                 messages.error(request, f'Failed to record damage: {str(e)}')
             return redirect('dashboard:damage_returns')
@@ -1183,58 +1320,28 @@ def damage_returns_manager(request):
                 notes = request.POST.get('notes', '').strip()
                 restock_now = request.POST.get('restock_now') == 'on'
 
-                is_restocked = False
-                if return_status == 'RECEIVED_INTACT' and restock_now:
-                    # Restock ordered items back to products
-                    for item in order.items.all():
-                        if item.product:
-                            prev_stock = item.product.stock_count
-                            new_stock = prev_stock + item.quantity
-                            item.product.stock_count = new_stock
-                            item.product.is_in_stock = True
-                            item.product.save()
-
-                            StockLog.objects.create(
-                                product=item.product,
-                                log_type='RETURN_RESTOCKED',
-                                quantity_delta=item.quantity,
-                                previous_stock=prev_stock,
-                                resulting_stock=new_stock,
-                                order=order,
-                                reference=f"Return #{order.order_number}",
-                                notes=f"Customer return restocked ({return_reason})",
-                                created_by=request.user if request.user.is_authenticated else None
-                            )
-                    is_restocked = True
-
-                # If received damaged, log as damage loss automatically
-                if return_status == 'RECEIVED_DAMAGED':
-                    for item in order.items.all():
-                        if item.product:
-                            DamageLog.objects.create(
-                                product=item.product,
-                                quantity=item.quantity,
-                                estimated_cost_per_jar=200.00,
-                                reason='RETURN_DAMAGED',
-                                incident_date=today,
-                                order_ref=order.order_number,
-                                notes=f"Automatic damage log from returned Order #{order.order_number}"
-                            )
-
-                # Set order status to CANCELLED / RETURNED
-                order.order_status = 'CANCELLED'
-                order.admin_notes = f"{order.admin_notes}\n[RETURN LOGGED: {return_reason} - Status: {return_status}]".strip()
-                order.save()
-
-                OrderReturn.objects.create(
+                ret, _ = OrderReturn.objects.get_or_create(
                     order=order,
-                    return_reason=return_reason,
-                    return_status=return_status,
-                    courier_return_fee=courier_return_fee,
-                    is_restocked=is_restocked,
-                    notes=notes
+                    defaults={
+                        'return_reason': return_reason,
+                        'return_status': return_status,
+                        'courier_return_fee': courier_return_fee,
+                        'notes': notes,
+                        'return_date': today,
+                    }
                 )
-                messages.success(request, f'Return logged for Order #{order.order_number}.')
+                ret.return_reason = return_reason
+
+                sync_order_return_state(
+                    order_return=ret,
+                    new_status=return_status,
+                    courier_fee=courier_return_fee,
+                    notes=notes,
+                    restock_if_intact=(return_status == 'RECEIVED_INTACT' and restock_now),
+                    user=request.user
+                )
+
+                messages.success(request, f'Return logged for Order #{order.order_number} ({ret.get_return_status_display()}).')
             except Exception as e:
                 messages.error(request, f'Failed to record return: {str(e)}')
             return redirect('dashboard:damage_returns')
@@ -1247,57 +1354,25 @@ def damage_returns_manager(request):
                 new_status = request.POST.get('new_status')
                 courier_fee = float(request.POST.get('courier_return_fee', ret.courier_return_fee))
                 notes = request.POST.get('notes', ret.notes)
-                
-                # If marking as received intact and not previously restocked
-                if new_status == 'RECEIVED_INTACT' and not ret.is_restocked:
-                    for item in ret.order.items.all():
-                        if item.product:
-                            prev_stock = item.product.stock_count
-                            new_stock = prev_stock + item.quantity
-                            item.product.stock_count = new_stock
-                            item.product.is_in_stock = True
-                            item.product.save()
 
-                            StockLog.objects.create(
-                                product=item.product,
-                                log_type='RETURN_RESTOCKED',
-                                quantity_delta=item.quantity,
-                                previous_stock=prev_stock,
-                                resulting_stock=new_stock,
-                                order=ret.order,
-                                reference=f"Return #{ret.order.order_number}",
-                                notes="Received intact and restocked from courier return",
-                                created_by=request.user if request.user.is_authenticated else None
-                            )
-                    ret.is_restocked = True
+                sync_order_return_state(
+                    order_return=ret,
+                    new_status=new_status,
+                    courier_fee=courier_fee,
+                    notes=notes,
+                    restock_if_intact=(new_status == 'RECEIVED_INTACT'),
+                    user=request.user
+                )
 
-                # If marking as received damaged
-                if new_status == 'RECEIVED_DAMAGED' and ret.return_status != 'RECEIVED_DAMAGED':
-                    for item in ret.order.items.all():
-                        if item.product:
-                            DamageLog.objects.create(
-                                product=item.product,
-                                quantity=item.quantity,
-                                estimated_cost_per_jar=200.00,
-                                reason='RETURN_DAMAGED',
-                                incident_date=today,
-                                order_ref=ret.order.order_number,
-                                notes=f"Automatic damage log from returned Order #{ret.order.order_number}"
-                            )
-
-                ret.return_status = new_status
-                ret.courier_return_fee = courier_fee
-                ret.notes = notes
-                ret.save()
                 messages.success(request, f'Return for #{ret.order.order_number} updated to {ret.get_return_status_display()}.')
             except Exception as e:
                 messages.error(request, f'Failed to update return: {str(e)}')
             return redirect('dashboard:damage_returns')
 
-    # Aggregations
+    # Aggregations & Detailed Calculations
     total_damaged_jars = damage_logs.aggregate(Sum('quantity'))['quantity__sum'] or 0
     total_damage_loss = float(damage_logs.aggregate(Sum('total_loss_bdt'))['total_loss_bdt__sum'] or 0)
-    
+
     total_returns_count = order_returns.count()
     total_courier_fees = float(order_returns.aggregate(Sum('courier_return_fee'))['courier_return_fee__sum'] or 0)
     intact_returns_count = order_returns.filter(return_status='RECEIVED_INTACT').count()
@@ -1337,17 +1412,25 @@ def mark_order_returned(request, order_number):
         fee = float(request.POST.get('courier_return_fee', 0.00))
         notes = request.POST.get('notes', '').strip()
 
-        order.order_status = 'CANCELLED'
-        order.save()
-
-        OrderReturn.objects.create(
+        ret, _ = OrderReturn.objects.get_or_create(
             order=order,
-            return_reason=reason,
-            return_status=status,
-            courier_return_fee=fee,
-            notes=notes
+            defaults={
+                'return_reason': reason,
+                'return_status': status,
+                'courier_return_fee': fee,
+                'notes': notes,
+            }
         )
-        messages.success(request, f'Order #{order.order_number} marked as return in progress.')
+        ret.return_reason = reason
+        sync_order_return_state(
+            order_return=ret,
+            new_status=status,
+            courier_fee=fee,
+            notes=notes,
+            restock_if_intact=(status == 'RECEIVED_INTACT'),
+            user=request.user
+        )
+        messages.success(request, f'Order #{order.order_number} marked as returned ({ret.get_return_status_display()}).')
     return redirect('dashboard:order_detail', order_number=order.order_number)
 
 
@@ -2105,34 +2188,6 @@ def order_notifications_api(request):
         'pending_count': pending_count,
         'recent_pending': recent_pending_data,
     })
-
-
-def launch_pos_driver(request):
-    """
-    Launch the local RongTa POS thermal printer driver installer directly on Windows.
-    """
-    if not (request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser)):
-        return JsonResponse({'status': 'error', 'message': 'Staff authorization required.'}, status=403)
-
-    import os
-    from django.conf import settings
-    driver_path = os.path.join(settings.BASE_DIR, 'static', 'driver', 'RongTaDriverInstall_V2.70.exe')
-    if not os.path.exists(driver_path):
-        alt_path = os.path.join(settings.BASE_DIR, 'static', 'driver', 'Thermal Printer Driver（Windows）', 'RongTaDriverInstall V2.70.exe')
-        if os.path.exists(alt_path):
-            driver_path = alt_path
-
-    if os.path.exists(driver_path):
-        try:
-            if hasattr(os, 'startfile'):
-                os.startfile(driver_path)
-            else:
-                import subprocess
-                subprocess.Popen([driver_path])
-            return JsonResponse({'status': 'success', 'message': 'Installer window opened! Please check your Windows taskbar or screen.'})
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': f'Could not launch installer: {str(e)}'}, status=500)
-    return JsonResponse({'status': 'error', 'message': 'Driver installer file not found in static/driver/'}, status=404)
 
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')

@@ -238,8 +238,11 @@
                     <span>Manage</span>
                 </a>
                 
-                <!-- Pathao Dispatch / Tracking Button -->
+                <!-- Pathao Dispatch / Sync / Tracking Button -->
                 {% if order.pathao_consignment_id %}
+                <a href="{% url 'dashboard:sync_single_pathao_order' order.order_number %}" title="Sync Pathao Status" class="p-1.5 rounded-xl bg-red-100 hover:bg-red-200 text-red-700 border border-red-300 text-xs transition flex items-center justify-center shadow-2xs">
+                    <i class="fa-solid fa-rotate"></i>
+                </a>
                 <a href="https://merchant.pathao.com/tracking?consignment_id={{ order.pathao_consignment_id }}" target="_blank" title="Pathao Tracking: {{ order.pathao_tracking_code|default:order.pathao_consignment_id }}" class="p-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs transition flex items-center justify-center">
                     <i class="fa-solid fa-truck-fast"></i>
                 </a>
@@ -365,6 +368,13 @@
                             <div class="flex items-center justify-end gap-1">
                                 <!-- Pathao button in table -->
                                 {% if order.pathao_consignment_id %}
+                                <a 
+                                    href="{% url 'dashboard:sync_single_pathao_order' order.order_number %}" 
+                                    class="p-1 text-red-600 hover:text-red-800 rounded transition"
+                                    title="Sync Pathao Status"
+                                >
+                                    <i class="fa-solid fa-rotate"></i>
+                                </a>
                                 <a 
                                     href="https://merchant.pathao.com/tracking?consignment_id={{ order.pathao_consignment_id }}" 
                                     target="_blank" 

@@ -14,7 +14,7 @@
                     <i class="fa-solid fa-triangle-exclamation"></i>
                     Loss & Inventory Protection
                 </span>
-                <span class="text-xs text-gray-400 font-semibold">• {{ total_damaged_jars }} jars damaged • {{ total_returns_count }} returns</span>
+                <span class="text-xs text-gray-400 font-semibold">• {{ total_damaged_jars }} jars damaged • {{ total_returns_count }} returns logged • ৳{{ total_combined_loss|floatformat:0 }} total financial loss</span>
             </div>
             <h1 class="font-display font-black text-xl sm:text-2xl lg:text-3xl text-gray-900 mt-1.5 break-words leading-tight">
                 Damage & Returns Hub (ভাঙা ও রিটার্ন ট্র্যাকিং)
@@ -50,13 +50,13 @@
             <div class="mt-2">
                 <span class="font-display font-black text-2xl sm:text-3xl text-rose-700">{{ total_damaged_jars }} <span class="text-sm font-semibold text-gray-500">jars</span></span>
             </div>
-            <span class="text-[11px] text-rose-600 font-semibold mt-1 block">Production & courier transit loss</span>
+            <span class="text-[11px] text-rose-600 font-semibold mt-1 block">Production & transit breakage</span>
         </div>
 
         <!-- Card 2: Financial Damage Loss -->
         <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs">
             <div class="flex items-center justify-between">
-                <span class="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">Damage Cost Loss</span>
+                <span class="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">Jar Damage Loss</span>
                 <span class="w-7 h-7 rounded-xl bg-red-50 text-red-700 flex items-center justify-center text-xs">
                     <i class="fa-solid fa-bangladeshi-taka-sign"></i>
                 </span>
@@ -64,7 +64,7 @@
             <div class="mt-2">
                 <span class="font-display font-black text-2xl sm:text-3xl text-gray-900">৳{{ total_damage_loss|floatformat:0 }}</span>
             </div>
-            <span class="text-[11px] text-gray-400 mt-1 block">Cost of ruined materials & jars</span>
+            <span class="text-[11px] text-gray-400 mt-1 block">Value of ruined pickle inventory</span>
         </div>
 
         <!-- Card 3: Courier Returns -->
@@ -78,17 +78,17 @@
             <div class="mt-2">
                 <span class="font-display font-black text-2xl sm:text-3xl text-amber-700">{{ total_returns_count }} <span class="text-sm font-semibold text-gray-500">parcels</span></span>
             </div>
-            <div class="text-[11px] text-amber-700 font-semibold mt-1 flex items-center gap-2">
-                <span>{{ intact_returns_count }} Restocked</span>
-                <span>•</span>
-                <span>{{ pending_returning_count }} In-Transit</span>
+            <div class="text-[10px] text-amber-800 font-semibold mt-1 flex items-center gap-1.5 flex-wrap">
+                <span class="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded">{{ intact_returns_count }} Restocked</span>
+                <span class="bg-rose-50 text-rose-700 px-1.5 py-0.5 rounded">{{ damaged_returns_count }} Damaged</span>
+                <span class="bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">{{ pending_returning_count }} Transit</span>
             </div>
         </div>
 
         <!-- Card 4: Total Combined Loss -->
         <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs">
             <div class="flex items-center justify-between">
-                <span class="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">Combined Loss & Courier Fees</span>
+                <span class="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">Combined Total Loss</span>
                 <span class="w-7 h-7 rounded-xl bg-gray-100 text-gray-700 flex items-center justify-center text-xs">
                     <i class="fa-solid fa-calculator"></i>
                 </span>
@@ -96,7 +96,7 @@
             <div class="mt-2">
                 <span class="font-display font-black text-2xl sm:text-3xl text-rose-700">৳{{ total_combined_loss|floatformat:0 }}</span>
             </div>
-            <span class="text-[11px] text-gray-500 mt-1 block">Includes ৳{{ total_courier_fees|floatformat:0 }} courier return fees</span>
+            <span class="text-[11px] text-gray-500 mt-1 block">৳{{ total_damage_loss|floatformat:0 }} jars + ৳{{ total_courier_fees|floatformat:0 }} courier fees</span>
         </div>
 
     </div>
@@ -257,11 +257,12 @@
                         </td>
                         <td class="py-3 px-3 text-right font-display font-black text-rose-700 text-sm">
                             -৳{{ log.total_loss_bdt|floatformat:0 }}
+                        </td>
                         <td class="py-3 px-3 text-right">
                             {% if request.user.is_superuser %}
                             <button 
                                 type="button" 
-                                onclick="openDeleteDamageModal('{{ log.id }}', '{{ log.product.name|escapejs }}', '{{ log.quantity_damaged }}')"
+                                onclick="openDeleteDamageModal('{{ log.id }}', '{{ log.product.name|escapejs }}', '{{ log.quantity }}')"
                                 class="text-gray-400 hover:text-rose-600 p-1.5 rounded-lg transition cursor-pointer" 
                                 title="Delete Log"
                             >
@@ -303,9 +304,9 @@
 
             <div>
                 <label class="block font-bold text-gray-700 mb-1">Pickle Product Variety *</label>
-                <select name="product_id" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 font-semibold text-gray-800 focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none">
+                <select name="product_id" id="damageProductId" required onchange="updateDamageCostFromProduct(this)" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 font-semibold text-gray-800 focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none">
                     {% for p in products %}
-                    <option value="{{ p.id }}">{{ p.name }} (Current Stock: {{ p.stock_count }} jars)</option>
+                    <option value="{{ p.id }}" data-price="{{ p.price_bdt }}">{{ p.name }} (৳{{ p.price_bdt|floatformat:0 }} • Current Stock: {{ p.stock_count }} jars)</option>
                     {% endfor %}
                 </select>
             </div>
@@ -316,8 +317,8 @@
                     <input type="number" name="quantity" min="1" value="1" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-bold text-gray-800 focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none">
                 </div>
                 <div>
-                    <label class="block font-bold text-gray-700 mb-1">Cost Per Jar (BDT ৳)</label>
-                    <input type="number" name="estimated_cost_per_jar" step="0.01" value="200.00" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-bold text-gray-800 focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none">
+                    <label class="block font-bold text-gray-700 mb-1">Loss Value / Jar (BDT ৳)</label>
+                    <input type="number" name="estimated_cost_per_jar" id="damageCostPerJar" step="0.01" value="{{ products.0.price_bdt|default:'250.00' }}" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-bold text-gray-800 focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none">
                 </div>
             </div>
 
@@ -414,9 +415,15 @@
                 <textarea name="notes" rows="2" placeholder="Steadfast return tracking ID, rider note, etc." class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-medium text-gray-800 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none"></textarea>
             </div>
 
-            <div class="flex items-center gap-2 pt-1">
-                <input type="checkbox" name="restock_now" id="restock_now" checked class="w-4 h-4 text-amber-600 rounded">
-                <label for="restock_now" class="font-bold text-gray-700">Add jars back to Product Stock (if parcel is received intact)</label>
+            <div class="bg-amber-50/60 p-3 rounded-xl border border-amber-200/60 space-y-1.5">
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" name="restock_now" id="restock_now" checked class="w-4 h-4 text-amber-600 rounded">
+                    <label for="restock_now" class="font-bold text-gray-800">অক্ষত থাকলে স্টকে ফেরত যোগ করুন (Restock if Intact)</label>
+                </div>
+                <p class="text-[10px] text-gray-500 leading-relaxed pl-6">
+                    • <strong>ভাঙা/নষ্ট পার্সেল (Received Damaged)</strong> হলে জার কোনোভাবেই স্টকে যোগ হবে না এবং ক্ষতি (Damage Loss) হিসেবে হিসাব হবে।<br>
+                    • <strong>কুরিয়ারে ফেরত আসা (Returning)</strong> অবস্থায় জার স্টকে ঢুকবে না। শুধুমাত্র অক্ষত নিশ্চিত হলেই স্টকে যোগ হবে।
+                </p>
             </div>
 
             <div class="pt-2 flex items-center justify-end gap-2 border-t border-gray-100">
@@ -505,10 +512,26 @@
 
 <script>
 function openDamageModal() {
+    const prodSelect = document.getElementById('damageProductId');
+    if (prodSelect) {
+        updateDamageCostFromProduct(prodSelect);
+    }
     document.getElementById('damageModal').classList.remove('hidden');
 }
 function closeDamageModal() {
     document.getElementById('damageModal').classList.add('hidden');
+}
+
+function updateDamageCostFromProduct(selectElem) {
+    if (!selectElem) return;
+    const selectedOption = selectElem.options[selectElem.selectedIndex];
+    if (selectedOption) {
+        const price = selectedOption.getAttribute('data-price');
+        const costInput = document.getElementById('damageCostPerJar');
+        if (price && costInput) {
+            costInput.value = parseFloat(price).toFixed(2);
+        }
+    }
 }
 
 function openReturnModal() {
