@@ -64,7 +64,7 @@
                     <!-- Featured Jar showcase image -->
                     <div class="relative aspect-square rounded-2xl overflow-hidden bg-black/60 border border-emerald-500/40 mb-5 flex items-center justify-center group">
                         <a href="{% if hero_pickle %}{% url 'store:product_detail' hero_pickle.slug %}{% else %}#pickle-menu{% endif %}" class="w-full h-full block">
-                            <img src="{% if hero_pickle.image %}{{ hero_pickle.image.url }}{% elif hero_pickle.image_url %}{{ hero_pickle.image_url }}{% else %}/static/images/pickle_hero.png{% endif %}" alt="{% if hero_pickle %}{{ hero_pickle.name }}{% else %}Artisanal Handcrafted Pickles{% endif %}" class="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500" loading="eager" fetchpriority="high" decoding="async" width="500" height="500">
+                            <img src="{% if hero_pickle %}{{ hero_pickle.primary_image_url }}{% else %}/static/images/pickle_hero.png{% endif %}" alt="{% if hero_pickle %}{{ hero_pickle.name }}{% else %}Artisanal Handcrafted Pickles{% endif %}" class="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500" loading="eager" fetchpriority="high" decoding="async" width="500" height="500">
                         </a>
                         <div class="absolute top-3 left-3 bg-amber-400 text-slate-950 text-xs font-black px-3.5 py-1.5 rounded-full uppercase tracking-wider shadow-lg flex items-center gap-1.5 ring-2 ring-amber-400/40">
                             <i class="fa-solid fa-fire text-rose-600"></i>
@@ -184,9 +184,9 @@
         <div class="product-card rounded-3xl overflow-hidden flex flex-col justify-between group transition-all duration-300">
             
             <!-- Card Image Box -->
-            <div class="relative aspect-4/3 overflow-hidden bg-slate-100 border-b border-slate-200">
+            <div class="relative aspect-square overflow-hidden bg-slate-100 border-b border-slate-200">
                 <a href="{% url 'store:product_detail' product.slug %}">
-                    <img src="{{ product.primary_image_url }}" alt="{{ product.name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" decoding="async" width="600" height="450">
+                    <img src="{{ product.primary_image_url }}" alt="{{ product.name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" decoding="async" width="1024" height="1024">
                 </a>
                 
                 <!-- Best Seller / Spice Level Badge -->

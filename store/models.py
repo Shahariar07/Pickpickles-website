@@ -94,10 +94,24 @@ class Product(models.Model):
 
     @property
     def primary_image_url(self):
+        url = None
         if self.image:
-            return self.image.url
-        if self.image_url:
-            return self.image_url
+            url = self.image.url
+        elif self.image_url:
+            url = self.image_url
+        
+        if url:
+            try:
+                local_rel = self.image.name if self.image else url.replace('/media/', '')
+                local_path = os.path.join(settings.MEDIA_ROOT, local_rel)
+                if os.path.exists(local_path):
+                    ts = int(os.path.getmtime(local_path))
+                else:
+                    ts = int(self.updated_at.timestamp()) if self.updated_at else 1
+            except Exception:
+                ts = int(self.updated_at.timestamp()) if self.updated_at else 1
+            separator = '&' if '?' in url else '?'
+            return f"{url}{separator}v={ts}"
         return "/static/images/pickle_default.png"
 
     def __str__(self):

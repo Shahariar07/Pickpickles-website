@@ -40,6 +40,13 @@ staticfiles/
 *.swp
 *.swo
 
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
 # OS generated files
 .DS_Store
 Thumbs.db

@@ -22,7 +22,7 @@
         <!-- Left: Product Image Box -->
         <div class="lg:col-span-6 space-y-4">
             <div class="relative aspect-square rounded-3xl overflow-hidden bg-white border border-gray-200 shadow-md flex items-center justify-center p-4">
-                <img src="{{ product.primary_image_url }}" alt="{{ product.name }}" class="w-full h-full object-cover rounded-2xl hover:scale-105 transition-transform duration-500" id="mainProductImg" loading="eager" fetchpriority="high" decoding="async" width="600" height="600">
+                <img src="{{ product.primary_image_url }}" alt="{{ product.name }}" class="w-full h-full object-cover rounded-2xl hover:scale-105 transition-transform duration-500" id="mainProductImg" loading="eager" fetchpriority="high" decoding="async" width="1024" height="1024">
                 
                 <!-- Spice badge -->
                 <div class="absolute top-4 left-4 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-gray-900 shadow-md border border-gray-100 flex items-center gap-1.5">
@@ -38,13 +38,19 @@
             <!-- Trust highlights -->
             <div class="grid grid-cols-3 gap-3 text-center">
                 <div class="bg-emerald-50/60 p-3 rounded-2xl border border-emerald-100">
+                    {% if 'pineapple' in product.name|lower %}
+                    <span class="text-lg">🍍</span>
+                    <p class="text-[11px] font-bold text-emerald-900 mt-1">Juicy & Zesty</p>
+                    <p class="text-[10px] text-emerald-700">Artisanal brine</p>
+                    {% else %}
                     <span class="text-lg">🥒</span>
                     <p class="text-[11px] font-bold text-emerald-900 mt-1">Super Crunchy</p>
                     <p class="text-[10px] text-emerald-700">Cold-pack brined</p>
+                    {% endif %}
                 </div>
                 <div class="bg-amber-50/60 p-3 rounded-2xl border border-amber-100">
                     <span class="text-lg">🌿</span>
-                    <p class="text-[11px] font-bold text-amber-900 mt-1">Pure Spices & Garlic</p>
+                    <p class="text-[11px] font-bold text-amber-900 mt-1">100% Pure Spices</p>
                     <p class="text-[10px] text-amber-700">No artificial flavors</p>
                 </div>
                 <div class="bg-indigo-50/60 p-3 rounded-2xl border border-indigo-100">
