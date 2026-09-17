@@ -20638,8 +20638,8 @@
         "pairing_suggestions": "Smash Burgers, Fried Chicken, Shawarma, Beef Tehari, Biryani, Bhuna Khichuri, Kebabs & Daal-Bhat",
         "cut_style": "CHIPS",
         "spice_level": "MILD",
-        "crunch_rating": 5,
         "jar_weight_grams": 600,
+        "gross_weight_grams": 850,
         "price_bdt": "350.00",
         "original_price_bdt": "400.00",
         "image": "products/pickled_mixed_veggies.webp",
@@ -20666,8 +20666,8 @@
         "pairing_suggestions": "Beef Tehari, Kacchi Biryani, Bhuna Khichuri, Kebabs, Smash Burgers, Fried Chicken & Dal-Rice",
         "cut_style": "CHIPS",
         "spice_level": "MEDIUM",
-        "crunch_rating": 4,
         "jar_weight_grams": 600,
+        "gross_weight_grams": 850,
         "price_bdt": "220.00",
         "original_price_bdt": "260.00",
         "image": "products/pickled_deshi_onions.webp",
@@ -20694,8 +20694,8 @@
         "pairing_suggestions": "Smash Burgers, Fried Chicken, Shawarma, Beef Tehari, Khichuri, Kebab Rolls & Daal-Bhat",
         "cut_style": "CHIPS",
         "spice_level": "HOT",
-        "crunch_rating": 4,
         "jar_weight_grams": 600,
+        "gross_weight_grams": 850,
         "price_bdt": "250.00",
         "original_price_bdt": "300.00",
         "image": "products/pickled_green_peppers.webp",
@@ -20722,8 +20722,8 @@
         "pairing_suggestions": "Smash Burgers, Fresh Green Salads, Grilled Meats, Shawarma, Beef Tehari, Khichuri & Cheese Sandwiches",
         "cut_style": "CHIPS",
         "spice_level": "MILD",
-        "crunch_rating": 5,
         "jar_weight_grams": 600,
+        "gross_weight_grams": 850,
         "price_bdt": "260.00",
         "original_price_bdt": "300.00",
         "image": "products/pickled_beetroot.webp",
@@ -20750,8 +20750,8 @@
         "pairing_suggestions": "Smash Burgers, Fried Chicken, Sandwiches, Shawarma, Beef Tehari & Daal-Rice",
         "cut_style": "CHIPS",
         "spice_level": "MILD",
-        "crunch_rating": 5,
         "jar_weight_grams": 600,
+        "gross_weight_grams": 850,
         "price_bdt": "350.00",
         "original_price_bdt": "400.00",
         "image": "products/classic_dill_pickles_g1kExO8.webp",
@@ -20778,8 +20778,8 @@
         "pairing_suggestions": "Burgers, Sandwiches, Snacks",
         "cut_style": "CHIPS",
         "spice_level": "MILD",
-        "crunch_rating": 3,
         "jar_weight_grams": 600,
+        "gross_weight_grams": 850,
         "price_bdt": "350.00",
         "original_price_bdt": "400.00",
         "image": "products/pickled_pineapple_w8eH6nX.webp",
@@ -21111,6 +21111,7 @@
         "product": 9,
         "product_name": "Pickled Mixed Veggies",
         "jar_weight_grams": 500,
+        "gross_weight_grams": 850,
         "unit_price": "350.00",
         "quantity": 1,
         "total_price": "350.00"
@@ -21124,6 +21125,7 @@
         "product": 10,
         "product_name": "Pickled Deshi Onions",
         "jar_weight_grams": 500,
+        "gross_weight_grams": 850,
         "unit_price": "220.00",
         "quantity": 1,
         "total_price": "220.00"
@@ -21137,6 +21139,7 @@
         "product": 11,
         "product_name": "Pickled Green Peppers",
         "jar_weight_grams": 500,
+        "gross_weight_grams": 850,
         "unit_price": "250.00",
         "quantity": 1,
         "total_price": "250.00"
@@ -21150,6 +21153,7 @@
         "product": 9,
         "product_name": "Pickled Mixed Veggies",
         "jar_weight_grams": 500,
+        "gross_weight_grams": 850,
         "unit_price": "350.00",
         "quantity": 1,
         "total_price": "350.00"
@@ -21163,6 +21167,7 @@
         "product": 10,
         "product_name": "Pickled Deshi Onions",
         "jar_weight_grams": 500,
+        "gross_weight_grams": 850,
         "unit_price": "220.00",
         "quantity": 1,
         "total_price": "220.00"
@@ -21176,6 +21181,7 @@
         "product": 14,
         "product_name": "Classic Dill Pickles",
         "jar_weight_grams": 500,
+        "gross_weight_grams": 850,
         "unit_price": "350.00",
         "quantity": 1,
         "total_price": "350.00"
@@ -21189,6 +21195,7 @@
         "product": 9,
         "product_name": "Pickled Mixed Veggies",
         "jar_weight_grams": 600,
+        "gross_weight_grams": 850,
         "unit_price": "350.00",
         "quantity": 1,
         "total_price": "350.00"
@@ -21202,6 +21209,7 @@
         "product": 12,
         "product_name": "Pickled Beetroot",
         "jar_weight_grams": 600,
+        "gross_weight_grams": 850,
         "unit_price": "260.00",
         "quantity": 1,
         "total_price": "260.00"
@@ -21215,6 +21223,7 @@
         "product": 12,
         "product_name": "Pickled Beetroot",
         "jar_weight_grams": 600,
+        "gross_weight_grams": 850,
         "unit_price": "260.00",
         "quantity": 1,
         "total_price": "260.00"
@@ -21228,6 +21237,7 @@
         "product": 10,
         "product_name": "Pickled Deshi Onions",
         "jar_weight_grams": 600,
+        "gross_weight_grams": 850,
         "unit_price": "220.00",
         "quantity": 1,
         "total_price": "220.00"
@@ -21241,6 +21251,7 @@
         "product": 11,
         "product_name": "Pickled Green Peppers",
         "jar_weight_grams": 600,
+        "gross_weight_grams": 850,
         "unit_price": "250.00",
         "quantity": 1,
         "total_price": "250.00"
@@ -21254,6 +21265,7 @@
         "product": 14,
         "product_name": "Classic Dill Pickles",
         "jar_weight_grams": 600,
+        "gross_weight_grams": 850,
         "unit_price": "350.00",
         "quantity": 1,
         "total_price": "350.00"
@@ -21267,6 +21279,7 @@
         "product": 10,
         "product_name": "Pickled Deshi Onions",
         "jar_weight_grams": 600,
+        "gross_weight_grams": 850,
         "unit_price": "220.00",
         "quantity": 1,
         "total_price": "220.00"
@@ -21280,6 +21293,7 @@
         "product": 11,
         "product_name": "Pickled Green Peppers",
         "jar_weight_grams": 600,
+        "gross_weight_grams": 850,
         "unit_price": "250.00",
         "quantity": 1,
         "total_price": "250.00"
@@ -21293,6 +21307,7 @@
         "product": 10,
         "product_name": "Pickled Deshi Onions",
         "jar_weight_grams": 600,
+        "gross_weight_grams": 850,
         "unit_price": "220.00",
         "quantity": 1,
         "total_price": "220.00"
@@ -21306,6 +21321,7 @@
         "product": 11,
         "product_name": "Pickled Green Peppers",
         "jar_weight_grams": 600,
+        "gross_weight_grams": 850,
         "unit_price": "250.00",
         "quantity": 1,
         "total_price": "250.00"
@@ -21319,6 +21335,7 @@
         "product": 14,
         "product_name": "Classic Dill Pickles",
         "jar_weight_grams": 600,
+        "gross_weight_grams": 850,
         "unit_price": "350.00",
         "quantity": 1,
         "total_price": "350.00"
@@ -21332,6 +21349,7 @@
         "product": 12,
         "product_name": "Pickled Beetroot",
         "jar_weight_grams": 600,
+        "gross_weight_grams": 850,
         "unit_price": "260.00",
         "quantity": 1,
         "total_price": "260.00"
@@ -21345,6 +21363,7 @@
         "product": 10,
         "product_name": "Pickled Deshi Onions",
         "jar_weight_grams": 600,
+        "gross_weight_grams": 850,
         "unit_price": "220.00",
         "quantity": 1,
         "total_price": "220.00"

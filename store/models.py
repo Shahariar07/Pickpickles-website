@@ -46,8 +46,8 @@ class Product(models.Model):
     pairing_suggestions = models.CharField(max_length=255, default="Smash Burgers, Fried Chicken, Shawarma, Beef Tehari, Biryani, Bhuna Khichuri, Daal-Rice")
     cut_style = models.CharField(max_length=20, choices=CUT_CHOICES, default='CHIPS')
     spice_level = models.CharField(max_length=20, choices=SPICE_CHOICES, default='MILD')
-    crunch_rating = models.PositiveSmallIntegerField(default=5, help_text="Rating out of 5")
-    jar_weight_grams = models.PositiveIntegerField(default=600, help_text="Weight in grams (e.g. 600g)")
+    jar_weight_grams = models.PositiveIntegerField(default=600, help_text="Net Weight in grams (e.g. 600g)")
+    gross_weight_grams = models.PositiveIntegerField(default=850, help_text="Gross weight for delivery in grams (e.g. 850g)")
     
     price_bdt = models.DecimalField(max_digits=10, decimal_places=2, help_text="Price in BDT (৳)")
     original_price_bdt = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Strike-through price if on sale")
@@ -460,6 +460,7 @@ class OrderItem(models.Model):
     product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, related_name='order_items')
     product_name = models.CharField(max_length=200)
     jar_weight_grams = models.PositiveIntegerField(default=600)
+    gross_weight_grams = models.PositiveIntegerField(default=850)
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     quantity = models.PositiveIntegerField(default=1)
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
