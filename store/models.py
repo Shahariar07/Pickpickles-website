@@ -46,6 +46,7 @@ class Product(models.Model):
     pairing_suggestions = models.CharField(max_length=255, default="Smash Burgers, Fried Chicken, Shawarma, Beef Tehari, Biryani, Bhuna Khichuri, Daal-Rice")
     cut_style = models.CharField(max_length=20, choices=CUT_CHOICES, default='CHIPS')
     spice_level = models.CharField(max_length=20, choices=SPICE_CHOICES, default='MILD')
+    crunch_rating = models.PositiveSmallIntegerField(default=5, help_text="Rating out of 5")
     jar_weight_grams = models.PositiveIntegerField(default=600, help_text="Net Weight in grams (e.g. 600g)")
     gross_weight_grams = models.PositiveIntegerField(default=850, help_text="Gross weight for delivery in grams (e.g. 850g)")
     
