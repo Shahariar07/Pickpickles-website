@@ -581,16 +581,17 @@ def create_manual_order(request):
                         'quantity': qty,
                         'unit_price': product.price_bdt,
                         'total_price': line_price,
-                        'jar_weight_grams': product.jar_weight_grams
+                        'jar_weight_grams': product.jar_weight_grams or 600,
+                        'gross_weight_grams': getattr(product, 'gross_weight_grams', 850) or 850
                     })
 
             if not valid_items:
                 messages.error(request, 'None of the selected products were found in the database.')
                 return redirect('dashboard:orders')
 
-            # Delivery Fee based on Pathao weight calculation
-            total_weight_grams = sum(itm['jar_weight_grams'] * itm['quantity'] for itm in valid_items)
-            default_fee = calculate_pathao_delivery_fee(total_weight_grams, delivery_zone)
+            # Delivery Fee based on Pathao gross weight calculation (850g per jar)
+            total_gross_weight_grams = sum((itm.get('gross_weight_grams', 850) or 850) * itm['quantity'] for itm in valid_items)
+            default_fee = calculate_pathao_delivery_fee(total_gross_weight_grams, delivery_zone)
             delivery_fee_str = request.POST.get('delivery_fee', '').strip()
             try:
                 delivery_fee = Decimal(delivery_fee_str) if delivery_fee_str else default_fee
@@ -627,6 +628,7 @@ def create_manual_order(request):
                     product=prod,
                     product_name=prod.name,
                     jar_weight_grams=itm['jar_weight_grams'],
+                    gross_weight_grams=itm.get('gross_weight_grams', 850),
                     unit_price=itm['unit_price'],
                     quantity=qty,
                     total_price=itm['total_price']
@@ -799,7 +801,8 @@ def stock_manager(request):
                 product.cut_style = request.POST.get('cut_style', product.cut_style)
                 product.spice_level = request.POST.get('spice_level', product.spice_level)
                 product.crunch_rating = int(request.POST.get('crunch_rating', product.crunch_rating or 5))
-                product.jar_weight_grams = int(request.POST.get('jar_weight_grams', product.jar_weight_grams))
+                product.jar_weight_grams = int(request.POST.get('jar_weight_grams', product.jar_weight_grams or 600))
+                product.gross_weight_grams = int(request.POST.get('gross_weight_grams', getattr(product, 'gross_weight_grams', 850) or 850))
                 product.price_bdt = float(request.POST.get('price_bdt', product.price_bdt))
                 
                 orig_price = request.POST.get('original_price_bdt')
@@ -838,6 +841,7 @@ def stock_manager(request):
                 spice_level = request.POST.get('spice_level', 'MILD')
                 crunch_rating = int(request.POST.get('crunch_rating', 5))
                 jar_weight_grams = int(request.POST.get('jar_weight_grams', 600))
+                gross_weight_grams = int(request.POST.get('gross_weight_grams', 850))
                 price_bdt = float(request.POST.get('price_bdt', 380))
                 orig_price = request.POST.get('original_price_bdt')
                 original_price_bdt = float(orig_price) if orig_price else None
@@ -858,6 +862,7 @@ def stock_manager(request):
                     spice_level=spice_level,
                     crunch_rating=crunch_rating,
                     jar_weight_grams=jar_weight_grams,
+                    gross_weight_grams=gross_weight_grams,
                     price_bdt=price_bdt,
                     original_price_bdt=original_price_bdt,
                     stock_count=stock_count,

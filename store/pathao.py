@@ -192,8 +192,8 @@ class PathaoCourierService:
             recipient_address = f"{recipient_address}, Bangladesh"
         recipient_address = recipient_address[:220]
 
-        # 4. Weight (0.5 kg to 10.0 kg)
-        weight_kg = float(order.total_weight_kg) if hasattr(order, 'total_weight_kg') and order.total_weight_kg else 0.6
+        # 4. Weight (0.5 kg to 10.0 kg) based on Gross Weight (850g per jar)
+        weight_kg = float(order.total_weight_kg) if hasattr(order, 'total_weight_kg') and order.total_weight_kg else 0.85
         weight_kg = max(0.5, min(10.0, round(weight_kg, 2)))
 
         recipient_city = 1
@@ -215,8 +215,8 @@ class PathaoCourierService:
             "item_type": 2,       # 2 for Parcel
             "item_quantity": max(1, order.total_items_count if hasattr(order, 'total_items_count') else 1),
             "item_weight": weight_kg,
-            "item_description": f"Pickpickles Jar Order #{order.order_number} ({weight_kg}kg)",
-            "special_instruction": str(order.customer_notes or "Fragile artisanal glass jars - Handle with care")[:250],
+            "item_description": f"Pickpickles Jar Order #{order.order_number} ({weight_kg}kg Gross)",
+            "special_instruction": str(order.customer_notes or "Fragile glass jars - Gross weight ~850g/jar - Handle with care")[:250],
         }
 
         try:

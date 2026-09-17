@@ -11,6 +11,7 @@ Pillow>=10.0.0
 python-dotenv>=1.0.0
 
 # Database & Utilities
+psycopg2-binary>=2.9.9
 sqlparse>=0.4.4
 asgiref>=3.7.0
 tzdata>=2024.1; sys_platform == 'win32'

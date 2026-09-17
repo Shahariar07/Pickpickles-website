@@ -20,6 +20,7 @@ class Cart:
                 'price': str(product.price_bdt),
                 'name': product.name,
                 'weight': product.jar_weight_grams or 600,
+                'gross_weight': getattr(product, 'gross_weight_grams', 850) or 850,
                 'image': product.primary_image_url,
                 'slug': product.slug,
             }
@@ -29,8 +30,9 @@ class Cart:
         else:
             self.cart[product_id]['quantity'] += quantity
 
-        # Update weight in session if product weight updated
+        # Update weights in session if product weight updated
         self.cart[product_id]['weight'] = product.jar_weight_grams or 600
+        self.cart[product_id]['gross_weight'] = getattr(product, 'gross_weight_grams', 850) or 850
 
         if self.cart[product_id]['quantity'] <= 0:
             self.remove(product)
@@ -63,7 +65,11 @@ class Cart:
                 item['price'] = Decimal(str(item_data['price']))
                 item['total_price'] = item['price'] * item['quantity']
                 item['weight'] = prod.jar_weight_grams or 600
-                item['total_weight_grams'] = item['weight'] * item['quantity']
+                item['net_weight'] = prod.jar_weight_grams or 600
+                item['gross_weight'] = getattr(prod, 'gross_weight_grams', 850) or 850
+                item['total_weight_grams'] = item['gross_weight'] * item['quantity']
+                item['total_net_weight_grams'] = item['net_weight'] * item['quantity']
+                item['total_gross_weight_grams'] = item['gross_weight'] * item['quantity']
                 yield item
 
     def __len__(self):
@@ -72,7 +78,7 @@ class Cart:
     def get_subtotal(self):
         return sum(Decimal(str(item.get('price', '0'))) * int(item.get('quantity', 0)) for item in self.cart.values())
 
-    def get_total_weight_grams(self):
+    def get_total_net_weight_grams(self):
         product_ids = [k for k in self.cart.keys()]
         products = Product.objects.filter(id__in=product_ids)
         product_map = {str(p.id): p for p in products}
@@ -89,11 +95,32 @@ class Cart:
             total_grams += w * qty
         return total_grams
 
+    def get_total_gross_weight_grams(self):
+        product_ids = [k for k in self.cart.keys()]
+        products = Product.objects.filter(id__in=product_ids)
+        product_map = {str(p.id): p for p in products}
+        
+        total_grams = 0
+        for product_id, item in self.cart.items():
+            qty = int(item.get('quantity', 0))
+            if qty <= 0:
+                continue
+            if product_id in product_map:
+                w = getattr(product_map[product_id], 'gross_weight_grams', 850) or 850
+            else:
+                w = int(item.get('gross_weight', 850))
+            total_grams += w * qty
+        return total_grams
+
+    def get_total_weight_grams(self):
+        # Default delivery/parcel weight calculation uses gross weight (850g per jar)
+        return self.get_total_gross_weight_grams()
+
     def get_total_weight_kg(self):
-        return round(self.get_total_weight_grams() / 1000.0, 2)
+        return round(self.get_total_gross_weight_grams() / 1000.0, 2)
 
     def get_billing_weight_kg(self):
-        total_g = self.get_total_weight_grams()
+        total_g = self.get_total_gross_weight_grams()
         if total_g <= 0:
             return 1
         return max(1, math.ceil(total_g / 1000.0))
