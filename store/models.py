@@ -59,6 +59,8 @@ class Product(models.Model):
     is_featured = models.BooleanField(default=False)
     is_in_stock = models.BooleanField(default=True)
     stock_count = models.PositiveIntegerField(default=50)
+    min_stock_threshold = models.PositiveIntegerField(default=15, help_text="Alert if stock falls below this number")
+    target_stock_level = models.PositiveIntegerField(default=50, help_text="Ideal target inventory quantity")
     
     ingredients = models.TextField(default="Fresh Cucumbers, Filtered Water, Pure Cane Vinegar, Himalayan Pink Salt, Fresh Garlic, Bay Leaf (Tejpata), Mustard Seeds, Coriander, Black Peppercorn.")
     shelf_life = models.CharField(max_length=150, default="Always keep refrigerated for maximum crunch. Best enjoyed within 1 month.")
@@ -73,6 +75,25 @@ class Product(models.Model):
         if not self.slug:
             self.slug = slugify(self.name)
         super().save(*args, **kwargs)
+
+    @property
+    def is_low_stock(self):
+        return self.stock_count <= self.min_stock_threshold or not self.is_in_stock
+
+    @property
+    def is_critical_stock(self):
+        return self.stock_count <= max(1, self.min_stock_threshold // 2) or not self.is_in_stock
+
+    @property
+    def needed_stock(self):
+        return max(0, self.target_stock_level - self.stock_count)
+
+    @property
+    def stock_percentage(self):
+        if self.target_stock_level > 0:
+            pct = round((self.stock_count / self.target_stock_level) * 100)
+            return min(100, max(0, pct))
+        return 100 if self.stock_count > 0 else 0
 
     @property
     def discount_percent(self):

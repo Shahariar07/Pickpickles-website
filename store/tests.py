@@ -130,3 +130,30 @@ class CartTests(TestCase):
         self.assertEqual(cancel_log.quantity_delta, 3)
         self.assertEqual(cancel_log.previous_stock, 47)
         self.assertEqual(cancel_log.resulting_stock, 50)
+
+    def test_out_of_stock_product_visible_on_homepage(self):
+        # Mark product as out of stock
+        self.product.is_in_stock = False
+        self.product.stock_count = 0
+        self.product.save()
+
+        response = self.client.get(reverse('store:index'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.product.name)
+        self.assertContains(response, "Stock Out")
+
+    def test_out_of_stock_cannot_be_added_to_cart(self):
+        self.product.is_in_stock = False
+        self.product.stock_count = 0
+        self.product.save()
+
+        url = reverse('store:cart_add', args=[self.product.id])
+        response = self.client.post(
+            f"{url}?format=json",
+            {'quantity': 1},
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        self.assertEqual(response.status_code, 400)
+        data = response.json()
+        self.assertFalse(data['success'])
+        self.assertIn("out of stock", data['message'].lower())

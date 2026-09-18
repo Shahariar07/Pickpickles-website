@@ -18,7 +18,7 @@ from django.db.models.functions import Coalesce
 
 def index(request):
     # Auto-calculate best seller product based on total ordered units (excluding cancelled and soft-deleted orders)
-    best_seller = Product.objects.filter(is_in_stock=True).annotate(
+    best_seller = Product.objects.annotate(
         total_sold=Coalesce(
             Sum('order_items__quantity', filter=Q(order_items__order__is_deleted=False) & ~Q(order_items__order__order_status='CANCELLED')),
             Value(0),
@@ -26,8 +26,8 @@ def index(request):
         )
     ).order_by('-total_sold', '-is_featured', 'id').first()
 
-    featured_products = Product.objects.filter(is_in_stock=True, is_featured=True).order_by('id')
-    all_products = Product.objects.filter(is_in_stock=True).annotate(
+    featured_products = Product.objects.filter(is_featured=True).order_by('id')
+    all_products = Product.objects.annotate(
         total_sold=Coalesce(
             Sum('order_items__quantity', filter=Q(order_items__order__is_deleted=False) & ~Q(order_items__order__order_status='CANCELLED')),
             Value(0),
@@ -36,7 +36,7 @@ def index(request):
     ).order_by('id')
     total_products_count = all_products.count()
     categories = Category.objects.annotate(
-        product_count=Count('products', filter=Q(products__is_in_stock=True))
+        product_count=Count('products')
     ).order_by('name')
     recent_reviews = Review.objects.filter(is_approved=True).select_related('product')[:6]
     
@@ -59,11 +59,11 @@ def index(request):
 
 def product_detail(request, slug):
     product = get_object_or_404(Product, slug=slug)
-    related_products = Product.objects.filter(is_in_stock=True).exclude(id=product.id)[:3]
+    related_products = Product.objects.exclude(id=product.id)[:3]
     reviews = product.reviews.filter(is_approved=True)
     review_form = ReviewForm()
 
-    best_seller = Product.objects.filter(is_in_stock=True).annotate(
+    best_seller = Product.objects.annotate(
         total_sold=Coalesce(
             Sum('order_items__quantity', filter=Q(order_items__order__is_deleted=False) & ~Q(order_items__order__order_status='CANCELLED')),
             Value(0),
@@ -120,6 +120,13 @@ def cart_view(request):
 def cart_add(request, product_id):
     cart = Cart(request)
     product = get_object_or_404(Product, id=product_id)
+    
+    if not product.is_in_stock:
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('format') == 'json':
+            return JsonResponse({'success': False, 'message': f'{product.name} is currently out of stock.'}, status=400)
+        messages.error(request, f'Sorry, {product.name} is currently out of stock.')
+        next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'store:index'
+        return redirect(next_url)
     
     quantity = int(request.POST.get('quantity', 1))
     override = request.POST.get('override', 'false') == 'true'

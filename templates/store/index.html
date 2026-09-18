@@ -59,17 +59,24 @@
 
             <!-- Right Hero Visual Card (Auto Best Seller Pickle) -->
             <div class="lg:col-span-5 relative flex justify-center">
-                {% with hero_pickle=best_seller|default:featured_products.0 %}
+                {% with hero_pickle=best_seller|default:featured_products.first %}
                 <div class="relative w-full max-w-sm sm:max-w-md p-6 rounded-3xl shadow-2xl border-2 border-emerald-400" style="background-color: #082816;">
                     <!-- Featured Jar showcase image -->
                     <div class="relative aspect-square rounded-2xl overflow-hidden bg-black/60 border border-emerald-500/40 mb-5 flex items-center justify-center group">
                         <a href="{% if hero_pickle %}{% url 'store:product_detail' hero_pickle.slug %}{% else %}#pickle-menu{% endif %}" class="w-full h-full block">
                             <img src="{% if hero_pickle %}{{ hero_pickle.primary_image_url }}{% else %}/static/images/pickle_hero.png{% endif %}" alt="{% if hero_pickle %}{{ hero_pickle.name }}{% else %}Artisanal Handcrafted Pickles{% endif %}" class="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500" loading="eager" fetchpriority="high" decoding="async" width="500" height="500">
                         </a>
+                        {% if hero_pickle and not hero_pickle.is_in_stock %}
+                        <div class="absolute top-3 left-3 bg-rose-600 text-white text-xs font-black px-3.5 py-1.5 rounded-full uppercase tracking-wider shadow-lg flex items-center gap-1.5 ring-2 ring-rose-400/40">
+                            <i class="fa-solid fa-circle-xmark"></i>
+                            <span>Stock Out</span>
+                        </div>
+                        {% else %}
                         <div class="absolute top-3 left-3 bg-amber-400 text-slate-950 text-xs font-black px-3.5 py-1.5 rounded-full uppercase tracking-wider shadow-lg flex items-center gap-1.5 ring-2 ring-amber-400/40">
                             <i class="fa-solid fa-fire text-rose-600"></i>
                             <span>#1 Best Seller</span>
                         </div>
+                        {% endif %}
                         <div class="absolute bottom-3 right-3 bg-slate-950/90 text-white text-xs font-black px-3 py-1.5 rounded-xl border border-white/30 flex items-center gap-1">
                             {% if hero_pickle.reviews_count > 0 %}
                             <span>⭐ {{ hero_pickle.average_rating }}/5 ({{ hero_pickle.reviews_count }} Review{{ hero_pickle.reviews_count|pluralize }})</span>
@@ -88,16 +95,19 @@
                         <p class="text-xs text-emerald-100 font-semibold">{% if hero_pickle %}{{ hero_pickle.tagline }}{% else %}Crisp cucumbers & sweet carrots in tangy-sweet vinegar brine.{% endif %}</p>
                         <div class="flex items-center justify-center gap-3 pt-2">
                             <span class="font-display font-black text-3xl text-amber-300">৳{% if hero_pickle %}{{ hero_pickle.price_bdt|floatformat:0 }}{% else %}380{% endif %}</span>
-                            {% if hero_pickle.original_price_bdt %}
-                            <span class="text-sm text-emerald-300/80 line-through font-bold">৳{{ hero_pickle.original_price_bdt|floatformat:0 }}</span>
-                            <span class="bg-rose-600 text-white font-black text-xs px-2.5 py-0.5 rounded-full">Save {{ hero_pickle.discount_percent }}%</span>
-                            {% endif %}
                         </div>
                         <div class="pt-2">
+                            {% if hero_pickle and not hero_pickle.is_in_stock %}
+                            <a href="{% if hero_pickle %}{% url 'store:product_detail' hero_pickle.slug %}{% else %}#pickle-menu{% endif %}" class="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-400/40 text-xs font-black px-5 py-2.5 rounded-xl shadow-md transition active:scale-95">
+                                <span>View Pickle Details</span>
+                                <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                            </a>
+                            {% else %}
                             <a href="{% if hero_pickle %}{% url 'store:product_detail' hero_pickle.slug %}{% else %}#pickle-menu{% endif %}" class="inline-flex items-center gap-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black px-5 py-2.5 rounded-xl shadow-md transition active:scale-95">
                                 <span>Order Best Seller Jar</span>
                                 <i class="fa-solid fa-arrow-right text-[10px]"></i>
                             </a>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -189,8 +199,13 @@
                     <img src="{{ product.primary_image_url }}" alt="{{ product.name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" decoding="async" width="1024" height="1024">
                 </a>
                 
-                <!-- Best Seller / Spice Level Badge -->
-                {% if best_seller and product.id == best_seller.id %}
+                <!-- Best Seller / Stock Out / Spice Level Badge -->
+                {% if not product.is_in_stock %}
+                <div class="absolute top-3 left-3 bg-rose-600 text-white text-xs font-black px-3 py-1 rounded-full shadow-lg border border-rose-500 flex items-center gap-1.5 z-10">
+                    <i class="fa-solid fa-circle-xmark"></i>
+                    <span>Stock Out</span>
+                </div>
+                {% elif best_seller and product.id == best_seller.id %}
                 <div class="absolute top-3 left-3 bg-amber-400 text-slate-950 text-xs font-black px-3 py-1 rounded-full shadow-lg border border-amber-300 flex items-center gap-1.5 ring-2 ring-amber-400/40 z-10">
                     <i class="fa-solid fa-fire text-rose-600"></i>
                     <span>Best Seller</span>
@@ -206,12 +221,6 @@
                     {{ product.jar_weight_grams }}g Jar
                 </div>
 
-                <!-- Discount badge if applicable -->
-                {% if product.discount_percent > 0 %}
-                <div class="absolute bottom-3 left-3 bg-rose-600 text-white text-xs font-black px-2.5 py-1 rounded-md shadow-md">
-                    {{ product.discount_percent }}% OFF
-                </div>
-                {% endif %}
             </div>
 
             <!-- Card Body -->
@@ -248,17 +257,21 @@
                         <span class="text-[11px] text-slate-600 font-bold block uppercase">Price per Jar</span>
                         <div class="flex items-baseline gap-2">
                             <span class="font-display font-black text-2xl text-slate-950">৳{{ product.price_bdt }}</span>
-                            {% if product.original_price_bdt %}
-                            <span class="text-xs text-slate-500 line-through font-bold">৳{{ product.original_price_bdt }}</span>
-                            {% endif %}
                         </div>
                     </div>
 
-                    <!-- Quick Add Button with AJAX -->
+                    <!-- Quick Add Button with AJAX or Stock Out button -->
+                    {% if product.is_in_stock %}
                     <button onclick="ajaxAddToCart({{ product.id }})" class="bg-[#15803d] hover:bg-[#166534] active:scale-95 text-white font-extrabold text-xs sm:text-sm px-4 py-3 rounded-xl shadow-md flex items-center gap-1.5 transition-all">
                         <i class="fa-solid fa-plus text-xs"></i>
                         <span>Add to Bag</span>
                     </button>
+                    {% else %}
+                    <button disabled class="bg-slate-200 text-slate-500 font-bold text-xs sm:text-sm px-4 py-3 rounded-xl cursor-not-allowed flex items-center gap-1.5 opacity-90 shadow-inner" title="Currently Out of Stock">
+                        <i class="fa-solid fa-ban text-xs"></i>
+                        <span>Stock Out</span>
+                    </button>
+                    {% endif %}
                 </div>
 
             </div>

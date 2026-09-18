@@ -99,10 +99,6 @@
                     <span class="text-xs text-slate-700 font-bold block">Price in Bangladeshi Taka</span>
                     <div class="flex items-baseline gap-2">
                         <span class="font-display font-black text-3xl text-emerald-950">৳{{ product.price_bdt }}</span>
-                        {% if product.original_price_bdt %}
-                        <span class="text-sm text-slate-500 line-through font-bold">৳{{ product.original_price_bdt }}</span>
-                        <span class="bg-rose-600 text-white text-xs font-black px-2.5 py-0.5 rounded-md">Save {{ product.discount_percent }}%</span>
-                        {% endif %}
                     </div>
                 </div>
 

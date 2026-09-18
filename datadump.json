@@ -3,7 +3,7 @@
     "model": "auth.user",
     "fields": {
         "password": "pbkdf2_sha256$1000000$BvOerURopUKMzvfrRreoZ0$215h3EiH/TkfPd9pSIgxXciituTHS1KL5p+CsJ0jiQw=",
-        "last_login": "2026-09-13T17:17:12.109Z",
+        "last_login": "2026-09-18T16:00:10.783Z",
         "is_superuser": true,
         "username": "admin",
         "first_name": "",
@@ -2487,6 +2487,14 @@
     "fields": {
         "session_data": "eyJwaWNrcGlja2xlc19jYXJ0Ijp7fX0:1x0bR9:6ay3DVW8ubjd5wDgsk0D2H-SBD7OGCCFFwW7J_58T9s",
         "expire_date": "2026-09-13T09:02:47.950Z"
+    }
+},
+{
+    "model": "sessions.session",
+    "pk": "4bb4uz7nyilzv3as76b1xb5ueik33z8r",
+    "fields": {
+        "session_data": "eyJwaWNrcGlja2xlc19jYXJ0Ijp7fX0:1x7b3g:t9dvmSUIe-p1MbkNDVmeDS3Ug8LcLN2NHHMi63bFzTI",
+        "expire_date": "2026-10-02T16:03:28.464Z"
     }
 },
 {
@@ -6015,6 +6023,14 @@
     "fields": {
         "session_data": "eyJwaWNrcGlja2xlc19jYXJ0Ijp7fX0:1x3rLc:uovnIo2QPhKbYplf1nDEY2kMIxqCXDZZ9uyxM5RPUj4",
         "expire_date": "2026-09-22T08:38:32.893Z"
+    }
+},
+{
+    "model": "sessions.session",
+    "pk": "aswapohk2pdfg80escm4j2rrfzj69rax",
+    "fields": {
+        "session_data": ".eJxVjDsOgzAQRO_iOrL8J1Cmzxms9XodOyCIMFSIuwckiqSY5r2Z2ZiHdcl-rTT7ElnHJLv9sgDY03iK-IbxNXGcxmUugZ8VftnKn1Ok4XF1_w4y1HysUQsLWjmrZUK0LVpSBpqYDpyicSBdI5RzxtwhaFC2BaVJCFIEbRB4nH4K9mcGqh5hXli37fsX-Zc_7Q:1x7b0V:CRCKT-PRWT_F9mgZAh3dCY6JBSE7bAmjPEQJsskIl6s",
+        "expire_date": "2026-10-02T16:00:11.896Z"
     }
 },
 {
@@ -14877,8 +14893,8 @@
     "model": "sessions.session",
     "pk": "ponbhrcvlvnx9kxj5t7yea7s2u48c1gr",
     "fields": {
-        "session_data": ".eJxVjDEOgzAQBP9ydWQZY_CZMn3eYJ3Pl0BAgDBUiL8nSDQU2-zM7g5zx_2ZQXJgWlZo9uMBgba1DVuWJXQJGjBw6yJxL-MJ0pfGz6R4Gteli-pU1EWzek1Jhufl3g5ayu1_jSXaaHQq0dd1aQtC5oKdYyRfWdIi9PbJaWaRCl1kjNalykdt0FhJcPwAvR9AUg:1x7FgG:ddqI-_mWN7ZYrVOJtZL_d3015Skmcg51d1YEv9PFBWE",
-        "expire_date": "2026-10-01T17:13:52.265Z"
+        "session_data": ".eJxVjDEOgzAQBP9ydWQZY_CZMn3eYJ3Pl0BAgDBUiL8nSDQU2-zM7g5zx_2ZQXJgWlZo9uMBgba1DVuWJXQJGjBw6yJxL-MJ0pfGz6R4Gteli-pU1EWzek1Jhufl3g5ayu1_jSXaaHQq0dd1aQtC5oKdYyRfWdIi9PbJaWaRCl1kjNalykdt0FhJcPwAvR9AUg:1x7b6J:3Yz04h_7WZ06furZCTwKPBTg4YWfAby7MqctNHqgaho",
+        "expire_date": "2026-10-02T16:06:11.787Z"
     }
 },
 {
@@ -20648,10 +20664,12 @@
         "is_featured": true,
         "is_in_stock": true,
         "stock_count": 5,
+        "min_stock_threshold": 15,
+        "target_stock_level": 50,
         "ingredients": "Fresh Local Cucumbers, Sweet Carrots, Crisp Bell Peppers (Capsicum), Filtered Water, Pure Cane Vinegar, Himalayan Pink Salt, Brown Cane Sugar, Fresh Garlic Cloves, Yellow Mustard Seeds, Coriander, Black Peppercorn.",
         "shelf_life": "Always keep refrigerated for maximum crunch. Best enjoyed within 1 month.",
         "created_at": "2026-08-24T15:28:26.412Z",
-        "updated_at": "2026-09-16T12:52:58.475Z"
+        "updated_at": "2026-09-18T12:50:29.716Z"
     }
 },
 {
@@ -20677,10 +20695,12 @@
         "is_featured": true,
         "is_in_stock": true,
         "stock_count": 0,
+        "min_stock_threshold": 15,
+        "target_stock_level": 50,
         "ingredients": "Fresh Local Deshi Onions, Filtered Water, Pure Cane Vinegar, Himalayan Pink Salt, Fresh Garlic Cloves, Bay Leaf (Tejpata), Yellow Mustard Seeds, Black Peppercorn, Green Chili.",
         "shelf_life": "Always keep refrigerated for maximum crunch. Best enjoyed within 1 month.",
         "created_at": "2026-08-26T05:42:01.310Z",
-        "updated_at": "2026-09-17T16:18:37.775Z"
+        "updated_at": "2026-09-18T12:50:29.639Z"
     }
 },
 {
@@ -20706,10 +20726,12 @@
         "is_featured": true,
         "is_in_stock": true,
         "stock_count": 0,
+        "min_stock_threshold": 15,
+        "target_stock_level": 50,
         "ingredients": "Fresh Local Green Chillies / Peppers, Filtered Water, Pure Cane Vinegar, Himalayan Pink Salt, Fresh Garlic Cloves, Bay Leaf (Tejpata), Yellow Mustard Seeds, Black Peppercorn.",
         "shelf_life": "Always keep refrigerated for maximum crunch. Best enjoyed within 1 month.",
         "created_at": "2026-08-26T16:47:50.919Z",
-        "updated_at": "2026-09-17T16:13:30.759Z"
+        "updated_at": "2026-09-18T12:50:29.685Z"
     }
 },
 {
@@ -20735,10 +20757,12 @@
         "is_featured": true,
         "is_in_stock": true,
         "stock_count": 1,
+        "min_stock_threshold": 15,
+        "target_stock_level": 50,
         "ingredients": "Fresh Local Beetroots, Filtered Water, Pure Cane Vinegar, Himalayan Pink Salt, Brown Cane Sugar, Fresh Garlic Cloves, Bay Leaf (Tejpata), Yellow Mustard Seeds, Black Peppercorn.",
         "shelf_life": "Always keep refrigerated for maximum crunch. Best enjoyed within 1 month.",
         "created_at": "2026-09-09T07:50:28.024Z",
-        "updated_at": "2026-09-17T16:16:45.185Z"
+        "updated_at": "2026-09-18T12:50:29.608Z"
     }
 },
 {
@@ -20759,15 +20783,17 @@
         "gross_weight_grams": 850,
         "price_bdt": "350.00",
         "original_price_bdt": "400.00",
-        "image": "products/classic_dill_pickles_g1kExO8.webp",
+        "image": "products/classic_dill_pickles.webp",
         "image_url": "/media/products/classic_dill_pickles.webp",
         "is_featured": true,
         "is_in_stock": true,
         "stock_count": 3,
+        "min_stock_threshold": 15,
+        "target_stock_level": 50,
         "ingredients": "Fresh Local Cucumbers, Filtered Water, Pure Cane Vinegar, Himalayan Pink Salt, Fresh Garlic Cloves, Dill Herbs, Bay Leaf, Yellow Mustard Seeds, Black Peppercorn.",
         "shelf_life": "Always keep refrigerated for maximum crunch. Best enjoyed within 1 month.",
         "created_at": "2026-09-11T05:41:30.330Z",
-        "updated_at": "2026-09-17T16:16:45.181Z"
+        "updated_at": "2026-09-18T12:50:29.577Z"
     }
 },
 {
@@ -20779,24 +20805,26 @@
         "category": 2,
         "tagline": "Juicy Golden Pineapple Chunks with Crushed Chili, Peppercorns & Spiced Vinegar Brine!",
         "description": "Handcrafted with fresh juicy golden pineapple chunks steeped in an artisanal spiced cane vinegar brine with crushed red chili flakes, whole yellow mustard seeds, black peppercorns, and fresh green chili slices. An irresistible harmony of sweet tropical fruit, sharp vinegar tang, and a spicy chili punch with zero heavy oils.",
-        "flavor_profile": "Crisp, Tangy, Garlic & Whole Spices",
-        "pairing_suggestions": "Burgers, Sandwiches, Snacks",
+        "flavor_profile": "Sweet & Tangy, Tropical Warmth, Mild Chili Kick & Mustard Snap",
+        "pairing_suggestions": "BBQ & Grilled Chicken, Smash Burgers, Tacos, Fried Chicken, Shawarma, Cheesy Pizza & Fresh Green Salads",
         "cut_style": "CHIPS",
-        "spice_level": "MILD",
+        "spice_level": "MEDIUM",
         "crunch_rating": 3,
         "jar_weight_grams": 600,
         "gross_weight_grams": 850,
         "price_bdt": "350.00",
         "original_price_bdt": "400.00",
-        "image": "products/pickled_pineapple_w8eH6nX.webp",
-        "image_url": "/static/images/pickle_default.png",
+        "image": "products/pickled_pineapple.webp",
+        "image_url": "/media/products/pickled_pineapple.webp",
         "is_featured": true,
         "is_in_stock": true,
         "stock_count": 2,
+        "min_stock_threshold": 15,
+        "target_stock_level": 50,
         "ingredients": "Fresh Local Pineapples, Filtered Water, Pure Cane Vinegar, Himalayan Pink Salt, Brown Cane Sugar, Crushed Red Chili Flakes, Fresh Green Chillies, Yellow Mustard Seeds, Black Peppercorn.",
         "shelf_life": "Always keep refrigerated for maximum crunch. Best enjoyed within 1 month.",
         "created_at": "2026-09-16T16:18:45.833Z",
-        "updated_at": "2026-09-16T16:22:20.320Z"
+        "updated_at": "2026-09-18T13:04:26.920Z"
     }
 },
 {

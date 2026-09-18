@@ -57,34 +57,52 @@
     </div>
 
     <!-- Inventory Quick Stats -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <!-- Card 1: Total Catalog Items -->
         <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs flex items-center justify-between">
             <div>
                 <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Total Catalog Items</span>
                 <span class="font-display font-black text-2xl text-gray-900 mt-0.5">{{ total_products_count }}</span>
+                <span class="text-[10px] text-gray-500 block mt-1">Total Jars: <strong>{{ total_current_inventory }} pcs</strong></span>
             </div>
             <span class="w-10 h-10 rounded-xl bg-gray-50 text-gray-700 flex items-center justify-center text-sm font-black">
                 <i class="fa-solid fa-layer-group"></i>
             </span>
         </div>
 
+        <!-- Card 2: In-Stock & Active -->
         <div class="bg-white p-4 rounded-2xl border border-emerald-200 bg-emerald-50/20 shadow-xs flex items-center justify-between">
             <div>
-                <span class="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">In-Stock & Active</span>
+                <span class="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">Healthy / In-Stock</span>
                 <span class="font-display font-black text-2xl text-emerald-800 mt-0.5">{{ in_stock_count }}</span>
+                <span class="text-[10px] text-emerald-700 font-bold block mt-1">Ready for fulfillment</span>
             </div>
             <span class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-sm font-black">
-                <i class="fa-solid fa-check"></i>
+                <i class="fa-solid fa-circle-check"></i>
             </span>
         </div>
 
-        <div class="bg-white p-4 rounded-2xl border border-rose-200 bg-rose-50/20 shadow-xs flex items-center justify-between">
+        <!-- Card 3: Low Stock & Deficit (ঘাটতি আছে) -->
+        <div class="bg-white p-4 rounded-2xl border {% if low_stock_count > 0 %}border-amber-300 bg-amber-50/30{% else %}border-gray-200{% endif %} shadow-xs flex items-center justify-between">
             <div>
-                <span class="text-[10px] font-bold text-rose-800 uppercase tracking-wider block">Out of Stock</span>
-                <span class="font-display font-black text-2xl text-rose-800 mt-0.5">{{ out_of_stock_count }}</span>
+                <span class="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">Low Stock Alert (ঘাটতি)</span>
+                <span class="font-display font-black text-2xl text-amber-800 mt-0.5">{{ low_stock_count }}</span>
+                <span class="text-[10px] text-amber-700 font-bold block mt-1">Below safety threshold</span>
             </div>
-            <span class="w-10 h-10 rounded-xl bg-rose-100 text-rose-800 flex items-center justify-center text-sm font-black">
+            <span class="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center text-sm font-black">
                 <i class="fa-solid fa-triangle-exclamation"></i>
+            </span>
+        </div>
+
+        <!-- Card 4: Production Deficit (মোট কতো পিস লাগবে) -->
+        <div class="bg-white p-4 rounded-2xl border {% if total_needed_jars > 0 %}border-rose-300 bg-rose-50/30{% else %}border-gray-200{% endif %} shadow-xs flex items-center justify-between">
+            <div>
+                <span class="text-[10px] font-bold text-rose-800 uppercase tracking-wider block">Total Production Needed</span>
+                <span class="font-display font-black text-2xl text-rose-700 mt-0.5">+{{ total_needed_jars }} <span class="text-xs font-bold text-rose-500">pcs</span></span>
+                <span class="text-[10px] text-rose-600 font-bold block mt-1">Target to replenish all</span>
+            </div>
+            <span class="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center text-sm font-black">
+                <i class="fa-solid fa-boxes-packing"></i>
             </span>
         </div>
     </div>
@@ -114,15 +132,16 @@
                 <thead class="bg-gray-50 text-gray-500 font-bold uppercase text-[10px] border-b border-gray-200">
                     <tr>
                         <th class="p-4">Pickle Variety</th>
-                        <th class="p-4">Category & Style</th>
-                        <th class="p-4">Price & Stock</th>
-                        <th class="p-4 text-center">Status</th>
+                        <th class="p-4">Category & Size</th>
+                        <th class="p-4">Current Stock (আসে)</th>
+                        <th class="p-4">Target & Deficit (লাগবে)</th>
+                        <th class="p-4">Price & Stock Edit</th>
                         <th class="p-4 text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 font-medium">
                     {% for product in products %}
-                    <tr class="hover:bg-gray-50/50 transition group">
+                    <tr class="hover:bg-gray-50/50 transition group {% if product.stock_count == 0 %}bg-rose-50/20{% elif product.is_critical_stock %}bg-rose-50/10{% elif product.is_low_stock %}bg-amber-50/10{% endif %}">
                         
                         <!-- Col 1: Product info -->
                         <td class="p-4">
@@ -140,7 +159,7 @@
                             </div>
                         </td>
 
-                        <!-- Col 2: Size & Cut -->
+                        <!-- Col 2: Category & Size -->
                         <td class="p-4">
                             <div class="space-y-1">
                                 <span class="font-bold text-gray-800 block text-xs">{{ product.category.name|default:"Artisan Pickles" }}</span>
@@ -155,7 +174,62 @@
                             </div>
                         </td>
 
-                        <!-- Col 3: Price & Stock Quick Editor -->
+                        <!-- Col 3: Current Stock (কতো পিস আসে) -->
+                        <td class="p-4">
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-display font-black text-base {% if product.stock_count == 0 %}text-rose-700{% elif product.is_critical_stock %}text-rose-600{% elif product.is_low_stock %}text-amber-700{% else %}text-emerald-800{% endif %}">
+                                        {{ product.stock_count }} <span class="text-xs font-bold text-gray-500">pcs</span>
+                                    </span>
+                                </div>
+                                <div>
+                                    {% if product.stock_count == 0 %}
+                                    <span class="inline-flex items-center gap-1 bg-rose-600 text-white font-extrabold text-[10px] px-2 py-0.5 rounded-md shadow-2xs">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span> 0 Stock / Empty
+                                    </span>
+                                    {% elif product.is_critical_stock %}
+                                    <span class="inline-flex items-center gap-1 bg-rose-100 text-rose-800 font-bold text-[10px] px-2 py-0.5 rounded-md border border-rose-200">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse"></span> Critical Low
+                                    </span>
+                                    {% elif product.is_low_stock %}
+                                    <span class="inline-flex items-center gap-1 bg-amber-100 text-amber-800 font-bold text-[10px] px-2 py-0.5 rounded-md border border-amber-200">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-amber-600"></span> Low Stock
+                                    </span>
+                                    {% else %}
+                                    <span class="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 font-bold text-[10px] px-2 py-0.5 rounded-md border border-emerald-200">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> In Stock
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Col 4: Target & Deficit (টার্গেট ও কতো পিস লাগবে) -->
+                        <td class="p-4">
+                            <div class="space-y-1.5 max-w-[160px]">
+                                <div class="flex items-center justify-between text-[11px]">
+                                    <span class="text-gray-400 font-bold">Target:</span>
+                                    <span class="font-extrabold text-gray-700">{{ product.target_stock_level }} pcs</span>
+                                </div>
+                                <div>
+                                    {% if product.needed_stock > 0 %}
+                                    <span class="inline-flex items-center gap-1 font-black text-[11px] text-rose-700 bg-rose-100/90 px-2 py-0.5 rounded-md border border-rose-200">
+                                        <i class="fa-solid fa-arrow-up text-[9px]"></i> লাগবে: +{{ product.needed_stock }} pcs
+                                    </span>
+                                    {% else %}
+                                    <span class="inline-flex items-center gap-1 font-bold text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                                        <i class="fa-solid fa-check text-[9px]"></i> Target Full
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <!-- Progress Bar -->
+                                <div class="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
+                                    <div class="{% if product.stock_count == 0 %}bg-rose-600{% elif product.is_critical_stock %}bg-rose-500{% elif product.is_low_stock %}bg-amber-500{% else %}bg-emerald-500{% endif %} h-1.5 rounded-full" style="width: {{ product.stock_percentage }}%;"></div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Col 5: Price & Stock Quick Editor -->
                         <td class="p-4">
                             <form method="POST" class="flex items-center gap-2">
                                 {% csrf_token %}
@@ -175,32 +249,27 @@
                             </form>
                         </td>
 
-                        <!-- Col 4: Availability Status -->
-                        <td class="p-4 text-center">
-                            {% if product.is_in_stock %}
-                            <span class="inline-flex items-center gap-1.5 bg-emerald-100 text-emerald-800 font-bold text-[11px] px-3 py-1 rounded-full border border-emerald-200">
-                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span> Available
-                            </span>
-                            {% else %}
-                            <span class="inline-flex items-center gap-1.5 bg-rose-100 text-rose-800 font-bold text-[11px] px-3 py-1 rounded-full border border-rose-200">
-                                <span class="w-1.5 h-1.5 rounded-full bg-rose-600"></span> Out of Stock
-                            </span>
-                            {% endif %}
-                        </td>
-
-                        <!-- Col 5: Actions Column (History, Restock, Edit, Toggle Stock, Delete) -->
+                        <!-- Col 6: Actions Column (History, Restock, Edit, Toggle Stock, Delete) -->
                         <td class="p-4 text-right">
                             <div class="flex items-center justify-end gap-1.5 whitespace-nowrap">
                                 
+                                <!-- Restock Deficit / Batch Button -->
+                                <button type="button" 
+                                    onclick="openRestockModal('{{ product.id }}', '{{ product.name|escapejs }}', '{{ product.needed_stock }}', '{{ product.stock_count }}', '{{ product.target_stock_level }}')" 
+                                    class="py-1.5 px-2.5 rounded-xl {% if product.needed_stock > 0 %}bg-emerald-700 hover:bg-emerald-800 text-white shadow-2xs animate-pulse{% else %}bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200{% endif %} text-xs font-bold transition flex items-center gap-1 cursor-pointer" 
+                                    title="Restock {{ product.name }} (Needed: +{{ product.needed_stock }} pcs)">
+                                    <i class="fa-solid fa-plus-circle text-xs"></i>
+                                    {% if product.needed_stock > 0 %}
+                                    <span>+{{ product.needed_stock }}</span>
+                                    {% else %}
+                                    <span>Restock</span>
+                                    {% endif %}
+                                </button>
+
                                 <!-- Stock History / Ledger Button -->
                                 <a href="{% url 'dashboard:product_stock_ledger' product.id %}" class="p-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold transition" title="View Stock History / Ledger for {{ product.name }}">
                                     <i class="fa-solid fa-clock-rotate-left"></i>
                                 </a>
-
-                                <!-- Quick Restock Button -->
-                                <button type="button" onclick="openRestockModal('{{ product.id }}', '{{ product.name|escapejs }}')" class="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold transition cursor-pointer" title="Add Batch Stock for {{ product.name }}">
-                                    <i class="fa-solid fa-plus"></i>
-                                </button>
 
                                 <!-- Edit Button (Opens Modal) -->
                                 <button type="button" 
@@ -217,6 +286,9 @@
                                         price: '{{ product.price_bdt }}',
                                         origPrice: '{{ product.original_price_bdt|default:'' }}',
                                         stockCount: '{{ product.stock_count }}',
+                                        minStockThreshold: '{{ product.min_stock_threshold }}',
+                                        targetStockLevel: '{{ product.target_stock_level }}',
+                                        neededStock: '{{ product.needed_stock }}',
                                         isInStock: {{ product.is_in_stock|yesno:'true,false' }},
                                         isFeatured: {{ product.is_featured|yesno:'true,false' }},
                                         imageUrl: '{{ product.image_url|escapejs }}',
@@ -256,7 +328,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="p-12 text-center text-gray-400">
+                        <td colspan="6" class="p-12 text-center text-gray-400">
                             <span class="text-3xl block mb-2">🥒</span>
                             <span class="font-bold text-gray-700">No pickle products configured yet.</span>
                         </td>
@@ -358,8 +430,18 @@
                 </div>
 
                 <div>
-                    <label class="font-bold text-gray-700 block mb-1">Stock Count (Units) *</label>
+                    <label class="font-bold text-gray-700 block mb-1">Current Stock (Units) *</label>
                     <input type="number" id="edit_stock_count" name="stock_count" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white">
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Safety Threshold (সতর্কবার্তা থ্রেশহোল্ড) *</label>
+                    <input type="number" id="edit_min_stock_threshold" name="min_stock_threshold" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-amber-900 focus:bg-white" title="Low stock alert triggers when stock is below this amount">
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Target Stock Level (টার্গেট স্টক) *</label>
+                    <input type="number" id="edit_target_stock_level" name="target_stock_level" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-brand-900 focus:bg-white" title="Ideal inventory target for this pickle flavor">
                 </div>
 
                 <!-- Single All-in-One Image Box with Preview & Change Options -->
@@ -521,8 +603,18 @@
                 </div>
 
                 <div>
-                    <label class="font-bold text-gray-700 block mb-1">Stock Count (Units) *</label>
-                    <input type="number" name="stock_count" value="40" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white">
+                    <label class="font-bold text-gray-700 block mb-1">Initial Stock Count *</label>
+                    <input type="number" name="stock_count" value="50" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:bg-white">
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Safety Threshold (সতর্কবার্তা থ্রেশহোল্ড) *</label>
+                    <input type="number" name="min_stock_threshold" value="15" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-amber-900 focus:bg-white">
+                </div>
+
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Target Stock Level (টার্গেট স্টক) *</label>
+                    <input type="number" name="target_stock_level" value="50" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-brand-900 focus:bg-white">
                 </div>
 
                 <!-- Single All-in-One Image Box with Preview & Upload Options -->
@@ -663,12 +755,34 @@
             {% csrf_token %}
             <input type="hidden" name="action" value="restock_batch">
 
+            <!-- Stock Deficit Helper Box -->
+            <div id="restockHelperBox" class="hidden p-3 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 text-xs space-y-1.5">
+                <div class="flex justify-between font-bold text-gray-800">
+                    <span>Selected Pickle:</span>
+                    <span id="helperProductName" class="text-brand-800 font-black"></span>
+                </div>
+                <div class="grid grid-cols-3 gap-1 pt-1 border-t border-amber-200/60 text-center text-[11px]">
+                    <div class="bg-white/70 p-1 rounded-lg">
+                        <span class="text-gray-400 block text-[9px] uppercase font-bold">Current</span>
+                        <span id="helperCurrentStock" class="font-black text-gray-900"></span> pcs
+                    </div>
+                    <div class="bg-white/70 p-1 rounded-lg">
+                        <span class="text-gray-400 block text-[9px] uppercase font-bold">Target</span>
+                        <span id="helperTargetStock" class="font-black text-gray-700"></span> pcs
+                    </div>
+                    <div class="bg-rose-100/80 p-1 rounded-lg border border-rose-200">
+                        <span class="text-rose-600 block text-[9px] uppercase font-black">লাগবে (Need)</span>
+                        <span id="helperNeededStock" class="font-black text-rose-700"></span> pcs
+                    </div>
+                </div>
+            </div>
+
             <div>
                 <label class="font-bold text-xs text-gray-700 block mb-1">Pickle Flavor / Product *</label>
                 <select name="product_id" id="modalRestockProductSelect" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500">
                     <option value="" disabled selected>-- Select Pickle Product --</option>
                     {% for p in products %}
-                    <option value="{{ p.id }}">{{ p.name }} (Current: {{ p.stock_count }} jars)</option>
+                    <option value="{{ p.id }}" data-needed="{{ p.needed_stock }}" data-current="{{ p.stock_count }}" data-target="{{ p.target_stock_level }}">{{ p.name }} (Current: {{ p.stock_count }} pcs | লাগবে: +{{ p.needed_stock }} pcs)</option>
                     {% endfor %}
                 </select>
             </div>
@@ -676,7 +790,7 @@
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="font-bold text-xs text-gray-700 block mb-1">Quantity to Add (Jars) *</label>
-                    <input type="number" name="quantity" min="1" step="1" required placeholder="e.g. 50" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500">
+                    <input type="number" name="quantity" id="modalRestockQuantity" min="1" step="1" required placeholder="e.g. 50" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-black text-emerald-900 focus:bg-white focus:ring-2 focus:ring-brand-500">
                 </div>
                 <div>
                     <label class="font-bold text-xs text-gray-700 block mb-1">Batch Code / Ref</label>
@@ -686,7 +800,7 @@
 
             <div>
                 <label class="font-bold text-xs text-gray-700 block mb-1">Production Notes / Remarks (Optional)</label>
-                <textarea name="notes" rows="2" placeholder="e.g. Freshly bottled, kitchen batch..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500"></textarea>
+                <textarea name="notes" rows="2" placeholder="e.g. Freshly bottled kitchen batch..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500"></textarea>
             </div>
 
             <div class="pt-3 flex items-center justify-end gap-2 border-t border-gray-100">
@@ -704,12 +818,32 @@
 <!-- JAVASCRIPT MODAL HANDLERS -->
 <!-- ========================================================================= -->
 <script>
-function openRestockModal(productId = null, productName = '') {
+function openRestockModal(productId = null, productName = '', neededQty = 0, currentStock = 0, targetStock = 50) {
     const modal = document.getElementById('restockModal');
     const selectEl = document.getElementById('modalRestockProductSelect');
+    const qtyInput = document.getElementById('modalRestockQuantity');
+    const helperBox = document.getElementById('restockHelperBox');
+
     if (productId && selectEl) {
         selectEl.value = productId;
     }
+
+    if (neededQty && parseInt(neededQty) > 0 && qtyInput) {
+        qtyInput.value = neededQty;
+    } else if (qtyInput && !qtyInput.value) {
+        qtyInput.value = 50;
+    }
+
+    if (productName && helperBox) {
+        document.getElementById('helperProductName').textContent = productName;
+        document.getElementById('helperCurrentStock').textContent = currentStock;
+        document.getElementById('helperTargetStock').textContent = targetStock;
+        document.getElementById('helperNeededStock').textContent = '+' + neededQty;
+        helperBox.classList.remove('hidden');
+    } else if (helperBox) {
+        helperBox.classList.add('hidden');
+    }
+
     if (modal) modal.classList.remove('hidden');
 }
 
@@ -745,6 +879,8 @@ function openEditModal(prod) {
     document.getElementById('edit_price').value = prod.price || '';
     document.getElementById('edit_orig_price').value = prod.origPrice || '';
     document.getElementById('edit_stock_count').value = prod.stockCount || 0;
+    document.getElementById('edit_min_stock_threshold').value = prod.minStockThreshold || 15;
+    document.getElementById('edit_target_stock_level').value = prod.targetStockLevel || 50;
     document.getElementById('edit_is_in_stock').checked = prod.isInStock;
     document.getElementById('edit_is_featured').checked = prod.isFeatured;
     document.getElementById('edit_image_url').value = prod.imageUrl || '';

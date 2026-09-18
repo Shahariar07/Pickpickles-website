@@ -81,8 +81,15 @@ def dashboard_index(request):
     avg_order_val = round(float(total_revenue) / delivered_count, 1) if delivered_count > 0 else 0
     total_jars_sold = OrderItem.objects.filter(order__in=delivered_paid_orders).aggregate(Sum('quantity'))['quantity__sum'] or 0
     delivery_rate = round((delivered_count / total_orders_count) * 100, 1) if total_orders_count > 0 else 0
-    low_stock_count = Product.objects.filter(stock_count__lt=15).count()
-    total_products_count = Product.objects.count()
+    
+    # Inventory & Low Stock Tracking
+    all_catalog_products = Product.objects.all().select_related('category').order_by('stock_count', 'name')
+    total_products_count = all_catalog_products.count()
+    low_stock_products = [p for p in all_catalog_products if p.is_low_stock]
+    low_stock_count = len(low_stock_products)
+    critical_stock_count = sum(1 for p in low_stock_products if p.is_critical_stock)
+    total_needed_jars = sum(p.needed_stock for p in all_catalog_products)
+    total_current_inventory = sum(p.stock_count for p in all_catalog_products)
 
     # 1. 10-Day Sales & Revenue Trend Calculation (Real Database Queries from Delivered/Paid orders)
     days_to_plot = 10
@@ -199,6 +206,10 @@ def dashboard_index(request):
         'total_jars_sold': total_jars_sold,
         'delivery_rate': delivery_rate,
         'low_stock_count': low_stock_count,
+        'critical_stock_count': critical_stock_count,
+        'low_stock_products': low_stock_products,
+        'total_needed_jars': total_needed_jars,
+        'total_current_inventory': total_current_inventory,
         'total_products_count': total_products_count,
         'pending_count': pending_count,
         'confirmed_count': confirmed_count,
@@ -809,6 +820,8 @@ def stock_manager(request):
                 product.original_price_bdt = float(orig_price) if orig_price else None
                 
                 product.stock_count = int(request.POST.get('stock_count', product.stock_count))
+                product.min_stock_threshold = int(request.POST.get('min_stock_threshold', getattr(product, 'min_stock_threshold', 15) or 15))
+                product.target_stock_level = int(request.POST.get('target_stock_level', getattr(product, 'target_stock_level', 50) or 50))
                 product.is_in_stock = request.POST.get('is_in_stock') == 'on' or request.POST.get('is_in_stock') == 'true'
                 product.is_featured = request.POST.get('is_featured') == 'on' or request.POST.get('is_featured') == 'true'
                 
@@ -846,6 +859,8 @@ def stock_manager(request):
                 orig_price = request.POST.get('original_price_bdt')
                 original_price_bdt = float(orig_price) if orig_price else None
                 stock_count = int(request.POST.get('stock_count', 50))
+                min_stock_threshold = int(request.POST.get('min_stock_threshold', 15))
+                target_stock_level = int(request.POST.get('target_stock_level', 50))
                 is_in_stock = request.POST.get('is_in_stock') == 'on' or request.POST.get('is_in_stock') == 'true'
                 is_featured = request.POST.get('is_featured') == 'on' or request.POST.get('is_featured') == 'true'
                 image_url = request.POST.get('image_url', '').strip()
@@ -866,6 +881,8 @@ def stock_manager(request):
                     price_bdt=price_bdt,
                     original_price_bdt=original_price_bdt,
                     stock_count=stock_count,
+                    min_stock_threshold=min_stock_threshold,
+                    target_stock_level=target_stock_level,
                     is_in_stock=is_in_stock,
                     is_featured=is_featured,
                     image_url=image_url or "/static/images/pickle_default.png",
@@ -896,9 +913,15 @@ def stock_manager(request):
             try:
                 new_price = request.POST.get('price_bdt')
                 new_stock_str = request.POST.get('stock_count')
+                new_target_str = request.POST.get('target_stock_level')
+                new_min_str = request.POST.get('min_stock_threshold')
                 note = request.POST.get('stock_note', '').strip()
                 if new_price:
                     product.price_bdt = float(new_price)
+                if new_target_str:
+                    product.target_stock_level = int(new_target_str)
+                if new_min_str:
+                    product.min_stock_threshold = int(new_min_str)
                 if new_stock_str is not None and new_stock_str != '':
                     new_stock = int(new_stock_str)
                     prev_stock = product.stock_count
@@ -981,6 +1004,14 @@ def stock_manager(request):
             messages.success(request, f'Category "{c_name}" deleted successfully.')
             return redirect('dashboard:stock_manager')
 
+    # Calculate Low Stock & Production Needs Metrics
+    low_stock_products = [p for p in all_products if p.is_low_stock]
+    low_stock_count = len(low_stock_products)
+    critical_stock_count = sum(1 for p in low_stock_products if p.is_critical_stock)
+    total_needed_jars = sum(p.needed_stock for p in all_products)
+    total_current_inventory = sum(p.stock_count for p in all_products)
+    total_target_inventory = sum(p.target_stock_level for p in all_products)
+
     context = {
         'products': products,
         'categories': categories,
@@ -988,8 +1019,14 @@ def stock_manager(request):
         'spice_choices': Product.SPICE_CHOICES,
         'cut_choices': Product.CUT_CHOICES,
         'total_products_count': all_products.count(),
-        'in_stock_count': all_products.filter(is_in_stock=True).count(),
-        'out_of_stock_count': all_products.filter(is_in_stock=False).count(),
+        'in_stock_count': all_products.filter(is_in_stock=True, stock_count__gt=0).count(),
+        'out_of_stock_count': all_products.filter(Q(is_in_stock=False) | Q(stock_count=0)).count(),
+        'low_stock_products': low_stock_products,
+        'low_stock_count': low_stock_count,
+        'critical_stock_count': critical_stock_count,
+        'total_needed_jars': total_needed_jars,
+        'total_current_inventory': total_current_inventory,
+        'total_target_inventory': total_target_inventory,
     }
     return render(request, 'dashboard/stock_manager.html', context)
 
