@@ -10,6 +10,7 @@ from django.db.models import Sum, Count, Q
 from django.utils import timezone
 from django.http import HttpResponse, JsonResponse
 from decimal import Decimal
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib.auth.models import User
 from store.models import Order, OrderItem, Product, Category, Review, calculate_pathao_delivery_fee
 from store.pathao import PathaoCourierService
@@ -110,37 +111,81 @@ def dashboard_index(request):
         revenue_series.append(day_rev)
         orders_series.append(day_cnt)
 
-    # 2. Dynamic Product Sales Performance Breakdown (Real OrderItem Counts)
-    # Query sales per product name from non-cancelled orders
-    top_products_qs = OrderItem.objects.filter(
-        ~Q(order__order_status='CANCELLED')
-    ).values('product_name').annotate(
+    # 2. Dynamic Product Sales Performance Breakdown (Auto-synced from Inventory & OrderItems)
+    order_items_qs = OrderItem.objects.filter(~Q(order__order_status='CANCELLED'))
+    
+    # Aggregate sales by product_id and product_name
+    sales_by_id = {}
+    sales_by_name = {}
+    for row in order_items_qs.values('product_id', 'product_name').annotate(
         total_qty=Sum('quantity'),
         total_sales=Sum('total_price')
-    ).order_by('-total_qty')
+    ):
+        qty = row['total_qty'] or 0
+        sales = float(row['total_sales'] or 0)
+        pid = row['product_id']
+        pname = (row['product_name'] or '').strip()
+        if pid:
+            sales_by_id[pid] = sales_by_id.get(pid, {'qty': 0, 'sales': 0, 'name': pname})
+            sales_by_id[pid]['qty'] += qty
+            sales_by_id[pid]['sales'] += sales
+        if pname:
+            name_key = pname.lower()
+            sales_by_name[name_key] = sales_by_name.get(name_key, {'qty': 0, 'sales': 0, 'name': pname})
+            sales_by_name[name_key]['qty'] += qty
+            sales_by_name[name_key]['sales'] += sales
 
-    product_labels = []
-    product_qty_data = []
+    # Auto-load ALL products from inventory catalog so items like Pineapple and future products appear automatically
+    catalog_prods = Product.objects.all().order_by('name')
+    processed_pids = set()
+    processed_names = set()
+    product_stats = []
+
+    for prod in catalog_prods:
+        matched_stat = sales_by_id.get(prod.id)
+        if not matched_stat:
+            matched_stat = sales_by_name.get(prod.name.strip().lower(), {'qty': 0, 'sales': 0, 'name': prod.name})
+        
+        qty = matched_stat.get('qty', 0)
+        sales = matched_stat.get('sales', 0)
+        product_stats.append({
+            'id': prod.id,
+            'name': prod.name,
+            'quantity': qty,
+            'sales': sales,
+            'stock': prod.stock_count,
+        })
+        processed_pids.add(prod.id)
+        processed_names.add(prod.name.strip().lower())
+
+    # Include any legacy orders for products that might not be in the current active Product catalog
+    for name_key, stat in sales_by_name.items():
+        if name_key not in processed_names and stat['qty'] > 0:
+            product_stats.append({
+                'id': None,
+                'name': stat['name'],
+                'quantity': stat['qty'],
+                'sales': stat['sales'],
+                'stock': 0,
+            })
+
+    # Sort descending by quantity sold, and secondarily by product name
+    product_stats.sort(key=lambda x: (-x['quantity'], x['name']))
+
+    product_labels = [p['name'] for p in product_stats]
+    product_qty_data = [p['quantity'] for p in product_stats]
+
+    if not product_labels:
+        product_labels = ['No Products Added']
+        product_qty_data = [0]
+
     best_seller = None
-
-    if top_products_qs.exists():
-        for item in top_products_qs:
-            product_labels.append(item['product_name'])
-            product_qty_data.append(item['total_qty'])
+    if product_stats and product_stats[0]['quantity'] > 0:
         best_seller = {
-            'name': top_products_qs[0]['product_name'],
-            'quantity': top_products_qs[0]['total_qty'],
-            'sales': top_products_qs[0]['total_sales'],
+            'name': product_stats[0]['name'],
+            'quantity': product_stats[0]['quantity'],
+            'sales': product_stats[0]['sales'],
         }
-    else:
-        # If no orders yet, list all current products from catalog with 0 sales
-        all_prods = Product.objects.all().order_by('name')
-        for prod in all_prods:
-            product_labels.append(prod.name)
-            product_qty_data.append(0)
-        if not product_labels:
-            product_labels = ['No Products Added']
-            product_qty_data = [0]
 
     # 3. Payment Methods Breakdown (Real database counts)
     cod_count = Order.objects.filter(payment_method='COD').count()
@@ -232,16 +277,20 @@ def orders_list(request):
     delivered_count = Order.objects.filter(order_status='DELIVERED').count()
     cancelled_count = Order.objects.filter(order_status='CANCELLED').count()
 
-    orders = Order.objects.all().prefetch_related('items')
+    orders = Order.objects.all().prefetch_related('items', 'items__product')
     status_filter = request.GET.get('status', 'ALL')
     search_query = request.GET.get('q', '').strip()
     zone_filter = request.GET.get('zone', 'ALL')
+    payment_filter = request.GET.get('payment', 'ALL')
 
     if status_filter and status_filter != 'ALL':
         orders = orders.filter(order_status=status_filter)
         
     if zone_filter and zone_filter != 'ALL':
         orders = orders.filter(delivery_zone=zone_filter)
+
+    if payment_filter and payment_filter != 'ALL':
+        orders = orders.filter(payment_status=payment_filter)
 
     if search_query:
         import re
@@ -265,8 +314,37 @@ def orders_list(request):
                 pass
         orders = orders.filter(s_filter)
 
+    # Pagination configuration (Default 10 items per page)
+    page_number = request.GET.get('page', 1)
+    per_page = request.GET.get('per_page', 10)
+    try:
+        per_page = int(per_page)
+        if per_page not in [10, 20, 50, 100]:
+            per_page = 10
+    except (ValueError, TypeError):
+        per_page = 10
+
+    paginator = Paginator(orders, per_page)
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    # Elided page range for pagination navigation
+    try:
+        elided_page_range = paginator.get_elided_page_range(number=page_obj.number, on_each_side=2, on_ends=1)
+    except Exception:
+        elided_page_range = paginator.page_range
+
     context = {
-        'orders': orders[:200],
+        'orders': page_obj,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'elided_page_range': elided_page_range,
+        'per_page': per_page,
+        'filtered_total_count': paginator.count,
         'total_orders_count': total_orders_count,
         'pending_count': pending_count,
         'confirmed_count': confirmed_count,
@@ -277,6 +355,7 @@ def orders_list(request):
         'trash_count': Order.trash_objects.count(),
         'status_filter': status_filter,
         'zone_filter': zone_filter,
+        'payment_filter': payment_filter,
         'search_query': search_query,
         'status_choices': Order.ORDER_STATUS_CHOICES,
         'payment_status_choices': Order.PAYMENT_STATUS_CHOICES,
@@ -285,19 +364,20 @@ def orders_list(request):
     return render(request, 'dashboard/orders_list.html', context)
 
 
-ACCEPTED_ORDER_STATUSES = {'CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'}
+DISPATCHED_ORDER_STATUSES = {'OUT_FOR_DELIVERY', 'DELIVERED'}
 
 def adjust_inventory_for_order_status_change(order, old_status, new_status, user=None):
     """
-    Deducts stock when an order is accepted/confirmed (transitions from PENDING/CANCELLED to CONFIRMED/PACKING/etc.).
-    Restores stock when an accepted order is cancelled or reverted (transitions to CANCELLED/PENDING).
-    Automatically creates detailed StockLog ledger records.
+    Physical Inventory Model (Option 2):
+    Stock is deducted ONLY when the order is physically dispatched/shipped to courier
+    (transitions to OUT_FOR_DELIVERY or DELIVERED).
+    Stock is restored if a dispatched order is cancelled or reverted back to PENDING/CONFIRMED/PACKING.
     """
-    was_accepted = old_status in ACCEPTED_ORDER_STATUSES
-    now_accepted = new_status in ACCEPTED_ORDER_STATUSES
+    was_dispatched = old_status in DISPATCHED_ORDER_STATUSES
+    now_dispatched = new_status in DISPATCHED_ORDER_STATUSES
 
-    if not was_accepted and now_accepted:
-        # Deduct stock when accepted
+    if not was_dispatched and now_dispatched:
+        # Deduct physical stock when dispatched/shipped to courier
         for itm in order.items.all():
             if itm.product:
                 prev_stock = itm.product.stock_count
@@ -306,7 +386,7 @@ def adjust_inventory_for_order_status_change(order, old_status, new_status, user
                 itm.product.stock_count = new_stock
                 if new_stock == 0:
                     itm.product.is_in_stock = False
-                itm.product.save()
+                itm.product.save(update_fields=['stock_count', 'is_in_stock'])
 
                 StockLog.objects.create(
                     product=itm.product,
@@ -315,17 +395,16 @@ def adjust_inventory_for_order_status_change(order, old_status, new_status, user
                     previous_stock=prev_stock,
                     resulting_stock=new_stock,
                     order=order,
-                    reference=f"Order #{order.order_number}",
-                    notes=f"Order #{order.order_number} confirmed ({old_status} -> {new_status}). Customer: {order.customer_name}",
+                    reference=f"Dispatched #{order.order_number}",
+                    notes=f"Order #{order.order_number} dispatched to courier ({old_status} -> {new_status}). Customer: {order.customer_name}",
                     created_by=user if getattr(user, 'is_authenticated', False) else None
                 )
-    elif was_accepted and not now_accepted:
-        # If this order has an OrderReturn associated, return logic (sync_order_return_state) dictates stock
-        # (Only intact returns get restocked. Damaged returns represent destroyed loss and are NEVER restocked).
+    elif was_dispatched and not now_dispatched:
+        # If this order has an OrderReturn associated, return logic dictates stock
         if hasattr(order, 'returns') and order.returns.exists():
             return
 
-        # Restore stock when cancelled or reverted before shipping
+        # Restore physical stock when a dispatched order is cancelled or reverted back to queue
         for itm in order.items.all():
             if itm.product:
                 prev_stock = itm.product.stock_count
@@ -333,7 +412,7 @@ def adjust_inventory_for_order_status_change(order, old_status, new_status, user
                 new_stock = prev_stock + restore_qty
                 itm.product.stock_count = new_stock
                 itm.product.is_in_stock = True
-                itm.product.save()
+                itm.product.save(update_fields=['stock_count', 'is_in_stock'])
 
                 StockLog.objects.create(
                     product=itm.product,
@@ -342,8 +421,8 @@ def adjust_inventory_for_order_status_change(order, old_status, new_status, user
                     previous_stock=prev_stock,
                     resulting_stock=new_stock,
                     order=order,
-                    reference=f"Order #{order.order_number}",
-                    notes=f"Order #{order.order_number} cancelled ({old_status} -> {new_status}). Stock restored to inventory.",
+                    reference=f"Reverted #{order.order_number}",
+                    notes=f"Dispatched Order #{order.order_number} reverted ({old_status} -> {new_status}). Stock restored.",
                     created_by=user if getattr(user, 'is_authenticated', False) else None
                 )
 
@@ -368,8 +447,12 @@ def order_detail(request, order_number):
 
         if new_payment_status:
             order.payment_status = new_payment_status
-        if admin_notes is not None:
-            order.admin_notes = admin_notes
+            
+        # Unified customer & delivery instruction
+        instruction = request.POST.get('customer_notes') or request.POST.get('admin_notes')
+        if instruction is not None:
+            order.customer_notes = instruction.strip()
+            order.admin_notes = instruction.strip()
             
         order.save()
         messages.success(request, f'Order #{order.order_number} details successfully updated.')
@@ -413,7 +496,7 @@ def edit_order_customer(request, order_number):
         city = request.POST.get('delivery_city', '').strip()
         zone = request.POST.get('delivery_zone', '').strip()
         email = request.POST.get('customer_email', '').strip()
-        notes = request.POST.get('customer_notes', '').strip()
+        notes = (request.POST.get('customer_notes') or request.POST.get('admin_notes') or '').strip()
         custom_fee = request.POST.get('delivery_fee', '').strip()
 
         if name:
@@ -428,6 +511,7 @@ def edit_order_customer(request, order_number):
             order.customer_email = email
         if notes is not None:
             order.customer_notes = notes
+            order.admin_notes = notes
 
         if zone and zone in dict(Order.ZONE_CHOICES):
             order.delivery_zone = zone
@@ -548,8 +632,9 @@ def create_manual_order(request):
             payment_method = request.POST.get('payment_method', 'COD')
             payment_status = request.POST.get('payment_status', 'UNPAID')
             payment_trx_id = request.POST.get('payment_trx_id', '').strip()
-            customer_notes = request.POST.get('customer_notes', '').strip()
-            admin_notes = request.POST.get('admin_notes', 'Manual order created by staff').strip()
+            instruction = (request.POST.get('delivery_instruction') or request.POST.get('customer_notes') or request.POST.get('admin_notes') or '').strip()
+            customer_notes = instruction
+            admin_notes = instruction
 
             # Retrieve multiple products and quantities
             product_ids = request.POST.getlist('product_id') or request.POST.getlist('product_id[]')
@@ -630,7 +715,7 @@ def create_manual_order(request):
                 admin_notes=admin_notes
             )
 
-            # Create OrderItems and deduct stock
+            # Create OrderItems (Stock is deducted upon physical dispatch/delivery)
             for itm in valid_items:
                 prod = itm['product']
                 qty = itm['quantity']
@@ -644,14 +729,6 @@ def create_manual_order(request):
                     quantity=qty,
                     total_price=itm['total_price']
                 )
-
-                if prod.stock_count >= qty:
-                    prod.stock_count -= qty
-                else:
-                    prod.stock_count = 0
-                if prod.stock_count == 0:
-                    prod.is_in_stock = False
-                prod.save()
 
             total_jars = sum(itm['quantity'] for itm in valid_items)
             messages.success(
@@ -743,7 +820,7 @@ def permanent_delete_order(request, order_number):
     if request.method == 'POST':
         order = get_object_or_404(Order.trash_objects, order_number=order_number)
         o_num = order.order_number
-        if order.order_status in ACCEPTED_ORDER_STATUSES:
+        if order.order_status in DISPATCHED_ORDER_STATUSES:
             for itm in order.items.all():
                 if itm.product:
                     itm.product.stock_count += itm.quantity
@@ -772,13 +849,32 @@ def edit_order_customer(request, order_number):
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def stock_manager(request):
     selected_cat = request.GET.get('category')
+    search_query = request.GET.get('q', '').strip()
+    status_filter = request.GET.get('status', 'ALL')
+
     all_products = Product.objects.all().select_related('category').order_by('name')
     categories = Category.objects.annotate(product_count=Count('products')).order_by('name')
     
+    products = all_products
     if selected_cat:
-        products = all_products.filter(category__slug=selected_cat)
-    else:
-        products = all_products
+        products = products.filter(category__slug=selected_cat)
+
+    if search_query:
+        products = products.filter(
+            Q(name__icontains=search_query) |
+            Q(tagline__icontains=search_query) |
+            Q(description__icontains=search_query) |
+            Q(ingredients__icontains=search_query)
+        )
+
+    if status_filter == 'IN_STOCK':
+        products = products.filter(is_in_stock=True, stock_count__gt=0)
+    elif status_filter == 'OUT_OF_STOCK':
+        products = products.filter(Q(is_in_stock=False) | Q(stock_count=0))
+    elif status_filter == 'SHORTAGE':
+        # Products with active demand exceeding physical stock
+        prod_ids_shortage = [p.id for p in products if p.is_low_stock]
+        products = products.filter(id__in=prod_ids_shortage)
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -799,42 +895,67 @@ def stock_manager(request):
         elif action == 'edit_product' or 'edit_product' in request.POST:
             product = get_object_or_404(Product, id=product_id)
             try:
-                product.name = request.POST.get('name', product.name).strip()
-                product.tagline = request.POST.get('tagline', product.tagline).strip()
-                product.description = request.POST.get('description', product.description).strip()
+                name_val = request.POST.get('name')
+                if name_val:
+                    product.name = name_val.strip()
+                
+                product.tagline = request.POST.get('tagline', '').strip()
+                product.description = request.POST.get('description', '').strip()
                 
                 cat_id = request.POST.get('category_id')
-                if cat_id:
+                if cat_id and str(cat_id).strip():
                     product.category = Category.objects.filter(id=cat_id).first()
                 else:
                     product.category = None
                     
-                product.cut_style = request.POST.get('cut_style', product.cut_style)
-                product.spice_level = request.POST.get('spice_level', product.spice_level)
-                product.crunch_rating = int(request.POST.get('crunch_rating', product.crunch_rating or 5))
-                product.jar_weight_grams = int(request.POST.get('jar_weight_grams', product.jar_weight_grams or 600))
-                product.gross_weight_grams = int(request.POST.get('gross_weight_grams', getattr(product, 'gross_weight_grams', 850) or 850))
-                product.price_bdt = float(request.POST.get('price_bdt', product.price_bdt))
+                product.cut_style = request.POST.get('cut_style') or product.cut_style or 'CHIPS'
+                product.spice_level = request.POST.get('spice_level') or product.spice_level or 'MILD'
                 
-                orig_price = request.POST.get('original_price_bdt')
-                product.original_price_bdt = float(orig_price) if orig_price else None
+                crunch_val = request.POST.get('crunch_rating')
+                product.crunch_rating = int(crunch_val) if crunch_val and str(crunch_val).isdigit() else (product.crunch_rating or 5)
                 
-                product.stock_count = int(request.POST.get('stock_count', product.stock_count))
-                product.min_stock_threshold = int(request.POST.get('min_stock_threshold', getattr(product, 'min_stock_threshold', 15) or 15))
-                product.target_stock_level = int(request.POST.get('target_stock_level', getattr(product, 'target_stock_level', 50) or 50))
-                product.is_in_stock = request.POST.get('is_in_stock') == 'on' or request.POST.get('is_in_stock') == 'true'
-                product.is_featured = request.POST.get('is_featured') == 'on' or request.POST.get('is_featured') == 'true'
+                jar_w_val = request.POST.get('jar_weight_grams')
+                product.jar_weight_grams = int(jar_w_val) if jar_w_val and str(jar_w_val).isdigit() else (product.jar_weight_grams or 600)
+                
+                gross_w_val = request.POST.get('gross_weight_grams')
+                product.gross_weight_grams = int(gross_w_val) if gross_w_val and str(gross_w_val).isdigit() else getattr(product, 'gross_weight_grams', 850) or 850
+                
+                price_val = request.POST.get('price_bdt')
+                if price_val and str(price_val).strip():
+                    product.price_bdt = float(price_val)
+                
+                orig_price_val = request.POST.get('original_price_bdt')
+                if orig_price_val and str(orig_price_val).strip():
+                    product.original_price_bdt = float(orig_price_val)
+                else:
+                    product.original_price_bdt = None
+                
+                stock_val = request.POST.get('stock_count')
+                if stock_val is not None and str(stock_val).strip() != '':
+                    product.stock_count = max(0, int(stock_val))
+                    
+                min_stock_val = request.POST.get('min_stock_threshold')
+                product.min_stock_threshold = int(min_stock_val) if min_stock_val and str(min_stock_val).isdigit() else getattr(product, 'min_stock_threshold', 15) or 15
+                
+                target_stock_val = request.POST.get('target_stock_level')
+                product.target_stock_level = int(target_stock_val) if target_stock_val and str(target_stock_val).isdigit() else getattr(product, 'target_stock_level', 50) or 50
+                
+                product.is_in_stock = request.POST.get('is_in_stock') in ['on', 'true', '1', True]
+                product.is_featured = request.POST.get('is_featured') in ['on', 'true', '1', True]
                 
                 image_url = request.POST.get('image_url')
-                if image_url:
+                if image_url is not None:
                     product.image_url = image_url.strip()
                     
                 if 'image' in request.FILES:
                     product.image = request.FILES['image']
                     
-                product.ingredients = request.POST.get('ingredients', product.ingredients).strip()
-                product.flavor_profile = request.POST.get('flavor_profile', product.flavor_profile).strip()
-                product.pairing_suggestions = request.POST.get('pairing_suggestions', product.pairing_suggestions).strip()
+                product.ingredients = request.POST.get('ingredients', '').strip() or product.ingredients
+                product.flavor_profile = request.POST.get('flavor_profile', '').strip() or product.flavor_profile
+                product.pairing_suggestions = request.POST.get('pairing_suggestions', '').strip() or product.pairing_suggestions
+                shelf_life_val = request.POST.get('shelf_life')
+                if shelf_life_val is not None:
+                    product.shelf_life = shelf_life_val.strip()
 
                 product.save()
                 messages.success(request, f'Product "{product.name}" has been successfully updated.')
@@ -845,28 +966,46 @@ def stock_manager(request):
         # 3. CREATE NEW PRODUCT
         elif action == 'create_product' or 'create_product' in request.POST:
             try:
-                name = request.POST.get('name').strip()
+                name = request.POST.get('name', '').strip()
                 tagline = request.POST.get('tagline', '').strip()
                 description = request.POST.get('description', '').strip()
                 cat_id = request.POST.get('category_id')
-                category = Category.objects.filter(id=cat_id).first() if cat_id else None
+                category = Category.objects.filter(id=cat_id).first() if (cat_id and str(cat_id).strip()) else None
                 cut_style = request.POST.get('cut_style', 'SPEARS')
                 spice_level = request.POST.get('spice_level', 'MILD')
-                crunch_rating = int(request.POST.get('crunch_rating', 5))
-                jar_weight_grams = int(request.POST.get('jar_weight_grams', 600))
-                gross_weight_grams = int(request.POST.get('gross_weight_grams', 850))
-                price_bdt = float(request.POST.get('price_bdt', 380))
+                
+                crunch_val = request.POST.get('crunch_rating')
+                crunch_rating = int(crunch_val) if crunch_val and str(crunch_val).isdigit() else 5
+                
+                jar_w_val = request.POST.get('jar_weight_grams')
+                jar_weight_grams = int(jar_w_val) if jar_w_val and str(jar_w_val).isdigit() else 600
+                
+                gross_w_val = request.POST.get('gross_weight_grams')
+                gross_weight_grams = int(gross_w_val) if gross_w_val and str(gross_w_val).isdigit() else 850
+                
+                price_val = request.POST.get('price_bdt')
+                price_bdt = float(price_val) if price_val and str(price_val).strip() else 380.0
+                
                 orig_price = request.POST.get('original_price_bdt')
-                original_price_bdt = float(orig_price) if orig_price else None
-                stock_count = int(request.POST.get('stock_count', 50))
-                min_stock_threshold = int(request.POST.get('min_stock_threshold', 15))
-                target_stock_level = int(request.POST.get('target_stock_level', 50))
-                is_in_stock = request.POST.get('is_in_stock') == 'on' or request.POST.get('is_in_stock') == 'true'
-                is_featured = request.POST.get('is_featured') == 'on' or request.POST.get('is_featured') == 'true'
+                original_price_bdt = float(orig_price) if orig_price and str(orig_price).strip() else None
+                
+                stock_val = request.POST.get('stock_count')
+                stock_count = max(0, int(stock_val)) if stock_val is not None and str(stock_val).strip() != '' else 50
+                
+                min_stock_val = request.POST.get('min_stock_threshold')
+                min_stock_threshold = int(min_stock_val) if min_stock_val and str(min_stock_val).isdigit() else 15
+                
+                target_stock_val = request.POST.get('target_stock_level')
+                target_stock_level = int(target_stock_val) if target_stock_val and str(target_stock_val).isdigit() else 50
+                
+                is_in_stock = request.POST.get('is_in_stock') in ['on', 'true', '1', True]
+                is_featured = request.POST.get('is_featured') in ['on', 'true', '1', True]
+                
                 image_url = request.POST.get('image_url', '').strip()
                 ingredients = request.POST.get('ingredients', '').strip()
                 flavor_profile = request.POST.get('flavor_profile', '').strip()
                 pairing_suggestions = request.POST.get('pairing_suggestions', '').strip()
+                shelf_life = request.POST.get('shelf_life', '').strip()
 
                 new_prod = Product.objects.create(
                     name=name,
@@ -888,7 +1027,8 @@ def stock_manager(request):
                     image_url=image_url or "/static/images/pickle_default.png",
                     ingredients=ingredients or "Fresh Local Cucumbers, Pure Cane Vinegar, Himalayan Pink Salt, Garlic, Spices.",
                     flavor_profile=flavor_profile or "Crisp, Tangy, Garlic & Whole Spices",
-                    pairing_suggestions=pairing_suggestions or "Burgers, Sandwiches, Snacks"
+                    pairing_suggestions=pairing_suggestions or "Burgers, Sandwiches, Snacks",
+                    shelf_life=shelf_life or "Always keep refrigerated for maximum crunch. Best enjoyed within 1 month."
                 )
                 if 'image' in request.FILES:
                     new_prod.image = request.FILES['image']
@@ -980,6 +1120,48 @@ def stock_manager(request):
                 messages.error(request, 'Invalid quantity format.')
             return redirect('dashboard:stock_manager')
 
+        # 5C. QUICK STEPPER (+1 / -1 jars)
+        elif action == 'quick_step_stock':
+            product = get_object_or_404(Product, id=product_id)
+            try:
+                delta = int(request.POST.get('delta', 1))
+                prev_stock = product.stock_count
+                new_stock = max(0, prev_stock + delta)
+                product.stock_count = new_stock
+                if new_stock > 0 and not product.is_in_stock:
+                    product.is_in_stock = True
+                elif new_stock == 0:
+                    product.is_in_stock = False
+                product.save()
+
+                StockLog.objects.create(
+                    product=product,
+                    log_type='RESTOCK' if delta > 0 else 'MANUAL_ADJUSTMENT',
+                    quantity_delta=delta,
+                    previous_stock=prev_stock,
+                    resulting_stock=new_stock,
+                    reference='Quick Stepper',
+                    notes=f"Quick stock adjusted by {delta:+d} jar(s)",
+                    created_by=request.user if request.user.is_authenticated else None
+                )
+
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': True,
+                        'product_id': product.id,
+                        'new_stock': new_stock,
+                        'needed_stock': product.needed_stock,
+                        'ordered_demand_count': product.ordered_demand_count,
+                        'is_low_stock': product.is_low_stock,
+                        'is_critical_stock': product.is_critical_stock
+                    })
+                messages.success(request, f'Updated stock for "{product.name}" to {new_stock} jars.')
+            except Exception as e:
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': str(e)}, status=400)
+                messages.error(request, f'Failed to update stock: {str(e)}')
+            return redirect(request.META.get('HTTP_REFERER') or 'dashboard:stock_manager')
+
         # 6. CREATE CATEGORY
         elif action == 'create_category' or 'create_category' in request.POST:
             cat_name = request.POST.get('category_name', '').strip()
@@ -1016,6 +1198,8 @@ def stock_manager(request):
         'products': products,
         'categories': categories,
         'selected_cat': selected_cat,
+        'search_query': search_query,
+        'status_filter': status_filter,
         'spice_choices': Product.SPICE_CHOICES,
         'cut_choices': Product.CUT_CHOICES,
         'total_products_count': all_products.count(),
@@ -1128,17 +1312,44 @@ def stock_ledger(request):
     current_inventory_total = Product.objects.aggregate(Sum('stock_count'))['stock_count__sum'] or 0
 
     all_products = Product.objects.all().order_by('name')
-    logs = logs_qs.order_by('-created_at')[:300]
+    logs_ordered = logs_qs.order_by('-created_at')
+
+    # Pagination (Default: 20 per page)
+    page_number = request.GET.get('page', 1)
+    per_page = request.GET.get('per_page', 20)
+    try:
+        per_page = int(per_page)
+        if per_page not in [10, 20, 50, 100]:
+            per_page = 20
+    except (ValueError, TypeError):
+        per_page = 20
+
+    paginator = Paginator(logs_ordered, per_page)
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    try:
+        elided_page_range = paginator.get_elided_page_range(number=page_obj.number, on_each_side=2, on_ends=1)
+    except Exception:
+        elided_page_range = paginator.page_range
 
     context = {
-        'logs': logs,
+        'logs': page_obj,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'elided_page_range': elided_page_range,
+        'per_page': per_page,
         'all_products': all_products,
         'selected_product': selected_product,
         'product_filter': product_filter,
         'type_filter': type_filter,
         'date_filter': date_filter,
         'search_query': search_query,
-        'total_logs_count': logs_qs.count(),
+        'total_logs_count': paginator.count,
         'total_jars_in': total_in,
         'total_jars_out': total_out,
         'net_movement': net_movement,
@@ -2296,26 +2507,60 @@ def customer_insights_api(request):
             'pathao_status': p_status,
         })
     
+    # Identify courier-fault returns vs customer-fault cancellations
+    non_customer_fault_reasons = {'COURIER_DELAY', 'DAMAGED_IN_TRANSIT', 'COURIER_FAULT', 'WRONG_ITEM'}
+    courier_fault_order_ids = set()
+    try:
+        from dashboard.models import OrderReturn
+        returns_qs = OrderReturn.objects.filter(order__in=matching_orders)
+        courier_fault_order_ids = set(
+            returns_qs.filter(return_reason__in=non_customer_fault_reasons).values_list('order_id', flat=True)
+        )
+    except Exception:
+        pass
+
+    courier_keywords = ['courier delay', 'damaged in transit', 'courier fault', 'courier rto', 'lost by courier', 'courier return']
+    for o in matching_orders.filter(order_status='CANCELLED'):
+        note = (o.admin_notes or '').lower()
+        if any(kw in note for kw in courier_keywords):
+            courier_fault_order_ids.add(o.id)
+
+    courier_fault_count = len(courier_fault_order_ids)
+
+    # Valid countable orders for customer (EXCLUDING courier-fault orders completely)
+    valid_matching_orders = matching_orders.exclude(id__in=courier_fault_order_ids)
+    valid_total_orders = valid_matching_orders.count()
+    if valid_total_orders == 0 and matching_orders.exists():
+        valid_total_orders = 1
+
+    customer_cancelled_count = valid_matching_orders.filter(order_status='CANCELLED').count()
+    delivered_count = valid_matching_orders.filter(order_status='DELIVERED').count()
+    pending_count = valid_matching_orders.filter(order_status__in=['PENDING', 'CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY']).count()
+    success_rate = round((delivered_count / valid_total_orders * 100), 1) if valid_total_orders > 0 else 100
+    
     # Trust & Risk Evaluation
-    if cancelled_count > 0:
+    if customer_cancelled_count > 0:
         trust_level = 'RISK'
-        trust_title = '⚠️ সতর্ক থাকুন (রিটার্ন/ক্যানসেল রেকর্ড আছে)'
+        trust_title = '⚠️ সতর্ক থাকুন (কাস্টমার রিফিউজাল রেকর্ড আছে)'
         trust_badge_class = 'bg-rose-100 text-rose-800 border-rose-200'
-        trust_desc = f'পূর্বে এই নম্বর থেকে {cancelled_count}টি অর্ডার ক্যানসেল বা রিটার্ন হয়েছে। পার্সেল পাঠানোর আগে ফোনে কথা বলে বা ডেলিভারি চার্জ অগ্রিম নিয়ে নিশ্চিত হওয়া নিরাপদ।'
-    elif total_orders >= 2:
+        trust_desc = f'পূর্বে এই নম্বর থেকে {customer_cancelled_count}টি অর্ডার কাস্টমার নিজে ক্যানসেল/রিফিউজ করেছেন।'
+    elif valid_total_orders >= 2:
         trust_level = 'TRUSTED'
         trust_title = '🟢 বিশ্বস্ত ও নিয়মিত কাস্টমার (Safe)'
         trust_badge_class = 'bg-emerald-100 text-emerald-800 border-emerald-200'
-        trust_desc = f'পূর্বে {total_orders}টি সফল অর্ডার সম্পন্ন হয়েছে (মোট খরচ: ৳{total_spent:,.0f})। কোনো রিটার্ন নেই, নিশ্চিন্তে পার্সেল পাঠাতে পারেন।'
-    elif total_orders == 1:
+        courier_note = f' (পূর্বে কুরিয়ারের ত্রুটিতে ফেরত আসা {courier_fault_count}টি অর্ডার বাদ দেওয়া হয়েছে)' if courier_fault_count > 0 else ''
+        trust_desc = f'পূর্বে {valid_total_orders}টি অর্ডার সম্পন্ন হয়েছে (মোট খরচ: ৳{total_spent:,.0f})। কোনো কাস্টমার রিফিউজাল নেই{courier_note}।'
+    elif valid_total_orders == 1:
         trust_level = 'NEW'
         trust_title = '🔵 নতুন কাস্টমার (১ম অর্ডার)'
         trust_badge_class = 'bg-blue-100 text-blue-800 border-blue-200'
-        trust_desc = 'পিকপিকলসে এটি কাস্টমারের ১ম অর্ডার। কোনো খারাপ রেকর্ড নেই। ডেলিভারি লোকেশন ও ফোন নম্বর চেক করে পাঠিয়ে দিন।'
+        courier_note = f' (পূর্বে কুরিয়ারের ত্রুটিতে ক্ষতিগ্রস্ত {courier_fault_count}টি পার্সেল বাদ দেওয়া হয়েছে)' if courier_fault_count > 0 else ''
+        trust_desc = f'পিকপিকলসে এটি কাস্টমারের ১ম প্রকৃত অর্ডার{courier_note}। কোনো কাস্টমার রিফিউজাল রেকর্ড নেই।'
     else:
         trust_level = 'CLEAN'
         trust_title = '⚪ ফ্রেশ নম্বর (কোনো ব্যাড হিস্ট্রি নেই)'
         trust_badge_class = 'bg-slate-100 text-slate-800 border-slate-200'
+        trust_desc = 'কোনো রেকর্ড পাওয়া যায়নি।'
     pathao_api_info = {
         'connected': pathao_svc.is_configured(),
         'store_id': pathao_svc.store_id or '446187',
@@ -2330,16 +2575,17 @@ def customer_insights_api(request):
         'status': 'success',
         'phone': phone,
         'clean_phone': formatted_phone,
-        'total_orders': total_orders,
+        'total_orders': valid_total_orders,
         'delivered_count': delivered_count,
-        'cancelled_count': cancelled_count,
+        'cancelled_count': customer_cancelled_count,
+        'courier_fault_count': courier_fault_count,
         'pending_count': pending_count,
         'success_rate': success_rate,
         'total_spent': float(total_spent),
         'all_spent': float(all_spent),
         'first_order_date': first_order.created_at.strftime('%b %d, %Y') if first_order else None,
         'latest_order_number': latest_order.order_number if latest_order else None,
-        'is_repeat_customer': total_orders > 1,
+        'is_repeat_customer': valid_total_orders > 1,
         'trust_level': trust_level,
         'trust_title': trust_title,
         'trust_badge_class': trust_badge_class,

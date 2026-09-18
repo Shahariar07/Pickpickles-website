@@ -385,10 +385,10 @@
                 {{ order.customer_phone }}
             </div>
 
-            {% if order.customer_notes %}
+            {% if order.delivery_instruction %}
             <div class="mt-1 p-1.5 rounded-lg border-2 border-black text-[9.5px] font-black text-black leading-tight bg-white">
-                <span class="uppercase text-[8.5px] block font-black border-b border-black pb-0.5 mb-0.5">RIDER NOTE:</span>
-                {{ order.customer_notes }}
+                <span class="uppercase text-[8.5px] block font-black border-b border-black pb-0.5 mb-0.5">RIDER NOTE / INSTRUCTION:</span>
+                {{ order.delivery_instruction }}
             </div>
             {% endif %}
         </div>
@@ -573,13 +573,13 @@
                     </div>
                 </div>
 
-                {% if order.customer_notes %}
+                {% if order.delivery_instruction %}
                 <div class="mt-3 p-3 bg-amber-50 rounded-xl border-2 border-amber-300 text-xs text-amber-950">
                     <span class="font-black text-[10px] uppercase tracking-wider block text-amber-900 flex items-center gap-1">
                         <i class="fa-solid fa-triangle-exclamation text-amber-700"></i>
-                        <span>Rider Special Note:</span>
+                        <span>Rider Special Instruction:</span>
                     </span>
-                    <p class="font-bold mt-0.5">{{ order.customer_notes }}</p>
+                    <p class="font-bold mt-0.5">{{ order.delivery_instruction }}</p>
                 </div>
                 {% endif %}
             </div>

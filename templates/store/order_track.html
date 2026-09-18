@@ -41,9 +41,9 @@
                 <span class="font-display font-black text-2xl text-brand-800">#{{ order.order_number }}</span>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
-                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black border {{ order.badge_color }}">
-                    <span class="w-2 h-2 rounded-full bg-current animate-pulse"></span>
-                    {{ order.get_order_status_display }}
+                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black border {{ order.badge_color }} shadow-2xs">
+                    <i class="{{ order.status_icon }}"></i>
+                    <span>{{ order.get_order_status_display }}</span>
                 </span>
                 {% if order.pathao_order_status %}
                 <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">

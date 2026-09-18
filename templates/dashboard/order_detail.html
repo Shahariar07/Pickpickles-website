@@ -19,9 +19,9 @@
                 #{{ order.order_number }}
             </h1>
 
-            <!-- Order Status Badge -->
+            <!-- Order Status Badge with Icon -->
             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black border {{ order.badge_color }} shrink-0 shadow-2xs">
-                <span class="w-2 h-2 rounded-full bg-current animate-pulse"></span>
+                <i class="{{ order.status_icon }} text-xs"></i>
                 <span>{{ order.get_order_status_display }}</span>
             </span>
 
@@ -179,13 +179,13 @@
                 <div class="grid grid-cols-2 gap-2.5">
                     <div>
                         <label class="block text-[11px] font-bold text-gray-700 mb-1">Order Status</label>
-                        <select name="order_status" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-2.5 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-1 focus:ring-brand-500">
-                            <option value="PENDING" {% if order.order_status == 'PENDING' %}selected{% endif %}>Pending Confirmation</option>
-                            <option value="CONFIRMED" {% if order.order_status == 'CONFIRMED' %}selected{% endif %}>Confirmed</option>
-                            <option value="PACKING" {% if order.order_status == 'PACKING' %}selected{% endif %}>Packing</option>
-                            <option value="OUT_FOR_DELIVERY" {% if order.order_status == 'OUT_FOR_DELIVERY' %}selected{% endif %}>Out for Delivery</option>
-                            <option value="DELIVERED" {% if order.order_status == 'DELIVERED' %}selected{% endif %}>Delivered 🎉</option>
-                            <option value="CANCELLED" {% if order.order_status == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
+                        <select name="order_status" class="w-full border rounded-xl px-2.5 py-2 text-xs font-black focus:ring-2 focus:ring-brand-500 transition shadow-2xs {{ order.status_select_class }}">
+                            <option value="PENDING" {% if order.order_status == 'PENDING' %}selected{% endif %} class="bg-white text-gray-900 font-bold py-1">🟡 Pending Confirmation</option>
+                            <option value="CONFIRMED" {% if order.order_status == 'CONFIRMED' %}selected{% endif %} class="bg-white text-gray-900 font-bold py-1">🔵 Confirmed</option>
+                            <option value="PACKING" {% if order.order_status == 'PACKING' %}selected{% endif %} class="bg-white text-gray-900 font-bold py-1">📦 Packing</option>
+                            <option value="OUT_FOR_DELIVERY" {% if order.order_status == 'OUT_FOR_DELIVERY' %}selected{% endif %} class="bg-white text-gray-900 font-bold py-1">🚚 Out for Delivery</option>
+                            <option value="DELIVERED" {% if order.order_status == 'DELIVERED' %}selected{% endif %} class="bg-white text-gray-900 font-bold py-1">🟢 Delivered 🎉</option>
+                            <option value="CANCELLED" {% if order.order_status == 'CANCELLED' %}selected{% endif %} class="bg-white text-gray-900 font-bold py-1">🔴 Cancelled</option>
                         </select>
                     </div>
 
@@ -201,7 +201,8 @@
                 </div>
 
                 <div>
-                    <input type="text" name="admin_notes" value="{{ order.admin_notes|default:'' }}" placeholder="Internal dispatch / rider note..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs text-gray-900 focus:bg-white focus:ring-1 focus:ring-brand-500">
+                    <label class="block text-[11px] font-bold text-gray-700 mb-1">Customer & Delivery Instruction</label>
+                    <input type="text" name="customer_notes" value="{{ order.delivery_instruction }}" placeholder="Delivery & customer instruction..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs text-gray-900 focus:bg-white focus:ring-1 focus:ring-brand-500">
                 </div>
 
                 <button type="submit" class="w-full bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs py-2 rounded-xl shadow-xs transition cursor-pointer">
@@ -267,6 +268,15 @@
                         </div>
                     </div>
 
+                    {% if order.customer_score.courier_fault_count > 0 %}
+                    <div class="text-[10px] text-emerald-900 bg-emerald-50/90 px-2 py-1 rounded-lg border border-emerald-200 flex items-center justify-between gap-1 shadow-2xs">
+                        <span class="flex items-center gap-1.5 font-bold">
+                            <i class="fa-solid fa-truck-fast text-emerald-600"></i>
+                            <span>পূর্বে কুরিয়ারের কারণে বাতিল হওয়া {{ order.customer_score.courier_fault_count }}টি অর্ডার বাদ দেওয়া হয়েছে (কাস্টমারের দোষ নয়)</span>
+                        </span>
+                    </div>
+                    {% endif %}
+
                     <!-- 1-Click External Fraud Verification -->
                     <div class="pt-1.5 border-t border-current/15 flex items-center justify-between gap-2 flex-wrap">
                         <span class="text-[11px] font-bold opacity-85 flex items-center gap-1">
@@ -307,16 +317,16 @@
                     </div>
                 </div>
 
-                {% if order.customer_notes %}
+                {% if order.delivery_instruction %}
                 <div class="text-amber-950 bg-gradient-to-r from-amber-50 to-orange-50/70 p-3.5 rounded-2xl border-2 border-amber-300 text-xs shadow-xs space-y-1.5">
                     <div class="flex items-center gap-1.5 text-amber-800 font-black text-[11px] uppercase tracking-wider">
                         <span class="w-5 h-5 rounded-md bg-amber-500 text-white flex items-center justify-center text-[10px]">
                             <i class="fa-solid fa-clipboard-list"></i>
                         </span>
-                        <span>Special Instruction / Delivery Note:</span>
+                        <span>Customer & Delivery Instruction:</span>
                     </div>
                     <p class="font-bold text-gray-900 text-sm leading-relaxed pl-6">
-                        "{{ order.customer_notes }}"
+                        "{{ order.delivery_instruction }}"
                     </p>
                 </div>
                 {% endif %}
@@ -506,8 +516,8 @@
             </div>
 
             <div>
-                <label class="font-bold text-gray-700 block mb-1">Customer Delivery Instructions / Notes</label>
-                <textarea name="customer_notes" rows="2" placeholder="e.g. Call before delivery, leave with guard..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500">{{ order.customer_notes }}</textarea>
+                <label class="font-bold text-gray-700 block mb-1">Customer & Delivery Instruction</label>
+                <textarea name="customer_notes" rows="2" placeholder="e.g. Call before delivery, leave with guard..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500">{{ order.delivery_instruction }}</textarea>
             </div>
 
             <div class="pt-3 flex items-center justify-end gap-2 border-t border-gray-100">

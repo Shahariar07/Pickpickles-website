@@ -41,35 +41,61 @@
     </div>
 
     <!-- Quick Status Counter Pills -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <a href="?status=ALL&zone={{ zone_filter }}&q={{ search_query }}" class="bg-white p-3.5 rounded-2xl border transition {% if status_filter == 'ALL' %}border-gray-900 shadow-sm ring-2 ring-gray-900/10{% else %}border-gray-200 hover:border-gray-300{% endif %}">
-            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">All Orders</span>
+    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+        <a href="?status=ALL&zone={{ zone_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="bg-white p-3.5 rounded-2xl border transition {% if status_filter == 'ALL' %}border-gray-900 shadow-sm ring-2 ring-gray-900/10 bg-gray-50/60{% else %}border-gray-200 hover:border-gray-300{% endif %}">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">All Orders</span>
+                <i class="fa-solid fa-list-check text-gray-400 text-xs"></i>
+            </div>
             <span class="font-display font-black text-xl text-gray-900 mt-0.5 block">{{ total_orders_count }}</span>
         </a>
 
-        <a href="?status=PENDING&zone={{ zone_filter }}&q={{ search_query }}" class="bg-white p-3.5 rounded-2xl border transition {% if status_filter == 'PENDING' %}border-amber-500 bg-amber-50/40 shadow-sm ring-2 ring-amber-500/20{% else %}border-gray-200 hover:border-amber-300{% endif %}">
-            <span class="text-[10px] font-bold text-amber-700 uppercase tracking-wider block">Pending</span>
+        <a href="?status=PENDING&zone={{ zone_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="bg-white p-3.5 rounded-2xl border transition {% if status_filter == 'PENDING' %}border-amber-500 bg-amber-50/60 shadow-sm ring-2 ring-amber-500/20{% else %}border-gray-200 hover:border-amber-300{% endif %}">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold text-amber-700 uppercase tracking-wider block">Pending</span>
+                <i class="fa-solid fa-clock text-amber-600 text-xs animate-pulse"></i>
+            </div>
             <span class="font-display font-black text-xl text-amber-600 mt-0.5 block">{{ pending_count }}</span>
         </a>
 
-        <a href="?status=CONFIRMED&zone={{ zone_filter }}&q={{ search_query }}" class="bg-white p-3.5 rounded-2xl border transition {% if status_filter == 'CONFIRMED' %}border-blue-500 bg-blue-50/40 shadow-sm ring-2 ring-blue-500/20{% else %}border-gray-200 hover:border-blue-300{% endif %}">
-            <span class="text-[10px] font-bold text-blue-700 uppercase tracking-wider block">Confirmed</span>
+        <a href="?status=CONFIRMED&zone={{ zone_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="bg-white p-3.5 rounded-2xl border transition {% if status_filter == 'CONFIRMED' %}border-blue-500 bg-blue-50/60 shadow-sm ring-2 ring-blue-500/20{% else %}border-gray-200 hover:border-blue-300{% endif %}">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold text-blue-700 uppercase tracking-wider block">Confirmed</span>
+                <i class="fa-solid fa-circle-check text-blue-600 text-xs"></i>
+            </div>
             <span class="font-display font-black text-xl text-blue-600 mt-0.5 block">{{ confirmed_count }}</span>
         </a>
 
-        <a href="?status=PACKING&zone={{ zone_filter }}&q={{ search_query }}" class="bg-white p-3.5 rounded-2xl border transition {% if status_filter == 'PACKING' %}border-purple-500 bg-purple-50/40 shadow-sm ring-2 ring-purple-500/20{% else %}border-gray-200 hover:border-purple-300{% endif %}">
-            <span class="text-[10px] font-bold text-purple-700 uppercase tracking-wider block">Packing</span>
+        <a href="?status=PACKING&zone={{ zone_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="bg-white p-3.5 rounded-2xl border transition {% if status_filter == 'PACKING' %}border-purple-500 bg-purple-50/60 shadow-sm ring-2 ring-purple-500/20{% else %}border-gray-200 hover:border-purple-300{% endif %}">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold text-purple-700 uppercase tracking-wider block">Packing</span>
+                <i class="fa-solid fa-box-open text-purple-600 text-xs"></i>
+            </div>
             <span class="font-display font-black text-xl text-purple-600 mt-0.5 block">{{ packing_count }}</span>
         </a>
 
-        <a href="?status=OUT_FOR_DELIVERY&zone={{ zone_filter }}&q={{ search_query }}" class="bg-white p-3.5 rounded-2xl border transition {% if status_filter == 'OUT_FOR_DELIVERY' %}border-indigo-500 bg-indigo-50/40 shadow-sm ring-2 ring-indigo-500/20{% else %}border-gray-200 hover:border-indigo-300{% endif %}">
-            <span class="text-[10px] font-bold text-indigo-700 uppercase tracking-wider block">Shipping</span>
+        <a href="?status=OUT_FOR_DELIVERY&zone={{ zone_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="bg-white p-3.5 rounded-2xl border transition {% if status_filter == 'OUT_FOR_DELIVERY' %}border-indigo-500 bg-indigo-50/60 shadow-sm ring-2 ring-indigo-500/20{% else %}border-gray-200 hover:border-indigo-300{% endif %}">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold text-indigo-700 uppercase tracking-wider block">Shipping</span>
+                <i class="fa-solid fa-truck-fast text-indigo-600 text-xs"></i>
+            </div>
             <span class="font-display font-black text-xl text-indigo-600 mt-0.5 block">{{ out_for_delivery_count }}</span>
         </a>
 
-        <a href="?status=DELIVERED&zone={{ zone_filter }}&q={{ search_query }}" class="bg-white p-3.5 rounded-2xl border transition {% if status_filter == 'DELIVERED' %}border-emerald-500 bg-emerald-50/40 shadow-sm ring-2 ring-emerald-500/20{% else %}border-gray-200 hover:border-emerald-300{% endif %}">
-            <span class="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">Delivered</span>
+        <a href="?status=DELIVERED&zone={{ zone_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="bg-white p-3.5 rounded-2xl border transition {% if status_filter == 'DELIVERED' %}border-emerald-500 bg-emerald-50/60 shadow-sm ring-2 ring-emerald-500/20{% else %}border-gray-200 hover:border-emerald-300{% endif %}">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">Delivered</span>
+                <i class="fa-solid fa-circle-check text-emerald-600 text-xs"></i>
+            </div>
             <span class="font-display font-black text-xl text-emerald-600 mt-0.5 block">{{ delivered_count }}</span>
+        </a>
+
+        <a href="?status=CANCELLED&zone={{ zone_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="bg-white p-3.5 rounded-2xl border transition {% if status_filter == 'CANCELLED' %}border-rose-500 bg-rose-50/60 shadow-sm ring-2 ring-rose-500/20{% else %}border-gray-200 hover:border-rose-300{% endif %}">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold text-rose-700 uppercase tracking-wider block">Cancelled</span>
+                <i class="fa-solid fa-circle-xmark text-rose-600 text-xs"></i>
+            </div>
+            <span class="font-display font-black text-xl text-rose-600 mt-0.5 block">{{ cancelled_count }}</span>
         </a>
     </div>
 
@@ -80,6 +106,9 @@
             <!-- Search Form -->
             <form method="GET" action="{% url 'dashboard:orders' %}" class="flex-1 max-w-md">
                 <input type="hidden" name="status" value="{{ status_filter }}">
+                <input type="hidden" name="zone" value="{{ zone_filter }}">
+                <input type="hidden" name="payment" value="{{ payment_filter }}">
+                <input type="hidden" name="per_page" value="{{ per_page }}">
                 <div class="relative flex items-center">
                     <i class="fa-solid fa-magnifying-glass absolute left-3.5 text-gray-400 text-xs"></i>
                     <input type="text" name="q" value="{{ search_query }}" placeholder="Search by Order #, Phone, Name, City, TrxID..." class="w-full bg-gray-50 pl-9 pr-20 py-2.5 rounded-xl border border-gray-200 text-xs font-medium focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none">
@@ -104,36 +133,43 @@
 
                 <div class="flex items-center gap-1 text-xs font-semibold">
                     <span class="text-gray-400 font-bold mr-1">Zone:</span>
-                    <a href="?status={{ status_filter }}&zone=ALL&q={{ search_query }}" class="px-2.5 py-1 rounded-xl {% if zone_filter == 'ALL' %}bg-brand-700 text-white font-bold{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">All</a>
-                    <a href="?status={{ status_filter }}&zone=INSIDE_DHAKA&q={{ search_query }}" class="px-2.5 py-1 rounded-xl {% if zone_filter == 'INSIDE_DHAKA' %}bg-brand-700 text-white font-bold{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Inside Dhaka</a>
-                    <a href="?status={{ status_filter }}&zone=OUTSIDE_DHAKA&q={{ search_query }}" class="px-2.5 py-1 rounded-xl {% if zone_filter == 'OUTSIDE_DHAKA' %}bg-brand-700 text-white font-bold{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Outside Dhaka</a>
+                    <a href="?status={{ status_filter }}&zone=ALL&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-2.5 py-1 rounded-xl {% if zone_filter == 'ALL' %}bg-brand-700 text-white font-bold{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">All</a>
+                    <a href="?status={{ status_filter }}&zone=INSIDE_DHAKA&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-2.5 py-1 rounded-xl {% if zone_filter == 'INSIDE_DHAKA' %}bg-brand-700 text-white font-bold{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Inside Dhaka</a>
+                    <a href="?status={{ status_filter }}&zone=OUTSIDE_DHAKA&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-2.5 py-1 rounded-xl {% if zone_filter == 'OUTSIDE_DHAKA' %}bg-brand-700 text-white font-bold{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Outside Dhaka</a>
                 </div>
             </div>
 
         </div>
 
-        <!-- Status Filter Tabs -->
+        <!-- Status Filter Tabs with Icons & Distinct Colors -->
         <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-bold scrollbar-none border-t border-gray-100 pt-3">
-            <a href="?status=ALL&zone={{ zone_filter }}&q={{ search_query }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition {% if status_filter == 'ALL' %}bg-gray-900 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
-                All Orders ({{ total_orders_count }})
+            <a href="?status=ALL&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition flex items-center gap-1.5 {% if status_filter == 'ALL' %}bg-gray-900 text-white shadow-xs{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+                <i class="fa-solid fa-list-check"></i>
+                <span>All Orders ({{ total_orders_count }})</span>
             </a>
-            <a href="?status=PENDING&zone={{ zone_filter }}&q={{ search_query }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition {% if status_filter == 'PENDING' %}bg-amber-600 text-white{% else %}bg-amber-50 text-amber-800 hover:bg-amber-100{% endif %}">
-                Pending ({{ pending_count }})
+            <a href="?status=PENDING&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition flex items-center gap-1.5 {% if status_filter == 'PENDING' %}bg-amber-600 text-white shadow-xs{% else %}bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200/60{% endif %}">
+                <i class="fa-solid fa-clock {% if status_filter == 'PENDING' %}text-white{% else %}text-amber-600{% endif %}"></i>
+                <span>Pending ({{ pending_count }})</span>
             </a>
-            <a href="?status=CONFIRMED&zone={{ zone_filter }}&q={{ search_query }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition {% if status_filter == 'CONFIRMED' %}bg-blue-600 text-white{% else %}bg-blue-50 text-blue-800 hover:bg-blue-100{% endif %}">
-                Confirmed ({{ confirmed_count }})
+            <a href="?status=CONFIRMED&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition flex items-center gap-1.5 {% if status_filter == 'CONFIRMED' %}bg-blue-600 text-white shadow-xs{% else %}bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200/60{% endif %}">
+                <i class="fa-solid fa-circle-check {% if status_filter == 'CONFIRMED' %}text-white{% else %}text-blue-600{% endif %}"></i>
+                <span>Confirmed ({{ confirmed_count }})</span>
             </a>
-            <a href="?status=PACKING&zone={{ zone_filter }}&q={{ search_query }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition {% if status_filter == 'PACKING' %}bg-purple-600 text-white{% else %}bg-purple-50 text-purple-800 hover:bg-purple-100{% endif %}">
-                Packing ({{ packing_count }})
+            <a href="?status=PACKING&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition flex items-center gap-1.5 {% if status_filter == 'PACKING' %}bg-purple-600 text-white shadow-xs{% else %}bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200/60{% endif %}">
+                <i class="fa-solid fa-box-open {% if status_filter == 'PACKING' %}text-white{% else %}text-purple-600{% endif %}"></i>
+                <span>Packing ({{ packing_count }})</span>
             </a>
-            <a href="?status=OUT_FOR_DELIVERY&zone={{ zone_filter }}&q={{ search_query }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition {% if status_filter == 'OUT_FOR_DELIVERY' %}bg-indigo-600 text-white{% else %}bg-indigo-50 text-indigo-800 hover:bg-indigo-100{% endif %}">
-                Out for Delivery ({{ out_for_delivery_count }})
+            <a href="?status=OUT_FOR_DELIVERY&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition flex items-center gap-1.5 {% if status_filter == 'OUT_FOR_DELIVERY' %}bg-indigo-600 text-white shadow-xs{% else %}bg-indigo-50 text-indigo-800 hover:bg-indigo-100 border border-indigo-200/60{% endif %}">
+                <i class="fa-solid fa-truck-fast {% if status_filter == 'OUT_FOR_DELIVERY' %}text-white{% else %}text-indigo-600{% endif %}"></i>
+                <span>Shipping ({{ out_for_delivery_count }})</span>
             </a>
-            <a href="?status=DELIVERED&zone={{ zone_filter }}&q={{ search_query }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition {% if status_filter == 'DELIVERED' %}bg-emerald-600 text-white{% else %}bg-emerald-50 text-emerald-800 hover:bg-emerald-100{% endif %}">
-                Delivered ({{ delivered_count }})
+            <a href="?status=DELIVERED&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition flex items-center gap-1.5 {% if status_filter == 'DELIVERED' %}bg-emerald-600 text-white shadow-xs{% else %}bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200/60{% endif %}">
+                <i class="fa-solid fa-circle-check {% if status_filter == 'DELIVERED' %}text-white{% else %}text-emerald-600{% endif %}"></i>
+                <span>Delivered ({{ delivered_count }})</span>
             </a>
-            <a href="?status=CANCELLED&zone={{ zone_filter }}&q={{ search_query }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition {% if status_filter == 'CANCELLED' %}bg-rose-600 text-white{% else %}bg-rose-50 text-rose-800 hover:bg-rose-100{% endif %}">
-                Cancelled ({{ cancelled_count }})
+            <a href="?status=CANCELLED&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition flex items-center gap-1.5 {% if status_filter == 'CANCELLED' %}bg-rose-600 text-white shadow-xs{% else %}bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200/60{% endif %}">
+                <i class="fa-solid fa-circle-xmark {% if status_filter == 'CANCELLED' %}text-white{% else %}text-rose-600{% endif %}"></i>
+                <span>Cancelled ({{ cancelled_count }})</span>
             </a>
             {% if request.user.is_superuser %}
             <a href="{% url 'dashboard:orders_trash' %}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition bg-rose-50/80 text-rose-700 hover:bg-rose-100 hover:text-rose-900 ml-auto flex items-center gap-1.5 border border-dashed border-rose-300 font-extrabold shadow-2xs">
@@ -147,10 +183,10 @@
     <!-- 1. Orders Queue Cards View (Minimal, Fast & Actionable) -->
     <div id="ordersCardsView" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {% for order in orders %}
-        <div class="bg-white rounded-2xl border {% if order.customer_notes %}border-amber-300 ring-1 ring-amber-300/60 bg-gradient-to-b from-amber-50/25 to-white{% else %}border-gray-200{% endif %} hover:border-brand-500/50 transition shadow-2xs hover:shadow-sm p-4 flex flex-col justify-between space-y-3 relative {% if order.order_status == 'PENDING' %}ring-2 ring-amber-400/50 border-amber-300{% endif %}">
+        <div class="bg-white rounded-2xl border {% if order.delivery_instruction %}border-amber-300 ring-1 ring-amber-300/60 bg-gradient-to-b from-amber-50/25 to-white{% else %}border-gray-200{% endif %} hover:border-brand-500/50 transition shadow-2xs hover:shadow-sm p-4 flex flex-col justify-between space-y-3 relative {% if order.order_status == 'PENDING' %}ring-2 ring-amber-400/50 border-amber-300{% endif %}">
             
-            <!-- Top Line: Order Number, Time, Special Instruction Badge & Status Dropdown -->
-            <div class="flex items-center justify-between gap-2">
+            <!-- Top Line: Order Number, Time, Special Instruction Badge & Status Badge + Quick Select -->
+            <div class="flex items-center justify-between gap-2 flex-wrap">
                 <div class="flex items-center gap-1.5 min-w-0 flex-wrap">
                     <a href="{% url 'dashboard:order_detail' order.order_number %}" class="font-display font-black text-sm text-gray-900 hover:text-brand-700 transition">
                         #{{ order.order_number }}
@@ -158,8 +194,8 @@
                     {% if order.order_status == 'PENDING' %}
                     <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" title="New Pending Order"></span>
                     {% endif %}
-                    {% if order.customer_notes %}
-                    <span class="inline-flex items-center gap-1 text-[10px] font-black px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300 shrink-0 shadow-2xs" title="Special Instruction: {{ order.customer_notes }}">
+                    {% if order.delivery_instruction %}
+                    <span class="inline-flex items-center gap-1 text-[10px] font-black px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300 shrink-0 shadow-2xs" title="Customer & Delivery Instruction: {{ order.delivery_instruction }}">
                         <i class="fa-solid fa-note-sticky text-amber-600 text-[9px]"></i>
                         <span>Instruction</span>
                     </span>
@@ -167,12 +203,20 @@
                     <span class="text-[11px] text-gray-400 font-medium truncate">• {{ order.created_at|timesince }} ago</span>
                 </div>
                 
-                <!-- Quick Status Change Select -->
+                <!-- Quick Status Change Select (Colored Based on Status/Text) -->
                 <form action="{% url 'dashboard:update_order_status_quick' order.order_number %}" method="POST" class="inline-block shrink-0">
                     {% csrf_token %}
-                    <select name="status" onchange="this.form.submit()" class="bg-white hover:bg-gray-50 border border-gray-200 rounded-lg px-2 py-0.5 text-[10px] font-extrabold text-gray-700 cursor-pointer shadow-2xs focus:ring-1 focus:ring-brand-500 {{ order.badge_color }}" title="Change Order Status">
+                    <select name="status" onchange="this.form.submit()" class="border rounded-xl px-2.5 py-1 text-[11px] font-black cursor-pointer shadow-2xs focus:outline-none focus:ring-2 focus:ring-brand-500 transition {{ order.status_select_class }}" title="Change Order Status">
                         {% for code, label in status_choices %}
-                        <option value="{{ code }}" {% if order.order_status == code %}selected{% endif %}>{{ label }}</option>
+                        <option value="{{ code }}" {% if order.order_status == code %}selected{% endif %} class="bg-white text-gray-900 font-bold py-1">
+                            {% if code == 'DELIVERED' %}🟢 {{ label }}
+                            {% elif code == 'PENDING' %}🟡 {{ label }}
+                            {% elif code == 'CANCELLED' %}🔴 {{ label }}
+                            {% elif code == 'CONFIRMED' %}🔵 {{ label }}
+                            {% elif code == 'PACKING' %}📦 {{ label }}
+                            {% elif code == 'OUT_FOR_DELIVERY' %}🚚 {{ label }}
+                            {% else %}{{ label }}{% endif %}
+                        </option>
                         {% endfor %}
                     </select>
                 </form>
@@ -197,7 +241,7 @@
             </div>
 
             <!-- Special Instruction / Customer Notes Box (Highlighted Details) -->
-            {% if order.customer_notes %}
+            {% if order.delivery_instruction %}
             <div class="bg-gradient-to-r from-amber-50 to-orange-50/60 border border-amber-200/90 rounded-xl p-2.5 text-xs text-amber-950 flex items-start gap-2 shadow-2xs">
                 <span class="inline-flex items-center justify-center w-5 h-5 rounded-lg bg-amber-500 text-white text-[10px] shrink-0 mt-0.5 shadow-2xs">
                     <i class="fa-solid fa-clipboard-list"></i>
@@ -205,11 +249,11 @@
                 <div class="min-w-0 flex-1">
                     <div class="text-[10px] font-black uppercase tracking-wider text-amber-800 flex items-center justify-between gap-1 mb-0.5">
                         <span class="flex items-center gap-1">
-                            <i class="fa-solid fa-bell text-amber-600 text-[9px]"></i> Special Instruction
+                            <i class="fa-solid fa-bell text-amber-600 text-[9px]"></i> Delivery & Customer Instruction
                         </span>
                     </div>
                     <p class="text-[11px] font-semibold text-amber-950 leading-snug break-words">
-                        "{{ order.customer_notes }}"
+                        "{{ order.delivery_instruction }}"
                     </p>
                 </div>
             </div>
@@ -316,8 +360,8 @@
                                 <span class="text-[9px] font-bold px-1.5 py-0.2 rounded border {{ order.customer_score.badge_class }} shrink-0" title="{{ order.customer_score.text }}">
                                     {{ order.customer_score.short_label }}
                                 </span>
-                                {% if order.customer_notes %}
-                                <span class="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs shrink-0" title="Special Instruction: {{ order.customer_notes }}">
+                                {% if order.delivery_instruction %}
+                                <span class="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs shrink-0" title="Customer & Delivery Instruction: {{ order.delivery_instruction }}">
                                     <i class="fa-solid fa-note-sticky text-amber-600 text-[8px]"></i> Instruction
                                 </span>
                                 {% endif %}
@@ -325,10 +369,10 @@
                             <div class="text-[11px] text-gray-400">
                                 {{ order.customer_phone }} • {{ order.delivery_city }}
                             </div>
-                            {% if order.customer_notes %}
-                            <div class="mt-1 flex items-start gap-1.5 bg-amber-50/90 border border-amber-200/90 rounded-lg px-2 py-1 text-[11px] text-amber-950 font-medium max-w-xs sm:max-w-sm" title="{{ order.customer_notes }}">
+                            {% if order.delivery_instruction %}
+                            <div class="mt-1 flex items-start gap-1.5 bg-amber-50/90 border border-amber-200/90 rounded-lg px-2 py-1 text-[11px] text-amber-950 font-medium max-w-xs sm:max-w-sm" title="{{ order.delivery_instruction }}">
                                 <i class="fa-solid fa-clipboard-list text-amber-600 text-[10px] shrink-0 mt-0.5"></i>
-                                <span class="line-clamp-2 break-words"><strong>Note:</strong> {{ order.customer_notes }}</span>
+                                <span class="line-clamp-2 break-words"><strong>Instruction:</strong> {{ order.delivery_instruction }}</span>
                             </div>
                             {% endif %}
                         </td>
@@ -348,13 +392,21 @@
                             </span>
                         </td>
 
-                        <!-- Status Quick Change Selector -->
-                        <td class="py-3 px-4 align-middle">
+                        <!-- Status Quick Change Selector (Colored Based on Status/Text) -->
+                        <td class="py-3 px-4 align-middle whitespace-nowrap">
                             <form action="{% url 'dashboard:update_order_status_quick' order.order_number %}" method="POST" class="inline-block">
                                 {% csrf_token %}
-                                <select name="status" onchange="this.form.submit()" class="bg-white hover:bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 text-[10px] font-bold text-gray-700 cursor-pointer shadow-2xs focus:ring-1 focus:ring-brand-500 {{ order.badge_color }}" title="Change Order Status">
+                                <select name="status" onchange="this.form.submit()" class="border rounded-xl px-2.5 py-1 text-[11px] font-black cursor-pointer shadow-2xs focus:outline-none focus:ring-2 focus:ring-brand-500 transition {{ order.status_select_class }}" title="Change Order Status">
                                     {% for code, label in status_choices %}
-                                    <option value="{{ code }}" {% if order.order_status == code %}selected{% endif %}>{{ label }}</option>
+                                    <option value="{{ code }}" {% if order.order_status == code %}selected{% endif %} class="bg-white text-gray-900 font-bold py-1">
+                                        {% if code == 'DELIVERED' %}🟢 {{ label }}
+                                        {% elif code == 'PENDING' %}🟡 {{ label }}
+                                        {% elif code == 'CANCELLED' %}🔴 {{ label }}
+                                        {% elif code == 'CONFIRMED' %}🔵 {{ label }}
+                                        {% elif code == 'PACKING' %}📦 {{ label }}
+                                        {% elif code == 'OUT_FOR_DELIVERY' %}🚚 {{ label }}
+                                        {% else %}{{ label }}{% endif %}
+                                    </option>
                                     {% endfor %}
                                 </select>
                             </form>
@@ -422,6 +474,103 @@
             </table>
         </div>
     </div>
+
+    <!-- 3. Modern Responsive Pagination & Results Bar -->
+    {% if paginator.count > 0 %}
+    <div class="bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-gray-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+        
+        <!-- Left: Showing items count & Per page selector -->
+        <div class="flex flex-wrap items-center gap-3 text-xs text-gray-500 font-medium">
+            <span>
+                Showing <strong class="text-gray-900 font-black">{{ page_obj.start_index }}</strong> to <strong class="text-gray-900 font-black">{{ page_obj.end_index }}</strong> of <strong class="text-gray-900 font-black">{{ paginator.count }}</strong> orders
+            </span>
+
+            <!-- Per Page Selector Form -->
+            <form method="GET" action="{% url 'dashboard:orders' %}" class="inline-flex items-center gap-1.5 ml-1">
+                <input type="hidden" name="status" value="{{ status_filter }}">
+                <input type="hidden" name="zone" value="{{ zone_filter }}">
+                <input type="hidden" name="payment" value="{{ payment_filter }}">
+                <input type="hidden" name="q" value="{{ search_query }}">
+                <label for="per_page_select" class="text-[11px] text-gray-400 font-semibold uppercase tracking-wider">Per page:</label>
+                <select id="per_page_select" name="per_page" onchange="this.form.submit()" class="bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-2 py-1 text-xs font-bold text-gray-700 cursor-pointer focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+                    <option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+                    <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                    <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+                </select>
+            </form>
+        </div>
+
+        <!-- Right: Pagination Buttons & Page Indicator -->
+        <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs text-gray-600 font-bold bg-gray-50 px-2.5 py-1 rounded-xl border border-gray-200">
+                Page <strong class="text-gray-900 font-black">{{ page_obj.number }}</strong> of <strong class="text-gray-900 font-black">{{ paginator.num_pages }}</strong>
+            </span>
+
+            {% if paginator.num_pages > 1 %}
+            <nav class="flex items-center gap-1 text-xs font-bold" aria-label="Orders Pagination">
+                
+                <!-- First & Prev Page -->
+                {% if page_obj.has_previous %}
+                <a href="?page=1&status={{ status_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}" class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="First Page">
+                    <i class="fa-solid fa-angles-left text-[10px]"></i>
+                </a>
+                <a href="?page={{ page_obj.previous_page_number }}&status={{ status_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}" class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="Previous Page">
+                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                    <span class="hidden sm:inline text-[11px]">Prev</span>
+                </a>
+                {% else %}
+                <span class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-300 border border-gray-100 cursor-not-allowed">
+                    <i class="fa-solid fa-angles-left text-[10px]"></i>
+                </span>
+                <span class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-300 border border-gray-100 cursor-not-allowed">
+                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                    <span class="hidden sm:inline text-[11px]">Prev</span>
+                </span>
+                {% endif %}
+
+                <!-- Page Number Pills -->
+                <div class="flex items-center gap-1 mx-1">
+                    {% for p in elided_page_range %}
+                        {% if p == page_obj.paginator.ELLIPSIS or p == '…' or p == '...' %}
+                        <span class="w-8 h-8 flex items-center justify-center text-gray-400 font-bold text-xs">…</span>
+                        {% elif p == page_obj.number %}
+                        <span class="w-8 h-8 rounded-xl flex items-center justify-center bg-brand-700 text-white font-extrabold text-xs shadow-xs ring-2 ring-brand-500/20">
+                            {{ p }}
+                        </span>
+                        {% else %}
+                        <a href="?page={{ p }}&status={{ status_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}" class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-700 hover:bg-brand-50 hover:text-brand-900 hover:border-brand-300 transition border border-gray-200 text-xs shadow-2xs">
+                            {{ p }}
+                        </a>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <!-- Next & Last Page -->
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}&status={{ status_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}" class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="Next Page">
+                    <span class="hidden sm:inline text-[11px]">Next</span>
+                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                </a>
+                <a href="?page={{ paginator.num_pages }}&status={{ status_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}" class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="Last Page">
+                    <i class="fa-solid fa-angles-right text-[10px]"></i>
+                </a>
+                {% else %}
+                <span class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-300 border border-gray-100 cursor-not-allowed">
+                    <span class="hidden sm:inline text-[11px]">Next</span>
+                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                </span>
+                <span class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-300 border border-gray-100 cursor-not-allowed">
+                    <i class="fa-solid fa-angles-right text-[10px]"></i>
+                </span>
+                {% endif %}
+
+            </nav>
+            {% endif %}
+        </div>
+
+    </div>
+    {% endif %}
 
 </div>
 
@@ -563,16 +712,10 @@
                 <input type="text" name="payment_trx_id" placeholder="TrxID (if paid) or special delivery instructions..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
             </div>
 
-            <!-- Notes -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                    <label class="font-bold text-gray-700 block mb-1">Customer Note (Optional)</label>
-                    <input type="text" name="customer_notes" placeholder="e.g. Call before delivery" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
-                </div>
-                <div>
-                    <label class="font-bold text-gray-700 block mb-1">Admin / Internal Note (Optional)</label>
-                    <input type="text" name="admin_notes" placeholder="e.g. Taken from Facebook Page" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
-                </div>
+            <!-- Customer & Delivery Instruction -->
+            <div>
+                <label class="font-bold text-gray-700 block mb-1">Customer & Delivery Instruction (Optional)</label>
+                <input type="text" name="customer_notes" placeholder="e.g. Call before delivery, leave with guard, Facebook order note..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
             </div>
 
             <!-- Modal Action Buttons -->

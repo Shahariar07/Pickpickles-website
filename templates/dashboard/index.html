@@ -166,7 +166,7 @@
                         </span>
                     </div>
                     <h3 class="font-display font-black text-base sm:text-lg text-gray-900 mt-0.5">
-                        স্টক ঘাটতি অ্যালার্ট: <span class="text-rose-700">কতো পিস আছে ও মোট লাগবে {{ total_needed_jars }} পিস!</span>
+                        অর্ডার ডেলিভারি ঘাটতি: <span class="text-rose-700">অর্ডার অনুযায়ী মোট কম আছে {{ total_needed_jars }} পিস!</span>
                     </h3>
                 </div>
             </div>
@@ -188,47 +188,36 @@
                         <div class="flex items-center justify-between gap-1">
                             <h4 class="font-bold text-gray-900 text-xs truncate" title="{{ prod.name }}">{{ prod.name }}</h4>
                             {% if prod.stock_count == 0 %}
-                            <span class="px-1.5 py-0.5 rounded text-[9px] font-black bg-rose-600 text-white uppercase shrink-0">Empty (0 pcs)</span>
+                            <span class="px-1.5 py-0.5 rounded text-[9px] font-black bg-rose-600 text-white uppercase shrink-0">0 Stock</span>
                             {% elif prod.is_critical_stock %}
-                            <span class="px-1.5 py-0.5 rounded text-[9px] font-black bg-rose-100 text-rose-800 shrink-0">Critical</span>
+                            <span class="px-1.5 py-0.5 rounded text-[9px] font-black bg-rose-100 text-rose-800 shrink-0">Critical Shortage</span>
                             {% else %}
-                            <span class="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-800 shrink-0">Low Stock</span>
+                            <span class="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-800 shrink-0">Order Shortage</span>
                             {% endif %}
                         </div>
                         <span class="text-gray-400 text-[10px] block truncate">{{ prod.category.name|default:"Artisan Pickles" }} • {{ prod.jar_weight_grams }}g</span>
                     </div>
                 </div>
 
-                <!-- Stock Numbers: Current vs Target vs Needed -->
+                <!-- Stock Numbers: Current vs Active Orders vs Shortage (লাগবে) -->
                 <div class="grid grid-cols-3 gap-1.5 bg-gray-50/80 p-2.5 rounded-xl border border-gray-100 text-center">
                     <div>
-                        <span class="text-[9px] text-gray-400 font-bold uppercase block">আসে (Current)</span>
+                        <span class="text-[9px] text-gray-400 font-bold uppercase block">আসে (Stock)</span>
                         <span class="font-display font-black text-sm {% if prod.stock_count == 0 %}text-rose-700{% elif prod.is_critical_stock %}text-rose-600{% else %}text-amber-700{% endif %}">
                             {{ prod.stock_count }} <span class="text-[10px] font-bold text-gray-500">pcs</span>
                         </span>
                     </div>
                     <div class="border-x border-gray-200">
-                        <span class="text-[9px] text-gray-400 font-bold uppercase block">টার্গেট (Target)</span>
-                        <span class="font-display font-black text-sm text-gray-700">
-                            {{ prod.target_stock_level }} <span class="text-[10px] font-bold text-gray-500">pcs</span>
+                        <span class="text-[9px] text-gray-400 font-bold uppercase block">অর্ডার (Orders)</span>
+                        <span class="font-display font-black text-sm text-gray-800">
+                            {{ prod.ordered_demand_count }} <span class="text-[10px] font-bold text-gray-500">pcs</span>
                         </span>
                     </div>
                     <div>
-                        <span class="text-[9px] text-rose-600 font-black uppercase block">লাগবে (Need)</span>
+                        <span class="text-[9px] text-rose-600 font-black uppercase block">কম আছে (লাগবে)</span>
                         <span class="font-display font-black text-sm text-rose-700">
                             +{{ prod.needed_stock }} <span class="text-[10px] font-bold text-rose-500">pcs</span>
                         </span>
-                    </div>
-                </div>
-
-                <!-- Stock Progress Bar -->
-                <div>
-                    <div class="flex justify-between text-[10px] font-bold text-gray-500 mb-1">
-                        <span>Stock Fill Rate</span>
-                        <span class="{% if prod.stock_count == 0 %}text-rose-600{% else %}text-amber-600{% endif %} font-black">{{ prod.stock_percentage }}%</span>
-                    </div>
-                    <div class="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
-                        <div class="{% if prod.stock_count == 0 %}bg-rose-600{% elif prod.is_critical_stock %}bg-rose-500{% else %}bg-amber-500{% endif %} h-2 rounded-full transition-all duration-500" style="width: {{ prod.stock_percentage }}%;"></div>
                     </div>
                 </div>
 
@@ -236,7 +225,7 @@
                 <div class="pt-1">
                     <a href="{% url 'dashboard:stock_manager' %}?category={{ prod.category.slug|default:'' }}" class="w-full py-2 px-3 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition active:scale-95 shadow-xs">
                         <i class="fa-solid fa-plus-circle text-emerald-200 text-xs"></i>
-                        <span>Restock +{{ prod.needed_stock }} pcs in Inventory</span>
+                        <span>Restock +{{ prod.needed_stock }} pcs for Orders</span>
                     </a>
                 </div>
 
@@ -343,7 +332,7 @@
                     {% endif %}
                 </div>
 
-                <div class="relative h-56 sm:h-64 w-full">
+                <div class="relative h-64 sm:h-72 w-full">
                     <canvas id="topProductsChart"></canvas>
                 </div>
             </div>
@@ -415,17 +404,17 @@
                         <td class="py-3 px-3">
                             <div class="flex items-center gap-1.5 flex-wrap">
                                 <span class="font-bold text-gray-900">{{ order.customer_name }}</span>
-                                {% if order.customer_notes %}
-                                <span class="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs" title="Special Instruction: {{ order.customer_notes }}">
+                                {% if order.delivery_instruction %}
+                                <span class="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs" title="Customer & Delivery Instruction: {{ order.delivery_instruction }}">
                                     <i class="fa-solid fa-note-sticky text-amber-600 text-[8px]"></i> Instruction
                                 </span>
                                 {% endif %}
                             </div>
                             <div class="text-[11px] text-gray-500">{{ order.customer_phone }}</div>
-                            {% if order.customer_notes %}
-                            <div class="mt-1 flex items-start gap-1 bg-amber-50 border border-amber-200/90 rounded px-1.5 py-0.5 text-[10px] text-amber-950 font-medium max-w-xs truncate" title="{{ order.customer_notes }}">
+                            {% if order.delivery_instruction %}
+                            <div class="mt-1 flex items-start gap-1 bg-amber-50 border border-amber-200/90 rounded px-1.5 py-0.5 text-[10px] text-amber-950 font-medium max-w-xs truncate" title="{{ order.delivery_instruction }}">
                                 <i class="fa-solid fa-clipboard-list text-amber-600 text-[9px] shrink-0 mt-0.5"></i>
-                                <span class="truncate"><strong>Note:</strong> {{ order.customer_notes }}</span>
+                                <span class="truncate"><strong>Instruction:</strong> {{ order.delivery_instruction }}</span>
                             </div>
                             {% endif %}
                         </td>
@@ -437,8 +426,9 @@
                             <span class="block text-[10px] text-gray-500">{{ order.get_payment_method_display }}</span>
                         </td>
                         <td class="py-3 px-3">
-                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border {{ order.badge_color }}">
-                                {{ order.get_order_status_display }}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-extrabold border shadow-2xs {{ order.badge_color }} whitespace-nowrap">
+                                <i class="{{ order.status_icon }}"></i>
+                                <span>{{ order.get_order_status_display }}</span>
                             </span>
                         </td>
                         <td class="py-3 px-3 text-right">
@@ -678,7 +668,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 backgroundColor: (data.productLabels || []).map((_, i) => barPalette[i % barPalette.length]),
                 borderRadius: 8,
                 borderSkipped: false,
-                barThickness: 20
+                maxBarThickness: 20
             }]
         },
         options: {

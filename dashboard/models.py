@@ -105,12 +105,13 @@ class DamageLog(models.Model):
 
 class OrderReturn(models.Model):
     RETURN_REASON_CHOICES = [
-        ('CUSTOMER_UNREACHABLE', 'Customer Phone Off / Unreachable 📵'),
-        ('CUSTOMER_REFUSED', 'Customer Refused at Doorstep 🚪'),
+        ('CUSTOMER_UNREACHABLE', 'Customer Phone Off / Unreachable 📵 (Customer Issue)'),
+        ('CUSTOMER_REFUSED', 'Customer Refused at Doorstep 🚪 (Customer Issue)'),
         ('WRONG_ADDRESS', 'Incorrect Address / Area Not Covered 📍'),
-        ('COURIER_DELAY', 'Courier Delayed / Customer Cancelled ⏳'),
-        ('DAMAGED_IN_TRANSIT', 'Jar Broken / Leaked during Delivery 💥'),
-        ('WRONG_ITEM', 'Wrong Variety / Flavor Sent 🫙'),
+        ('COURIER_DELAY', 'Courier Delay / RTO ⏳ (Courier Fault)'),
+        ('DAMAGED_IN_TRANSIT', 'Broken / Leaked in Transit 💥 (Courier Fault)'),
+        ('COURIER_FAULT', 'Courier Fault / Lost / Hub Misroute 🚚 (Courier Fault)'),
+        ('WRONG_ITEM', 'Wrong Variety Sent 🫙 (Merchant Fault)'),
     ]
 
     RETURN_STATUS_CHOICES = [

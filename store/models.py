@@ -1,4 +1,6 @@
+import os
 import uuid
+from django.conf import settings
 from django.db import models
 from django.utils.text import slugify
 
@@ -77,21 +79,32 @@ class Product(models.Model):
         super().save(*args, **kwargs)
 
     @property
-    def is_low_stock(self):
-        return self.stock_count <= self.min_stock_threshold or not self.is_in_stock
-
-    @property
-    def is_critical_stock(self):
-        return self.stock_count <= max(1, self.min_stock_threshold // 2) or not self.is_in_stock
+    def ordered_demand_count(self):
+        """Total quantity demanded across all active unfulfilled orders."""
+        return self.order_items.filter(
+            order__is_deleted=False,
+            order__order_status__in=['PENDING', 'CONFIRMED', 'PACKING']
+        ).aggregate(models.Sum('quantity'))['quantity__sum'] or 0
 
     @property
     def needed_stock(self):
-        return max(0, self.target_stock_level - self.stock_count)
+        """Exact quantity deficit needed according to active customer orders."""
+        return max(0, self.ordered_demand_count - self.stock_count)
+
+    @property
+    def is_low_stock(self):
+        """True if there is an active order shortage or product is out of stock."""
+        return self.needed_stock > 0 or (self.stock_count == 0 and not self.is_in_stock)
+
+    @property
+    def is_critical_stock(self):
+        """True if there are active customer orders waiting but physical stock is 0."""
+        return self.stock_count == 0 and self.ordered_demand_count > 0
 
     @property
     def stock_percentage(self):
-        if self.target_stock_level > 0:
-            pct = round((self.stock_count / self.target_stock_level) * 100)
+        if self.ordered_demand_count > 0:
+            pct = round((self.stock_count / self.ordered_demand_count) * 100)
             return min(100, max(0, pct))
         return 100 if self.stock_count > 0 else 0
 
@@ -116,24 +129,40 @@ class Product(models.Model):
 
     @property
     def primary_image_url(self):
-        url = None
-        if self.image:
-            url = self.image.url
-        elif self.image_url:
-            url = self.image_url
-        
-        if url:
+        # 1. Check self.image if file actually exists on disk
+        if self.image and self.image.name:
             try:
-                local_rel = self.image.name if self.image else url.replace('/media/', '')
-                local_path = os.path.join(settings.MEDIA_ROOT, local_rel)
+                local_path = os.path.join(settings.MEDIA_ROOT, self.image.name)
                 if os.path.exists(local_path):
                     ts = int(os.path.getmtime(local_path))
-                else:
-                    ts = int(self.updated_at.timestamp()) if self.updated_at else 1
+                    url = self.image.url
+                    separator = '&' if '?' in url else '?'
+                    return f"{url}{separator}v={ts}"
             except Exception:
-                ts = int(self.updated_at.timestamp()) if self.updated_at else 1
-            separator = '&' if '?' in url else '?'
-            return f"{url}{separator}v={ts}"
+                pass
+
+        # 2. Check self.image_url
+        if self.image_url and self.image_url.strip():
+            url = self.image_url.strip()
+            if url.startswith('/media/'):
+                rel_path = url.replace('/media/', '').split('?')[0]
+                local_path = os.path.join(settings.MEDIA_ROOT, rel_path)
+                if os.path.exists(local_path):
+                    ts = int(os.path.getmtime(local_path))
+                    separator = '&' if '?' in url else '?'
+                    return f"{url.split('?')[0]}{separator}v={ts}"
+            elif url.startswith('http://') or url.startswith('https://') or url.startswith('/static/'):
+                return url
+
+        # 3. Fallback: Check media/products/ matching slug
+        if self.slug:
+            for ext in ['.webp', '.jpg', '.png', '.jpeg']:
+                rel_path = f"products/{self.slug}{ext}"
+                local_path = os.path.join(settings.MEDIA_ROOT, rel_path)
+                if os.path.exists(local_path):
+                    ts = int(os.path.getmtime(local_path))
+                    return f"/media/{rel_path}?v={ts}"
+
         return "/static/images/pickle_default.png"
 
     def __str__(self):
@@ -281,7 +310,27 @@ class Order(models.Model):
                 candidate += 1
                 cand_str = f"PKP-{candidate:05d}"
             self.order_number = cand_str
+
+        # Synchronize customer instruction and delivery instruction
+        clean_cust_notes = (self.customer_notes or '').strip()
+        clean_admin_notes = (self.admin_notes or '').strip()
+        if clean_cust_notes and not clean_admin_notes:
+            self.admin_notes = clean_cust_notes
+        elif clean_admin_notes and not clean_cust_notes:
+            self.customer_notes = clean_admin_notes
+        elif clean_cust_notes:
+            self.customer_notes = clean_cust_notes
+            self.admin_notes = clean_cust_notes
+
         super().save(*args, **kwargs)
+
+    @property
+    def delivery_instruction(self):
+        """
+        Unified Customer and Delivery Instruction.
+        """
+        return (self.customer_notes or self.admin_notes or '').strip()
+
 
     @property
     def total_items_count(self):
@@ -302,14 +351,85 @@ class Order(models.Model):
     @property
     def badge_color(self):
         colors = {
-            'PENDING': 'bg-amber-100 text-amber-800 border-amber-300',
-            'CONFIRMED': 'bg-blue-100 text-blue-800 border-blue-300',
-            'PACKING': 'bg-purple-100 text-purple-800 border-purple-300',
-            'OUT_FOR_DELIVERY': 'bg-indigo-100 text-indigo-800 border-indigo-300',
-            'DELIVERED': 'bg-emerald-100 text-emerald-800 border-emerald-300',
-            'CANCELLED': 'bg-rose-100 text-rose-800 border-rose-300',
+            'PENDING': 'bg-amber-50 text-amber-900 border-amber-300 ring-1 ring-amber-400/20',
+            'CONFIRMED': 'bg-blue-50 text-blue-900 border-blue-300 ring-1 ring-blue-400/20',
+            'PACKING': 'bg-purple-50 text-purple-900 border-purple-300 ring-1 ring-purple-400/20',
+            'OUT_FOR_DELIVERY': 'bg-indigo-50 text-indigo-900 border-indigo-300 ring-1 ring-indigo-400/20',
+            'DELIVERED': 'bg-emerald-50 text-emerald-900 border-emerald-300 ring-1 ring-emerald-400/20',
+            'CANCELLED': 'bg-rose-50 text-rose-900 border-rose-300 ring-1 ring-rose-400/20',
         }
-        return colors.get(self.order_status, 'bg-gray-100 text-gray-800')
+        return colors.get(self.order_status, 'bg-gray-100 text-gray-800 border-gray-300')
+
+    @property
+    def status_icon(self):
+        """
+        Returns FontAwesome icon class with matching color for the order status.
+        """
+        icons = {
+            'PENDING': 'fa-solid fa-clock text-amber-600',
+            'CONFIRMED': 'fa-solid fa-circle-check text-blue-600',
+            'PACKING': 'fa-solid fa-box-open text-purple-600',
+            'OUT_FOR_DELIVERY': 'fa-solid fa-truck-fast text-indigo-600',
+            'DELIVERED': 'fa-solid fa-circle-check text-emerald-600',
+            'CANCELLED': 'fa-solid fa-circle-xmark text-rose-600',
+        }
+        return icons.get(self.order_status, 'fa-solid fa-circle-question text-gray-500')
+
+    @property
+    def status_icon_pure(self):
+        """
+        Returns bare FontAwesome icon class without color classes.
+        """
+        icons = {
+            'PENDING': 'fa-solid fa-clock',
+            'CONFIRMED': 'fa-solid fa-circle-check',
+            'PACKING': 'fa-solid fa-box-open',
+            'OUT_FOR_DELIVERY': 'fa-solid fa-truck-fast',
+            'DELIVERED': 'fa-solid fa-circle-check',
+            'CANCELLED': 'fa-solid fa-circle-xmark',
+        }
+        return icons.get(self.order_status, 'fa-solid fa-circle-question')
+
+    @property
+    def status_dot_class(self):
+        dots = {
+            'PENDING': 'bg-amber-500',
+            'CONFIRMED': 'bg-blue-500',
+            'PACKING': 'bg-purple-500',
+            'OUT_FOR_DELIVERY': 'bg-indigo-500',
+            'DELIVERED': 'bg-emerald-500',
+            'CANCELLED': 'bg-rose-500',
+        }
+        return dots.get(self.order_status, 'bg-gray-400')
+
+    @property
+    def status_emoji(self):
+        emojis = {
+            'PENDING': '🟡',
+            'CONFIRMED': '🔵',
+            'PACKING': '📦',
+            'OUT_FOR_DELIVERY': '🚚',
+            'DELIVERED': '🟢',
+            'CANCELLED': '🔴',
+        }
+        return emojis.get(self.order_status, '⚪')
+
+    @property
+    def status_select_class(self):
+        """
+        Distinct vibrant background, text, and border styling for the dropdown selector itself based on status.
+        """
+        classes = {
+            'PENDING': 'bg-amber-100 text-amber-950 border-amber-400 hover:bg-amber-200/90 focus:ring-amber-400',
+            'CONFIRMED': 'bg-blue-100 text-blue-950 border-blue-400 hover:bg-blue-200/90 focus:ring-blue-400',
+            'PACKING': 'bg-purple-100 text-purple-950 border-purple-400 hover:bg-purple-200/90 focus:ring-purple-400',
+            'OUT_FOR_DELIVERY': 'bg-indigo-100 text-indigo-950 border-indigo-400 hover:bg-indigo-200/90 focus:ring-indigo-400',
+            'DELIVERED': 'bg-emerald-100 text-emerald-950 border-emerald-400 hover:bg-emerald-200/90 focus:ring-emerald-400',
+            'CANCELLED': 'bg-rose-100 text-rose-950 border-rose-400 hover:bg-rose-200/90 focus:ring-rose-400',
+        }
+        return classes.get(self.order_status, 'bg-gray-100 text-gray-900 border-gray-300')
+
+
 
     @property
     def customer_score(self):
@@ -340,46 +460,96 @@ class Order(models.Model):
             }
         
         all_orders = Order.all_objects.filter(customer_phone__icontains=last_10)
-        total = all_orders.count()
-        delivered = all_orders.filter(order_status='DELIVERED').count()
-        cancelled = all_orders.filter(order_status='CANCELLED').count()
-        in_transit = all_orders.filter(order_status__in=['CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY']).count()
         
-        # Check returns from dashboard.OrderReturn or cancelled orders
+        # Check returns and identify courier/merchant faults vs customer rejections
+        non_customer_fault_reasons = {'COURIER_DELAY', 'DAMAGED_IN_TRANSIT', 'COURIER_FAULT', 'WRONG_ITEM'}
+        courier_fault_order_ids = set()
+        customer_returns_count = 0
         try:
             from dashboard.models import OrderReturn
-            returned = OrderReturn.objects.filter(order__in=all_orders).count()
+            returns_qs = OrderReturn.objects.filter(order__in=all_orders)
+            courier_fault_order_ids = set(
+                returns_qs.filter(return_reason__in=non_customer_fault_reasons).values_list('order_id', flat=True)
+            )
+            customer_returns_count = returns_qs.exclude(return_reason__in=non_customer_fault_reasons).count()
         except Exception:
-            returned = cancelled
+            pass
 
-        delivered_orders_sum = all_orders.filter(order_status='DELIVERED').aggregate(total_spent=Sum('total_amount'))['total_spent'] or 0
+        # Also identify orders where notes explicitly state courier issues
+        courier_keywords = ['courier delay', 'damaged in transit', 'courier fault', 'courier rto', 'lost by courier', 'courier return']
+        for o in all_orders.filter(order_status='CANCELLED'):
+            note = (o.admin_notes or '').lower()
+            if any(kw in note for kw in courier_keywords):
+                courier_fault_order_ids.add(o.id)
+
+        courier_fault_count = len(courier_fault_order_ids)
+
+        # Countable orders for customer: EXCLUDE courier-fault cancelled/returned orders completely!
+        # Only customer's valid orders and customer-initiated cancellations/returns are counted.
+        countable_orders = all_orders.exclude(id__in=courier_fault_order_ids)
+        total = countable_orders.count()
+        if total == 0:
+            total = 1  # Base minimum for the active customer interaction
+
+        delivered = countable_orders.filter(order_status='DELIVERED').count()
+        in_transit = countable_orders.filter(order_status__in=['CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY']).count()
+        customer_cancelled = countable_orders.filter(order_status='CANCELLED').count()
+        total_cancelled_all = all_orders.filter(order_status='CANCELLED').count()
+        
+        # Effective rejections attributable to customer
+        effective_customer_rejections = max(customer_returns_count, customer_cancelled)
+        
+        delivered_orders_sum = countable_orders.filter(order_status='DELIVERED').aggregate(total_spent=Sum('total_amount'))['total_spent'] or 0
 
         common_stats = {
             'total_orders': total,
             'delivered_count': delivered,
-            'cancelled_count': cancelled,
-            'returned_count': max(returned, cancelled),
+            'cancelled_count': customer_cancelled,
+            'total_cancelled_all': total_cancelled_all,
+            'returned_count': effective_customer_rejections,
+            'courier_fault_count': courier_fault_count,
             'in_transit_count': in_transit,
             'total_spent': delivered_orders_sum,
         }
         
         if total <= 1:
-            return {
-                **common_stats,
-                'score': 100,
-                'rate': '100%',
-                'stars': '5.0',
-                'badge_class': 'bg-blue-50 text-blue-800 border-blue-200',
-                'icon': 'fa-solid fa-user-check text-blue-600',
-                'label': 'New Client (1st Order)',
-                'short_label': '🔵 New (1st)',
-                'risk_level': 'NEW',
-                'risk_title': 'New Customer (1st Order)',
-                'text': '1st Order on Pickpickles • Verify Address'
-            }
+            courier_note = f" • Prior {courier_fault_count} courier issue(s) excluded" if courier_fault_count > 0 else ""
+            if effective_customer_rejections == 0:
+                return {
+                    **common_stats,
+                    'score': 100,
+                    'rate': '100%',
+                    'stars': '5.0',
+                    'badge_class': 'bg-blue-50 text-blue-800 border-blue-200',
+                    'icon': 'fa-solid fa-user-check text-blue-600',
+                    'label': 'New Client (1st Order)',
+                    'short_label': '🔵 New (1st)',
+                    'risk_level': 'NEW',
+                    'risk_title': 'New Customer (1st Order)',
+                    'text': f'1st Order on Pickpickles • Verify Address{courier_note}'
+                }
+            else:
+                return {
+                    **common_stats,
+                    'score': 0,
+                    'rate': '0%',
+                    'stars': '1.0',
+                    'badge_class': 'bg-rose-50 text-rose-800 border-rose-200',
+                    'icon': 'fa-solid fa-triangle-exclamation text-rose-600',
+                    'label': 'Refused Order',
+                    'short_label': '🔴 Refused',
+                    'risk_level': 'RISKY',
+                    'risk_title': 'Customer Refused Delivery',
+                    'text': 'Customer deliberately refused delivery'
+                }
         
+        # Calculate success rate based on countable orders
         success_rate = round((delivered / total) * 100) if total > 0 else 100
-        if cancelled == 0 and returned == 0:
+        if success_rate > 100:
+            success_rate = 100
+
+        if effective_customer_rejections == 0:
+            courier_note = f" (Excluded {courier_fault_count} Courier RTO)" if courier_fault_count > 0 else ""
             return {
                 **common_stats,
                 'score': 100,
@@ -390,8 +560,8 @@ class Order(models.Model):
                 'label': f'Safe Client ({total} Orders)',
                 'short_label': f'🟢 Safe ({total} Orders)',
                 'risk_level': 'GOOD',
-                'risk_title': '100% Safe Customer (0 Return)',
-                'text': f'{total} Orders • 100% Delivery Success'
+                'risk_title': f'100% Safe Customer ({total} Orders • 0 Customer Refusals){courier_note}',
+                'text': f'{total} Orders • 0 Customer Rejections{courier_note}'
             }
         elif success_rate >= 70:
             return {
@@ -404,7 +574,7 @@ class Order(models.Model):
                 'label': f'Moderate Risk ({success_rate}%)',
                 'short_label': f'🟡 {success_rate}% ({total} Orders)',
                 'risk_level': 'MODERATE',
-                'risk_title': f'Moderate Risk ({cancelled} Cancellations)',
+                'risk_title': f'Moderate Risk ({effective_customer_rejections} Customer Cancellations)',
                 'text': f'{delivered} Delivered / {total} Total Orders'
             }
         else:
@@ -418,8 +588,8 @@ class Order(models.Model):
                 'label': f'Risky Client ({success_rate}%)',
                 'short_label': f'🔴 Risky ({success_rate}%)',
                 'risk_level': 'RISKY',
-                'risk_title': f'High Return Risk ({cancelled} Returned)',
-                'text': f'{cancelled} Returned / Cancelled Orders'
+                'risk_title': f'High Return Risk ({effective_customer_rejections} Customer Refusals)',
+                'text': f'{effective_customer_rejections} Customer Rejections / {total} Orders'
             }
 
     def sync_pathao_status(self):
