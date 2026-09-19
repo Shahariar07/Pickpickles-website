@@ -188,5 +188,28 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 {% endif %}
+{% if GOOGLE_ANALYTICS_ID %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof gtag === 'function') {
+        gtag('event', 'purchase', {
+            transaction_id: '{{ order.order_number|escapejs }}',
+            value: {{ order.total_amount|floatformat:2 }},
+            currency: 'BDT',
+            shipping: {{ order.delivery_fee|floatformat:2 }},
+            items: [
+                {% for item in order.items.all %}
+                {
+                    item_name: '{{ item.product_name|escapejs }}',
+                    price: {{ item.unit_price|floatformat:2 }},
+                    quantity: {{ item.quantity }}
+                }{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ]
+        });
+    }
+});
+</script>
+{% endif %}
 {% endblock %}
 

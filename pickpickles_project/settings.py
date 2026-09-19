@@ -192,6 +192,9 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # Meta / Facebook Pixel
 META_PIXEL_ID = os.environ.get('META_PIXEL_ID', '2165451210680943')
 
+# Google Analytics 4 (GA4) Measurement ID
+GOOGLE_ANALYTICS_ID = os.environ.get('GOOGLE_ANALYTICS_ID', 'G-WBKEST4M2S')
+
 # Pathao Courier Merchant API Configuration
 PATHAO_BASE_URL = os.environ.get('PATHAO_BASE_URL', 'https://api-hermes.pathao.com')
 PATHAO_CLIENT_ID = os.environ.get('PATHAO_CLIENT_ID', '')
