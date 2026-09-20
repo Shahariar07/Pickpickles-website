@@ -207,16 +207,16 @@ PATHAO_STORE_ID = os.environ.get('PATHAO_STORE_ID', '')
 # ============================================
 # Production Security Hardening (SSL, Cookies, HSTS, Headers)
 # ============================================
+# Tell Django that reverse proxies (Nginx / aaPanel / Cloudflare) handle SSL termination
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Set DJANGO_SECURE_SSL_REDIRECT=True in .env only if Nginx/Cloudflare does NOT already redirect HTTP to HTTPS
+SECURE_SSL_REDIRECT = os.environ.get('DJANGO_SECURE_SSL_REDIRECT', 'False').lower() in ('true', '1', 't')
+
 if not DEBUG:
-    # Tell Django that Nginx reverse proxy handles SSL termination
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-
-    # Automatically redirect all non-HTTPS HTTP traffic to HTTPS
-    SECURE_SSL_REDIRECT = True
-
-    # Ensure Session & CSRF cookies are transmitted strictly over HTTPS
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
+    # Ensure Session & CSRF cookies are transmitted securely
+    SESSION_COOKIE_SECURE = os.environ.get('DJANGO_SESSION_COOKIE_SECURE', 'True').lower() in ('true', '1', 't')
+    CSRF_COOKIE_SECURE = os.environ.get('DJANGO_CSRF_COOKIE_SECURE', 'True').lower() in ('true', '1', 't')
 
     # Protect session cookie from client-side script access
     SESSION_COOKIE_HTTPONLY = True
@@ -229,10 +229,11 @@ if not DEBUG:
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
 
-    # HTTP Strict Transport Security (HSTS) - 1 Year with subdomains & preload
-    SECURE_HSTS_SECONDS = 31536000
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
+    # HTTP Strict Transport Security (HSTS) - only activate if explicitly enabled or SSL redirect is on
+    if SECURE_SSL_REDIRECT or os.environ.get('DJANGO_ENABLE_HSTS', 'False').lower() in ('true', '1', 't'):
+        SECURE_HSTS_SECONDS = 31536000
+        SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+        SECURE_HSTS_PRELOAD = True
 
 
 
