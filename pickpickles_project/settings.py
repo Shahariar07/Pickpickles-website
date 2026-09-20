@@ -204,4 +204,36 @@ PATHAO_PASSWORD = os.environ.get('PATHAO_PASSWORD', '')
 PATHAO_STORE_ID = os.environ.get('PATHAO_STORE_ID', '')
 
 
+# ============================================
+# Production Security Hardening (SSL, Cookies, HSTS, Headers)
+# ============================================
+if not DEBUG:
+    # Tell Django that Nginx reverse proxy handles SSL termination
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+    # Automatically redirect all non-HTTPS HTTP traffic to HTTPS
+    SECURE_SSL_REDIRECT = True
+
+    # Ensure Session & CSRF cookies are transmitted strictly over HTTPS
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+    # Protect session cookie from client-side script access
+    SESSION_COOKIE_HTTPONLY = True
+
+    # SameSite cookie policy for modern browser CSRF mitigation
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    CSRF_COOKIE_SAMESITE = 'Lax'
+
+    # Security Headers against clickjacking, MIME sniffing & cross-site scripting
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
+
+    # HTTP Strict Transport Security (HSTS) - 1 Year with subdomains & preload
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+
+
 
