@@ -13,7 +13,10 @@ class SteadfastCourierService:
     """
 
     def __init__(self):
-        self.base_url = getattr(settings, 'STEADFAST_BASE_URL', 'https://portal.packzy.com/api/v1').rstrip('/')
+        raw_url = getattr(settings, 'STEADFAST_BASE_URL', 'https://portal.packzy.com/api/v1') or 'https://portal.packzy.com/api/v1'
+        # Automatically fix unresolvable domain portal.steadfast.com.bd to portal.packzy.com
+        raw_url = raw_url.replace('portal.steadfast.com.bd', 'portal.packzy.com')
+        self.base_url = raw_url.rstrip('/')
         self.api_key = getattr(settings, 'STEADFAST_API_KEY', '')
         self.secret_key = getattr(settings, 'STEADFAST_SECRET_KEY', '')
 
