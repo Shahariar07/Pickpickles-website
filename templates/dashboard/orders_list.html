@@ -291,7 +291,7 @@
                 </a>
 
                 <!-- Fraud Check Button -->
-                <button type="button" onmouseenter="prefetchFraud('{{ order.customer_phone|escapejs }}')" onclick="openFraudModal('{{ order.customer_phone|escapejs }}', '{{ order.customer_name|escapejs }}', '{{ order.order_number }}')" title="Steadfast Fraud Check" class="p-1.5 rounded-xl bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-200 text-xs transition flex items-center justify-center shadow-2xs cursor-pointer active:scale-95">
+                <button type="button" onclick="openFraudModal('{{ order.customer_phone|escapejs }}', '{{ order.customer_name|escapejs }}', '{{ order.order_number }}')" title="Steadfast Fraud Check" class="p-1.5 rounded-xl bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-200 text-xs transition flex items-center justify-center shadow-2xs cursor-pointer active:scale-95">
                     <i class="fa-solid fa-shield-halved text-cyan-600"></i>
                 </button>
                 
@@ -442,7 +442,6 @@
                                 <!-- Fraud Check Button in Table Actions -->
                                 <button 
                                     type="button" 
-                                    onmouseenter="prefetchFraud('{{ order.customer_phone|escapejs }}')"
                                     onclick="openFraudModal('{{ order.customer_phone|escapejs }}', '{{ order.customer_name|escapejs }}', '{{ order.order_number }}')"
                                     class="p-1 text-cyan-700 hover:text-cyan-900 rounded transition cursor-pointer active:scale-95"
                                     title="Steadfast Fraud Check"

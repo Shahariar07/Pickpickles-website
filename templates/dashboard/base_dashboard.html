@@ -176,6 +176,13 @@
                                 <i class="fa-solid fa-file-invoice-dollar text-brand-accent text-sm w-4 text-center"></i>
                                 <span>P&L Statement</span>
                             </a>
+
+                            <!-- Pricing & Profitability Intelligence Link -->
+                            <a href="{% url 'dashboard:business_profitability' %}" class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'business_profitability' %}bg-emerald-600 text-white shadow-md shadow-emerald-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
+                                <i class="fa-solid fa-calculator text-amber-300 text-sm w-4 text-center"></i>
+                                <span>Pricing & Profitability</span>
+                                <span class="ml-auto px-1.5 py-0.5 text-[9px] font-black bg-amber-400/20 text-amber-300 rounded border border-amber-400/30">Smart</span>
+                            </a>
                         </nav>
                     </div>
 
@@ -695,6 +702,9 @@
         let isFirstPoll = true;
 
         async function pollOrderNotifications() {
+            // Skip polling if the browser tab is hidden/minimized to save server resources
+            if (document.hidden) return;
+
             try {
                 const url = `{% url 'dashboard:api_order_notifications' %}?last_id=${lastKnownOrderId}`;
                 const res = await fetch(url, { credentials: 'same-origin' });
@@ -741,8 +751,15 @@
             updateSoundUI();
             updateReminderIntervalUI();
             pollOrderNotifications();
-            // Poll every 12 seconds
-            setInterval(pollOrderNotifications, 12000);
+            // Poll every 30 seconds while tab is active
+            setInterval(pollOrderNotifications, 30000);
+
+            // Immediately poll when user switches back to this tab
+            document.addEventListener('visibilitychange', function() {
+                if (!document.hidden) {
+                    pollOrderNotifications();
+                }
+            });
         });
     </script>
 

@@ -1,6 +1,7 @@
 import csv
 import json
 import datetime
+import math
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.contrib.auth import authenticate, login, logout
@@ -72,16 +73,20 @@ def dashboard_index(request):
     net_profit = float(total_revenue) - float(total_expenses)
     profit_margin = round((net_profit / float(total_revenue)) * 100, 1) if float(total_revenue) > 0 else 0
     
-    pending_count = Order.objects.filter(order_status='PENDING').count()
-    confirmed_count = Order.objects.filter(order_status='CONFIRMED').count()
-    packing_count = Order.objects.filter(order_status='PACKING').count()
-    out_for_delivery_count = Order.objects.filter(order_status='OUT_FOR_DELIVERY').count()
-    delivered_count = Order.objects.filter(order_status='DELIVERED').count()
-    cancelled_count = Order.objects.filter(order_status='CANCELLED').count()
+    # Status Counts (Optimized: 1 single group-by query instead of 6 queries)
+    status_counts_dict = dict(Order.objects.values('order_status').annotate(cnt=Count('id')).values_list('order_status', 'cnt'))
+    pending_count = status_counts_dict.get('PENDING', 0)
+    confirmed_count = status_counts_dict.get('CONFIRMED', 0)
+    packing_count = status_counts_dict.get('PACKING', 0)
+    out_for_delivery_count = status_counts_dict.get('OUT_FOR_DELIVERY', 0)
+    delivered_count = status_counts_dict.get('DELIVERED', 0)
+    cancelled_count = status_counts_dict.get('CANCELLED', 0)
     
     # Advanced KPIs
     avg_order_val = round(float(total_revenue) / delivered_count, 1) if delivered_count > 0 else 0
-    total_jars_sold = OrderItem.objects.filter(order__in=delivered_paid_orders).aggregate(Sum('quantity'))['quantity__sum'] or 0
+    delivered_jars_sold = OrderItem.objects.filter(order__in=delivered_paid_orders).aggregate(Sum('quantity'))['quantity__sum'] or 0
+    total_jars_sold = OrderItem.objects.filter(~Q(order__order_status='CANCELLED')).aggregate(Sum('quantity'))['quantity__sum'] or 0
+    pipeline_jars_sold = max(0, total_jars_sold - delivered_jars_sold)
     delivery_rate = round((delivered_count / total_orders_count) * 100, 1) if total_orders_count > 0 else 0
     
     # Inventory & Low Stock Tracking
@@ -93,24 +98,32 @@ def dashboard_index(request):
     total_needed_jars = sum(p.needed_stock for p in all_catalog_products)
     total_current_inventory = sum(p.stock_count for p in all_catalog_products)
 
-    # 1. 10-Day Sales & Revenue Trend Calculation (Real Database Queries from Delivered/Paid orders)
+    # 1. 10-Day Sales & Revenue Trend Calculation (Optimized: 1 batch query instead of 20 loop queries)
     days_to_plot = 10
+    start_plot_date = today - datetime.timedelta(days=days_to_plot)
+    recent_trend_orders = list(Order.objects.filter(
+        created_at__date__gte=start_plot_date
+    ).values('created_at__date', 'order_status', 'payment_status', 'total_amount'))
+
+    daily_stats = {}
+    for ord_info in recent_trend_orders:
+        d = ord_info['created_at__date']
+        if d not in daily_stats:
+            daily_stats[d] = {'count': 0, 'rev': 0.0}
+        if ord_info['order_status'] != 'CANCELLED':
+            daily_stats[d]['count'] += 1
+        if ord_info['order_status'] == 'DELIVERED' or ord_info['payment_status'] == 'PAID':
+            daily_stats[d]['rev'] += float(ord_info['total_amount'] or 0)
+
     date_labels = []
     revenue_series = []
     orders_series = []
-    
     for i in range(days_to_plot - 1, -1, -1):
         target_date = today - datetime.timedelta(days=i)
-        day_label = target_date.strftime('%b %d')
-        date_labels.append(day_label)
-        
-        day_qs = Order.objects.filter(~Q(order_status='CANCELLED'), created_at__date=target_date)
-        day_collected_qs = Order.objects.filter(Q(order_status='DELIVERED') | Q(payment_status='PAID'), created_at__date=target_date)
-        day_rev = float(day_collected_qs.aggregate(Sum('total_amount'))['total_amount__sum'] or 0)
-        day_cnt = day_qs.count()
-        
-        revenue_series.append(day_rev)
-        orders_series.append(day_cnt)
+        date_labels.append(target_date.strftime('%b %d'))
+        stat = daily_stats.get(target_date, {'count': 0, 'rev': 0.0})
+        revenue_series.append(stat['rev'])
+        orders_series.append(stat['count'])
 
     # 2. Dynamic Product Sales Performance Breakdown (Auto-synced from Inventory & OrderItems)
     order_items_qs = OrderItem.objects.filter(~Q(order__order_status='CANCELLED'))
@@ -250,6 +263,8 @@ def dashboard_index(request):
         'profit_margin': profit_margin,
         'avg_order_val': avg_order_val,
         'total_jars_sold': total_jars_sold,
+        'delivered_jars_sold': delivered_jars_sold,
+        'pipeline_jars_sold': pipeline_jars_sold,
         'delivery_rate': delivery_rate,
         'low_stock_count': low_stock_count,
         'critical_stock_count': critical_stock_count,
@@ -270,13 +285,17 @@ def dashboard_index(request):
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def orders_list(request):
-    total_orders_count = Order.objects.count()
-    pending_count = Order.objects.filter(order_status='PENDING').count()
-    confirmed_count = Order.objects.filter(order_status='CONFIRMED').count()
-    packing_count = Order.objects.filter(order_status='PACKING').count()
-    out_for_delivery_count = Order.objects.filter(order_status='OUT_FOR_DELIVERY').count()
-    delivered_count = Order.objects.filter(order_status='DELIVERED').count()
-    cancelled_count = Order.objects.filter(order_status='CANCELLED').count()
+    # High-performance single aggregation query for order status counts
+    status_counts = dict(
+        Order.objects.values('order_status').annotate(cnt=Count('id')).values_list('order_status', 'cnt')
+    )
+    pending_count = status_counts.get('PENDING', 0)
+    confirmed_count = status_counts.get('CONFIRMED', 0)
+    packing_count = status_counts.get('PACKING', 0)
+    out_for_delivery_count = status_counts.get('OUT_FOR_DELIVERY', 0)
+    delivered_count = status_counts.get('DELIVERED', 0)
+    cancelled_count = status_counts.get('CANCELLED', 0)
+    total_orders_count = sum(status_counts.values())
 
     orders = Order.objects.all().prefetch_related('items', 'items__product')
     status_filter = request.GET.get('status', 'ALL')
@@ -2425,6 +2444,182 @@ def financial_statement_print(request):
 
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
+def business_profitability(request):
+    """
+    Business Profitability & Smart Pricing Intelligence:
+    Calculates cost-per-jar, unit economics, recommended selling prices for targeted profit margins,
+    break-even volume, and interactive feasibility analysis based on real expenses & production data.
+    """
+    # 1. Production & Sales Volume
+    delivered_paid_orders = Order.objects.filter(Q(order_status='DELIVERED') | Q(payment_status='PAID'))
+    non_cancelled_orders = Order.objects.filter(~Q(order_status='CANCELLED'))
+
+    jars_delivered = OrderItem.objects.filter(order__in=delivered_paid_orders).aggregate(Sum('quantity'))['quantity__sum'] or 0
+    jars_sold_total = OrderItem.objects.filter(order__in=non_cancelled_orders).aggregate(Sum('quantity'))['quantity__sum'] or 0
+    pipeline_jars = max(0, jars_sold_total - jars_delivered)
+
+    # Current Catalog & Physical Stock
+    all_products = list(Product.objects.all().order_by('name'))
+    total_physical_stock = sum(p.stock_count for p in all_products)
+    catalog_product_count = len(all_products)
+
+    # Average selling price in store
+    valid_prices = [float(p.price_bdt) for p in all_products if p.price_bdt and p.price_bdt > 0]
+    avg_store_price = round(sum(valid_prices) / len(valid_prices), 2) if valid_prices else 400.0
+
+    # Total Accounted Production Batch Volume (Physical Stock + All Sold Jars)
+    # This accounts for the actual jars created/covered by raw materials & packaging
+    batch_volume = total_physical_stock + jars_sold_total
+    effective_volume = max(1, batch_volume)
+
+    # 2. Expenses Breakdown
+    total_expenses = float(Expense.objects.aggregate(Sum('amount'))['amount__sum'] or 0)
+
+    # Categorize expenses
+    cat_expenses = Expense.objects.values('category').annotate(total=Sum('amount'), count=Count('id'))
+    
+    packaging_expense = 0.0
+    raw_material_expense = 0.0
+    spices_brine_expense = 0.0
+    logistics_expense = 0.0
+    marketing_expense = 0.0
+    utilities_rent_expense = 0.0
+    other_expense = 0.0
+
+    for row in cat_expenses:
+        cat = (row['category'] or '').upper()
+        amt = float(row['total'] or 0)
+        if any(k in cat for k in ['PACKAGING', 'JAR', 'BOTTLE', 'LABEL', 'LID']):
+            packaging_expense += amt
+        elif any(k in cat for k in ['RAW_MATERIAL', 'CUCUMBER', 'VEGGIE', 'FRUIT', 'MANGO', 'EGG']):
+            raw_material_expense += amt
+        elif any(k in cat for k in ['SPICES_BRINE', 'HERB', 'SALT', 'SUGAR', 'WATER', 'VINEGAR', 'SPICE']):
+            spices_brine_expense += amt
+        elif any(k in cat for k in ['LOGISTICS', 'COURIER', 'RIDER', 'DELIVERY']):
+            logistics_expense += amt
+        elif any(k in cat for k in ['MARKETING', 'AD', 'FACEBOOK', 'BOOST', 'PROMOTION']):
+            marketing_expense += amt
+        elif any(k in cat for k in ['UTILITIES', 'GAS', 'ELECTRICITY', 'RENT']):
+            utilities_rent_expense += amt
+        else:
+            other_expense += amt
+
+    # Direct Production Cost (COGS)
+    direct_cogs = packaging_expense + raw_material_expense + spices_brine_expense
+    indirect_overhead = logistics_expense + marketing_expense + utilities_rent_expense + other_expense
+
+    # Per Jar Unit Economics (Batch-allocated)
+    cogs_per_jar = round(direct_cogs / effective_volume, 2)
+    packaging_per_jar = round(packaging_expense / effective_volume, 2)
+    raw_produce_per_jar = round(raw_material_expense / effective_volume, 2)
+    spices_per_jar = round(spices_brine_expense / effective_volume, 2)
+    overhead_per_jar = round(indirect_overhead / effective_volume, 2)
+    
+    total_cost_per_jar = round(total_expenses / effective_volume, 2) if effective_volume > 0 else 0.0
+
+    # Pricing Models based on Unit Cost
+    # Formula: Price = Cost / (1 - Margin%)
+    pricing_matrix = []
+    margin_tiers = [
+        {'name': 'Break-Even (আসল খরচ)', 'margin': 0, 'desc': 'জিরো প্রফিট - শুধু আসল খরচ উঠে আসবে'},
+        {'name': 'Wholesale Margin (২০% লাভ)', 'margin': 20, 'desc': 'পাইকারি বা বাল্ক অর্ডারের প্রফিট রেঞ্জ'},
+        {'name': 'Standard Retail (৩৫% লাভ)', 'margin': 35, 'desc': 'ফুড রিটেইল ইন্ডাস্ট্রির প্রচলিত রেঞ্জ'},
+        {'name': 'Target Healthy Margin (৫০% লাভ)', 'margin': 50, 'desc': 'ব্র্যান্ড গ্রোথ ও স্থায়ী প্রফিটের জন্য আদর্শ'},
+        {'name': 'Premium Artisan (৬৫% লাভ)', 'margin': 65, 'desc': 'প্রিমিয়াম অর্গানিক হোমমেড ক্যাটাগরি'},
+        {'name': 'Super Premium Margin (৭৫% লাভ)', 'margin': 75, 'desc': 'হাই-মার্জিন ব্র্যান্ড স্ট্যান্ডার্ড'},
+    ]
+
+    for tier in margin_tiers:
+        m = tier['margin']
+        if m == 0:
+            rec_price = total_cost_per_jar
+        else:
+            rec_price = total_cost_per_jar / (1 - (m / 100))
+        
+        profit_per_jar = rec_price - total_cost_per_jar
+        pricing_matrix.append({
+            'tier_name': tier['name'],
+            'margin_pct': m,
+            'desc': tier['desc'],
+            'recommended_price': round(rec_price, 0),
+            'profit_per_jar': round(profit_per_jar, 0),
+        })
+
+    # Compare current store average price against cost
+    current_profit_per_jar = round(avg_store_price - total_cost_per_jar, 2)
+    current_margin_pct = round((current_profit_per_jar / avg_store_price) * 100, 1) if avg_store_price > 0 else 0
+
+    # Break-Even Sales Volume Calculation:
+    # How many jars at current average price are needed to cover 100% of all expenses?
+    break_even_jars = int(math.ceil(total_expenses / avg_store_price)) if avg_store_price > 0 else 0
+    jars_remaining_to_breakeven = max(0, break_even_jars - jars_sold_total)
+    breakeven_progress_pct = min(100, round((jars_sold_total / break_even_jars) * 100, 1)) if break_even_jars > 0 else 100
+
+    # Potential Batch Revenue & Profit when full batch (stock + sold) is sold out:
+    batch_projected_revenue = round(effective_volume * avg_store_price, 2)
+    batch_projected_profit = round(batch_projected_revenue - total_expenses, 2)
+
+    # Cost percentages
+    cost_percentages = {
+        'packaging': round((packaging_expense / total_expenses * 100), 1) if total_expenses > 0 else 0,
+        'raw_material': round((raw_material_expense / total_expenses * 100), 1) if total_expenses > 0 else 0,
+        'spices_brine': round((spices_brine_expense / total_expenses * 100), 1) if total_expenses > 0 else 0,
+        'overhead': round((indirect_overhead / total_expenses * 100), 1) if total_expenses > 0 else 0,
+    }
+
+    # Product-wise profitability mapping
+    product_profit_list = []
+    for prod in all_products:
+        p_price = float(prod.price_bdt or 0)
+        p_profit = round(p_price - total_cost_per_jar, 2)
+        p_margin = round((p_profit / p_price) * 100, 1) if p_price > 0 else 0
+        product_profit_list.append({
+            'product': prod,
+            'price': p_price,
+            'cost': total_cost_per_jar,
+            'profit': p_profit,
+            'margin': p_margin,
+            'stock': prod.stock_count,
+            'stock_value': round(p_price * prod.stock_count, 2),
+            'stock_profit_potential': round(p_profit * prod.stock_count, 2),
+        })
+
+    context = {
+        'total_jars_sold': jars_sold_total,
+        'jars_delivered': jars_delivered,
+        'pipeline_jars': pipeline_jars,
+        'total_physical_stock': total_physical_stock,
+        'batch_volume': batch_volume,
+        'total_expenses': total_expenses,
+        'direct_cogs': direct_cogs,
+        'indirect_overhead': indirect_overhead,
+        'cogs_per_jar': cogs_per_jar,
+        'total_cost_per_jar': total_cost_per_jar,
+        'packaging_per_jar': packaging_per_jar,
+        'raw_produce_per_jar': raw_produce_per_jar,
+        'spices_per_jar': spices_per_jar,
+        'overhead_per_jar': overhead_per_jar,
+        'packaging_expense': packaging_expense,
+        'raw_material_expense': raw_material_expense,
+        'spices_brine_expense': spices_brine_expense,
+        'indirect_overhead_expense': indirect_overhead,
+        'cost_percentages': cost_percentages,
+        'avg_store_price': avg_store_price,
+        'current_profit_per_jar': current_profit_per_jar,
+        'current_margin_pct': current_margin_pct,
+        'pricing_matrix': pricing_matrix,
+        'break_even_jars': break_even_jars,
+        'jars_remaining_to_breakeven': jars_remaining_to_breakeven,
+        'breakeven_progress_pct': breakeven_progress_pct,
+        'batch_projected_revenue': batch_projected_revenue,
+        'batch_projected_profit': batch_projected_profit,
+        'product_profit_list': product_profit_list,
+        'all_products': all_products,
+    }
+    return render(request, 'dashboard/business_profitability.html', context)
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
 def admin_users_manager(request):
     if not request.user.is_superuser:
         messages.error(request, 'Permission Denied: Only Administrator has access to Staff & Admin user management.')
@@ -2614,16 +2809,22 @@ def expense_categories_manager(request):
             return redirect('dashboard:expense_categories')
 
     # Load categories with stats
+    # Load categories with stats using a single batch query
     categories = ExpenseCategory.objects.all().order_by('name')
+    exp_summary = Expense.objects.values('category').annotate(spent=Sum('amount'), count=Count('id'))
+    exp_map = {row['category']: (row['spent'] or 0, row['count'] or 0) for row in exp_summary}
+
     category_stats = []
     for cat in categories:
-        # Match both by slug and by name
-        spent = Expense.objects.filter(
-            Q(category=cat.slug) | Q(category=cat.name)
-        ).aggregate(Sum('amount'))['amount__sum'] or 0
-        count = Expense.objects.filter(
-            Q(category=cat.slug) | Q(category=cat.name)
-        ).count()
+        spent_slug, count_slug = exp_map.get(cat.slug, (0, 0))
+        spent_name, count_name = exp_map.get(cat.name, (0, 0))
+        if cat.slug != cat.name:
+            spent = spent_slug + spent_name
+            count = count_slug + count_name
+        else:
+            spent = spent_slug
+            count = count_slug
+
         category_stats.append({
             'id': cat.id,
             'slug': cat.slug,

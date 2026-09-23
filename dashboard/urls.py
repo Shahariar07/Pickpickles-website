@@ -15,6 +15,7 @@ urlpatterns = [
     path('expenses/', views.expense_manager, name='expenses'),
     path('statement/', views.financial_statement, name='statement'),
     path('statement/print/', views.financial_statement_print, name='statement_print'),
+    path('profitability/', views.business_profitability, name='business_profitability'),
     path('pickle-categories/', views.pickle_categories_manager, name='pickle_categories'),
     path('expense-categories/', views.expense_categories_manager, name='expense_categories'),
     path('admin-users/', views.admin_users_manager, name='admin_users'),

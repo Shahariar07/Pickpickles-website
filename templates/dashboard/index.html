@@ -34,11 +34,16 @@
                 <i class="fa-solid fa-list-check text-gray-500"></i>
                 <span>Orders Queue ({{ total_orders_count }})</span>
             </a>
+            <a href="{% url 'dashboard:business_profitability' %}" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow-xs">
+                <i class="fa-solid fa-calculator text-emerald-600"></i>
+                <span>Pricing & Profitability</span>
+                <span class="text-[9px] bg-emerald-200 text-emerald-900 px-1.5 py-0.5 rounded font-black">Smart</span>
+            </a>
         </div>
     </div>
 
-    <!-- 6 Compact Executive KPI Metrics Cards -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
+    <!-- 7 Compact Executive KPI Metrics Cards -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-7 gap-3">
         
         <!-- Card 1: Total Gross Revenue (Collected upon Delivery) -->
         <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs hover:border-blue-300 transition" title="Money collected from Delivered/Paid customer orders">
@@ -93,7 +98,25 @@
             </div>
         </div>
 
-        <!-- Card 4: Today's Revenue -->
+        <!-- Card 4: Total Jars Sold (মোট বিক্রিত জার) -->
+        <div class="bg-white p-4 rounded-2xl border border-brand-200/90 bg-brand-50/30 shadow-xs hover:border-brand-400 transition" title="Lifetime Jars Sold across all non-cancelled orders">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-extrabold text-brand-900 uppercase tracking-wider">Total Jars Sold</span>
+                <span class="w-6 h-6 rounded-lg bg-brand-100 text-brand-800 flex items-center justify-center text-[10px]">
+                    <i class="fa-solid fa-jar"></i>
+                </span>
+            </div>
+            <div class="mt-1.5 flex items-baseline gap-1">
+                <span class="font-display font-black text-lg sm:text-xl text-brand-900">{{ total_jars_sold }}</span>
+                <span class="text-xs font-bold text-brand-700">Jars</span>
+            </div>
+            <div class="text-[10px] text-gray-500 mt-1.5 pt-1.5 border-t border-brand-100 flex items-center justify-between">
+                <span title="Delivered & Paid">Delivered: <strong class="text-emerald-700 font-black">{{ delivered_jars_sold }}</strong></span>
+                <span title="In Packing / Transit">Queue: <strong class="text-amber-700 font-black">{{ pipeline_jars_sold }}</strong></span>
+            </div>
+        </div>
+
+        <!-- Card 5: Today's Revenue -->
         <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs hover:border-emerald-300 transition">
             <div class="flex items-center justify-between">
                 <span class="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">Today's Sales</span>
@@ -110,7 +133,7 @@
             </div>
         </div>
 
-        <!-- Card 5: Total Orders & Completion Rate -->
+        <!-- Card 6: Total Orders & Completion Rate -->
         <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs hover:border-indigo-300 transition">
             <div class="flex items-center justify-between">
                 <span class="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">Total Orders</span>
@@ -127,7 +150,7 @@
             </div>
         </div>
 
-        <!-- Card 6: Pending Action Queue -->
+        <!-- Card 7: Pending Action Queue -->
         <div class="bg-white p-4 rounded-2xl border border-amber-200 bg-amber-50/40 shadow-xs hover:border-amber-400 transition">
             <div class="flex items-center justify-between">
                 <span class="text-[10px] font-extrabold text-amber-800 uppercase tracking-wider">Pending Action</span>

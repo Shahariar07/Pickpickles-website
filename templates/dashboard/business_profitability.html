@@ -1,0 +1,755 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Business Profitability & Smart Pricing | Pickpickles Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6 max-w-7xl mx-auto pb-12">
+
+    <!-- Top Breadcrumbs & Page Header -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-5 sm:p-6 rounded-3xl border border-gray-200/90 shadow-xs">
+        <div>
+            <div class="flex items-center gap-2 text-xs font-bold text-gray-500 mb-1.5">
+                <a href="{% url 'dashboard:index' %}" class="hover:text-brand-700 transition flex items-center gap-1">
+                    <i class="fa-solid fa-gauge text-[11px]"></i>
+                    <span>Dashboard</span>
+                </a>
+                <span>/</span>
+                <span class="text-brand-800 font-extrabold flex items-center gap-1">
+                    <i class="fa-solid fa-calculator text-[11px] text-amber-500"></i>
+                    <span>Pricing & Profitability</span>
+                </span>
+            </div>
+            <h1 class="font-display font-black text-xl sm:text-2xl text-gray-900 tracking-tight flex items-center gap-2.5">
+                <span>Business Profitability & Smart Pricing</span>
+                <span class="text-xs px-2.5 py-0.5 rounded-full font-black bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                    <i class="fa-solid fa-sparkles text-[10px] text-amber-600"></i>
+                    Unit Economics
+                </span>
+            </h1>
+            <p class="text-xs sm:text-sm text-gray-600 mt-1 max-w-3xl">
+                ব্যয় বিশ্লেষণ ও ইউনিট ইকোনমিক্স: প্রতিটি জারের প্রকৃত উৎপাদন খরচ, স্বাস্থ্যকর প্রফিট মার্জিন অনুযায়ী কাঙ্ক্ষিত বিক্রয়মূল্য এবং লাইভ ব্যবসায়িক সম্ভাব্যতা ক্যালকুলেটর।
+            </p>
+        </div>
+
+        <!-- Action Quick Links -->
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{% url 'dashboard:expenses' %}" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 transition flex items-center gap-1.5 shadow-2xs">
+                <i class="fa-solid fa-receipt text-gray-500"></i>
+                <span>Manage Expenses</span>
+            </a>
+            <a href="{% url 'dashboard:stock_manager' %}" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-brand-700 hover:bg-brand-800 text-white transition flex items-center gap-1.5 shadow-xs">
+                <i class="fa-solid fa-tag text-brand-accent"></i>
+                <span>Adjust Product Prices</span>
+            </a>
+            <button type="button" onclick="window.print()" class="px-3 py-2 rounded-xl text-xs font-bold bg-white hover:bg-gray-50 text-gray-600 border border-gray-200 transition flex items-center gap-1 shadow-2xs">
+                <i class="fa-solid fa-print"></i>
+                <span>Print</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 5 Top Executive KPI Cards -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3.5">
+        
+        <!-- KPI 1: Cost per Jar -->
+        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-rose-200 bg-rose-50/20 shadow-xs hover:border-rose-400 transition" title="Total Lifetime Expenses ÷ Total Batch Volume (Stock + Sold)">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-black uppercase tracking-wider text-rose-800">Unit Cost (প্রতি জার খরচ)</span>
+                <span class="w-7 h-7 rounded-xl bg-rose-100 text-rose-800 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-coins"></i>
+                </span>
+            </div>
+            <div class="mt-2">
+                <div class="font-display font-black text-xl sm:text-2xl text-rose-900">৳{{ total_cost_per_jar }}</div>
+                <div class="text-[11px] text-rose-700 font-semibold mt-0.5">প্রতি জারের প্রকৃত উৎপাদন খরচ</div>
+            </div>
+            <div class="mt-2.5 pt-2 border-t border-rose-100 text-[10px] text-gray-600 flex justify-between items-center">
+                <span>Direct COGS: <strong class="text-rose-900">৳{{ cogs_per_jar }}</strong></span>
+                <span>Overhead: <strong class="text-gray-800">৳{{ overhead_per_jar }}</strong></span>
+            </div>
+        </div>
+
+        <!-- KPI 2: Store Average Price -->
+        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-blue-200 bg-blue-50/20 shadow-xs hover:border-blue-400 transition">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-black uppercase tracking-wider text-blue-800">Store Avg Price (গড় মূল্য)</span>
+                <span class="w-7 h-7 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-tags"></i>
+                </span>
+            </div>
+            <div class="mt-2">
+                <div class="font-display font-black text-xl sm:text-2xl text-blue-900">৳{{ avg_store_price|floatformat:0 }}</div>
+                <div class="text-[11px] text-blue-700 font-semibold mt-0.5">বর্তমান স্টোর গড় বিক্রয়মূল্য</div>
+            </div>
+            <div class="mt-2.5 pt-2 border-t border-blue-100 text-[10px] text-gray-600 flex justify-between items-center">
+                <span>Range: ৳320 – ৳450</span>
+                <span class="font-bold text-blue-900">{{ all_products|length }} টি পণ্য</span>
+            </div>
+        </div>
+
+        <!-- KPI 3: Profit per Jar -->
+        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-emerald-200 bg-emerald-50/20 shadow-xs hover:border-emerald-400 transition">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-black uppercase tracking-wider text-emerald-800">Profit / Jar (প্রতি জারে লাভ)</span>
+                <span class="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-chart-line-up"></i>
+                </span>
+            </div>
+            <div class="mt-2">
+                <div class="font-display font-black text-xl sm:text-2xl text-emerald-900">৳{{ current_profit_per_jar|floatformat:0 }}</div>
+                <div class="text-[11px] text-emerald-700 font-semibold mt-0.5">গড় মূল্যে প্রতিটি জারে মুনাফা</div>
+            </div>
+            <div class="mt-2.5 pt-2 border-t border-emerald-100 text-[10px] text-emerald-800 font-bold flex justify-between items-center">
+                <span>প্রফিট মার্জিন:</span>
+                <span class="font-black text-emerald-700 text-xs">{{ current_margin_pct }}% 🚀</span>
+            </div>
+        </div>
+
+        <!-- KPI 4: Break-Even Volume -->
+        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-amber-200 bg-amber-50/20 shadow-xs hover:border-amber-400 transition" title="Number of jars needed to sell at avg price to fully recover total ৳{{ total_expenses }} expenses">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-black uppercase tracking-wider text-amber-800">Break-Even (ব্রেক-ইভেন)</span>
+                <span class="w-7 h-7 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-bullseye"></i>
+                </span>
+            </div>
+            <div class="mt-2">
+                <div class="font-display font-black text-xl sm:text-2xl text-amber-900">{{ break_even_jars }} <span class="text-sm font-bold text-amber-700">Jars</span></div>
+                <div class="text-[11px] text-amber-700 font-semibold mt-0.5">আসল খরচ উঠে আসার টার্গেট</div>
+            </div>
+            <div class="mt-2.5 pt-2 border-t border-amber-100 text-[10px] text-gray-600 flex justify-between items-center">
+                <span>বিক্রি হয়েছে: <strong class="text-brand-800">{{ total_jars_sold }}</strong></span>
+                <span>বাকি: <strong class="text-amber-800">{{ jars_remaining_to_breakeven }} টি</strong></span>
+            </div>
+        </div>
+
+        <!-- KPI 5: Total Accounted Batch Volume -->
+        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-indigo-200 bg-indigo-50/20 shadow-xs hover:border-indigo-400 transition" title="Physical Inventory Stock ({{ total_physical_stock }}) + Lifetime Sold Jars ({{ total_jars_sold }})">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-black uppercase tracking-wider text-indigo-800">Production Batch (মোট জার)</span>
+                <span class="w-7 h-7 rounded-xl bg-indigo-100 text-indigo-800 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                </span>
+            </div>
+            <div class="mt-2">
+                <div class="font-display font-black text-xl sm:text-2xl text-indigo-900">{{ batch_volume }} <span class="text-sm font-bold text-indigo-700">Jars</span></div>
+                <div class="text-[11px] text-indigo-700 font-semibold mt-0.5">বর্তমান খরচে কাভার হওয়া জার সংখ্যা</div>
+            </div>
+            <div class="mt-2.5 pt-2 border-t border-indigo-100 text-[10px] text-gray-600 flex justify-between items-center">
+                <span>স্টকে আছে: <strong class="text-indigo-900">{{ total_physical_stock }}</strong></span>
+                <span>বিক্রিত: <strong class="text-brand-800">{{ total_jars_sold }}</strong></span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Smart Pricing Recommendation Matrix -->
+    <div class="bg-white p-6 rounded-3xl border border-gray-200 shadow-xs space-y-5">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-gray-100 pb-4">
+            <div>
+                <span class="text-xs font-black uppercase tracking-wider text-brand-700 bg-brand-50 px-2.5 py-1 rounded-md border border-brand-200">
+                    Smart Pricing Strategy Matrix
+                </span>
+                <h2 class="font-display font-black text-lg sm:text-xl text-gray-900 mt-2">
+                    খরচ অনুযায়ী প্রতিটি জারের বিক্রয়মূল্য কত হওয়া উচিত?
+                </h2>
+                <p class="text-xs text-gray-500 mt-0.5">
+                    আপনার মোট ৳{{ total_expenses|floatformat:0 }} খরচে {{ batch_volume }}টি জারের ব্যাচ বিবেচনায় প্রতি জারের উৎপাদন খরচ <strong>৳{{ total_cost_per_jar }}</strong>। বিভিন্ন প্রফিট মার্জিনের জন্য প্রস্তাবিত দাম নিচে দেওয়া হলো:
+                </p>
+            </div>
+            <div class="text-right flex flex-col items-end">
+                <span class="text-[11px] font-bold text-gray-400">বর্তমান স্টোর গড় মূল্য</span>
+                <span class="text-xl font-black text-brand-800 font-display">৳{{ avg_store_price|floatformat:0 }}</span>
+            </div>
+        </div>
+
+        <!-- 6 Tier Pricing Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5">
+            {% for tier in pricing_matrix %}
+            <div class="relative p-4 rounded-2xl border transition flex flex-col justify-between 
+                {% if tier.margin_pct == 0 %}
+                    bg-gray-50/60 border-gray-300 hover:border-gray-400
+                {% elif tier.margin_pct == 20 %}
+                    bg-sky-50/40 border-sky-200 hover:border-sky-300
+                {% elif tier.margin_pct == 35 %}
+                    bg-blue-50/40 border-blue-200 hover:border-blue-300
+                {% elif tier.margin_pct == 50 %}
+                    bg-emerald-50/40 border-emerald-300 hover:border-emerald-400 ring-2 ring-emerald-500/20
+                {% elif tier.margin_pct == 65 %}
+                    bg-amber-50/40 border-amber-200 hover:border-amber-300
+                {% else %}
+                    bg-purple-50/40 border-purple-200 hover:border-purple-300
+                {% endif %}">
+                
+                {% if tier.margin_pct == 50 %}
+                <span class="absolute -top-2.5 right-3 bg-emerald-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-xs uppercase tracking-wider">
+                    Recommended ⭐
+                </span>
+                {% endif %}
+
+                <div>
+                    <div class="text-xs font-bold text-gray-700 flex items-center justify-between">
+                        <span>{{ tier.tier_name }}</span>
+                        <span class="font-mono font-black text-xs {% if tier.margin_pct == 0 %}text-gray-500{% elif tier.margin_pct >= 50 %}text-emerald-700{% else %}text-blue-700{% endif %}">
+                            {{ tier.margin_pct }}%
+                        </span>
+                    </div>
+                    <div class="text-[11px] text-gray-500 mt-1 line-clamp-2 leading-tight">
+                        {{ tier.desc }}
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-t border-gray-200/60">
+                    <div class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">প্রস্তাবিত দাম:</div>
+                    <div class="font-display font-black text-2xl text-gray-900 mt-0.5">
+                        ৳{{ tier.recommended_price|floatformat:0 }}
+                    </div>
+                    <div class="text-[11px] font-bold mt-1 {% if tier.profit_per_jar > 0 %}text-emerald-700{% else %}text-gray-400{% endif %}">
+                        {% if tier.profit_per_jar > 0 %}
+                            +৳{{ tier.profit_per_jar|floatformat:0 }} লাভ/জার
+                        {% else %}
+                            লাভ ০ টাকা (নো প্রফিট)
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Strategy Assessment Banner -->
+        <div class="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-brand-50 to-emerald-500/10 border border-emerald-300 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3.5">
+                <span class="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-lg shrink-0 shadow-xs">
+                    <i class="fa-solid fa-badge-check"></i>
+                </span>
+                <div>
+                    <h4 class="text-sm font-black text-gray-900">
+                        আপনার বর্তমান প্রাইসিং মডেল খুবই আকর্ষণীয় ও অত্যন্ত লাভজনক!
+                    </h4>
+                    <p class="text-xs text-gray-600 mt-0.5">
+                        স্টোরে আপনার বর্তমান গড় মূল্য <strong>৳{{ avg_store_price|floatformat:0 }}</strong>। প্রতি জারের মোট খরচ <strong>৳{{ total_cost_per_jar }}</strong> বাদ দিলে প্রতি জারে <strong>৳{{ current_profit_per_jar|floatformat:0 }}</strong> লাভ থাকছে (যা <strong>{{ current_margin_pct }}% গ্রস মার্জিন</strong>)।
+                    </p>
+                </div>
+            </div>
+            <div class="shrink-0">
+                <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl font-black text-xs bg-emerald-700 text-white shadow-2xs">
+                    <i class="fa-solid fa-rocket"></i>
+                    <span>High Profit Zone</span>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 2: খরচের খাতভিত্তিক বিশ্লেষণ (Cost Breakdown) & Batch Economics -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Left: Category-wise Cost Contribution (2 cols) -->
+        <div class="lg:col-span-2 bg-white p-6 rounded-3xl border border-gray-200 shadow-xs space-y-5">
+            <div>
+                <span class="text-xs font-black uppercase tracking-wider text-rose-700 bg-rose-50 px-2.5 py-1 rounded-md border border-rose-200">
+                    Cost Component Breakdown
+                </span>
+                <h3 class="font-display font-black text-lg text-gray-900 mt-2">
+                    প্রতি জারের খরচে কোন খাতের অবদান কত?
+                </h3>
+                <p class="text-xs text-gray-500 mt-0.5">
+                    মোট ব্যয় ৳{{ total_expenses|floatformat:0 }}-এর ভিত্তিতে প্রতি জারের মোট ৳{{ total_cost_per_jar }} খরচের বিস্তারিত অনুপাত:
+                </p>
+            </div>
+
+            <!-- Stacked Horizontal Progress Bar -->
+            <div class="space-y-1.5">
+                <div class="w-full h-4 bg-gray-100 rounded-full overflow-hidden flex shadow-inner">
+                    <div style="width: {{ cost_percentages.packaging }}%;" class="bg-amber-500 transition-all duration-500" title="Packaging: {{ cost_percentages.packaging }}%"></div>
+                    <div style="width: {{ cost_percentages.raw_material }}%;" class="bg-emerald-600 transition-all duration-500" title="Raw Produce: {{ cost_percentages.raw_material }}%"></div>
+                    <div style="width: {{ cost_percentages.spices_brine }}%;" class="bg-teal-600 transition-all duration-500" title="Spices & Brine: {{ cost_percentages.spices_brine }}%"></div>
+                    <div style="width: {{ cost_percentages.overhead }}%;" class="bg-purple-600 transition-all duration-500" title="Overhead & Other: {{ cost_percentages.overhead }}%"></div>
+                </div>
+                <div class="flex flex-wrap items-center justify-between text-[11px] font-bold text-gray-500 pt-1 gap-2">
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
+                        <span>প্যাকেজিং ({{ cost_percentages.packaging }}%)</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block"></span>
+                        <span>কাঁচামাল ও শসা ({{ cost_percentages.raw_material }}%)</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2.5 h-2.5 rounded-full bg-teal-600 inline-block"></span>
+                        <span>মশলা ও ভিনেগার ({{ cost_percentages.spices_brine }}%)</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2.5 h-2.5 rounded-full bg-purple-600 inline-block"></span>
+                        <span>অন্যান্য ও ওভারহেড ({{ cost_percentages.overhead }}%)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cost Cards Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
+                
+                <!-- Packaging Cost Card -->
+                <div class="p-4 rounded-2xl border border-amber-200 bg-amber-50/20">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-extrabold text-amber-900 flex items-center gap-1.5">
+                            <i class="fa-solid fa-jar text-amber-600"></i>
+                            <span>গ্লাস জার, ক্যাপ ও স্টিকার</span>
+                        </span>
+                        <span class="text-xs font-black text-amber-900 bg-amber-100 px-2 py-0.5 rounded-md">
+                            ৳{{ packaging_per_jar }}/জার
+                        </span>
+                    </div>
+                    <div class="mt-2 text-xs text-gray-600">
+                        মোট খরচ: <strong>৳{{ packaging_expense|floatformat:0 }}</strong> ({{ cost_percentages.packaging }}%)
+                    </div>
+                    <div class="text-[10px] text-gray-500 mt-1">
+                        ফুড-গ্রেড গ্লাস জার, এয়ারটাইট গোল্ড মেটাল ঢাকনা ও লেবেলিং।
+                    </div>
+                </div>
+
+                <!-- Raw Material Cost Card -->
+                <div class="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/20">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-extrabold text-emerald-900 flex items-center gap-1.5">
+                            <i class="fa-solid fa-carrot text-emerald-600"></i>
+                            <span>তাজা শসা ও কাঁচা সবজি</span>
+                        </span>
+                        <span class="text-xs font-black text-emerald-900 bg-emerald-100 px-2 py-0.5 rounded-md">
+                            ৳{{ raw_produce_per_jar }}/জার
+                        </span>
+                    </div>
+                    <div class="mt-2 text-xs text-gray-600">
+                        মোট খরচ: <strong>৳{{ raw_material_expense|floatformat:0 }}</strong> ({{ cost_percentages.raw_material }}%)
+                    </div>
+                    <div class="text-[10px] text-gray-500 mt-1">
+                        ফ্রেশ ক্রাঞ্চি শসা, রসুন, মরিচ ও অন্যান্য মূল কাঁচামাল।
+                    </div>
+                </div>
+
+                <!-- Spices & Brine Cost Card -->
+                <div class="p-4 rounded-2xl border border-teal-200 bg-teal-50/20">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-extrabold text-teal-900 flex items-center gap-1.5">
+                            <i class="fa-solid fa-leaf text-teal-600"></i>
+                            <span>ভিনেগার, লবণ ও মশলা</span>
+                        </span>
+                        <span class="text-xs font-black text-teal-900 bg-teal-100 px-2 py-0.5 rounded-md">
+                            ৳{{ spices_per_jar }}/জার
+                        </span>
+                    </div>
+                    <div class="mt-2 text-xs text-gray-600">
+                        মোট খরচ: <strong>৳{{ spices_brine_expense|floatformat:0 }}</strong> ({{ cost_percentages.spices_brine }}%)
+                    </div>
+                    <div class="text-[10px] text-gray-500 mt-1">
+                        খাঁটি আখ ভিনেগার, ব্রাইন স্পাইসেস, সরিষা দানা ও স্পেশাল মসলা।
+                    </div>
+                </div>
+
+                <!-- Overhead / Operating Cost Card -->
+                <div class="p-4 rounded-2xl border border-purple-200 bg-purple-50/20">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-extrabold text-purple-900 flex items-center gap-1.5">
+                            <i class="fa-solid fa-bolt text-purple-600"></i>
+                            <span>লজিস্টিকস ও কিচেন ওভারহেড</span>
+                        </span>
+                        <span class="text-xs font-black text-purple-900 bg-purple-100 px-2 py-0.5 rounded-md">
+                            ৳{{ overhead_per_jar }}/জার
+                        </span>
+                    </div>
+                    <div class="mt-2 text-xs text-gray-600">
+                        মোট খরচ: <strong>৳{{ indirect_overhead|floatformat:0 }}</strong> ({{ cost_percentages.overhead }}%)
+                    </div>
+                    <div class="text-[10px] text-gray-500 mt-1">
+                        গ্যাস, বিদ্যুৎ, কিচেন খরচ ও পরিচালন সংক্রান্ত বিবিধ ব্যয়।
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Right: Batch Lifecycle Economics & Full Recovery (1 col) -->
+        <div class="bg-gradient-to-br from-brand-900 via-brand-950 to-gray-900 text-white p-6 rounded-3xl shadow-lg flex flex-col justify-between space-y-6">
+            <div>
+                <span class="text-[10px] font-black uppercase tracking-widest text-brand-accent bg-brand-800/80 px-2.5 py-1 rounded border border-brand-700/60 inline-block">
+                    Full Batch Projection
+                </span>
+                <h3 class="font-display font-black text-xl text-white mt-3">
+                    বর্তমান উৎপাদন ব্যাচের লাভজনকতা
+                </h3>
+                <p class="text-xs text-gray-300 mt-1 leading-relaxed">
+                    আপনার তৈরি মোট <strong>{{ batch_volume }}টি জার</strong> (স্টকে থাকা {{ total_physical_stock }} জার + বিক্রিত {{ total_jars_sold }} জার) গড় মূল্য ৳{{ avg_store_price|floatformat:0 }}-এ সম্পূর্ণ বিক্রি হলে সম্ভাব্য আয় ও লাভ:
+                </p>
+            </div>
+
+            <div class="space-y-4 bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-xs">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-gray-300">প্রত্যাশিত মোট আয় (Revenue):</span>
+                    <strong class="font-mono text-base font-black text-emerald-400">৳{{ batch_projected_revenue|floatformat:0 }}</strong>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-gray-300">মোট খরচ (Expenses):</span>
+                    <strong class="font-mono text-base font-black text-rose-400">-৳{{ total_expenses|floatformat:0 }}</strong>
+                </div>
+                <div class="pt-3 border-t border-white/15 flex items-center justify-between">
+                    <span class="text-xs font-black text-brand-accent">প্রত্যাশিত নিট লাভ (Profit):</span>
+                    <strong class="font-display text-xl font-black text-white">৳{{ batch_projected_profit|floatformat:0 }}</strong>
+                </div>
+            </div>
+
+            <!-- Break-Even Progress Bar -->
+            <div class="space-y-2">
+                <div class="flex items-center justify-between text-xs font-bold">
+                    <span class="text-gray-300">আসল খরচ রিকভারি অগ্রগতি:</span>
+                    <span class="text-brand-accent font-black">{{ breakeven_progress_pct }}%</span>
+                </div>
+                <div class="w-full bg-white/10 h-2.5 rounded-full overflow-hidden">
+                    <div style="width: {{ breakeven_progress_pct }}%;" class="h-full bg-emerald-500 rounded-full transition-all duration-700"></div>
+                </div>
+                <div class="text-[11px] text-gray-400 flex items-center justify-between">
+                    <span>বিক্রি হয়েছে: {{ total_jars_sold }} জার</span>
+                    <span>ব্রেক-ইভেন টার্গেট: {{ break_even_jars }} জার</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Section 3: Interactive Live What-If Simulator (লাইভ প্রফিট ক্যালকুলেটর) -->
+    <div class="bg-white p-6 sm:p-8 rounded-3xl border border-gray-200 shadow-xs space-y-6">
+        <div class="border-b border-gray-100 pb-4">
+            <span class="text-xs font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
+                Interactive Feasibility Simulator
+            </span>
+            <h3 class="font-display font-black text-lg sm:text-xl text-gray-900 mt-2">
+                লাইভ ব্যবসায়িক সম্ভাব্যতা ও মুনাফা ক্যালকুলেটর
+            </h3>
+            <p class="text-xs sm:text-sm text-gray-500 mt-0.5">
+                নিচের স্লাইডার বা সংখ্যা পরিবর্তন করে যেকোনো উৎপাদন ভলিউম ও বিক্রয়মূল্যের জন্য তাৎক্ষণিক লাভ-ক্ষতির পূর্বাভাস দেখুন:
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- Controls (7 cols) -->
+            <div class="lg:col-span-7 space-y-5">
+                
+                <!-- Slider 1: Monthly Target Jars -->
+                <div class="bg-gray-50/80 p-4 rounded-2xl border border-gray-200 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label for="sim_jars" class="text-xs font-extrabold text-gray-700 flex items-center gap-1.5">
+                            <i class="fa-solid fa-boxes-stacked text-brand-600"></i>
+                            <span>মাসিক উৎপাদন ও বিক্রির লক্ষ্যমাত্রা (Jars):</span>
+                        </label>
+                        <div class="flex items-center gap-1">
+                            <input type="number" id="sim_jars_num" min="10" max="5000" step="10" value="200" 
+                                class="w-20 text-right font-display font-black text-sm bg-white border border-gray-300 rounded-lg px-2 py-1 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                            <span class="text-xs text-gray-500 font-bold">জার</span>
+                        </div>
+                    </div>
+                    <input type="range" id="sim_jars" min="20" max="1000" step="10" value="200" 
+                        class="w-full accent-brand-700 cursor-pointer h-2 bg-gray-200 rounded-lg">
+                    <div class="flex justify-between text-[10px] text-gray-400 font-bold">
+                        <span>২০ জার</span>
+                        <span>২৫০ জার</span>
+                        <span>৫০০ জার</span>
+                        <span>১,০০০ জার</span>
+                    </div>
+                </div>
+
+                <!-- Slider 2: Target Selling Price -->
+                <div class="bg-gray-50/80 p-4 rounded-2xl border border-gray-200 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label for="sim_price" class="text-xs font-extrabold text-gray-700 flex items-center gap-1.5">
+                            <i class="fa-solid fa-tag text-emerald-600"></i>
+                            <span>প্রতি জারের বিক্রয়মূল্য (Selling Price per Jar):</span>
+                        </label>
+                        <div class="flex items-center gap-1">
+                            <span class="text-xs font-bold text-gray-500">৳</span>
+                            <input type="number" id="sim_price_num" min="100" max="1000" step="10" value="{{ avg_store_price|floatformat:0 }}" 
+                                class="w-20 text-right font-display font-black text-sm bg-white border border-gray-300 rounded-lg px-2 py-1 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        </div>
+                    </div>
+                    <input type="range" id="sim_price" min="200" max="700" step="10" value="{{ avg_store_price|floatformat:0 }}" 
+                        class="w-full accent-emerald-600 cursor-pointer h-2 bg-gray-200 rounded-lg">
+                    <div class="flex justify-between text-[10px] text-gray-400 font-bold">
+                        <span>৳২০০</span>
+                        <span>৳৩৫০</span>
+                        <span>৳৪৫০</span>
+                        <span>৳৭০০</span>
+                    </div>
+                </div>
+
+                <!-- Cost Parameters Row -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    
+                    <!-- Direct COGS input -->
+                    <div class="bg-gray-50/80 p-3.5 rounded-2xl border border-gray-200">
+                        <label class="text-[11px] font-bold text-gray-600 block mb-1">
+                            প্রতি জারে কাঁচামাল ও প্যাকেজিং খরচ:
+                        </label>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xs text-gray-400 font-bold">৳</span>
+                            <input type="number" id="sim_cogs" value="{{ cogs_per_jar|floatformat:1 }}" min="10" max="300" step="1"
+                                class="w-full bg-white border border-gray-300 rounded-lg px-2.5 py-1 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        </div>
+                        <span class="text-[10px] text-gray-400 mt-1 block">ডিফল্ট: ৳{{ cogs_per_jar }} (জার, শসা, ভিনেগার)</span>
+                    </div>
+
+                    <!-- Marketing & Overhead input -->
+                    <div class="bg-gray-50/80 p-3.5 rounded-2xl border border-gray-200">
+                        <label class="text-[11px] font-bold text-gray-600 block mb-1">
+                            প্রতি জারে বিজ্ঞাপন ও ওভারহেড বাজেট:
+                        </label>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xs text-gray-400 font-bold">৳</span>
+                            <input type="number" id="sim_overhead" value="{{ overhead_per_jar|floatformat:1 }}" min="0" max="300" step="1"
+                                class="w-full bg-white border border-gray-300 rounded-lg px-2.5 py-1 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        </div>
+                        <span class="text-[10px] text-gray-400 mt-1 block">ডিফল্ট: ৳{{ overhead_per_jar }} (বিজ্ঞাপন ও অন্যান্য)</span>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Live Calculation Results Card (5 cols) -->
+            <div class="lg:col-span-5 bg-gradient-to-br from-emerald-950 via-gray-900 to-brand-950 text-white p-6 rounded-3xl border border-emerald-800/40 shadow-xl space-y-5">
+                
+                <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                    <div>
+                        <span class="text-[10px] font-black uppercase tracking-widest text-emerald-400">Live Projected Outcomes</span>
+                        <h4 class="font-display font-black text-lg text-white">মাসিক আর্থিক ফলাফল</h4>
+                    </div>
+                    <span id="sim_badge" class="px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        Highly Profitable 🚀
+                    </span>
+                </div>
+
+                <!-- Big Net Profit Display -->
+                <div class="bg-white/5 p-4 rounded-2xl border border-white/10 text-center">
+                    <span class="text-xs text-gray-300 font-bold">প্রত্যাশিত নিট মাসিক মুনাফা (Net Profit):</span>
+                    <div id="sim_res_profit" class="font-display font-black text-3xl sm:text-4xl text-emerald-400 mt-1 tracking-tight">
+                        ৳0
+                    </div>
+                    <div class="text-xs text-emerald-300 font-bold mt-1">
+                        নিট প্রফিট মার্জিন: <span id="sim_res_margin" class="font-black">0%</span>
+                    </div>
+                </div>
+
+                <!-- 4 Detail Numbers -->
+                <div class="grid grid-cols-2 gap-3 text-xs">
+                    <div class="bg-white/5 p-3 rounded-xl border border-white/10">
+                        <span class="text-[10px] text-gray-400 block font-bold">মোট মাসিক বিক্রয় (Revenue):</span>
+                        <strong id="sim_res_revenue" class="font-display text-sm font-black text-white mt-0.5 block">৳0</strong>
+                    </div>
+                    <div class="bg-white/5 p-3 rounded-xl border border-white/10">
+                        <span class="text-[10px] text-gray-400 block font-bold">মোট উৎপাদন ব্যয় (Cost):</span>
+                        <strong id="sim_res_cost" class="font-display text-sm font-black text-rose-300 mt-0.5 block">৳0</strong>
+                    </div>
+                    <div class="bg-white/5 p-3 rounded-xl border border-white/10">
+                        <span class="text-[10px] text-gray-400 block font-bold">প্রতি জারে লাভ (Unit Profit):</span>
+                        <strong id="sim_res_unit_profit" class="font-display text-sm font-black text-emerald-300 mt-0.5 block">৳0</strong>
+                    </div>
+                    <div class="bg-white/5 p-3 rounded-xl border border-white/10">
+                        <span class="text-[10px] text-gray-400 block font-bold">ব্রেক-ইভেন বিক্রি (Units):</span>
+                        <strong id="sim_res_breakeven" class="font-display text-sm font-black text-amber-300 mt-0.5 block">0 Jars</strong>
+                    </div>
+                </div>
+
+                <!-- Simulation Advice Note -->
+                <p id="sim_advice_text" class="text-[11px] text-gray-300 leading-relaxed bg-black/30 p-3 rounded-xl border border-white/5">
+                    লোড হচ্ছে...
+                </p>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Section 4: ক্যাটালগ প্রোডাক্ট অনুযায়ী লাভ ও মার্জিন বিশ্লেষণ -->
+    <div class="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
+        <div class="p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+                <span class="text-xs font-black uppercase tracking-wider text-brand-700 bg-brand-50 px-2.5 py-1 rounded-md border border-brand-200">
+                    Product-Level Economics
+                </span>
+                <h3 class="font-display font-black text-lg text-gray-900 mt-2">
+                    প্রতিটি আচারের বর্তমান বিক্রয়মূল্য, উৎপাদন খরচ ও লাভ
+                </h3>
+                <p class="text-xs text-gray-500 mt-0.5">
+                    প্রতি জারের আনুমানিক উৎপাদন খরচ <strong>৳{{ total_cost_per_jar }}</strong> ধরে প্রতিটি পণ্যের প্রফিট মার্জিন এবং স্টকের সম্ভাব্য মুনাফা:
+                </p>
+            </div>
+            <a href="{% url 'dashboard:stock_manager' %}" class="text-xs font-bold text-brand-700 hover:text-brand-900 underline self-start sm:self-auto">
+                ইনভেন্টরি ও স্টক ম্যানেজমেন্ট &rarr;
+            </a>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead>
+                    <tr class="bg-gray-50/80 text-gray-500 font-extrabold uppercase tracking-wider border-b border-gray-200">
+                        <th class="py-3.5 px-4 sm:pl-6">পণ্য (Product Name)</th>
+                        <th class="py-3.5 px-3 text-right">বিক্রয়মূল্য</th>
+                        <th class="py-3.5 px-3 text-right">উৎপাদন খরচ</th>
+                        <th class="py-3.5 px-3 text-right">প্রতি জারে লাভ</th>
+                        <th class="py-3.5 px-3 text-center">মার্জিন %</th>
+                        <th class="py-3.5 px-3 text-center">বর্তমান স্টক</th>
+                        <th class="py-3.5 px-4 sm:pr-6 text-right">স্টকের মোট সম্ভাব্য লাভ</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 font-medium text-gray-700">
+                    {% for row in product_profit_list %}
+                    <tr class="hover:bg-gray-50/60 transition">
+                        <td class="py-3 px-4 sm:pl-6">
+                            <div class="font-bold text-gray-900">{{ row.product.name }}</div>
+                            <div class="text-[10px] text-gray-400">{{ row.product.category.name|default:"General Pickle" }}</div>
+                        </td>
+                        <td class="py-3 px-3 text-right font-display font-bold text-gray-900">
+                            ৳{{ row.price|floatformat:0 }}
+                        </td>
+                        <td class="py-3 px-3 text-right text-gray-500 font-mono">
+                            ৳{{ row.cost|floatformat:0 }}
+                        </td>
+                        <td class="py-3 px-3 text-right font-display font-black text-emerald-700">
+                            +৳{{ row.profit|floatformat:0 }}
+                        </td>
+                        <td class="py-3 px-3 text-center">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black {% if row.margin >= 70 %}bg-emerald-100 text-emerald-800 border border-emerald-200{% elif row.margin >= 50 %}bg-blue-100 text-blue-800 border border-blue-200{% else %}bg-amber-100 text-amber-800 border border-amber-200{% endif %}">
+                                {{ row.margin }}%
+                            </span>
+                        </td>
+                        <td class="py-3 px-3 text-center font-bold text-gray-800">
+                            {{ row.stock }} জার
+                        </td>
+                        <td class="py-3 px-4 sm:pr-6 text-right font-display font-black text-emerald-800">
+                            ৳{{ row.stock_profit_potential|floatformat:0 }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="py-8 text-center text-gray-400">কোনো পণ্য পাওয়া যায়নি।</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Section 5: স্ট্র্যাটেজিক রিকমেন্ডেশন (Actionable Growth Recommendations) -->
+    <div class="p-6 rounded-3xl bg-white border border-gray-200 shadow-xs space-y-4">
+        <h3 class="font-display font-black text-base sm:text-lg text-gray-900 flex items-center gap-2">
+            <i class="fa-solid fa-lightbulb text-amber-500"></i>
+            <span>মুনাফা বাড়ানোর জন্য ৩টি স্ট্র্যাটেজিক পরামর্শ (Business Tips)</span>
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs leading-relaxed">
+            <div class="p-4 rounded-2xl bg-amber-50/40 border border-amber-200">
+                <strong class="text-amber-950 font-black block text-sm mb-1">১. প্যাকেজিং পাইকারি কেনা:</strong>
+                <p class="text-gray-600">
+                    বর্তমানে আপনার ব্যয়ের প্রায় ৫০% প্যাকেজিংয়ে। ৫০০ বা ১০০০ গ্লাস জার ও ক্যাপ একসাথে ফ্যাক্টরি থেকে কিনলে প্রতি জারে <strong>৳১৫–২০ টাকা খরচ কমে আসবে</strong>।
+                </p>
+            </div>
+            <div class="p-4 rounded-2xl bg-emerald-50/40 border border-emerald-200">
+                <strong class="text-emerald-950 font-black block text-sm mb-1">২. ২ বা ৩ জারের বান্ডেল অফার:</strong>
+                <p class="text-gray-600">
+                    কুরিয়ার ডেলিভারি চার্জ ১ জারেও যা, ২ জারেও প্রায় কাছাকাছি। বান্ডেল বিক্রি করলে গড় বাস্কেট সাইজ বাড়বে এবং কুরিয়ার ক্ষতি কমে নিট প্রফিট ৩০% পর্যন্ত বৃদ্ধি পাবে।
+                </p>
+            </div>
+            <div class="p-4 rounded-2xl bg-blue-50/40 border border-blue-200">
+                <strong class="text-blue-950 font-black block text-sm mb-1">৩. রিপিট কাস্টমার রিঅর্ডার:</strong>
+                <p class="text-gray-600">
+                    একবার কেনা ক্রেতাকে হোয়াটসঅ্যাপ ও এসএমএস এর মাধ্যমে ফলো-আপ দিয়ে রিঅর্ডার আনলে বিজ্ঞাপনের কোনো খরচ (০ টাকা Ad spend) ছাড়াই ১০০% লাভ অর্জিত হয়।
+                </p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Interactive Simulator JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const jarsSlider = document.getElementById('sim_jars');
+    const jarsNum = document.getElementById('sim_jars_num');
+    const priceSlider = document.getElementById('sim_price');
+    const priceNum = document.getElementById('sim_price_num');
+    const cogsInput = document.getElementById('sim_cogs');
+    const overheadInput = document.getElementById('sim_overhead');
+
+    const resProfit = document.getElementById('sim_res_profit');
+    const resMargin = document.getElementById('sim_res_margin');
+    const resRevenue = document.getElementById('sim_res_revenue');
+    const resCost = document.getElementById('sim_res_cost');
+    const resUnitProfit = document.getElementById('sim_res_unit_profit');
+    const resBreakeven = document.getElementById('sim_res_breakeven');
+    const badge = document.getElementById('sim_badge');
+    const adviceText = document.getElementById('sim_advice_text');
+
+    function syncInputs(fromSlider, sliderEl, numEl) {
+        if (fromSlider) {
+            numEl.value = sliderEl.value;
+        } else {
+            sliderEl.value = numEl.value;
+        }
+        recalculate();
+    }
+
+    jarsSlider.addEventListener('input', () => syncInputs(true, jarsSlider, jarsNum));
+    jarsNum.addEventListener('input', () => syncInputs(false, jarsSlider, jarsNum));
+
+    priceSlider.addEventListener('input', () => syncInputs(true, priceSlider, priceNum));
+    priceNum.addEventListener('input', () => syncInputs(false, priceSlider, priceNum));
+
+    cogsInput.addEventListener('input', recalculate);
+    overheadInput.addEventListener('input', recalculate);
+
+    function recalculate() {
+        const jars = parseFloat(jarsNum.value) || 0;
+        const price = parseFloat(priceNum.value) || 0;
+        const cogs = parseFloat(cogsInput.value) || 0;
+        const overhead = parseFloat(overheadInput.value) || 0;
+
+        const unitCost = cogs + overhead;
+        const totalRevenue = jars * price;
+        const totalCost = jars * unitCost;
+        const totalProfit = totalRevenue - totalCost;
+        const unitProfit = price - unitCost;
+        const marginPct = price > 0 ? (unitProfit / price) * 100 : 0;
+        
+        // Break-even jars if overhead was a fixed monthly pool
+        const fixedPool = jars * overhead; 
+        const breakevenUnits = (price - cogs) > 0 ? Math.ceil(fixedPool / (price - cogs)) : 0;
+
+        // Render Values
+        resProfit.textContent = (totalProfit >= 0 ? '৳' : '-৳') + Math.abs(Math.round(totalProfit)).toLocaleString();
+        resMargin.textContent = marginPct.toFixed(1) + '%';
+        resRevenue.textContent = '৳' + Math.round(totalRevenue).toLocaleString();
+        resCost.textContent = '৳' + Math.round(totalCost).toLocaleString();
+        resUnitProfit.textContent = (unitProfit >= 0 ? '+৳' : '-৳') + Math.abs(Math.round(unitProfit)).toLocaleString();
+        resBreakeven.textContent = Math.max(1, breakevenUnits) + ' Jars';
+
+        // Badge & Advice
+        if (marginPct >= 60) {
+            badge.className = 'px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+            badge.textContent = 'অসাধারণ লাভজনক 🚀';
+            adviceText.innerHTML = `প্রতি মাসে <strong>${jars} টি জার</strong> ৳${price} মূল্যে বিক্রি করলে আপনি <strong>৳${Math.round(totalProfit).toLocaleString()} টাকা</strong> নিট লাভ করবেন। আপনার মুনাফা মার্জিন অত্যন্ত আকর্ষণীয় (${marginPct.toFixed(1)}%)।`;
+        } else if (marginPct >= 40) {
+            badge.className = 'px-2.5 py-1 rounded-full text-[10px] font-black bg-blue-500/20 text-blue-300 border border-blue-500/30';
+            badge.textContent = 'স্থায়ী ও নিরাপদ প্রফিট 📈';
+            adviceText.innerHTML = `এটি একটি খুব ভালো স্বাস্থ্যকর ফুড রিটেইল মার্জিন (${marginPct.toFixed(1)}%)। প্রতি জারে <strong>৳${Math.round(unitProfit)} লাভ</strong> নিশ্চিত থাকছে।`;
+        } else if (marginPct >= 20) {
+            badge.className = 'px-2.5 py-1 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/30';
+            badge.textContent = 'পাইকারি মার্জিন ⚖️';
+            adviceText.innerHTML = `মার্জিন কিছুটা কম (${marginPct.toFixed(1)}%)। ভলিউম অনেক বেশি হলে এই দামে পাইকারি সরবরাহ করা যেতে পারে।`;
+        } else {
+            badge.className = 'px-2.5 py-1 rounded-full text-[10px] font-black bg-rose-500/20 text-rose-300 border border-rose-500/30';
+            badge.textContent = 'ঝুঁকিপূর্ণ মার্জিন ⚠️';
+            adviceText.innerHTML = `উৎপাদন খরচ বিক্রয়মূল্যের কাছাকাছি। জারের দাম বাড়ানোর পরামর্শ দেওয়া হচ্ছে।`;
+        }
+    }
+
+    recalculate();
+});
+</script>
+{% endblock %}
