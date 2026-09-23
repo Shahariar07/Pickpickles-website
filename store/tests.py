@@ -157,3 +157,87 @@ class CartTests(TestCase):
         data = response.json()
         self.assertFalse(data['success'])
         self.assertIn("out of stock", data['message'].lower())
+
+    def test_steadfast_service_structure(self):
+        from store.steadfast import SteadfastCourierService
+        from django.test import override_settings
+
+        with override_settings(STEADFAST_API_KEY='', STEADFAST_SECRET_KEY=''):
+            service = SteadfastCourierService()
+            self.assertFalse(service.is_configured())
+
+    def test_steadfast_order_properties_and_sync(self):
+        from store.models import Order
+        from unittest.mock import patch
+
+        order = Order.objects.create(
+            customer_name='Rahim Uddin',
+            customer_phone='01712345678',
+            delivery_address='House 12, Road 4, Dhanmondi',
+            delivery_city='Dhaka',
+            delivery_zone='INSIDE_DHAKA',
+            subtotal=Decimal('380.00'),
+            delivery_fee=Decimal('150.00'),
+            total_amount=Decimal('530.00'),
+            payment_method='COD',
+            payment_status='UNPAID',
+            steadfast_consignment_id='1424107',
+            steadfast_tracking_code='15BAEB8A',
+            steadfast_order_status='in_review'
+        )
+
+        self.assertEqual(order.active_courier, 'STEADFAST')
+        self.assertEqual(order.active_courier_name, 'Steadfast Courier')
+        self.assertEqual(order.active_consignment_id, '1424107')
+        self.assertEqual(order.active_tracking_code, '15BAEB8A')
+        self.assertIn('steadfast.com.bd/tracking/15BAEB8A', order.active_tracking_url)
+
+        # Mock Steadfast status response to 'delivered'
+        with patch('store.steadfast.SteadfastCourierService.is_configured', return_value=True), \
+             patch('store.steadfast.SteadfastCourierService.get_delivery_status_by_cid', return_value={'success': True, 'delivery_status': 'delivered'}):
+            status = order.sync_courier_status()
+            order.refresh_from_db()
+            self.assertEqual(status, 'delivered')
+            self.assertEqual(order.order_status, 'DELIVERED')
+            self.assertEqual(order.payment_status, 'PAID')
+
+    def test_steadfast_webhook(self):
+        from store.models import Order
+        import json
+
+        order = Order.objects.create(
+            customer_name='Karim Mia',
+            customer_phone='01812345678',
+            delivery_address='Zindabazar',
+            delivery_city='Sylhet',
+            delivery_zone='OUTSIDE_DHAKA',
+            subtotal=Decimal('760.00'),
+            delivery_fee=Decimal('150.00'),
+            total_amount=Decimal('910.00'),
+            payment_method='COD',
+            payment_status='UNPAID',
+            steadfast_consignment_id='998877',
+            steadfast_tracking_code='SF998877',
+            steadfast_order_status='in_transit',
+            order_status='OUT_FOR_DELIVERY'
+        )
+
+        webhook_url = reverse('store:steadfast_webhook')
+        payload = {
+            'consignment_id': '998877',
+            'invoice': order.order_number,
+            'tracking_code': 'SF998877',
+            'delivery_status': 'delivered'
+        }
+
+        response = self.client.post(webhook_url, data=json.dumps(payload), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['status'], 'success')
+        self.assertEqual(data['order_status'], 'DELIVERED')
+        self.assertEqual(data['payment_status'], 'PAID')
+
+        order.refresh_from_db()
+        self.assertEqual(order.order_status, 'DELIVERED')
+        self.assertEqual(order.payment_status, 'PAID')
+        self.assertEqual(order.steadfast_order_status, 'delivered')

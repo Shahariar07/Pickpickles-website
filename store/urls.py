@@ -20,5 +20,6 @@ urlpatterns = [
     path('404/', views.custom_404_view, name='custom_404'),
     path('500/', views.custom_500_view, name='custom_500'),
     path('api/pathao/webhook/', views.pathao_webhook, name='pathao_webhook'),
+    path('api/steadfast/webhook/', views.steadfast_webhook, name='steadfast_webhook'),
 ]
 

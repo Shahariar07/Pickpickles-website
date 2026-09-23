@@ -244,10 +244,22 @@ class Order(models.Model):
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     
+    # Courier Integration (Pathao & Steadfast)
+    COURIER_CHOICES = [
+        ('PATHAO', 'Pathao Courier'),
+        ('STEADFAST', 'Steadfast Courier'),
+    ]
+    courier_provider = models.CharField(max_length=30, choices=COURIER_CHOICES, default='PATHAO', blank=True, null=True)
+
     # Pathao Courier Tracking & Consignment
     pathao_consignment_id = models.CharField(max_length=100, blank=True, null=True, help_text="Pathao Consignment ID")
     pathao_tracking_code = models.CharField(max_length=100, blank=True, null=True, help_text="Pathao Public Tracking Code")
     pathao_order_status = models.CharField(max_length=50, blank=True, null=True, help_text="Status synced from Pathao Courier")
+
+    # Steadfast Courier Tracking & Consignment
+    steadfast_consignment_id = models.CharField(max_length=100, blank=True, null=True, help_text="Steadfast Consignment ID")
+    steadfast_tracking_code = models.CharField(max_length=100, blank=True, null=True, help_text="Steadfast Public Tracking Code")
+    steadfast_order_status = models.CharField(max_length=50, blank=True, null=True, help_text="Status synced from Steadfast Courier")
     
     # Payment Info
     payment_method = models.CharField(max_length=30, choices=PAYMENT_METHOD_CHOICES, default='BKASH_ONLINE')
@@ -592,6 +604,51 @@ class Order(models.Model):
                 'text': f'{effective_customer_rejections} Customer Rejections / {total} Orders'
             }
 
+    @property
+    def active_courier(self):
+        """Returns the courier used for this order: 'STEADFAST', 'PATHAO', or None."""
+        if self.steadfast_consignment_id or self.courier_provider == 'STEADFAST':
+            return 'STEADFAST'
+        if self.pathao_consignment_id or self.courier_provider == 'PATHAO':
+            return 'PATHAO'
+        return None
+
+    @property
+    def active_courier_name(self):
+        if self.active_courier == 'STEADFAST':
+            return 'Steadfast Courier'
+        if self.active_courier == 'PATHAO':
+            return 'Pathao Courier'
+        return 'Not Dispatched'
+
+    @property
+    def active_consignment_id(self):
+        if self.active_courier == 'STEADFAST':
+            return self.steadfast_consignment_id
+        return self.pathao_consignment_id
+
+    @property
+    def active_tracking_code(self):
+        if self.active_courier == 'STEADFAST':
+            return self.steadfast_tracking_code or self.steadfast_consignment_id
+        return self.pathao_tracking_code or self.pathao_consignment_id
+
+    @property
+    def active_courier_status(self):
+        if self.active_courier == 'STEADFAST':
+            return self.steadfast_order_status
+        return self.pathao_order_status
+
+    @property
+    def active_tracking_url(self):
+        if self.active_courier == 'STEADFAST':
+            code = self.steadfast_tracking_code or self.steadfast_consignment_id
+            return f"https://steadfast.com.bd/tracking/{code}" if code else "https://steadfast.com.bd/tracking"
+        elif self.active_courier == 'PATHAO':
+            cid = self.pathao_consignment_id
+            return f"https://merchant.pathao.com/tracking?consignment_id={cid}" if cid else "https://merchant.pathao.com/tracking"
+        return None
+
     def sync_pathao_status(self):
         """
         Syncs live consignment tracking status from Pathao Courier Developer API and updates order_status.
@@ -642,6 +699,32 @@ class Order(models.Model):
         except Exception:
             pass
         return self.pathao_order_status
+
+    def sync_steadfast_status(self):
+        """
+        Syncs live consignment tracking status from Steadfast Courier API and updates order_status.
+        """
+        if not self.steadfast_consignment_id and not self.steadfast_tracking_code and not self.order_number:
+            return None
+        try:
+            from store.steadfast import SteadfastCourierService
+            service = SteadfastCourierService()
+            if not service.is_configured():
+                return None
+            return service.sync_order_status(self)
+        except Exception:
+            pass
+        return self.steadfast_order_status
+
+    def sync_courier_status(self):
+        """
+        Automatically syncs status from whichever courier service the order was dispatched with.
+        """
+        if self.active_courier == 'STEADFAST':
+            return self.sync_steadfast_status()
+        elif self.active_courier == 'PATHAO':
+            return self.sync_pathao_status()
+        return None
 
     def __str__(self):
         return f"Order #{self.order_number} - {self.customer_name} (৳{self.total_amount})"

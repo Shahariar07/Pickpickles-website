@@ -47,8 +47,25 @@
             </span>
         </div>
 
-        <!-- Right: Primary Actions (Single Pathao Button) -->
+        <!-- Right: Primary Actions (Steadfast & Pathao Courier Buttons) -->
         <div class="flex items-center gap-2 flex-wrap shrink-0">
+            <!-- Steadfast Dispatch / Track / Sync Button -->
+            {% if order.steadfast_consignment_id %}
+            <a href="{% url 'dashboard:sync_single_steadfast_order' order.order_number %}" class="bg-cyan-700 hover:bg-cyan-800 text-white text-xs font-black px-3.5 py-2 rounded-xl shadow-2xs flex items-center gap-1.5 transition" title="Fetch live tracking & delivery status from Steadfast Courier API">
+                <i class="fa-solid fa-rotate text-white"></i>
+                <span>Sync Steadfast</span>
+            </a>
+            <a href="https://steadfast.com.bd/tracking/{{ order.steadfast_tracking_code|default:order.steadfast_consignment_id }}" target="_blank" class="bg-cyan-50 hover:bg-cyan-100 text-cyan-800 text-xs font-black px-3.5 py-2 rounded-xl border border-cyan-200 flex items-center gap-1.5 transition shadow-2xs" title="Track on Steadfast Courier Portal">
+                <i class="fa-solid fa-truck-fast text-cyan-600"></i>
+                <span>Steadfast Track</span>
+            </a>
+            {% elif order.order_status not in 'DELIVERED,CANCELLED' %}
+            <button type="button" onclick="openSteadfastModal()" class="bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-black px-3.5 py-2 rounded-xl shadow-xs flex items-center gap-1.5 transition cursor-pointer active:scale-95" title="Dispatch order with Steadfast Courier">
+                <i class="fa-solid fa-truck-fast"></i>
+                <span>Send to Steadfast</span>
+            </button>
+            {% endif %}
+
             <!-- Pathao Dispatch / Track / Sync Button -->
             {% if order.pathao_consignment_id %}
             <a href="{% url 'dashboard:sync_single_pathao_order' order.order_number %}" class="bg-red-600 hover:bg-red-700 text-white text-xs font-black px-3.5 py-2 rounded-xl shadow-2xs flex items-center gap-1.5 transition" title="Fetch live tracking & delivery status from Pathao Courier API">
@@ -56,11 +73,11 @@
                 <span>Sync Pathao</span>
             </a>
             <a href="https://merchant.pathao.com/tracking?consignment_id={{ order.pathao_consignment_id }}" target="_blank" class="bg-red-50 hover:bg-red-100 text-red-700 text-xs font-black px-3.5 py-2 rounded-xl border border-red-200 flex items-center gap-1.5 transition shadow-2xs" title="Track on Pathao Merchant Portal">
-                <i class="fa-solid fa-truck-fast text-red-600"></i>
+                <i class="fa-solid fa-paper-plane text-red-600"></i>
                 <span>Pathao Track</span>
             </a>
-            {% elif order.order_status != 'CANCELLED' %}
-            <button type="button" onclick="openPathaoModal()" class="bg-[#ea1d24] hover:bg-[#c9141a] text-white text-xs font-black px-4 py-2 rounded-xl shadow-xs flex items-center gap-2 transition cursor-pointer active:scale-95">
+            {% elif order.order_status not in 'DELIVERED,CANCELLED' %}
+            <button type="button" onclick="openPathaoModal()" class="bg-[#ea1d24] hover:bg-[#c9141a] text-white text-xs font-black px-3.5 py-2 rounded-xl shadow-xs flex items-center gap-1.5 transition cursor-pointer active:scale-95" title="Dispatch order with Pathao Courier">
                 <i class="fa-solid fa-paper-plane"></i>
                 <span>Send to Pathao</span>
             </button>
@@ -331,22 +348,53 @@
                 </div>
                 {% endif %}
 
+                <!-- Steadfast Live Consignment Bar (if active) -->
+                {% if order.steadfast_consignment_id %}
+                <div class="flex items-center justify-between text-xs bg-cyan-50/90 p-2.5 rounded-xl border border-cyan-200 shadow-2xs">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <i class="fa-solid fa-truck-fast text-cyan-600"></i>
+                        <span class="text-gray-500 font-bold">Steadfast:</span>
+                        <strong class="font-mono text-gray-900 font-bold bg-white px-1.5 py-0.5 rounded border border-cyan-200">{{ order.steadfast_tracking_code|default:order.steadfast_consignment_id }}</strong>
+                        {% if order.steadfast_order_status %}
+                        <span class="text-[10px] font-black uppercase px-1.5 py-0.5 bg-cyan-100 text-cyan-800 rounded border border-cyan-300">
+                            {{ order.steadfast_order_status }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div class="flex items-center gap-2 font-bold text-xs shrink-0">
+                        <a href="{% url 'dashboard:sync_single_steadfast_order' order.order_number %}" class="bg-cyan-700 hover:bg-cyan-800 text-white px-2 py-0.5 rounded-lg inline-flex items-center gap-1 font-extrabold shadow-2xs transition" title="Fetch live consignment tracking from Steadfast API">
+                            <i class="fa-solid fa-rotate text-[10px]"></i>
+                            <span>Sync</span>
+                        </a>
+                        <a href="https://steadfast.com.bd/tracking/{{ order.steadfast_tracking_code|default:order.steadfast_consignment_id }}" target="_blank" class="text-cyan-700 hover:text-cyan-900 underline flex items-center gap-1">
+                            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                            <span>Track</span>
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
                 <!-- Pathao Live Consignment Bar (if active) -->
                 {% if order.pathao_consignment_id %}
-                <div class="flex items-center justify-between text-xs bg-red-50/80 p-2.5 rounded-xl border border-red-200">
-                    <div class="flex items-center gap-1.5">
-                        <i class="fa-solid fa-truck-fast text-[#ea1d24]"></i>
+                <div class="flex items-center justify-between text-xs bg-red-50/80 p-2.5 rounded-xl border border-red-200 shadow-2xs">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <i class="fa-solid fa-paper-plane text-[#ea1d24]"></i>
                         <span class="text-gray-500 font-bold">Pathao:</span>
                         <strong class="font-mono text-gray-900 font-bold bg-white px-1.5 py-0.5 rounded border border-red-200">{{ order.pathao_tracking_code|default:order.pathao_consignment_id }}</strong>
+                        {% if order.pathao_order_status %}
+                        <span class="text-[10px] font-black uppercase px-1.5 py-0.5 bg-red-100 text-red-800 rounded border border-red-300">
+                            {{ order.pathao_order_status }}
+                        </span>
+                        {% endif %}
                     </div>
-                    <div class="flex items-center gap-2.5 font-bold text-xs">
+                    <div class="flex items-center gap-2 font-bold text-xs shrink-0">
                         <a href="{% url 'dashboard:sync_single_pathao_order' order.order_number %}" class="bg-red-600 hover:bg-red-700 text-white px-2 py-0.5 rounded-lg inline-flex items-center gap-1 font-extrabold shadow-2xs transition" title="Fetch live consignment tracking from Pathao Courier API">
                             <i class="fa-solid fa-rotate text-[10px]"></i>
                             <span>Sync</span>
                         </a>
                         <a href="https://merchant.pathao.com/tracking?consignment_id={{ order.pathao_consignment_id }}" target="_blank" class="text-red-600 hover:text-red-800 underline flex items-center gap-1">
                             <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-                            <span>Track on Pathao</span>
+                            <span>Track</span>
                         </a>
                     </div>
                 </div>
@@ -700,6 +748,89 @@
     </div>
 </div>
 
+<!-- STEADFAST DISPATCH CONFIRMATION MODAL -->
+<div id="steadfastDispatchModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+            <div class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-2xl bg-cyan-600/10 text-cyan-700 flex items-center justify-center text-lg font-black">
+                    <i class="fa-solid fa-truck-fast"></i>
+                </div>
+                <div>
+                    <h3 class="font-display font-black text-base text-gray-900">Dispatch with Steadfast</h3>
+                    <p class="text-[11px] text-gray-500 font-medium">Steadfast Courier Merchant API</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeSteadfastModal()" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 flex items-center justify-center transition cursor-pointer">
+                <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+        </div>
+
+        <!-- Order Summary Card inside Modal -->
+        <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100 space-y-2.5 text-xs">
+            <div class="flex items-center justify-between pb-2 border-b border-gray-200/60">
+                <span class="text-gray-500">Invoice / Order #:</span>
+                <strong class="text-brand-800 font-bold font-mono">#{{ order.order_number }}</strong>
+            </div>
+            
+            <div class="flex items-center justify-between">
+                <span class="text-gray-500">Recipient Name:</span>
+                <strong class="text-gray-900 font-bold">{{ order.customer_name }}</strong>
+            </div>
+
+            <div class="flex items-center justify-between">
+                <span class="text-gray-500">Contact Phone:</span>
+                <strong class="text-gray-900 font-mono font-bold">{{ order.customer_phone }}</strong>
+            </div>
+
+            <div class="flex items-start justify-between gap-3">
+                <span class="text-gray-500 shrink-0">Delivery Address:</span>
+                <span class="text-gray-800 text-right font-medium">{{ order.delivery_address }}{% if order.delivery_city %}, {{ order.delivery_city }}{% endif %}</span>
+            </div>
+
+            <div class="flex items-center justify-between">
+                <span class="text-gray-500">Delivery Zone:</span>
+                <span class="font-bold text-gray-800">{{ order.get_delivery_zone_display|default:order.delivery_zone }}</span>
+            </div>
+
+            <div class="flex items-center justify-between pt-2 border-t border-gray-200/60">
+                <span class="text-gray-500">Parcel Content:</span>
+                <span class="text-gray-900 font-bold">{{ order.total_items_count }} Jar(s) ({{ order.total_weight_kg }} kg)</span>
+            </div>
+
+            <div class="flex items-center justify-between bg-white p-2.5 rounded-xl border border-gray-200">
+                <span class="font-bold text-gray-700">Cash on Delivery (COD):</span>
+                <div class="text-right">
+                    {% if order.payment_status == 'PAID' %}
+                    <span class="font-display font-black text-sm text-emerald-600">৳0 (Already Paid)</span>
+                    <span class="text-[10px] block font-bold text-gray-500">Payment: PAID</span>
+                    {% else %}
+                    <span class="font-display font-black text-sm text-cyan-800">৳{{ order.total_amount }}</span>
+                    <span class="text-[10px] block font-bold text-gray-500">Payment: UNPAID (Collect COD)</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Submission -->
+        <form method="POST" action="{% url 'dashboard:dispatch_order_to_steadfast' order.order_number %}">
+            {% csrf_token %}
+            <div class="flex items-center justify-end gap-2.5 pt-2">
+                <button type="button" onclick="closeSteadfastModal()" class="px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs transition cursor-pointer">
+                    Cancel
+                </button>
+                <button type="submit" class="px-5 py-2.5 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white font-bold text-xs transition shadow-md cursor-pointer flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-truck-fast"></i>
+                    <span>Confirm & Send to Steadfast</span>
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>
+
 <script>
 function openEditCustomerModal() {
     document.getElementById('editCustomerModal').classList.remove('hidden');
@@ -727,6 +858,13 @@ function openPathaoModal() {
 }
 function closePathaoModal() {
     document.getElementById('pathaoDispatchModal').classList.add('hidden');
+}
+
+function openSteadfastModal() {
+    document.getElementById('steadfastDispatchModal').classList.remove('hidden');
+}
+function closeSteadfastModal() {
+    document.getElementById('steadfastDispatchModal').classList.add('hidden');
 }
 </script>
 

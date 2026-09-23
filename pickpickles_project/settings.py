@@ -203,6 +203,12 @@ PATHAO_USERNAME = os.environ.get('PATHAO_USERNAME', '')
 PATHAO_PASSWORD = os.environ.get('PATHAO_PASSWORD', '')
 PATHAO_STORE_ID = os.environ.get('PATHAO_STORE_ID', '')
 
+# Steadfast Courier Merchant API Configuration
+_raw_sf_url = os.environ.get('STEADFAST_BASE_URL', 'https://portal.packzy.com/api/v1')
+STEADFAST_BASE_URL = _raw_sf_url.replace('portal.steadfast.com.bd', 'portal.packzy.com') if _raw_sf_url else 'https://portal.packzy.com/api/v1'
+STEADFAST_API_KEY = os.environ.get('STEADFAST_API_KEY', '')
+STEADFAST_SECRET_KEY = os.environ.get('STEADFAST_SECRET_KEY', '')
+
 
 # ============================================
 # Production Security Hardening (SSL, Cookies, HSTS, Headers)

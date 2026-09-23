@@ -14,6 +14,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib.auth.models import User
 from store.models import Order, OrderItem, Product, Category, Review, calculate_pathao_delivery_fee
 from store.pathao import PathaoCourierService
+from store.steadfast import SteadfastCourierService
 from .models import Expense, ExpenseCategory, DamageLog, OrderReturn, StockLog
 
 
@@ -566,6 +567,32 @@ def dispatch_order_to_pathao(request, order_number):
 
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
+def dispatch_order_to_steadfast(request, order_number):
+    order = get_object_or_404(Order, order_number=order_number)
+    fallback_url = request.META.get('HTTP_REFERER') or reverse('dashboard:order_detail', kwargs={'order_number': order_number})
+
+    if request.method == 'POST':
+        steadfast_service = SteadfastCourierService()
+
+        if not steadfast_service.is_configured():
+            messages.warning(request, "Steadfast API is not configured. Please add STEADFAST_API_KEY and STEADFAST_SECRET_KEY in your environment or settings.")
+            return redirect(fallback_url)
+
+        result = steadfast_service.create_order(order)
+        if result.get('success'):
+            if order.order_status == 'PENDING':
+                adjust_inventory_for_order_status_change(order, 'PENDING', 'CONFIRMED')
+                order.order_status = 'CONFIRMED'
+                order.save(update_fields=['order_status'])
+
+            messages.success(request, result.get('message', f'Order #{order.order_number} dispatched to Steadfast Courier!'))
+        else:
+            messages.error(request, result.get('message', 'Failed to dispatch to Steadfast.'))
+
+    return redirect(fallback_url)
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
 def sync_all_pathao_orders(request):
     """
     1-Click Bulk Sync: Query Pathao Courier API for all active orders with consignment IDs.
@@ -597,6 +624,67 @@ def sync_all_pathao_orders(request):
 
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
+def sync_all_steadfast_orders(request):
+    """
+    1-Click Bulk Sync: Query Steadfast Courier API for all active orders with consignment IDs.
+    Automatically marks orders as DELIVERED and payment as PAID when delivered.
+    """
+    active_orders = Order.objects.filter(
+        steadfast_consignment_id__isnull=False,
+        order_status__in=['PENDING', 'CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY']
+    )
+    synced_count = 0
+    delivered_count = 0
+
+    for order in active_orders:
+        old_status = order.order_status
+        new_status = order.sync_steadfast_status()
+        if new_status:
+            synced_count += 1
+            if old_status != order.order_status:
+                adjust_inventory_for_order_status_change(order, old_status, order.order_status, user=request.user)
+            if old_status != 'DELIVERED' and order.order_status == 'DELIVERED':
+                delivered_count += 1
+
+    if synced_count > 0:
+        messages.success(request, f"Synced {synced_count} active Steadfast orders. {delivered_count} newly marked as Delivered 🎉")
+    else:
+        messages.info(request, "No active Steadfast orders needed syncing, or Steadfast API is not configured.")
+
+    return redirect(request.META.get('HTTP_REFERER') or 'dashboard:orders')
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def sync_all_courier_orders(request):
+    """
+    Unified 1-Click Sync for all active orders across both Pathao and Steadfast couriers.
+    """
+    active_orders = Order.objects.filter(
+        Q(pathao_consignment_id__isnull=False) | Q(steadfast_consignment_id__isnull=False),
+        order_status__in=['PENDING', 'CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY']
+    )
+    synced_count = 0
+    delivered_count = 0
+
+    for order in active_orders:
+        old_status = order.order_status
+        new_status = order.sync_courier_status()
+        if new_status:
+            synced_count += 1
+            if old_status != order.order_status:
+                adjust_inventory_for_order_status_change(order, old_status, order.order_status, user=request.user)
+            if old_status != 'DELIVERED' and order.order_status == 'DELIVERED':
+                delivered_count += 1
+
+    if synced_count > 0:
+        messages.success(request, f"Synced {synced_count} active courier orders (Pathao & Steadfast). {delivered_count} newly marked as Delivered 🎉")
+    else:
+        messages.info(request, "No active courier orders needed syncing, or courier APIs are not configured.")
+
+    return redirect(request.META.get('HTTP_REFERER') or 'dashboard:orders')
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
 def sync_single_pathao_order(request, order_number):
     """
     1-Click Single Order Sync with Pathao Courier API.
@@ -614,6 +702,30 @@ def sync_single_pathao_order(request, order_number):
         else:
             messages.info(request, "Could not fetch updated status from Pathao Courier API or no new status update.")
             
+    referer = request.META.get('HTTP_REFERER')
+    if referer:
+        return redirect(referer)
+    return redirect('dashboard:order_detail', order_number=order.order_number)
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def sync_single_steadfast_order(request, order_number):
+    """
+    1-Click Single Order Sync with Steadfast Courier API.
+    """
+    order = get_object_or_404(Order, order_number=order_number)
+    if not order.steadfast_consignment_id and not order.steadfast_tracking_code:
+        messages.warning(request, f"Order #{order.order_number} has not been dispatched to Steadfast yet.")
+    else:
+        old_status = order.order_status
+        status = order.sync_steadfast_status()
+        if status:
+            if old_status != order.order_status:
+                adjust_inventory_for_order_status_change(order, old_status, order.order_status, user=request.user)
+            messages.success(request, f"Steadfast status updated: {order.steadfast_order_status} (Order status: {order.get_order_status_display()})")
+        else:
+            messages.info(request, "Could not fetch updated status from Steadfast Courier API or no new status update.")
+
     referer = request.META.get('HTTP_REFERER')
     if referer:
         return redirect(referer)
@@ -2475,24 +2587,40 @@ def customer_insights_api(request):
     success_rate = round((delivered_count / total_orders * 100), 1) if total_orders > 0 else 0
     formatted_phone = f"0{last_10}" if len(last_10) == 10 else phone
     
-    # Live Pathao Tracking check on latest consignment
+    # Live Courier Tracking check (Pathao & Steadfast)
     pathao_svc = PathaoCourierService()
-    pathao_consignments = []
+    steadfast_svc = SteadfastCourierService()
+    courier_consignments = []
     
     orders_data = []
     for o in matching_orders.order_by('-created_at')[:8]:
-        p_status = o.pathao_order_status or ''
-        # If order has consignment ID, check live info from Pathao
-        if o.pathao_consignment_id and pathao_svc.is_configured():
+        c_status = o.active_courier_status or ''
+        # If order has Steadfast consignment, check live info
+        if o.steadfast_consignment_id and steadfast_svc.is_configured():
+            try:
+                info_res = steadfast_svc.get_delivery_status_by_cid(o.steadfast_consignment_id)
+                if info_res.get('success') and info_res.get('delivery_status'):
+                    c_status = info_res.get('delivery_status')
+                    courier_consignments.append({
+                        'courier': 'Steadfast',
+                        'consignment_id': o.steadfast_consignment_id,
+                        'order_number': o.order_number,
+                        'status': c_status,
+                    })
+            except Exception:
+                pass
+        # If order has Pathao consignment, check live info
+        elif o.pathao_consignment_id and pathao_svc.is_configured():
             try:
                 info_res = pathao_svc.get_order_info(o.pathao_consignment_id)
                 if info_res.get('success'):
                     p_info = info_res.get('data', {})
-                    p_status = p_info.get('order_status') or p_info.get('delivery_status') or p_status
-                    pathao_consignments.append({
+                    c_status = p_info.get('order_status') or p_info.get('delivery_status') or c_status
+                    courier_consignments.append({
+                        'courier': 'Pathao',
                         'consignment_id': o.pathao_consignment_id,
                         'order_number': o.order_number,
-                        'status': p_status,
+                        'status': c_status,
                     })
             except Exception:
                 pass
@@ -2503,8 +2631,15 @@ def customer_insights_api(request):
             'status_code': o.order_status,
             'total_amount': float(o.total_amount),
             'created_at': o.created_at.strftime('%d %b, %Y'),
+            'courier': o.active_courier_name,
+            'courier_code': o.active_courier,
+            'consignment_id': o.active_consignment_id or '',
+            'tracking_code': o.active_tracking_code or '',
             'pathao_id': o.pathao_consignment_id or '',
-            'pathao_status': p_status,
+            'steadfast_id': o.steadfast_consignment_id or '',
+            'courier_status': c_status,
+            'pathao_status': o.pathao_order_status or '',
+            'steadfast_status': o.steadfast_order_status or '',
         })
     
     # Identify courier-fault returns vs customer-fault cancellations
@@ -2561,14 +2696,11 @@ def customer_insights_api(request):
         trust_title = '⚪ ফ্রেশ নম্বর (কোনো ব্যাড হিস্ট্রি নেই)'
         trust_badge_class = 'bg-slate-100 text-slate-800 border-slate-200'
         trust_desc = 'কোনো রেকর্ড পাওয়া যায়নি।'
-    pathao_api_info = {
-        'connected': pathao_svc.is_configured(),
-        'store_id': pathao_svc.store_id or '446187',
-        'store_name': 'Pick pickles',
-        'hub_name': 'Faridpur Hub',
-        'api_host': pathao_svc.base_url,
-        'consignments_checked': len(pathao_consignments),
-        'consignments': pathao_consignments,
+    courier_api_info = {
+        'pathao_connected': pathao_svc.is_configured(),
+        'steadfast_connected': steadfast_svc.is_configured(),
+        'consignments_checked': len(courier_consignments),
+        'consignments': courier_consignments,
     }
 
     return JsonResponse({
@@ -2590,8 +2722,10 @@ def customer_insights_api(request):
         'trust_title': trust_title,
         'trust_badge_class': trust_badge_class,
         'trust_desc': trust_desc,
-        'pathao_api_info': pathao_api_info,
-        'pathao_consignments': pathao_consignments,
+        'courier_api_info': courier_api_info,
+        'pathao_api_info': courier_api_info,
+        'courier_consignments': courier_consignments,
+        'pathao_consignments': courier_consignments,
         'recent_orders': orders_data,
     })
 

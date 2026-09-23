@@ -45,10 +45,10 @@
                     <i class="{{ order.status_icon }}"></i>
                     <span>{{ order.get_order_status_display }}</span>
                 </span>
-                {% if order.pathao_order_status %}
-                <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                    <i class="fa-solid fa-truck-fast text-[11px] text-blue-600"></i>
-                    <span>Courier: {{ order.pathao_order_status }}</span>
+                {% if order.active_courier_status %}
+                <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold {% if order.active_courier == 'STEADFAST' %}bg-cyan-50 text-cyan-700 border border-cyan-200{% else %}bg-blue-50 text-blue-700 border border-blue-200{% endif %}">
+                    <i class="fa-solid fa-truck-fast text-[11px] {% if order.active_courier == 'STEADFAST' %}text-cyan-600{% else %}text-blue-600{% endif %}"></i>
+                    <span>{{ order.active_courier_name }}: {{ order.active_courier_status }}</span>
                 </span>
                 {% endif %}
             </div>
@@ -132,7 +132,7 @@
         </div>
         {% endif %}
 
-        {% if order.pathao_consignment_id %}
+        {% if order.active_consignment_id or order.active_tracking_code %}
         <!-- Courier Live Tracking Info Box -->
         <div class="bg-gradient-to-r from-emerald-50 via-white to-blue-50 p-4 sm:p-5 rounded-2xl border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
             <div class="flex items-center gap-3">
@@ -140,16 +140,18 @@
                     <i class="fa-solid fa-truck-fast"></i>
                 </div>
                 <div>
-                    <h4 class="font-bold text-gray-900 text-sm">Dispatched via Courier</h4>
+                    <h4 class="font-bold text-gray-900 text-sm">Dispatched via {{ order.active_courier_name }}</h4>
                     <p class="text-gray-500 mt-0.5">
-                        Tracking Code: <strong class="font-mono text-gray-900 bg-white px-2 py-0.5 rounded border border-gray-200">{{ order.pathao_tracking_code|default:order.pathao_consignment_id }}</strong>
+                        Tracking Code: <strong class="font-mono text-gray-900 bg-white px-2 py-0.5 rounded border border-gray-200">{{ order.active_tracking_code }}</strong>
                     </p>
                 </div>
             </div>
-            <a href="https://merchant.pathao.com/tracking?consignment_id={{ order.pathao_consignment_id }}" target="_blank" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-4 py-2.5 rounded-xl shadow-xs inline-flex items-center justify-center gap-1.5 transition whitespace-nowrap">
-                <span>Live Courier Tracking</span>
+            {% if order.active_tracking_url %}
+            <a href="{{ order.active_tracking_url }}" target="_blank" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-4 py-2.5 rounded-xl shadow-xs inline-flex items-center justify-center gap-1.5 transition whitespace-nowrap">
+                <span>Live {{ order.active_courier_name }} Tracking</span>
                 <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
             </a>
+            {% endif %}
         </div>
         {% endif %}
 

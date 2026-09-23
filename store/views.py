@@ -400,11 +400,10 @@ def order_track(request):
         order = Order.objects.filter(q_filter).first()
         
         if order:
-            if order.pathao_consignment_id:
-                try:
-                    order.sync_pathao_status()
-                except Exception:
-                    pass
+            try:
+                order.sync_courier_status()
+            except Exception:
+                pass
         else:
             messages.error(request, f'No order found matching "{query}". Please verify your Order ID (e.g. PKP-00001) or Phone number.')
 
@@ -615,5 +614,76 @@ def pathao_webhook(request):
         'order_status': order.order_status,
         'payment_status': order.payment_status,
         'pathao_order_status': order.pathao_order_status,
+    })
+
+
+@csrf_exempt
+def steadfast_webhook(request):
+    """
+    Steadfast Courier Webhook / Callback Endpoint.
+    Receives instant parcel status updates from Steadfast Courier.
+    Endpoint: POST /api/steadfast/webhook/
+    """
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Only POST method is accepted'}, status=405)
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        data = request.POST.dict()
+
+    consignment_id = str(data.get('consignment_id') or '').strip()
+    invoice = str(data.get('invoice') or data.get('order_number') or data.get('merchant_order_id') or '').strip()
+    tracking_code = str(data.get('tracking_code') or '').strip()
+    raw_status = str(data.get('status') or data.get('delivery_status') or data.get('event') or '').strip()
+
+    if not consignment_id and not invoice and not tracking_code:
+        return JsonResponse({'status': 'error', 'message': 'consignment_id, invoice, or tracking_code required'}, status=400)
+
+    order = None
+    if invoice:
+        order = Order.all_objects.filter(order_number=invoice).first()
+    if not order and consignment_id:
+        order = Order.all_objects.filter(steadfast_consignment_id=consignment_id).first()
+    if not order and tracking_code:
+        order = Order.all_objects.filter(steadfast_tracking_code=tracking_code).first()
+
+    if not order:
+        return JsonResponse({'status': 'error', 'message': 'Order not found in database'}, status=404)
+
+    if raw_status:
+        order.steadfast_order_status = raw_status
+        clean = raw_status.lower().replace('-', '_').replace(' ', '_')
+
+        status_map = {
+            'in_review': 'CONFIRMED',
+            'pending': 'CONFIRMED',
+            'picked_up': 'PACKING',
+            'received_at_hub': 'PACKING',
+            'in_transit': 'OUT_FOR_DELIVERY',
+            'hold': 'OUT_FOR_DELIVERY',
+            'delivered': 'DELIVERED',
+            'delivered_approval_pending': 'DELIVERED',
+            'partial_delivered': 'DELIVERED',
+            'partial_delivered_approval_pending': 'DELIVERED',
+            'cancelled': 'CANCELLED',
+            'cancelled_approval_pending': 'CANCELLED',
+            'unknown': 'CANCELLED',
+        }
+
+        if clean in status_map:
+            mapped = status_map[clean]
+            order.order_status = mapped
+            if mapped == 'DELIVERED' and order.payment_status == 'UNPAID':
+                order.payment_status = 'PAID'
+
+        order.save(update_fields=['steadfast_order_status', 'order_status', 'payment_status'])
+
+    return JsonResponse({
+        'status': 'success',
+        'order_number': order.order_number,
+        'order_status': order.order_status,
+        'payment_status': order.payment_status,
+        'steadfast_order_status': order.steadfast_order_status,
     })
 
