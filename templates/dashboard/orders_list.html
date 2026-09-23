@@ -289,6 +289,11 @@
                     <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
                     <span>Manage</span>
                 </a>
+
+                <!-- Fraud Check Button -->
+                <button type="button" onmouseenter="prefetchFraud('{{ order.customer_phone|escapejs }}')" onclick="openFraudModal('{{ order.customer_phone|escapejs }}', '{{ order.customer_name|escapejs }}', '{{ order.order_number }}')" title="Steadfast Fraud Check" class="p-1.5 rounded-xl bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-200 text-xs transition flex items-center justify-center shadow-2xs cursor-pointer active:scale-95">
+                    <i class="fa-solid fa-shield-halved text-cyan-600"></i>
+                </button>
                 
                 <!-- Steadfast Courier Button / Tracking -->
                 {% if order.steadfast_consignment_id %}
@@ -434,6 +439,17 @@
                         <!-- Action -->
                         <td class="py-3 px-4 sm:pr-6 align-middle text-right">
                             <div class="flex items-center justify-end gap-1">
+                                <!-- Fraud Check Button in Table Actions -->
+                                <button 
+                                    type="button" 
+                                    onmouseenter="prefetchFraud('{{ order.customer_phone|escapejs }}')"
+                                    onclick="openFraudModal('{{ order.customer_phone|escapejs }}', '{{ order.customer_name|escapejs }}', '{{ order.order_number }}')"
+                                    class="p-1 text-cyan-700 hover:text-cyan-900 rounded transition cursor-pointer active:scale-95"
+                                    title="Steadfast Fraud Check"
+                                >
+                                    <i class="fa-solid fa-shield-halved"></i>
+                                </button>
+                                
                                 <!-- Steadfast Courier button in table -->
                                 {% if order.steadfast_consignment_id %}
                                 <a 
@@ -957,6 +973,71 @@
     </div>
 </div>
 
+<!-- FRAUD CHECK MODAL (Steadfast Courier API + Store History) -->
+<div id="fraudCheckModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 space-y-4 shadow-2xl relative max-h-[92vh] overflow-y-auto">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+            <div class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-2xl bg-cyan-600/10 text-cyan-700 flex items-center justify-center text-lg font-black shadow-2xs">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div>
+                    <h3 class="font-display font-black text-base sm:text-lg text-gray-900">Fraud & Delivery Verification</h3>
+                    <p class="text-[11px] text-gray-500 font-medium flex items-center gap-1.5">
+                        <span id="fraud_modal_customer_name" class="font-bold text-gray-800">Customer</span>
+                        <span>•</span>
+                        <span id="fraud_modal_order_number" class="text-brand-700 font-mono font-bold">#PKP-00000</span>
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <span id="fraud_modal_cache_badge" class="hidden text-[10px] font-black text-cyan-800 bg-cyan-100/90 px-1.5 py-0.5 rounded border border-cyan-200">
+                    ⚡ Instant
+                </span>
+                <button 
+                    type="button" 
+                    id="fraud_modal_recheck_btn"
+                    onclick="refreshCurrentFraudModal()"
+                    class="text-[11px] font-bold text-cyan-800 hover:text-cyan-900 bg-cyan-50 hover:bg-cyan-100 border border-cyan-200 px-2.5 py-1 rounded-xl shadow-2xs transition flex items-center gap-1 cursor-pointer active:scale-95"
+                    title="Bypass cache and check live from Steadfast"
+                >
+                    <i class="fa-solid fa-rotate text-[10px]"></i>
+                    <span>Re-check Live</span>
+                </button>
+                <button type="button" onclick="closeFraudModal()" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 flex items-center justify-center transition cursor-pointer">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Phone & Direct Actions Bar -->
+        <div class="bg-gray-50 p-3 rounded-2xl border border-gray-200/80 flex items-center justify-between gap-2 flex-wrap">
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-400 font-bold uppercase tracking-wider">Phone:</span>
+                <strong id="fraud_modal_phone" class="font-mono text-sm text-gray-900 font-black">01XXXXXXXXX</strong>
+            </div>
+            <div class="flex items-center gap-1.5">
+                <a id="fraud_modal_call_btn" href="#" class="bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold px-2.5 py-1 rounded-xl shadow-2xs transition inline-flex items-center gap-1">
+                    <i class="fa-solid fa-phone text-[10px]"></i> <span>Call</span>
+                </a>
+                <a id="fraud_modal_wa_btn" href="#" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-2.5 py-1 rounded-xl shadow-2xs transition inline-flex items-center gap-1">
+                    <i class="fa-brands fa-whatsapp text-sm"></i> <span>WhatsApp</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Modal Dynamic Content Area -->
+        <div id="fraudModalContent" class="space-y-3">
+            <div class="py-8 text-center space-y-2">
+                <i class="fa-solid fa-circle-notch fa-spin text-cyan-600 text-2xl"></i>
+                <p class="text-xs text-gray-600 font-bold">Connecting to Steadfast Courier API & Analyzing History...</p>
+        </div>
+
+    </div>
+</div>
+
 <script>
 function openManualOrderModal() {
     document.getElementById('manualOrderModal').classList.remove('hidden');
@@ -1118,6 +1199,209 @@ function openSteadfastModal(orderNumber, customerName, customerPhone, deliveryAd
 }
 function closeSteadfastModal() {
     document.getElementById('steadfastDispatchModal').classList.add('hidden');
+}
+
+/* ========================================================
+   STEADFAST FRAUD CHECK LIVE MODAL HANDLER (FAST & OPTIMIZED)
+   ======================================================== */
+const clientOrdersFraudCache = {};
+let currentFraudModalContext = { phone: '', customerName: '', orderNumber: '' };
+
+// Background hover prefetch so clicking opens instantly with 0ms wait
+function prefetchFraud(phone) {
+    if (!phone) return;
+    const clean = phone.replace(/[^0-9]/g, '');
+    const cleanPhone = clean.length > 11 ? clean.slice(-11) : clean;
+    if (clientOrdersFraudCache[cleanPhone]) return;
+
+    fetch(`/dashboard/api/fraud-check/?phone=${encodeURIComponent(cleanPhone)}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                clientOrdersFraudCache[cleanPhone] = data;
+            }
+        })
+        .catch(() => {});
+}
+
+function refreshCurrentFraudModal() {
+    if (currentFraudModalContext.phone) {
+        openFraudModal(
+            currentFraudModalContext.phone, 
+            currentFraudModalContext.customerName, 
+            currentFraudModalContext.orderNumber, 
+            true
+        );
+    }
+}
+
+async function openFraudModal(phone, customerName, orderNumber, isForce = false) {
+    currentFraudModalContext = { phone, customerName, orderNumber };
+
+    document.getElementById('fraud_modal_customer_name').textContent = customerName || 'Customer';
+    document.getElementById('fraud_modal_order_number').textContent = orderNumber ? '#' + orderNumber : '';
+    document.getElementById('fraud_modal_phone').textContent = phone;
+
+    const clean = phone.replace(/[^0-9]/g, '');
+    const last10 = clean.slice(-10);
+    const cleanPhone = clean.length > 11 ? clean.slice(-11) : clean;
+
+    document.getElementById('fraud_modal_call_btn').href = 'tel:' + phone;
+    document.getElementById('fraud_modal_wa_btn').href = `https://wa.me/880${last10}?text=Hello%20${encodeURIComponent(customerName || '')},%20from%20Pickpickles`;
+
+    const modal = document.getElementById('fraudCheckModal');
+    const content = document.getElementById('fraudModalContent');
+    const badge = document.getElementById('fraud_modal_cache_badge');
+    const recheckBtn = document.getElementById('fraud_modal_recheck_btn');
+    modal.classList.remove('hidden');
+
+    // 1. Instant Render from Memory Cache (0ms) if not forced
+    if (!isForce && clientOrdersFraudCache[cleanPhone]) {
+        renderOrdersFraudContent(clientOrdersFraudCache[cleanPhone], content, badge);
+        return;
+    }
+
+    if (badge) badge.classList.add('hidden');
+    if (recheckBtn) {
+        recheckBtn.disabled = true;
+        recheckBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-[10px]"></i> <span>Checking...</span>';
+    }
+
+    content.innerHTML = `
+        <div class="py-8 text-center space-y-2">
+            <i class="fa-solid fa-circle-notch fa-spin text-cyan-600 text-2xl"></i>
+            <p class="text-xs text-gray-600 font-bold">Connecting to Steadfast Courier API & Analyzing History...</p>
+        </div>
+    `;
+
+    try {
+        const url = `/dashboard/api/fraud-check/?phone=${encodeURIComponent(phone)}${isForce ? '&force=1' : ''}`;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.success) {
+            clientOrdersFraudCache[cleanPhone] = data;
+            renderOrdersFraudContent(data, content, badge);
+        } else {
+            content.innerHTML = `
+                <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs">
+                    <i class="fa-solid fa-circle-xmark text-rose-600"></i>
+                    <span class="font-bold">Error:</span> ${data.message || 'Failed to fetch fraud record.'}
+                </div>
+            `;
+        }
+    } catch (e) {
+        content.innerHTML = `
+            <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs">
+                <i class="fa-solid fa-circle-xmark text-rose-600"></i>
+                <span class="font-bold">Network Error:</span> Failed to connect to server.
+            </div>
+        `;
+    } finally {
+        if (recheckBtn) {
+            recheckBtn.disabled = false;
+            recheckBtn.innerHTML = '<i class="fa-solid fa-rotate text-[10px]"></i> <span>Re-check Live</span>';
+        }
+    }
+}
+
+function renderOrdersFraudContent(data, content, badge) {
+    if (badge) {
+        if (data.from_cache) {
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    }
+
+    const sf = data.steadfast || {};
+    const local = data.local || {};
+
+    let sfHtml = '';
+    if (sf.success) {
+        sfHtml = `
+            <div class="p-4 rounded-2xl border ${sf.badge_class} space-y-2.5">
+                <div class="flex items-center justify-between gap-2 flex-wrap">
+                    <span class="font-extrabold flex items-center gap-1.5 text-xs">
+                        <i class="fa-solid fa-truck-fast text-cyan-700"></i>
+                        <span>Steadfast Network: ${sf.risk_title}</span>
+                    </span>
+                    <span class="text-[10px] font-black uppercase tracking-wider bg-white/90 px-2 py-0.5 rounded shadow-2xs">
+                        ${sf.success_rate}% Delivery Rate
+                    </span>
+                </div>
+
+                <!-- 3-Pill Steadfast Stats Grid -->
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div class="bg-white/90 p-2 rounded-xl border border-current/10 shadow-2xs">
+                        <span class="text-[10px] opacity-75 block font-bold">Steadfast Parcels</span>
+                        <strong class="text-base font-black text-gray-900">${sf.total_parcels}</strong>
+                    </div>
+                    <div class="bg-white/90 p-2 rounded-xl border border-current/10 shadow-2xs">
+                        <span class="text-[10px] text-emerald-700 block font-bold">Delivered</span>
+                        <strong class="text-base font-black text-emerald-700">${sf.total_delivered}</strong>
+                    </div>
+                    <div class="bg-white/90 p-2 rounded-xl border border-current/10 shadow-2xs">
+                        <span class="text-[10px] text-rose-700 block font-bold">Cancelled / Returned</span>
+                        <strong class="text-base font-black text-rose-700">${sf.total_cancelled}</strong>
+                    </div>
+                </div>
+
+                <p class="text-xs leading-relaxed opacity-90 pt-1">
+                    ${sf.risk_desc}
+                </p>
+            </div>
+        `;
+    } else {
+        sfHtml = `
+            <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-1">
+                <div class="font-bold flex items-center gap-1.5">
+                    <i class="fa-solid fa-circle-exclamation text-amber-600"></i>
+                    <span>Steadfast API Notice:</span>
+                </div>
+                <p class="text-[11px] text-amber-800">${sf.message || 'Steadfast API not reachable or credentials missing.'}</p>
+            </div>
+        `;
+    }
+
+    const localHtml = `
+        <div class="p-4 rounded-2xl border border-gray-200 bg-gray-50/80 space-y-2.5">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+                <span class="font-extrabold flex items-center gap-1.5 text-xs text-gray-800">
+                    <i class="fa-solid fa-store text-brand-700"></i>
+                    <span>Pickpickles Store History</span>
+                </span>
+                <span class="text-[10px] font-black uppercase tracking-wider bg-white px-2 py-0.5 rounded border border-gray-200 shadow-2xs">
+                    ${local.success_rate}% Store Success
+                </span>
+            </div>
+
+            <div class="grid grid-cols-4 gap-2 text-center text-xs">
+                <div class="bg-white p-2 rounded-xl border border-gray-200 shadow-2xs">
+                    <span class="text-[10px] text-gray-500 block font-bold">Orders</span>
+                    <strong class="text-sm font-black text-gray-900">${local.total_orders}</strong>
+                </div>
+                <div class="bg-white p-2 rounded-xl border border-gray-200 shadow-2xs">
+                    <span class="text-[10px] text-emerald-700 block font-bold">Delivered</span>
+                    <strong class="text-sm font-black text-emerald-700">${local.delivered_count}</strong>
+                </div>
+                <div class="bg-white p-2 rounded-xl border border-gray-200 shadow-2xs">
+                    <span class="text-[10px] text-rose-700 block font-bold">Cancelled</span>
+                    <strong class="text-sm font-black text-rose-700">${local.cancelled_count}</strong>
+                </div>
+                <div class="bg-white p-2 rounded-xl border border-gray-200 shadow-2xs">
+                    <span class="text-[10px] text-brand-700 block font-bold">Total Spent</span>
+                    <strong class="text-sm font-black text-brand-700">৳${local.total_spent.toLocaleString()}</strong>
+                </div>
+            </div>
+        </div>
+    `;
+
+    content.innerHTML = sfHtml + localHtml;
+}
+
+function closeFraudModal() {
+    document.getElementById('fraudCheckModal').classList.add('hidden');
 }
 
 function setOrdersViewMode(mode) {

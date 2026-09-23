@@ -39,4 +39,5 @@ urlpatterns = [
     path('order/<str:order_number>/invoice/', views.order_invoice, name='order_invoice'),
     path('api/order-notifications/', views.order_notifications_api, name='api_order_notifications'),
     path('api/customer-insights/', views.customer_insights_api, name='api_customer_insights'),
+    path('api/fraud-check/', views.steadfast_fraud_check_api, name='api_fraud_check'),
 ]

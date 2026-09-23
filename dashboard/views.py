@@ -1426,15 +1426,15 @@ def stock_ledger(request):
     all_products = Product.objects.all().order_by('name')
     logs_ordered = logs_qs.order_by('-created_at')
 
-    # Pagination (Default: 20 per page)
+    # Pagination (Default: 10 per page)
     page_number = request.GET.get('page', 1)
-    per_page = request.GET.get('per_page', 20)
+    per_page = request.GET.get('per_page', 10)
     try:
         per_page = int(per_page)
         if per_page not in [10, 20, 50, 100]:
-            per_page = 20
+            per_page = 10
     except (ValueError, TypeError):
-        per_page = 20
+        per_page = 10
 
     paginator = Paginator(logs_ordered, per_page)
     try:
@@ -1734,7 +1734,7 @@ def damage_returns_manager(request):
                 messages.error(request, f'Failed to update return: {str(e)}')
             return redirect('dashboard:damage_returns')
 
-    # Aggregations & Detailed Calculations
+    # Aggregations & Detailed Calculations (Full Querysets)
     total_damaged_jars = damage_logs.aggregate(Sum('quantity'))['quantity__sum'] or 0
     total_damage_loss = float(damage_logs.aggregate(Sum('total_loss_bdt'))['total_loss_bdt__sum'] or 0)
 
@@ -1746,9 +1746,65 @@ def damage_returns_manager(request):
 
     total_combined_loss = total_damage_loss + total_courier_fees
 
+    # 1. Courier Returns Pagination
+    ret_page_number = request.GET.get('ret_page', 1)
+    ret_per_page = request.GET.get('ret_per_page', 10)
+    try:
+        ret_per_page = int(ret_per_page)
+        if ret_per_page not in [10, 15, 25, 50]:
+            ret_per_page = 10
+    except (ValueError, TypeError):
+        ret_per_page = 10
+
+    returns_paginator = Paginator(order_returns, ret_per_page)
+    try:
+        returns_page_obj = returns_paginator.page(ret_page_number)
+    except PageNotAnInteger:
+        returns_page_obj = returns_paginator.page(1)
+    except EmptyPage:
+        returns_page_obj = returns_paginator.page(returns_paginator.num_pages)
+
+    try:
+        returns_elided_range = returns_paginator.get_elided_page_range(number=returns_page_obj.number, on_each_side=2, on_ends=1)
+    except Exception:
+        returns_elided_range = returns_paginator.page_range
+
+    # 2. Damage Logs Pagination
+    dmg_page_number = request.GET.get('dmg_page', 1)
+    dmg_per_page = request.GET.get('dmg_per_page', 10)
+    try:
+        dmg_per_page = int(dmg_per_page)
+        if dmg_per_page not in [10, 15, 25, 50]:
+            dmg_per_page = 10
+    except (ValueError, TypeError):
+        dmg_per_page = 10
+
+    damage_paginator = Paginator(damage_logs, dmg_per_page)
+    try:
+        damage_page_obj = damage_paginator.page(dmg_page_number)
+    except PageNotAnInteger:
+        damage_page_obj = damage_paginator.page(1)
+    except EmptyPage:
+        damage_page_obj = damage_paginator.page(damage_paginator.num_pages)
+
+    try:
+        damage_elided_range = damage_paginator.get_elided_page_range(number=damage_page_obj.number, on_each_side=2, on_ends=1)
+    except Exception:
+        damage_elided_range = damage_paginator.page_range
+
     context = {
-        'damage_logs': damage_logs,
-        'order_returns': order_returns,
+        'damage_logs': damage_page_obj,
+        'damage_page_obj': damage_page_obj,
+        'damage_paginator': damage_paginator,
+        'damage_elided_range': damage_elided_range,
+        'dmg_per_page': dmg_per_page,
+
+        'order_returns': returns_page_obj,
+        'returns_page_obj': returns_page_obj,
+        'returns_paginator': returns_paginator,
+        'returns_elided_range': returns_elided_range,
+        'ret_per_page': ret_per_page,
+
         'products': products,
         'orders': orders,
         'damage_reasons': DamageLog.DAMAGE_REASON_CHOICES,
@@ -1849,11 +1905,41 @@ def reviews_manager(request):
             messages.success(request, f'Review for {product.name} added successfully!')
             return redirect('dashboard:reviews')
 
+    total_reviews = reviews.count()
+    approved_count = reviews.filter(is_approved=True).count()
+
+    # Pagination (Default: 10 per page)
+    page_number = request.GET.get('page', 1)
+    per_page = request.GET.get('per_page', 10)
+    try:
+        per_page = int(per_page)
+        if per_page not in [10, 20, 50, 100]:
+            per_page = 10
+    except (ValueError, TypeError):
+        per_page = 10
+
+    paginator = Paginator(reviews, per_page)
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    try:
+        elided_page_range = paginator.get_elided_page_range(number=page_obj.number, on_each_side=2, on_ends=1)
+    except Exception:
+        elided_page_range = paginator.page_range
+
     context = {
-        'reviews': reviews,
+        'reviews': page_obj,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'elided_page_range': elided_page_range,
+        'per_page': per_page,
         'products': products,
-        'total_reviews': reviews.count(),
-        'approved_count': reviews.filter(is_approved=True).count(),
+        'total_reviews': total_reviews,
+        'approved_count': approved_count,
     }
     return render(request, 'dashboard/reviews.html', context)
 
@@ -1989,8 +2075,38 @@ def expense_manager(request):
         'comparisonData': [float(total_revenue), float(total_expenses), max(0, net_profit)]
     }
 
+    # Order expenses consistently
+    expenses_ordered = expenses.order_by('-expense_date', '-created_at')
+
+    # Pagination (Default: 10 per page)
+    page_number = request.GET.get('page', 1)
+    per_page = request.GET.get('per_page', 10)
+    try:
+        per_page = int(per_page)
+        if per_page not in [10, 20, 50, 100]:
+            per_page = 10
+    except (ValueError, TypeError):
+        per_page = 10
+
+    paginator = Paginator(expenses_ordered, per_page)
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    try:
+        elided_page_range = paginator.get_elided_page_range(number=page_obj.number, on_each_side=2, on_ends=1)
+    except Exception:
+        elided_page_range = paginator.page_range
+
     context = {
-        'expenses': expenses,
+        'expenses': page_obj,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'elided_page_range': elided_page_range,
+        'per_page': per_page,
         'dynamic_categories': ExpenseCategory.objects.all(),
         'category_choices': Expense.CATEGORY_CHOICES,
         'payment_choices': Expense.PAYMENT_CHOICES,
@@ -2002,7 +2118,7 @@ def expense_manager(request):
         'net_profit': net_profit,
         'profit_margin': profit_margin,
         'this_month_expenses': this_month_expenses,
-        'expense_count': expenses.count(),
+        'expense_count': paginator.count,
         'expense_chart_json': json.dumps(expense_chart_data),
     }
     return render(request, 'dashboard/expenses.html', context)
@@ -2096,7 +2212,7 @@ def financial_statement(request):
     # 4. Combined Transaction Stream (Delivered Orders + Expenses in chronological order)
     combined_transactions = []
     
-    for order in delivered_qs.order_by('-created_at')[:150]:
+    for order in delivered_qs.order_by('-created_at'):
         combined_transactions.append({
             'date': order.created_at,
             'is_income': True,
@@ -2110,7 +2226,7 @@ def financial_statement(request):
             'url': reverse('dashboard:order_detail', args=[order.order_number]),
         })
 
-    for exp in expenses_qs.order_by('-expense_date', '-created_at')[:150]:
+    for exp in expenses_qs.order_by('-expense_date', '-created_at'):
         combined_transactions.append({
             'date': timezone.make_aware(datetime.datetime.combine(exp.expense_date, datetime.time.min)) if timezone.is_naive(datetime.datetime.combine(exp.expense_date, datetime.time.min)) else exp.created_at,
             'is_income': False,
@@ -2126,6 +2242,29 @@ def financial_statement(request):
 
     # Sort combined transactions by date descending
     combined_transactions.sort(key=lambda x: x['date'], reverse=True)
+
+    # Pagination (Default: 10 per page)
+    page_number = request.GET.get('page', 1)
+    per_page = request.GET.get('per_page', 10)
+    try:
+        per_page = int(per_page)
+        if per_page not in [10, 20, 50, 100]:
+            per_page = 10
+    except (ValueError, TypeError):
+        per_page = 10
+
+    paginator = Paginator(combined_transactions, per_page)
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    try:
+        elided_page_range = paginator.get_elided_page_range(number=page_obj.number, on_each_side=2, on_ends=1)
+    except Exception:
+        elided_page_range = paginator.page_range
 
     context = {
         'period_title': period_title,
@@ -2147,7 +2286,12 @@ def financial_statement(request):
         'net_profit': net_profit,
         'profit_margin': profit_margin,
         'is_profitable': is_profitable,
-        'transactions': combined_transactions,
+        'transactions': page_obj,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'elided_page_range': elided_page_range,
+        'per_page': per_page,
+        'total_transactions_count': paginator.count,
         'now': now,
     }
     return render(request, 'dashboard/statement.html', context)
@@ -2490,9 +2634,36 @@ def expense_categories_manager(request):
             'count': count
         })
 
+    # Pagination (Default: 10 per page)
+    page_number = request.GET.get('page', 1)
+    per_page = request.GET.get('per_page', 10)
+    try:
+        per_page = int(per_page)
+        if per_page not in [10, 20, 50, 100]:
+            per_page = 10
+    except (ValueError, TypeError):
+        per_page = 10
+
+    paginator = Paginator(category_stats, per_page)
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    try:
+        elided_page_range = paginator.get_elided_page_range(number=page_obj.number, on_each_side=2, on_ends=1)
+    except Exception:
+        elided_page_range = paginator.page_range
+
     context = {
-        'category_stats': category_stats,
-        'total_categories': len(category_stats),
+        'category_stats': page_obj,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'elided_page_range': elided_page_range,
+        'per_page': per_page,
+        'total_categories': paginator.count,
         'total_expenses_all': Expense.objects.aggregate(Sum('amount'))['amount__sum'] or 0,
     }
     return render(request, 'dashboard/expense_categories.html', context)
@@ -2728,6 +2899,60 @@ def customer_insights_api(request):
         'pathao_consignments': courier_consignments,
         'recent_orders': orders_data,
     })
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def steadfast_fraud_check_api(request):
+    """
+    Direct Fraud Check API using Steadfast Courier Developer API + Local Store History.
+    """
+    phone = request.GET.get('phone', '').strip() or request.POST.get('phone', '').strip()
+    if not phone:
+        return JsonResponse({'success': False, 'message': 'Phone number is required'}, status=400)
+
+    force = request.GET.get('force', '').lower() in ('1', 'true', 'yes') or request.POST.get('force', '').lower() in ('1', 'true', 'yes')
+
+    clean_digits = ''.join(c for c in phone if c.isdigit())
+    last_10 = clean_digits[-10:] if len(clean_digits) >= 10 else clean_digits
+    formatted_phone = f"0{last_10}" if len(last_10) == 10 else phone
+
+    steadfast_svc = SteadfastCourierService()
+    fraud_result = steadfast_svc.check_fraud(formatted_phone, force_refresh=force)
+
+    # High-performance single database query for local order metrics
+    matching_orders = Order.all_objects.filter(customer_phone__icontains=last_10)
+    aggs = matching_orders.aggregate(
+        total=Count('id'),
+        delivered=Count('id', filter=Q(order_status='DELIVERED')),
+        cancelled=Count('id', filter=Q(order_status='CANCELLED')),
+        pending=Count('id', filter=Q(order_status__in=['PENDING', 'CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY'])),
+        total_spent=Sum('total_amount', filter=Q(order_status='DELIVERED'))
+    )
+    total_local = aggs['total'] or 0
+    delivered_local = aggs['delivered'] or 0
+    cancelled_local = aggs['cancelled'] or 0
+    pending_local = aggs['pending'] or 0
+    total_spent_local = float(aggs['total_spent'] or 0)
+    customer_name = matching_orders.order_by('-created_at').values_list('customer_name', flat=True).first() or 'Customer'
+
+    local_summary = {
+        'customer_name': customer_name,
+        'total_orders': total_local,
+        'delivered_count': delivered_local,
+        'cancelled_count': cancelled_local,
+        'pending_count': pending_local,
+        'total_spent': total_spent_local,
+        'success_rate': round((delivered_local / total_local * 100), 1) if total_local > 0 else 100,
+    }
+
+    return JsonResponse({
+        'success': True,
+        'phone': formatted_phone,
+        'from_cache': fraud_result.get('from_cache', False),
+        'steadfast': fraud_result,
+        'local': local_summary,
+    })
+
 
 
 

@@ -112,7 +112,7 @@
                 <p class="text-xs text-gray-400">Track parcels returned by Steadfast/Riders and manage inventory restocks</p>
             </div>
             <span class="text-xs font-bold text-gray-500 bg-gray-100 px-3 py-1 rounded-xl">
-                {{ order_returns|length }} Returns Recorded
+                {{ total_returns_count }} Returns Recorded
             </span>
         </div>
 
@@ -201,6 +201,75 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Returns Pagination Footer -->
+        <div class="pt-3 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <!-- Left info + per_page -->
+            <div class="flex items-center gap-3 text-gray-500">
+                <span>
+                    Showing <strong class="text-gray-900 font-bold">{{ returns_page_obj.start_index|default:0 }}</strong> to 
+                    <strong class="text-gray-900 font-bold">{{ returns_page_obj.end_index|default:0 }}</strong> of 
+                    <strong class="text-gray-900 font-bold">{{ returns_paginator.count }}</strong> returns
+                </span>
+
+                <form method="GET" action="" class="flex items-center gap-1.5">
+                    <input type="hidden" name="dmg_page" value="{{ damage_page_obj.number }}">
+                    <input type="hidden" name="dmg_per_page" value="{{ dmg_per_page }}">
+                    <label for="ret_per_page_select" class="text-[10px] text-gray-400 font-semibold uppercase">Per page:</label>
+                    <select id="ret_per_page_select" name="ret_per_page" onchange="this.form.submit()" class="bg-gray-50 border border-gray-200 rounded-lg px-2 py-0.5 text-xs font-bold text-gray-700 cursor-pointer focus:ring-1 focus:ring-brand-500">
+                        <option value="10" {% if ret_per_page == 10 %}selected{% endif %}>10</option>
+                        <option value="15" {% if ret_per_page == 15 %}selected{% endif %}>15</option>
+                        <option value="25" {% if ret_per_page == 25 %}selected{% endif %}>25</option>
+                        <option value="50" {% if ret_per_page == 50 %}selected{% endif %}>50</option>
+                    </select>
+                </form>
+            </div>
+
+            <!-- Right controls -->
+            <div class="flex flex-wrap items-center gap-1.5">
+                <span class="text-[11px] text-gray-600 font-bold bg-gray-50 px-2.5 py-1 rounded-xl border border-gray-200">
+                    Page <strong class="text-gray-900">{{ returns_page_obj.number }}</strong> of <strong class="text-gray-900">{{ returns_paginator.num_pages }}</strong>
+                </span>
+
+                {% if returns_paginator.num_pages > 1 %}
+                <nav class="flex items-center gap-1 font-bold text-xs" aria-label="Returns Pagination">
+                    {% if returns_page_obj.has_previous %}
+                    <a href="?ret_page=1&ret_per_page={{ ret_per_page }}&dmg_page={{ damage_page_obj.number }}&dmg_per_page={{ dmg_per_page }}" class="w-7 h-7 rounded-lg flex items-center justify-center text-gray-600 hover:bg-gray-100 border border-gray-200" title="First Page">
+                        <i class="fa-solid fa-angles-left text-[9px]"></i>
+                    </a>
+                    <a href="?ret_page={{ returns_page_obj.previous_page_number }}&ret_per_page={{ ret_per_page }}&dmg_page={{ damage_page_obj.number }}&dmg_per_page={{ dmg_per_page }}" class="px-2 h-7 rounded-lg flex items-center justify-center gap-1 text-gray-600 hover:bg-gray-100 border border-gray-200" title="Prev">
+                        <i class="fa-solid fa-chevron-left text-[9px]"></i>
+                        <span class="hidden sm:inline text-[10px]">Prev</span>
+                    </a>
+                    {% endif %}
+
+                    {% for p in returns_elided_range %}
+                        {% if p == returns_page_obj.paginator.ELLIPSIS or p == '…' or p == '...' %}
+                        <span class="w-6 h-7 flex items-center justify-center text-gray-400 font-bold text-xs">…</span>
+                        {% elif p == returns_page_obj.number %}
+                        <span class="w-7 h-7 rounded-lg flex items-center justify-center bg-brand-700 text-white font-extrabold text-xs shadow-xs">
+                            {{ p }}
+                        </span>
+                        {% else %}
+                        <a href="?ret_page={{ p }}&ret_per_page={{ ret_per_page }}&dmg_page={{ damage_page_obj.number }}&dmg_per_page={{ dmg_per_page }}" class="w-7 h-7 rounded-lg flex items-center justify-center text-gray-700 hover:bg-brand-50 border border-gray-200 text-xs">
+                            {{ p }}
+                        </a>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if returns_page_obj.has_next %}
+                    <a href="?ret_page={{ returns_page_obj.next_page_number }}&ret_per_page={{ ret_per_page }}&dmg_page={{ damage_page_obj.number }}&dmg_per_page={{ dmg_per_page }}" class="px-2 h-7 rounded-lg flex items-center justify-center gap-1 text-gray-600 hover:bg-gray-100 border border-gray-200" title="Next">
+                        <span class="hidden sm:inline text-[10px]">Next</span>
+                        <i class="fa-solid fa-chevron-right text-[9px]"></i>
+                    </a>
+                    <a href="?ret_page={{ returns_paginator.num_pages }}&ret_per_page={{ ret_per_page }}&dmg_page={{ damage_page_obj.number }}&dmg_per_page={{ dmg_per_page }}" class="w-7 h-7 rounded-lg flex items-center justify-center text-gray-600 hover:bg-gray-100 border border-gray-200" title="Last Page">
+                        <i class="fa-solid fa-angles-right text-[9px]"></i>
+                    </a>
+                    {% endif %}
+                </nav>
+                {% endif %}
+            </div>
+        </div>
     </div>
 
     <!-- SECTION 2: Damaged Pickle Jars Log (ভাঙা ও নষ্ট জার তালিকা) -->
@@ -213,10 +282,15 @@
                 </h3>
                 <p class="text-xs text-gray-400">Record jar breakage during courier shipping or kitchen preparation</p>
             </div>
-            <button type="button" onclick="openDamageModal()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-3.5 py-1.5 rounded-xl border border-rose-200 transition">
-                <i class="fa-solid fa-plus text-xs"></i>
-                <span>Add Damage Record</span>
-            </button>
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-gray-500 bg-gray-100 px-3 py-1 rounded-xl">
+                    {{ damage_paginator.count }} Records Recorded
+                </span>
+                <button type="button" onclick="openDamageModal()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-3.5 py-1.5 rounded-xl border border-rose-200 transition">
+                    <i class="fa-solid fa-plus text-xs"></i>
+                    <span>Add Damage Record</span>
+                </button>
+            </div>
         </div>
 
         <div class="overflow-x-auto">
@@ -280,6 +354,75 @@
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+
+        <!-- Damage Logs Pagination Footer -->
+        <div class="pt-3 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <!-- Left info + per_page -->
+            <div class="flex items-center gap-3 text-gray-500">
+                <span>
+                    Showing <strong class="text-gray-900 font-bold">{{ damage_page_obj.start_index|default:0 }}</strong> to 
+                    <strong class="text-gray-900 font-bold">{{ damage_page_obj.end_index|default:0 }}</strong> of 
+                    <strong class="text-gray-900 font-bold">{{ damage_paginator.count }}</strong> records
+                </span>
+
+                <form method="GET" action="" class="flex items-center gap-1.5">
+                    <input type="hidden" name="ret_page" value="{{ returns_page_obj.number }}">
+                    <input type="hidden" name="ret_per_page" value="{{ ret_per_page }}">
+                    <label for="dmg_per_page_select" class="text-[10px] text-gray-400 font-semibold uppercase">Per page:</label>
+                    <select id="dmg_per_page_select" name="dmg_per_page" onchange="this.form.submit()" class="bg-gray-50 border border-gray-200 rounded-lg px-2 py-0.5 text-xs font-bold text-gray-700 cursor-pointer focus:ring-1 focus:ring-brand-500">
+                        <option value="10" {% if dmg_per_page == 10 %}selected{% endif %}>10</option>
+                        <option value="15" {% if dmg_per_page == 15 %}selected{% endif %}>15</option>
+                        <option value="25" {% if dmg_per_page == 25 %}selected{% endif %}>25</option>
+                        <option value="50" {% if dmg_per_page == 50 %}selected{% endif %}>50</option>
+                    </select>
+                </form>
+            </div>
+
+            <!-- Right controls -->
+            <div class="flex flex-wrap items-center gap-1.5">
+                <span class="text-[11px] text-gray-600 font-bold bg-gray-50 px-2.5 py-1 rounded-xl border border-gray-200">
+                    Page <strong class="text-gray-900">{{ damage_page_obj.number }}</strong> of <strong class="text-gray-900">{{ damage_paginator.num_pages }}</strong>
+                </span>
+
+                {% if damage_paginator.num_pages > 1 %}
+                <nav class="flex items-center gap-1 font-bold text-xs" aria-label="Damage Pagination">
+                    {% if damage_page_obj.has_previous %}
+                    <a href="?dmg_page=1&dmg_per_page={{ dmg_per_page }}&ret_page={{ returns_page_obj.number }}&ret_per_page={{ ret_per_page }}" class="w-7 h-7 rounded-lg flex items-center justify-center text-gray-600 hover:bg-gray-100 border border-gray-200" title="First Page">
+                        <i class="fa-solid fa-angles-left text-[9px]"></i>
+                    </a>
+                    <a href="?dmg_page={{ damage_page_obj.previous_page_number }}&dmg_per_page={{ dmg_per_page }}&ret_page={{ returns_page_obj.number }}&ret_per_page={{ ret_per_page }}" class="px-2 h-7 rounded-lg flex items-center justify-center gap-1 text-gray-600 hover:bg-gray-100 border border-gray-200" title="Prev">
+                        <i class="fa-solid fa-chevron-left text-[9px]"></i>
+                        <span class="hidden sm:inline text-[10px]">Prev</span>
+                    </a>
+                    {% endif %}
+
+                    {% for p in damage_elided_range %}
+                        {% if p == damage_page_obj.paginator.ELLIPSIS or p == '…' or p == '...' %}
+                        <span class="w-6 h-7 flex items-center justify-center text-gray-400 font-bold text-xs">…</span>
+                        {% elif p == damage_page_obj.number %}
+                        <span class="w-7 h-7 rounded-lg flex items-center justify-center bg-brand-700 text-white font-extrabold text-xs shadow-xs">
+                            {{ p }}
+                        </span>
+                        {% else %}
+                        <a href="?dmg_page={{ p }}&dmg_per_page={{ dmg_per_page }}&ret_page={{ returns_page_obj.number }}&ret_per_page={{ ret_per_page }}" class="w-7 h-7 rounded-lg flex items-center justify-center text-gray-700 hover:bg-brand-50 border border-gray-200 text-xs">
+                            {{ p }}
+                        </a>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if damage_page_obj.has_next %}
+                    <a href="?dmg_page={{ damage_page_obj.next_page_number }}&dmg_per_page={{ dmg_per_page }}&ret_page={{ returns_page_obj.number }}&ret_per_page={{ ret_per_page }}" class="px-2 h-7 rounded-lg flex items-center justify-center gap-1 text-gray-600 hover:bg-gray-100 border border-gray-200" title="Next">
+                        <span class="hidden sm:inline text-[10px]">Next</span>
+                        <i class="fa-solid fa-chevron-right text-[9px]"></i>
+                    </a>
+                    <a href="?dmg_page={{ damage_paginator.num_pages }}&dmg_per_page={{ dmg_per_page }}&ret_page={{ returns_page_obj.number }}&ret_per_page={{ ret_per_page }}" class="w-7 h-7 rounded-lg flex items-center justify-center text-gray-600 hover:bg-gray-100 border border-gray-200" title="Last Page">
+                        <i class="fa-solid fa-angles-right text-[9px]"></i>
+                    </a>
+                    {% endif %}
+                </nav>
+                {% endif %}
+            </div>
         </div>
     </div>
 

@@ -257,15 +257,15 @@
                     </div>
                 </div>
 
-                <!-- ⭐ Customer Website Order History & Fraud Check Intelligence Box -->
-                <div class="p-3 rounded-2xl border text-xs {{ order.customer_score.badge_class }} space-y-2">
+                <!-- ⭐ Customer Website Order History & Local Trust Box -->
+                <div class="p-3.5 rounded-2xl border text-xs {{ order.customer_score.badge_class }} space-y-2.5">
                     <div class="flex items-center justify-between gap-2 flex-wrap">
                         <span class="font-extrabold flex items-center gap-1.5 text-xs">
                             <i class="{{ order.customer_score.icon }}"></i>
-                            <span>{{ order.customer_score.risk_title }}</span>
+                            <span>Store Record: {{ order.customer_score.risk_title }}</span>
                         </span>
                         <span class="text-[10px] font-black uppercase tracking-wider bg-white/90 px-2 py-0.5 rounded shadow-2xs">
-                            {{ order.customer_score.rate }} Success Rate
+                            {{ order.customer_score.rate }} Store Rate
                         </span>
                     </div>
 
@@ -293,19 +293,35 @@
                         </span>
                     </div>
                     {% endif %}
+                </div>
+                <div class="p-3.5 rounded-2xl border border-cyan-200 bg-gradient-to-br from-cyan-50/70 via-white to-sky-50/60 shadow-2xs space-y-2.5 text-xs" id="steadfastFraudCard">
+                    <div class="flex items-center justify-between gap-2 flex-wrap">
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-lg bg-cyan-600 text-white flex items-center justify-center text-xs shadow-2xs">
+                                <i class="fa-solid fa-shield-halved"></i>
+                            </span>
+                            <strong class="text-gray-900 font-black text-xs">Steadfast Fraud Check</strong>
+                            <span id="sfCacheIndicator" class="hidden text-[10px] font-black text-cyan-800 bg-cyan-100/80 px-1.5 py-0.5 rounded border border-cyan-200">
+                                ⚡ Instant
+                            </span>
+                        </div>
+                        <button 
+                            type="button" 
+                            onclick="checkSteadfastFraud('{{ order.customer_phone }}', '{{ order.customer_name|escapejs }}', true)"
+                            id="sfCheckBtn"
+                            class="bg-cyan-700 hover:bg-cyan-800 text-white text-[11px] font-black px-2.5 py-1 rounded-lg shadow-2xs flex items-center gap-1 transition cursor-pointer active:scale-95"
+                            title="Bypass cache and check live with Steadfast API"
+                        >
+                            <i class="fa-solid fa-rotate text-[10px]"></i>
+                            <span>Re-check Live</span>
+                        </button>
+                    </div>
 
-                    <!-- 1-Click External Fraud Verification -->
-                    <div class="pt-1.5 border-t border-current/15 flex items-center justify-between gap-2 flex-wrap">
-                        <span class="text-[11px] font-bold opacity-85 flex items-center gap-1">
-                            <i class="fa-solid fa-shield-halved text-amber-500"></i> Fraud Check:
-                        </span>
-                        <div class="flex items-center gap-1.5">
-                            <a href="https://couriercheck.com/?phone={{ order.customer_phone }}" target="_blank" class="bg-slate-900 hover:bg-slate-800 text-white font-bold text-[11px] px-2 py-1 rounded-lg transition inline-flex items-center gap-1 shadow-2xs" title="BD Couriers Fraud History">
-                                <i class="fa-solid fa-shield-halved text-amber-400 text-[10px]"></i> <span>CourierCheck</span>
-                            </a>
-                            <a href="https://merchant.pathao.com/parcels?search={{ order.customer_phone }}" target="_blank" class="bg-[#ea1d24] hover:bg-[#c9141a] text-white font-bold text-[11px] px-2 py-1 rounded-lg transition inline-flex items-center gap-1 shadow-2xs" title="Search on Pathao Merchant">
-                                <i class="fa-solid fa-truck-fast text-[10px]"></i> <span>Pathao</span>
-                            </a>
+                    <!-- Dynamic Results Box (Auto-Populated on Page Load via JS) -->
+                    <div id="sfFraudResultBox" class="space-y-2">
+                        <div class="bg-white/80 p-2.5 rounded-xl border border-cyan-100 flex items-center gap-2 text-[11px] text-gray-500">
+                            <i class="fa-solid fa-circle-notch fa-spin text-cyan-600"></i>
+                            <span>Loading customer delivery reputation from Steadfast...</span>
                         </div>
                     </div>
                 </div>
@@ -866,6 +882,136 @@ function openSteadfastModal() {
 function closeSteadfastModal() {
     document.getElementById('steadfastDispatchModal').classList.add('hidden');
 }
+
+// Client-side cache for instantaneous (0ms) render on subsequent views
+const sfDetailFraudCache = {};
+
+async function checkSteadfastFraud(phone, name, isForce = false) {
+    const btn = document.getElementById('sfCheckBtn');
+    const resultBox = document.getElementById('sfFraudResultBox');
+    const cacheIndicator = document.getElementById('sfCacheIndicator');
+    if (!resultBox || !phone) return;
+
+    // 1. Check instant client memory cache if not forced
+    if (!isForce && sfDetailFraudCache[phone]) {
+        renderSteadfastFraudUI(sfDetailFraudCache[phone], resultBox, cacheIndicator);
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-[10px]"></i> <span>Checking...</span>';
+    }
+
+    if (isForce) {
+        resultBox.innerHTML = `
+            <div class="bg-white/90 p-3 rounded-xl border border-cyan-200 text-center py-3.5 space-y-1.5">
+                <i class="fa-solid fa-circle-notch fa-spin text-cyan-600 text-lg"></i>
+                <p class="text-[11px] text-gray-600 font-bold">Connecting live to Steadfast Courier API...</p>
+            </div>
+        `;
+    }
+
+    try {
+        const url = `/dashboard/api/fraud-check/?phone=${encodeURIComponent(phone)}${isForce ? '&force=1' : ''}`;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.success) {
+            sfDetailFraudCache[phone] = data;
+            renderSteadfastFraudUI(data, resultBox, cacheIndicator);
+        } else {
+            const err = (data.steadfast && data.steadfast.message) || data.message || 'Could not fetch data from Steadfast.';
+            resultBox.innerHTML = `
+                <div class="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-1">
+                    <div class="font-bold flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle-exclamation text-amber-600"></i>
+                        <span>Steadfast Notice:</span>
+                    </div>
+                    <p class="text-[11px] text-amber-800">${err}</p>
+                </div>
+            `;
+        }
+    } catch (e) {
+        resultBox.innerHTML = `
+            <div class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs">
+                <i class="fa-solid fa-circle-xmark text-rose-600"></i>
+                <span class="font-bold">Error:</span> Failed to connect to server.
+            </div>
+        `;
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-rotate text-[10px]"></i> <span>Re-check Live</span>';
+        }
+    }
+}
+
+function renderSteadfastFraudUI(data, resultBox, cacheIndicator) {
+    if (cacheIndicator) {
+        if (data.from_cache) {
+            cacheIndicator.classList.remove('hidden');
+        } else {
+            cacheIndicator.classList.add('hidden');
+        }
+    }
+
+    if (data.steadfast && data.steadfast.success) {
+        const sf = data.steadfast;
+        resultBox.innerHTML = `
+            <div class="p-3 rounded-xl border ${sf.badge_class} space-y-2">
+                <div class="flex items-center justify-between gap-1 flex-wrap">
+                    <span class="font-extrabold flex items-center gap-1.5 text-xs">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        <span>${sf.risk_title}</span>
+                    </span>
+                    <span class="text-[10px] font-black uppercase tracking-wider bg-white/90 px-2 py-0.5 rounded shadow-2xs">
+                        ${sf.success_rate}% Delivery Rate
+                    </span>
+                </div>
+
+                <!-- 3-Pill Order Stats Grid for Steadfast -->
+                <div class="grid grid-cols-3 gap-1.5 text-center">
+                    <div class="bg-white/90 p-1.5 rounded-xl border border-current/10 shadow-2xs">
+                        <span class="text-[10px] opacity-75 block font-bold">Steadfast Total</span>
+                        <strong class="text-sm font-black text-gray-900">${sf.total_parcels}</strong>
+                    </div>
+                    <div class="bg-white/90 p-1.5 rounded-xl border border-current/10 shadow-2xs">
+                        <span class="text-[10px] text-emerald-700 block font-bold">Delivered</span>
+                        <strong class="text-sm font-black text-emerald-700">${sf.total_delivered}</strong>
+                    </div>
+                    <div class="bg-white/90 p-1.5 rounded-xl border border-current/10 shadow-2xs">
+                        <span class="text-[10px] text-rose-700 block font-bold">Cancelled / Return</span>
+                        <strong class="text-sm font-black text-rose-700">${sf.total_cancelled}</strong>
+                    </div>
+                </div>
+
+                <p class="text-[11px] leading-relaxed opacity-90 pt-0.5">
+                    ${sf.risk_desc}
+                </p>
+            </div>
+        `;
+    } else {
+        const sf = data.steadfast || {};
+        const err = sf.message || data.message || 'Could not fetch data from Steadfast.';
+        resultBox.innerHTML = `
+            <div class="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-1">
+                <div class="font-bold flex items-center gap-1.5">
+                    <i class="fa-solid fa-circle-exclamation text-amber-600"></i>
+                    <span>Steadfast Notice:</span>
+                </div>
+                <p class="text-[11px] text-amber-800">${err}</p>
+            </div>
+        `;
+    }
+}
+
+// Automatically load fraud check in the background as soon as page loads
+document.addEventListener('DOMContentLoaded', function() {
+    {% if order.customer_phone %}
+    checkSteadfastFraud('{{ order.customer_phone }}', '{{ order.customer_name|escapejs }}', false);
+    {% endif %}
+});
 </script>
 
 {% endblock %}

@@ -280,6 +280,96 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Pagination Footer -->
+        <div class="px-5 py-4 bg-gray-50/70 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <!-- Left: Showing entries info + Per Page select -->
+            <div class="flex items-center gap-4 text-xs text-gray-500">
+                <span>
+                    Showing <strong class="text-gray-900 font-bold">{{ page_obj.start_index|default:0 }}</strong> to 
+                    <strong class="text-gray-900 font-bold">{{ page_obj.end_index|default:0 }}</strong> of 
+                    <strong class="text-gray-900 font-bold">{{ expense_count }}</strong> expenses
+                </span>
+
+                <form method="GET" action="" class="flex items-center gap-1.5">
+                    <input type="hidden" name="category" value="{{ category_filter }}">
+                    <input type="hidden" name="q" value="{{ search_query }}">
+                    <label for="per_page_select" class="text-[11px] text-gray-400 font-semibold uppercase tracking-wider">Per page:</label>
+                    <select id="per_page_select" name="per_page" onchange="this.form.submit()" class="bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-2 py-1 text-xs font-bold text-gray-700 cursor-pointer focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+                        <option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+                        <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                        <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+                    </select>
+                </form>
+            </div>
+
+            <!-- Right: Pagination Buttons & Page Indicator -->
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="text-xs text-gray-600 font-bold bg-white px-2.5 py-1 rounded-xl border border-gray-200 shadow-2xs">
+                    Page <strong class="text-gray-900 font-black">{{ page_obj.number }}</strong> of <strong class="text-gray-900 font-black">{{ paginator.num_pages }}</strong>
+                </span>
+
+                {% if paginator.num_pages > 1 %}
+                <nav class="flex items-center gap-1 text-xs font-bold" aria-label="Expenses Pagination">
+                    <!-- First & Prev Page -->
+                    {% if page_obj.has_previous %}
+                    <a href="?page=1&category={{ category_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}" class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 hover:bg-white hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="First Page">
+                        <i class="fa-solid fa-angles-left text-[10px]"></i>
+                    </a>
+                    <a href="?page={{ page_obj.previous_page_number }}&category={{ category_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}" class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-600 hover:bg-white hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="Previous Page">
+                        <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                        <span class="hidden sm:inline text-[11px]">Prev</span>
+                    </a>
+                    {% else %}
+                    <span class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-300 border border-gray-100 cursor-not-allowed">
+                        <i class="fa-solid fa-angles-left text-[10px]"></i>
+                    </span>
+                    <span class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-300 border border-gray-100 cursor-not-allowed">
+                        <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                        <span class="hidden sm:inline text-[11px]">Prev</span>
+                    </span>
+                    {% endif %}
+
+                    <!-- Page Number Pills -->
+                    <div class="flex items-center gap-1 mx-1">
+                        {% for p in elided_page_range %}
+                            {% if p == page_obj.paginator.ELLIPSIS or p == '…' or p == '...' %}
+                            <span class="w-8 h-8 flex items-center justify-center text-gray-400 font-bold text-xs">…</span>
+                            {% elif p == page_obj.number %}
+                            <span class="w-8 h-8 rounded-xl flex items-center justify-center bg-brand-700 text-white font-extrabold text-xs shadow-xs ring-2 ring-brand-500/20">
+                                {{ p }}
+                            </span>
+                            {% else %}
+                            <a href="?page={{ p }}&category={{ category_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}" class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-700 hover:bg-brand-50 hover:text-brand-900 hover:border-brand-300 transition border border-gray-200 text-xs shadow-2xs">
+                                {{ p }}
+                            </a>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    <!-- Next & Last Page -->
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}&category={{ category_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}" class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-600 hover:bg-white hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="Next Page">
+                        <span class="hidden sm:inline text-[11px]">Next</span>
+                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                    </a>
+                    <a href="?page={{ paginator.num_pages }}&category={{ category_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}" class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 hover:bg-white hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="Last Page">
+                        <i class="fa-solid fa-angles-right text-[10px]"></i>
+                    </a>
+                    {% else %}
+                    <span class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-300 border border-gray-100 cursor-not-allowed">
+                        <span class="hidden sm:inline text-[11px]">Next</span>
+                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                    </span>
+                    <span class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-300 border border-gray-100 cursor-not-allowed">
+                        <i class="fa-solid fa-angles-right text-[10px]"></i>
+                    </span>
+                    {% endif %}
+                </nav>
+                {% endif %}
+            </div>
+        </div>
     </div>
 
 </div>
