@@ -20,7 +20,7 @@
                 Orders & Delivery Queue
             </h1>
             <p class="text-xs sm:text-sm text-gray-500 mt-1 break-words">
-                Process customer orders, verify bKash/Nagad payments, and print packaging slips.
+                Process customer orders, verify bKash payments, and print packaging slips.
             </p>
         </div>
         
@@ -750,7 +750,6 @@
                     <select name="payment_method" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
                         <option value="COD" selected>Cash on Delivery (COD)</option>
                         <option value="BKASH">bKash Personal (Send Money)</option>
-                        <option value="NAGAD">Nagad Personal (Send Money)</option>
                     </select>
                 </div>
                 <div>
@@ -763,7 +762,7 @@
             </div>
 
             <div>
-                <label class="font-bold text-gray-700 block mb-1">bKash/Nagad TrxID or Admin Note (Optional)</label>
+                <label class="font-bold text-gray-700 block mb-1">bKash TrxID or Admin Note (Optional)</label>
                 <input type="text" name="payment_trx_id" placeholder="TrxID (if paid) or special delivery instructions..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
             </div>
 

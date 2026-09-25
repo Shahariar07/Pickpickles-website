@@ -424,10 +424,10 @@
             <div class="flex items-center justify-between border-b border-gray-100 pb-3">
                 <h3 class="font-display font-black text-sm sm:text-base text-gray-900 flex items-center gap-2">
                     <span class="w-8 h-8 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center text-sm font-black shrink-0">🫙</span>
-                    <span>Ordered Pickle Jars ({{ order.total_items_count }} Jars • {{ order.total_weight_kg }} kg)</span>
+                    <span>Ordered Pickle Jars ({{ order.total_items_count }} Jars)</span>
                 </h3>
-                <span class="text-xs font-bold text-gray-500 bg-gray-100 px-2.5 sm:px-3 py-1 rounded-xl shrink-0">
-                    600g Standard Jar
+                <span class="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 sm:px-3 py-1 rounded-xl shrink-0">
+                    <i class="fa-solid fa-weight-scale text-emerald-600 mr-1"></i>{{ order.total_weight_kg }} kg Total
                 </span>
             </div>
 
@@ -502,7 +502,7 @@
                         {% else %}
                         <div class="bg-amber-100 text-amber-900 border border-amber-300 px-3.5 py-1.5 rounded-xl text-right">
                             <span class="font-black text-xs sm:text-sm block"><i class="fa-solid fa-hand-holding-dollar"></i> Collect ৳{{ order.total_amount }} COD</span>
-                            <span class="text-[10px] opacity-80">Cash to be collected by Pathao</span>
+                            <span class="text-[10px] opacity-80">Cash to be collected on delivery</span>
                         </div>
                         {% endif %}
                     </div>

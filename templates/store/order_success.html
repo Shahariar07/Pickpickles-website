@@ -80,13 +80,13 @@
             </div>
         </div>
 
-        {% if order.payment_method in 'BKASH,NAGAD' and order.payment_status != 'PAID' %}
+        {% if order.payment_method == 'BKASH' and order.payment_status != 'PAID' %}
         <!-- MFS Instructions Card -->
         <div class="bg-pink-50/80 p-4 rounded-2xl border-2 border-pink-200 text-xs text-pink-950 space-y-2">
             <div class="flex items-center justify-between gap-2 flex-wrap">
                 <span class="font-black text-pink-900 flex items-center gap-1.5">
                     <i class="fa-solid fa-mobile-screen-button text-pink-600"></i>
-                    {% if order.payment_method == 'NAGAD' %}Nagad{% else %}bKash{% endif %} Send Money Number: <span class="font-mono font-black text-base text-slate-950">01739804566</span>
+                    bKash Send Money Number: <span class="font-mono font-black text-base text-slate-950">01739804566</span>
                 </span>
                 <span class="bg-pink-200/80 text-pink-900 font-bold text-[11px] px-2.5 py-0.5 rounded-full">Personal</span>
             </div>

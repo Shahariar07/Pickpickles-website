@@ -59,12 +59,12 @@ class CheckoutForm(forms.ModelForm):
             }),
             'payment_sender_number': forms.TextInput(attrs={
                 'class': 'form-input',
-                'placeholder': 'bKash/Nagad wallet number used to send money',
+                'placeholder': 'bKash number used to send money',
                 'id': 'payment_sender_number'
             }),
             'payment_trx_id': forms.TextInput(attrs={
                 'class': 'form-input',
-                'placeholder': 'e.g. BKT78291X or NGD62104',
+                'placeholder': 'e.g. 9BKT78291X',
                 'id': 'payment_trx_id'
             }),
             'customer_notes': forms.Textarea(attrs={
@@ -88,7 +88,7 @@ class CheckoutForm(forms.ModelForm):
                 self.add_error('customer_phone', 'Mobile number is not valid.')
 
         # Validate MFS payment details
-        if payment_method in ['BKASH', 'NAGAD']:
+        if payment_method == 'BKASH':
             if not sender_number or len(sender_number) < 11 or not sender_number.replace('+', '').isdigit():
                 self.add_error('payment_sender_number', 'Mobile number is not valid.')
                 
