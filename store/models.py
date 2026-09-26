@@ -58,9 +58,9 @@ class Product(models.Model):
     image = models.ImageField(upload_to='products/', blank=True, null=True)
     image_url = models.CharField(max_length=500, blank=True, help_text="Optional fallback image URL or static asset path")
     
-    is_featured = models.BooleanField(default=False)
-    is_in_stock = models.BooleanField(default=True)
-    stock_count = models.PositiveIntegerField(default=50)
+    is_featured = models.BooleanField(default=False, db_index=True)
+    is_in_stock = models.BooleanField(default=True, db_index=True)
+    stock_count = models.PositiveIntegerField(default=50, db_index=True)
     min_stock_threshold = models.PositiveIntegerField(default=15, help_text="Alert if stock falls below this number")
     target_stock_level = models.PositiveIntegerField(default=50, help_text="Ideal target inventory quantity")
     
@@ -72,6 +72,12 @@ class Product(models.Model):
 
     class Meta:
         ordering = ['-is_featured', 'name']
+        indexes = [
+            models.Index(fields=['stock_count', 'name']),
+            models.Index(fields=['-is_featured', 'name']),
+            models.Index(fields=['is_in_stock']),
+        ]
+
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -81,24 +87,34 @@ class Product(models.Model):
     @property
     def ordered_demand_count(self):
         """Total quantity demanded across all active unfulfilled orders."""
-        return self.order_items.filter(
-            order__is_deleted=False,
-            order__order_status__in=['PENDING', 'CONFIRMED', 'PACKING']
-        ).aggregate(models.Sum('quantity'))['quantity__sum'] or 0
+        if hasattr(self, '_computed_demand'):
+            return self._computed_demand
+        if not hasattr(self, '_cached_demand'):
+            self._cached_demand = self.order_items.filter(
+                order__is_deleted=False,
+                order__order_status__in=['PENDING', 'CONFIRMED', 'PACKING']
+            ).aggregate(models.Sum('quantity'))['quantity__sum'] or 0
+        return self._cached_demand
 
     @property
     def needed_stock(self):
         """Exact quantity deficit needed according to active customer orders."""
+        if hasattr(self, '_computed_needed'):
+            return self._computed_needed
         return max(0, self.ordered_demand_count - self.stock_count)
 
     @property
     def is_low_stock(self):
         """True if there is an active order shortage or product is out of stock."""
+        if hasattr(self, '_computed_is_low'):
+            return self._computed_is_low
         return self.needed_stock > 0 or (self.stock_count == 0 and not self.is_in_stock)
 
     @property
     def is_critical_stock(self):
         """True if there are active customer orders waiting but physical stock is 0."""
+        if hasattr(self, '_computed_is_crit'):
+            return self._computed_is_crit
         return self.stock_count == 0 and self.ordered_demand_count > 0
 
     @property
@@ -107,6 +123,7 @@ class Product(models.Model):
             pct = round((self.stock_count / self.ordered_demand_count) * 100)
             return min(100, max(0, pct))
         return 100 if self.stock_count > 0 else 0
+
 
     @property
     def discount_percent(self):
@@ -231,13 +248,13 @@ class Order(models.Model):
     
     # Customer Details
     customer_name = models.CharField(max_length=150)
-    customer_phone = models.CharField(max_length=20)
+    customer_phone = models.CharField(max_length=20, db_index=True)
     customer_email = models.EmailField(blank=True, null=True)
     
     # Address
     delivery_address = models.TextField(help_text="House, Road, Area, Landmark")
     delivery_city = models.CharField(max_length=100, default="Dhaka")
-    delivery_zone = models.CharField(max_length=30, choices=ZONE_CHOICES, default='INSIDE_DHAKA')
+    delivery_zone = models.CharField(max_length=30, choices=ZONE_CHOICES, default='INSIDE_DHAKA', db_index=True)
     
     # Financials in BDT
     delivery_fee = models.DecimalField(max_digits=8, decimal_places=2, default=150.00)
@@ -262,14 +279,14 @@ class Order(models.Model):
     steadfast_order_status = models.CharField(max_length=50, blank=True, null=True, help_text="Status synced from Steadfast Courier")
     
     # Payment Info
-    payment_method = models.CharField(max_length=30, choices=PAYMENT_METHOD_CHOICES, default='BKASH_ONLINE')
-    payment_status = models.CharField(max_length=30, choices=PAYMENT_STATUS_CHOICES, default='UNPAID')
+    payment_method = models.CharField(max_length=30, choices=PAYMENT_METHOD_CHOICES, default='BKASH_ONLINE', db_index=True)
+    payment_status = models.CharField(max_length=30, choices=PAYMENT_STATUS_CHOICES, default='UNPAID', db_index=True)
     payment_sender_number = models.CharField(max_length=20, blank=True, help_text="Customer bKash/Nagad number")
     payment_trx_id = models.CharField(max_length=100, blank=True, help_text="bKash / Nagad Transaction ID")
     bkash_payment_id = models.CharField(max_length=100, blank=True, null=True, help_text="Official bKash PGW Payment ID")
     
     # Order Status & Management
-    order_status = models.CharField(max_length=30, choices=ORDER_STATUS_CHOICES, default='PENDING')
+    order_status = models.CharField(max_length=30, choices=ORDER_STATUS_CHOICES, default='PENDING', db_index=True)
     customer_notes = models.TextField(blank=True, help_text="Customer special request")
     admin_notes = models.TextField(blank=True, help_text="Internal notes / rider info")
     
@@ -277,7 +294,7 @@ class Order(models.Model):
     is_deleted = models.BooleanField(default=False, db_index=True, help_text="Soft deleted / moved to trash")
     deleted_at = models.DateTimeField(null=True, blank=True, help_text="Timestamp when moved to trash")
     
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     # Managers
@@ -288,6 +305,15 @@ class Order(models.Model):
     class Meta:
         ordering = ['-created_at']
         base_manager_name = 'all_objects'
+        indexes = [
+            models.Index(fields=['-created_at']),
+            models.Index(fields=['order_status', '-created_at']),
+            models.Index(fields=['customer_phone']),
+            models.Index(fields=['is_deleted', 'order_status']),
+            models.Index(fields=['payment_status']),
+            models.Index(fields=['delivery_zone']),
+        ]
+
 
     def soft_delete(self):
         from django.utils import timezone

@@ -92,14 +92,40 @@ def dashboard_index(request):
     pipeline_jars_sold = max(0, total_jars_sold - delivered_jars_sold)
     delivery_rate = round((delivered_count / total_orders_count) * 100, 1) if total_orders_count > 0 else 0
     
-    # Inventory & Low Stock Tracking
-    all_catalog_products = Product.objects.all().select_related('category').order_by('stock_count', 'name')
-    total_products_count = all_catalog_products.count()
-    low_stock_products = [p for p in all_catalog_products if p.is_low_stock]
+    # Inventory & Low Stock Tracking (Ultra-fast 1-Query Batch Demand)
+    active_demands = dict(
+        OrderItem.objects.filter(
+            order__is_deleted=False,
+            order__order_status__in=['PENDING', 'CONFIRMED', 'PACKING']
+        ).values('product_id').annotate(total_demand=Sum('quantity')).values_list('product_id', 'total_demand')
+    )
+
+    all_catalog_products = list(Product.objects.all().select_related('category').order_by('stock_count', 'name'))
+    total_products_count = len(all_catalog_products)
+    low_stock_products = []
+    critical_stock_count = 0
+    total_needed_jars = 0
+    total_current_inventory = 0
+
+    for p in all_catalog_products:
+        demand = active_demands.get(p.id, 0)
+        needed = max(0, demand - p.stock_count)
+        is_low = needed > 0 or (p.stock_count == 0 and not p.is_in_stock)
+        is_crit = (p.stock_count == 0 and demand > 0)
+        
+        p._computed_demand = demand
+        p._computed_needed = needed
+        p._computed_is_low = is_low
+        p._computed_is_crit = is_crit
+
+        if is_low:
+            low_stock_products.append(p)
+        if is_crit:
+            critical_stock_count += 1
+        total_needed_jars += needed
+        total_current_inventory += p.stock_count
+
     low_stock_count = len(low_stock_products)
-    critical_stock_count = sum(1 for p in low_stock_products if p.is_critical_stock)
-    total_needed_jars = sum(p.needed_stock for p in all_catalog_products)
-    total_current_inventory = sum(p.stock_count for p in all_catalog_products)
 
     # 1. 10-Day Sales & Revenue Trend Calculation (Optimized: 1 batch query instead of 20 loop queries)
     days_to_plot = 10
@@ -152,8 +178,8 @@ def dashboard_index(request):
             sales_by_name[name_key]['qty'] += qty
             sales_by_name[name_key]['sales'] += sales
 
-    # Auto-load ALL products from inventory catalog so items like Pineapple and future products appear automatically
-    catalog_prods = Product.objects.all().order_by('name')
+    # Auto-load ALL products from inventory catalog
+    catalog_prods = all_catalog_products
     processed_pids = set()
     processed_names = set()
     product_stats = []
@@ -204,15 +230,18 @@ def dashboard_index(request):
             'sales': product_stats[0]['sales'],
         }
 
-    # 3. Payment Methods Breakdown (Real database counts)
-    cod_count = Order.objects.filter(payment_method='COD').count()
-    bkash_count = Order.objects.filter(payment_method='BKASH').count()
-    nagad_count = Order.objects.filter(payment_method='NAGAD').count()
+    # 3. Payment Methods Breakdown (Single aggregation query)
+    pay_counts = dict(Order.objects.values('payment_method').annotate(cnt=Count('id')).values_list('payment_method', 'cnt'))
+    cod_count = pay_counts.get('COD', 0)
+    bkash_count = pay_counts.get('BKASH_ONLINE', 0) + pay_counts.get('BKASH', 0)
+    nagad_count = pay_counts.get('NAGAD', 0)
     payment_data = [cod_count, bkash_count, nagad_count]
 
-    # 4. Delivery Zone Breakdown (Real database counts)
-    inside_dhaka_count = Order.objects.filter(delivery_zone='INSIDE_DHAKA').count()
-    outside_dhaka_count = Order.objects.filter(delivery_zone='OUTSIDE_DHAKA').count()
+    # 4. Delivery Zone Breakdown (Single aggregation query)
+    zone_counts = dict(Order.objects.values('delivery_zone').annotate(cnt=Count('id')).values_list('delivery_zone', 'cnt'))
+    inside_dhaka_count = zone_counts.get('INSIDE_DHAKA', 0)
+    outside_dhaka_count = zone_counts.get('OUTSIDE_DHAKA', 0)
+
 
     # 5. Expense Categories Breakdown (Real database sums)
     category_totals = Expense.objects.values('category').annotate(cat_sum=Sum('amount')).order_by('-cat_sum')

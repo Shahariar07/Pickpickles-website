@@ -77,6 +77,16 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'pickpickles-cache',
+        'TIMEOUT': 300,
+    }
+}
+
+
 ROOT_URLCONF = 'pickpickles_project.urls'
 
 TEMPLATES = [
