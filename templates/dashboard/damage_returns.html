@@ -186,9 +186,16 @@
                             {% endif %}
                         </td>
                         <td class="py-3 px-3 text-right">
-                            <button type="button" onclick="openUpdateReturnModal('{{ ret.id }}', '{{ ret.order.order_number }}', '{{ ret.return_status }}', '{{ ret.courier_return_fee }}', '{{ ret.notes|escapejs }}')" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-[11px] px-3 py-1.5 rounded-xl transition">
-                                Update Status
-                            </button>
+                            <div class="flex items-center justify-end gap-1.5">
+                                <button type="button" onclick="openUpdateReturnModal('{{ ret.id }}', '{{ ret.order.order_number }}', '{{ ret.return_status }}', '{{ ret.courier_return_fee }}', '{{ ret.notes|escapejs }}')" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-[11px] px-3 py-1.5 rounded-xl transition">
+                                    Update Status
+                                </button>
+                                {% if request.user.is_superuser %}
+                                <button type="button" onclick="openDeleteReturnModal('{{ ret.id }}', '{{ ret.order.order_number }}')" class="p-1.5 text-gray-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition" title="Delete Return Record">
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                </button>
+                                {% endif %}
+                            </div>
                         </td>
                     </tr>
                     {% empty %}
@@ -490,9 +497,15 @@
                 <textarea name="notes" rows="2" placeholder="Describe how it happened, courier rider name, etc." class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-medium text-gray-800 focus:bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none"></textarea>
             </div>
 
-            <div class="flex items-center gap-2 pt-1">
-                <input type="checkbox" name="deduct_stock" id="deduct_stock" checked class="w-4 h-4 text-rose-600 rounded">
-                <label for="deduct_stock" class="font-bold text-gray-700">Deduct damaged jars from current Product Stock automatically</label>
+            <div class="space-y-2 pt-1">
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" name="add_to_expense" id="add_to_expense" checked class="w-4 h-4 text-rose-600 rounded">
+                    <label for="add_to_expense" class="font-bold text-gray-700">Add to Expenses automatically (খরচ হিসেবে যোগ করুন)</label>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" name="deduct_stock" id="deduct_stock" checked class="w-4 h-4 text-rose-600 rounded">
+                    <label for="deduct_stock" class="font-bold text-gray-700">Deduct damaged jars from current Product Stock automatically</label>
+                </div>
             </div>
 
             <div class="pt-2 flex items-center justify-end gap-2 border-t border-gray-100">
@@ -651,6 +664,36 @@
 
     </div>
 </div>
+
+<!-- DELETE RETURN CONFIRMATION MODAL -->
+<div id="deleteReturnModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative text-center">
+        
+        <div class="w-14 h-14 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto text-2xl">
+            <i class="fa-solid fa-trash-can"></i>
+        </div>
+
+        <div>
+            <h3 class="font-display font-black text-lg text-gray-900">Delete Return Record?</h3>
+            <p class="text-xs text-gray-500 mt-1">
+                Are you sure you want to delete return log for Order <strong id="del_return_order" class="text-gray-900">#</strong>? Linked courier fees and damage losses will also be removed.
+            </p>
+        </div>
+
+        <form method="POST" action="{% url 'dashboard:damage_returns' %}" class="pt-2 flex items-center justify-center gap-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete_return">
+            <input type="hidden" id="del_return_id" name="return_id" value="">
+            <button type="button" onclick="closeDeleteReturnModal()" class="w-1/2 px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs transition cursor-pointer">
+                Cancel
+            </button>
+            <button type="submit" class="w-1/2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition shadow-md cursor-pointer">
+                Yes, Delete
+            </button>
+        </form>
+
+    </div>
+</div>
 {% endif %}
 
 <script>
@@ -704,6 +747,15 @@ function openDeleteDamageModal(id, product, qty) {
 }
 function closeDeleteDamageModal() {
     document.getElementById('deleteDamageModal').classList.add('hidden');
+}
+
+function openDeleteReturnModal(id, orderNum) {
+    document.getElementById('del_return_id').value = id;
+    document.getElementById('del_return_order').textContent = '#' + orderNum;
+    document.getElementById('deleteReturnModal').classList.remove('hidden');
+}
+function closeDeleteReturnModal() {
+    document.getElementById('deleteReturnModal').classList.add('hidden');
 }
 </script>
 {% endblock %}

@@ -35,6 +35,7 @@ class Expense(models.Model):
         ('LOGISTICS', 'Courier & Rider Delivery Cost 🚚'),
         ('MARKETING', 'Digital Ads & Marketing 📢'),
         ('UTILITIES', 'Gas, Electricity & Kitchen Rent ⚡'),
+        ('DAMAGE_LOSS', 'Damaged & Broken Products Loss 💥'),
         ('OTHER', 'Operational & Miscellaneous 📋'),
     ]
 
@@ -89,6 +90,7 @@ class DamageLog(models.Model):
     reason = models.CharField(max_length=50, choices=DAMAGE_REASON_CHOICES, default='TRANSIT_BREAKAGE')
     incident_date = models.DateField(default=timezone.now)
     order_ref = models.CharField(max_length=100, blank=True, help_text="Order # if courier related")
+    expense = models.ForeignKey('Expense', on_delete=models.SET_NULL, null=True, blank=True, related_name='damage_logs')
     notes = models.TextField(blank=True, help_text="Details of incident, courier consignment, etc.")
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -124,6 +126,7 @@ class OrderReturn(models.Model):
     return_reason = models.CharField(max_length=50, choices=RETURN_REASON_CHOICES, default='CUSTOMER_REFUSED')
     return_status = models.CharField(max_length=30, choices=RETURN_STATUS_CHOICES, default='RETURNING')
     courier_return_fee = models.DecimalField(max_digits=8, decimal_places=2, default=0.00, help_text="Return fee charged by courier (৳)")
+    expense = models.ForeignKey('Expense', on_delete=models.SET_NULL, null=True, blank=True, related_name='order_returns')
     is_restocked = models.BooleanField(default=False, help_text="Whether jars have been added back to Product stock")
     return_date = models.DateField(default=timezone.now)
     notes = models.TextField(blank=True, help_text="Courier consignment ID, rider remarks")

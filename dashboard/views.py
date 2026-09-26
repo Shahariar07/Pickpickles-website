@@ -54,6 +54,9 @@ def dashboard_index(request):
     now = timezone.now()
     today = now.date()
     
+    # Ensure damage and returns expenses are synchronized
+    ensure_damage_and_returns_expenses_synced(user=request.user)
+    
     # Basic Metrics
     total_orders_count = Order.objects.count()
     today_orders = Order.objects.filter(created_at__date=today)
@@ -1499,19 +1502,20 @@ def product_stock_ledger(request, product_id):
 
 def sync_order_return_state(order_return, new_status, courier_fee=None, notes=None, restock_if_intact=True, user=None):
     """
-    Synchronizes an OrderReturn with Product stock, StockLog ledger, and DamageLog records.
+    Synchronizes an OrderReturn with Product stock, StockLog ledger, DamageLog records, and Expenses.
     - If RECEIVED_INTACT: restocks inventory (if restock_if_intact and not already restocked),
       removes any auto-generated DamageLogs for this order.
     - If RECEIVED_DAMAGED: reverses any previous restock, creates accurate DamageLog records
       for all order items using real unit prices, and logs stock deduction.
     - If RETURNING: reverses any previous restock and removes auto-generated DamageLogs until
       final inspection upon receipt.
+    - Accurately creates/updates/removes linked courier return fee Expense.
     """
     order = order_return.order
     today = timezone.now().date()
 
     if courier_fee is not None:
-        order_return.courier_return_fee = courier_fee
+        order_return.courier_return_fee = Decimal(str(courier_fee))
     if notes is not None:
         order_return.notes = notes
 
@@ -1522,10 +1526,37 @@ def sync_order_return_state(order_return, new_status, courier_fee=None, notes=No
         order.order_status = 'CANCELLED'
         order.save(update_fields=['order_status'])
 
+    # Handle Courier Return Fee in Expense Ledger
+    courier_fee_val = float(order_return.courier_return_fee or 0)
+    if courier_fee_val > 0:
+        if order_return.expense:
+            order_return.expense.amount = Decimal(str(courier_fee_val))
+            order_return.expense.expense_date = order_return.return_date or today
+            order_return.expense.notes = f"Return Courier Charge for Order #{order.order_number} ({order_return.get_return_reason_display()})"
+            order_return.expense.save()
+        else:
+            exp = Expense.objects.create(
+                title=f"Courier Return Fee: Order #{order.order_number}",
+                category='LOGISTICS',
+                amount=Decimal(str(courier_fee_val)),
+                expense_date=order_return.return_date or today,
+                payment_method='CASH',
+                receipt_reference=f"RET-FEE-{order.order_number}",
+                notes=f"Return Courier Charge for Order #{order.order_number} ({order_return.get_return_reason_display()})"
+            )
+            order_return.expense = exp
+    else:
+        if order_return.expense:
+            order_return.expense.delete()
+            order_return.expense = None
+
     # 1. Handling RECEIVED_INTACT (Jars returned intact and safe to resell)
     if new_status == 'RECEIVED_INTACT':
-        # Remove any damage logs previously recorded for this returned order
-        DamageLog.objects.filter(order_ref=order.order_number, reason='RETURN_DAMAGED').delete()
+        # Remove any damage logs previously recorded for this returned order along with linked expenses
+        for old_dmg in DamageLog.objects.filter(order_ref=order.order_number, reason='RETURN_DAMAGED'):
+            if old_dmg.expense:
+                old_dmg.expense.delete()
+            old_dmg.delete()
 
         # Restock items if requested and not already restocked
         if restock_if_intact and not order_return.is_restocked:
@@ -1577,24 +1608,45 @@ def sync_order_return_state(order_return, new_status, courier_fee=None, notes=No
             order_return.is_restocked = False
 
         # Ensure accurate DamageLog records exist for each product item using real unit prices
-        DamageLog.objects.filter(order_ref=order.order_number, reason='RETURN_DAMAGED').delete()
+        for old_dmg in DamageLog.objects.filter(order_ref=order.order_number, reason='RETURN_DAMAGED'):
+            if old_dmg.expense:
+                old_dmg.expense.delete()
+            old_dmg.delete()
+
         for item in order.items.all():
             if item.product:
                 unit_cost = float(item.unit_price) if item.unit_price else float(item.product.price_bdt)
+                total_loss = unit_cost * item.quantity
+                
+                # Auto create expense record for damaged return loss
+                exp = Expense.objects.create(
+                    title=f"Damaged Return: {item.quantity}x {item.product.name} (#{order.order_number})",
+                    category='DAMAGE_LOSS',
+                    amount=Decimal(str(total_loss)),
+                    expense_date=order_return.return_date or today,
+                    payment_method='CASH',
+                    receipt_reference=f"DMG-RET-{order.order_number}",
+                    notes=f"Returned damaged/broken parcel: Order #{order.order_number} ({order_return.get_return_reason_display()})"
+                )
+
                 DamageLog.objects.create(
                     product=item.product,
                     quantity=item.quantity,
-                    estimated_cost_per_jar=unit_cost,
+                    estimated_cost_per_jar=Decimal(str(unit_cost)),
                     reason='RETURN_DAMAGED',
                     incident_date=order_return.return_date or today,
                     order_ref=order.order_number,
+                    expense=exp,
                     notes=f"Returned damaged/broken parcel: Order #{order.order_number} ({order_return.get_return_reason_display()})"
                 )
 
     # 3. Handling RETURNING (In transit with courier)
     elif new_status == 'RETURNING':
         # Remove damage logs since parcel is still in courier transit
-        DamageLog.objects.filter(order_ref=order.order_number, reason='RETURN_DAMAGED').delete()
+        for old_dmg in DamageLog.objects.filter(order_ref=order.order_number, reason='RETURN_DAMAGED'):
+            if old_dmg.expense:
+                old_dmg.expense.delete()
+            old_dmg.delete()
 
         # If it was previously marked restocked, revert stock
         if order_return.is_restocked:
@@ -1612,21 +1664,65 @@ def sync_order_return_state(order_return, new_status, courier_fee=None, notes=No
     return order_return
 
 
+def ensure_damage_and_returns_expenses_synced(user=None):
+    """
+    Guarantees that all DamageLogs and OrderReturns are properly represented in the Expense ledger.
+    Backfills any unlinked DamageLogs or OrderReturn courier fees.
+    """
+    today = timezone.now().date()
+    
+    # 1. Backfill any DamageLog without an Expense
+    unlinked_damages = DamageLog.objects.filter(expense__isnull=True).select_related('product')
+    for dmg in unlinked_damages:
+        reason_label = dmg.get_reason_display()
+        total_loss = float(dmg.total_loss_bdt or (dmg.quantity * dmg.estimated_cost_per_jar))
+        exp = Expense.objects.create(
+            title=f"Damaged Product: {dmg.quantity}x {dmg.product.name}",
+            category='DAMAGE_LOSS',
+            amount=Decimal(str(total_loss)),
+            expense_date=dmg.incident_date or today,
+            payment_method='CASH',
+            receipt_reference=f"DMG-{dmg.order_ref}" if dmg.order_ref else f"DMG-LOG-{dmg.id}",
+            notes=f"Reason: {reason_label}. {dmg.notes}".strip()
+        )
+        dmg.expense = exp
+        dmg.save(update_fields=['expense'])
+
+    # 2. Backfill/Sync any OrderReturn with courier fee > 0 without an Expense
+    unlinked_returns = OrderReturn.objects.filter(courier_return_fee__gt=0, expense__isnull=True).select_related('order')
+    for ret in unlinked_returns:
+        fee = float(ret.courier_return_fee)
+        exp = Expense.objects.create(
+            title=f"Courier Return Fee: Order #{ret.order.order_number}",
+            category='LOGISTICS',
+            amount=Decimal(str(fee)),
+            expense_date=ret.return_date or today,
+            payment_method='CASH',
+            receipt_reference=f"RET-FEE-{ret.order.order_number}",
+            notes=f"Return Courier Charge for Order #{ret.order.order_number} ({ret.get_return_reason_display()})"
+        )
+        ret.expense = exp
+        ret.save(update_fields=['expense'])
+
+    # 3. Synchronize any RECEIVED_DAMAGED order return that is missing damage logs
+    damaged_returns_without_logs = OrderReturn.objects.filter(return_status='RECEIVED_DAMAGED').select_related('order')
+    for ret in damaged_returns_without_logs:
+        existing_log_count = DamageLog.objects.filter(order_ref=ret.order.order_number, reason='RETURN_DAMAGED').count()
+        if existing_log_count == 0:
+            sync_order_return_state(ret, 'RECEIVED_DAMAGED', user=user)
+
+
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def damage_returns_manager(request):
     """Manager for recording broken/damaged pickle jars and courier returned parcels."""
     now = timezone.now()
     today = now.date()
 
-    # Automatically ensure historical returned damaged orders have synchronized DamageLog records
-    damaged_returns_without_logs = OrderReturn.objects.filter(return_status='RECEIVED_DAMAGED')
-    for ret in damaged_returns_without_logs:
-        existing_log_count = DamageLog.objects.filter(order_ref=ret.order.order_number, reason='RETURN_DAMAGED').count()
-        if existing_log_count == 0:
-            sync_order_return_state(ret, 'RECEIVED_DAMAGED', user=request.user)
+    # Automatically ensure historical damages and returns are fully synchronized with expenses
+    ensure_damage_and_returns_expenses_synced(user=request.user)
 
-    damage_logs = DamageLog.objects.all().select_related('product').order_by('-incident_date', '-created_at')
-    order_returns = OrderReturn.objects.all().select_related('order').prefetch_related('order__items').order_by('-created_at')
+    damage_logs = DamageLog.objects.all().select_related('product', 'expense').order_by('-incident_date', '-created_at')
+    order_returns = OrderReturn.objects.all().select_related('order', 'expense').prefetch_related('order__items').order_by('-created_at')
     products = Product.objects.all().order_by('name')
     orders = Order.objects.all().order_by('-created_at')[:100]
 
@@ -1647,6 +1743,7 @@ def damage_returns_manager(request):
                 order_ref = request.POST.get('order_ref', '').strip()
                 notes = request.POST.get('notes', '').strip()
                 deduct_stock = request.POST.get('deduct_stock') == 'on'
+                add_to_expense = ('add_to_expense' in request.POST) or (request.POST.get('add_to_expense') == 'on')
 
                 # Deduct from product stock if requested
                 if deduct_stock and product.stock_count >= quantity:
@@ -1668,16 +1765,32 @@ def damage_returns_manager(request):
                         created_by=request.user if request.user.is_authenticated else None
                     )
 
+                exp = None
+                if add_to_expense:
+                    reason_dict = dict(DamageLog.DAMAGE_REASON_CHOICES)
+                    reason_label = reason_dict.get(reason, reason)
+                    exp = Expense.objects.create(
+                        title=f"Damaged Product: {quantity}x {product.name}",
+                        category='DAMAGE_LOSS',
+                        amount=Decimal(str(estimated_cost * quantity)),
+                        expense_date=incident_date,
+                        payment_method='CASH',
+                        receipt_reference=f"DMG-{order_ref}" if order_ref else f"DMG-{product.id}-{int(timezone.now().timestamp())}",
+                        notes=f"Reason: {reason_label}. {notes}".strip()
+                    )
+
                 DamageLog.objects.create(
                     product=product,
                     quantity=quantity,
-                    estimated_cost_per_jar=estimated_cost,
+                    estimated_cost_per_jar=Decimal(str(estimated_cost)),
                     reason=reason,
                     incident_date=incident_date,
                     order_ref=order_ref,
+                    expense=exp,
                     notes=notes
                 )
-                messages.success(request, f'Logged {quantity}x {product.name} damage (৳{estimated_cost * quantity:,.0f} loss). Stock updated.')
+                exp_msg = " Added to expenses." if exp else ""
+                messages.success(request, f'Logged {quantity}x {product.name} damage (৳{estimated_cost * quantity:,.0f} loss).{exp_msg} Stock updated.')
             except Exception as e:
                 messages.error(request, f'Failed to record damage: {str(e)}')
             return redirect('dashboard:damage_returns')
@@ -1689,8 +1802,27 @@ def damage_returns_manager(request):
                 return redirect('dashboard:damage_returns')
             damage_id = request.POST.get('damage_id')
             log = get_object_or_404(DamageLog, id=damage_id)
+            if log.expense:
+                log.expense.delete()
             log.delete()
-            messages.success(request, 'Damage record deleted.')
+            messages.success(request, 'Damage record and associated expense deleted.')
+            return redirect('dashboard:damage_returns')
+
+        # 2.5 DELETE RETURN LOG
+        elif action == 'delete_return':
+            if not request.user.is_superuser:
+                messages.error(request, 'Permission Denied: Staff accounts are restricted from deleting return logs. Only Administrator can delete.')
+                return redirect('dashboard:damage_returns')
+            ret_id = request.POST.get('return_id')
+            ret = get_object_or_404(OrderReturn, id=ret_id)
+            if ret.expense:
+                ret.expense.delete()
+            for old_dmg in DamageLog.objects.filter(order_ref=ret.order.order_number, reason='RETURN_DAMAGED'):
+                if old_dmg.expense:
+                    old_dmg.expense.delete()
+                old_dmg.delete()
+            ret.delete()
+            messages.success(request, 'Return record and associated expenses deleted.')
             return redirect('dashboard:damage_returns')
 
         # 3. RECORD COURIER RETURN
@@ -1968,6 +2100,9 @@ def expense_manager(request):
     now = timezone.now()
     today = now.date()
 
+    # Ensure damage and returns expenses are synchronized
+    ensure_damage_and_returns_expenses_synced(user=request.user)
+
     if request.method == 'POST':
         action = request.POST.get('action')
         expense_id = request.POST.get('expense_id')
@@ -2062,6 +2197,7 @@ def expense_manager(request):
             ('Courier & Rider Delivery Cost 🚚', 'LOGISTICS', 'fa-truck-fast', 'Courier parcel shipping fees and direct delivery rider charges.'),
             ('Digital Ads & Marketing 📢', 'MARKETING', 'fa-bullhorn', 'Facebook page sponsored ads, boost campaigns, and promotion.'),
             ('Gas, Electricity & Kitchen Rent ⚡', 'UTILITIES', 'fa-bolt', 'Kitchen utilities, gas cylinders, and production space rent.'),
+            ('Damaged & Broken Products Loss 💥', 'DAMAGE_LOSS', 'fa-burst', 'Financial loss from courier breakage, kitchen spills, and unsellable damaged jars.'),
             ('Operational & Miscellaneous 📋', 'OTHER', 'fa-receipt', 'Sanitizing supplies, kitchen tools, and operational expenses.'),
         ]
         for name, slug, icon, desc in default_seed:
