@@ -10,6 +10,9 @@ ExecStart=/var/www/pickpickles/venv/bin/gunicorn \
           --access-logfile /var/log/gunicorn/pickpickles_access.log \
           --error-logfile /var/log/gunicorn/pickpickles_error.log \
           --workers 3 \
+          --threads 2 \
+          --worker-class gthread \
+          --timeout 120 \
           --bind unix:/run/gunicorn_pickpickles.sock \
           pickpickles_project.wsgi:application
 
