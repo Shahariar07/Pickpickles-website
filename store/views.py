@@ -17,10 +17,10 @@ from django.db.models.functions import Coalesce
 
 
 def index(request):
-    # Auto-calculate best seller product based on total ordered units (excluding cancelled and soft-deleted orders)
+    # Auto-calculate best seller product based on total shipped/delivered units
     best_seller = Product.objects.annotate(
         total_sold=Coalesce(
-            Sum('order_items__quantity', filter=Q(order_items__order__is_deleted=False) & ~Q(order_items__order__order_status='CANCELLED')),
+            Sum('order_items__quantity', filter=Q(order_items__order__is_deleted=False) & Q(order_items__order__order_status__in=['OUT_FOR_DELIVERY', 'DELIVERED'])),
             Value(0),
             output_field=IntegerField()
         )
@@ -29,7 +29,7 @@ def index(request):
     featured_products = Product.objects.filter(is_featured=True).order_by('id')
     all_products = Product.objects.annotate(
         total_sold=Coalesce(
-            Sum('order_items__quantity', filter=Q(order_items__order__is_deleted=False) & ~Q(order_items__order__order_status='CANCELLED')),
+            Sum('order_items__quantity', filter=Q(order_items__order__is_deleted=False) & Q(order_items__order__order_status__in=['OUT_FOR_DELIVERY', 'DELIVERED'])),
             Value(0),
             output_field=IntegerField()
         )
@@ -65,7 +65,7 @@ def product_detail(request, slug):
 
     best_seller = Product.objects.annotate(
         total_sold=Coalesce(
-            Sum('order_items__quantity', filter=Q(order_items__order__is_deleted=False) & ~Q(order_items__order__order_status='CANCELLED')),
+            Sum('order_items__quantity', filter=Q(order_items__order__is_deleted=False) & Q(order_items__order__order_status__in=['OUT_FOR_DELIVERY', 'DELIVERED'])),
             Value(0),
             output_field=IntegerField()
         )

@@ -88,8 +88,8 @@ def dashboard_index(request):
     # Advanced KPIs
     avg_order_val = round(float(total_revenue) / delivered_count, 1) if delivered_count > 0 else 0
     delivered_jars_sold = OrderItem.objects.filter(order__in=delivered_paid_orders).aggregate(Sum('quantity'))['quantity__sum'] or 0
-    total_jars_sold = OrderItem.objects.filter(~Q(order__order_status='CANCELLED')).aggregate(Sum('quantity'))['quantity__sum'] or 0
-    pipeline_jars_sold = max(0, total_jars_sold - delivered_jars_sold)
+    total_jars_sold = OrderItem.objects.filter(order__order_status__in=['OUT_FOR_DELIVERY', 'DELIVERED']).aggregate(Sum('quantity'))['quantity__sum'] or 0
+    pipeline_jars_sold = OrderItem.objects.filter(order__order_status__in=['PENDING', 'CONFIRMED', 'PACKING']).aggregate(Sum('quantity'))['quantity__sum'] or 0
     delivery_rate = round((delivered_count / total_orders_count) * 100, 1) if total_orders_count > 0 else 0
     
     # Inventory & Low Stock Tracking (Ultra-fast 1-Query Batch Demand)
@@ -154,8 +154,8 @@ def dashboard_index(request):
         revenue_series.append(stat['rev'])
         orders_series.append(stat['count'])
 
-    # 2. Dynamic Product Sales Performance Breakdown (Auto-synced from Inventory & OrderItems)
-    order_items_qs = OrderItem.objects.filter(~Q(order__order_status='CANCELLED'))
+    # 2. Dynamic Product Sales Performance Breakdown (Auto-synced from Inventory & OrderItems of Shipped/Delivered Orders)
+    order_items_qs = OrderItem.objects.filter(order__order_status__in=['OUT_FOR_DELIVERY', 'DELIVERED'])
     
     # Aggregate sales by product_id and product_name
     sales_by_id = {}
@@ -2616,12 +2616,14 @@ def business_profitability(request):
     break-even volume, and interactive feasibility analysis based on real expenses & production data.
     """
     # 1. Production & Sales Volume
+    # Shipped / In Shipping or Delivered orders count as sold (not pending/confirmed/packing queue)
+    shipped_delivered_orders = Order.objects.filter(order_status__in=['OUT_FOR_DELIVERY', 'DELIVERED'])
     delivered_paid_orders = Order.objects.filter(Q(order_status='DELIVERED') | Q(payment_status='PAID'))
-    non_cancelled_orders = Order.objects.filter(~Q(order_status='CANCELLED'))
+    unshipped_queue_orders = Order.objects.filter(order_status__in=['PENDING', 'CONFIRMED', 'PACKING'])
 
     jars_delivered = OrderItem.objects.filter(order__in=delivered_paid_orders).aggregate(Sum('quantity'))['quantity__sum'] or 0
-    jars_sold_total = OrderItem.objects.filter(order__in=non_cancelled_orders).aggregate(Sum('quantity'))['quantity__sum'] or 0
-    pipeline_jars = max(0, jars_sold_total - jars_delivered)
+    jars_sold_total = OrderItem.objects.filter(order__in=shipped_delivered_orders).aggregate(Sum('quantity'))['quantity__sum'] or 0
+    pipeline_jars = OrderItem.objects.filter(order__in=unshipped_queue_orders).aggregate(Sum('quantity'))['quantity__sum'] or 0
 
     # Current Catalog & Physical Stock
     all_products = list(Product.objects.all().order_by('name'))
