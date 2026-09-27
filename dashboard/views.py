@@ -1252,35 +1252,90 @@ def stock_manager(request):
                 messages.error(request, 'Invalid price or stock count format.')
             return redirect('dashboard:stock_manager')
 
-        # 5B. RESTOCK / PRODUCTION BATCH ADD
-        elif action == 'restock_batch' or 'restock_batch' in request.POST:
-            product = get_object_or_404(Product, id=product_id)
-            try:
-                add_qty = int(request.POST.get('quantity', 0))
-                batch_ref = request.POST.get('batch_reference', '').strip() or 'Production Batch'
-                notes = request.POST.get('notes', '').strip()
-                if add_qty > 0:
-                    prev_stock = product.stock_count
-                    new_stock = prev_stock + add_qty
-                    product.stock_count = new_stock
-                    product.is_in_stock = True
-                    product.save()
+        # 5B. MULTI-ITEM PRODUCTION BATCH & RESTOCK ADD
+        elif action in ['restock_batch', 'multi_item_batch'] or 'restock_batch' in request.POST or 'multi_item_batch' in request.POST:
+            batch_ref = request.POST.get('batch_reference', '').strip() or 'Production Batch'
+            notes = request.POST.get('notes', '').strip()
+            prod_date_str = request.POST.get('production_date', '').strip()
+            prod_date_obj = None
+            if prod_date_str:
+                try:
+                    prod_date_obj = datetime.datetime.strptime(prod_date_str, '%Y-%m-%d').date()
+                except ValueError:
+                    pass
 
-                    StockLog.objects.create(
-                        product=product,
+            items_to_add = []
+
+            # 1. Check array format product_ids[] / quantities[]
+            prod_ids = request.POST.getlist('product_ids[]') or request.POST.getlist('product_id')
+            qtys = request.POST.getlist('quantities[]') or request.POST.getlist('quantity')
+            if prod_ids and qtys and len(prod_ids) == len(qtys):
+                for p_id, q_val in zip(prod_ids, qtys):
+                    try:
+                        q_int = int(q_val)
+                        if q_int > 0:
+                            items_to_add.append((int(p_id), q_int))
+                    except (ValueError, TypeError):
+                        pass
+
+            # 2. Check dynamic batch_qty_<id> fields
+            for key, val in request.POST.items():
+                if key.startswith('batch_qty_') and val:
+                    try:
+                        p_id = int(key.replace('batch_qty_', ''))
+                        q_int = int(val)
+                        if q_int > 0 and (p_id, q_int) not in items_to_add:
+                            items_to_add.append((p_id, q_int))
+                    except (ValueError, TypeError):
+                        pass
+
+            # 3. Fallback: single product_id and quantity
+            if not items_to_add and product_id:
+                try:
+                    q_int = int(request.POST.get('quantity', 0))
+                    if q_int > 0:
+                        items_to_add.append((int(product_id), q_int))
+                except (ValueError, TypeError):
+                    pass
+
+            if not items_to_add:
+                messages.error(request, 'Please enter a valid production quantity (at least 1 jar) for one or more pickle items.')
+                return redirect('dashboard:stock_manager')
+
+            total_added_jars = 0
+            updated_product_names = []
+
+            for p_id, add_qty in items_to_add:
+                prod = Product.objects.filter(id=p_id).first()
+                if prod:
+                    prev_stock = prod.stock_count
+                    new_stock = prev_stock + add_qty
+                    prod.stock_count = new_stock
+                    prod.is_in_stock = True
+                    prod.save(update_fields=['stock_count', 'is_in_stock'])
+
+                    log = StockLog.objects.create(
+                        product=prod,
                         log_type='RESTOCK',
                         quantity_delta=add_qty,
                         previous_stock=prev_stock,
                         resulting_stock=new_stock,
                         reference=batch_ref,
-                        notes=notes or f"Restocked +{add_qty} jars (Batch: {batch_ref})",
+                        notes=notes or f"Batch Production ({batch_ref}): +{add_qty} jars",
                         created_by=request.user if request.user.is_authenticated else None
                     )
-                    messages.success(request, f'Successfully added +{add_qty} jars to "{product.name}" stock (Current total: {new_stock} jars).')
-                else:
-                    messages.error(request, 'Please enter a valid positive quantity to add.')
-            except ValueError:
-                messages.error(request, 'Invalid quantity format.')
+                    if prod_date_obj:
+                        prod_datetime = timezone.make_aware(datetime.datetime.combine(prod_date_obj, timezone.now().time())) if timezone.is_naive(datetime.datetime.combine(prod_date_obj, timezone.now().time())) else datetime.datetime.combine(prod_date_obj, timezone.now().time())
+                        StockLog.objects.filter(id=log.id).update(created_at=prod_datetime)
+
+                    total_added_jars += add_qty
+                    updated_product_names.append(f"{prod.name} (+{add_qty})")
+
+            date_display = f" on {prod_date_obj.strftime('%b %d, %Y')}" if prod_date_obj else ""
+            messages.success(
+                request,
+                f'🎉 Production Batch "{batch_ref}"{date_display} successfully saved! Total +{total_added_jars} jars added across {len(updated_product_names)} pickle flavor(s).'
+            )
             return redirect('dashboard:stock_manager')
 
         # 5C. QUICK STEPPER (+1 / -1 jars)
@@ -1357,8 +1412,24 @@ def stock_manager(request):
     total_current_inventory = sum(p.stock_count for p in all_products)
     total_target_inventory = sum(p.target_stock_level for p in all_products)
 
+    # Suggest next batch reference number
+    last_batch_log = StockLog.objects.filter(reference__icontains='Batch').order_by('-id').first()
+    next_batch_num = 1
+    if last_batch_log and last_batch_log.reference:
+        import re
+        m = re.search(r'Batch\s*#?\s*(\d+)', last_batch_log.reference, re.IGNORECASE)
+        if m:
+            try:
+                next_batch_num = int(m.group(1)) + 1
+            except Exception:
+                pass
+    suggested_batch_ref = f"Batch #{next_batch_num}"
+
     context = {
         'products': products,
+        'all_catalog_products': all_products,
+        'suggested_batch_ref': suggested_batch_ref,
+        'today_date': timezone.now().date().strftime('%Y-%m-%d'),
         'categories': categories,
         'selected_cat': selected_cat,
         'search_query': search_query,
