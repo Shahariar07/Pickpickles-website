@@ -210,7 +210,7 @@ class SteadfastCourierService:
     def check_fraud(self, phone: str, force_refresh: bool = False) -> dict:
         """
         Check customer delivery history and fraud risk by phone number across Steadfast Courier network.
-        Endpoint: GET /fraud_check/{phone}
+        Endpoint: GET /fraud_check/score/{phone} (updated to Steadfast Courier 2026 score API)
         """
         if not phone:
             return {"success": False, "message": "Phone number is required"}
@@ -223,7 +223,7 @@ class SteadfastCourierService:
         if len(clean_phone) > 11:
             clean_phone = clean_phone[-11:]
 
-        cache_key = f"sf_fraud_v3_{clean_phone}"
+        cache_key = f"sf_fraud_v4_{clean_phone}"
 
         # 1. Tier-1: Process In-Memory Cache (0.001ms instantaneous lookup)
         if not force_refresh and clean_phone in _sf_fraud_mem_cache:
@@ -247,51 +247,118 @@ class SteadfastCourierService:
             }
 
         headers = self._get_headers()
-        url = f"{self.base_url}/fraud_check/{clean_phone}"
+        url = f"{self.base_url}/fraud_check/score/{clean_phone}"
         try:
             # Fast timeout of 5 seconds to keep dashboard responsive
             res = self.session.get(url, headers=headers, timeout=5)
+            # Fallback to legacy endpoint if score endpoint returns 404
+            if res.status_code == 404:
+                url = f"{self.base_url}/fraud_check/{clean_phone}"
+                res = self.session.get(url, headers=headers, timeout=5)
+
             if res.status_code == 200:
                 data = res.json() if res.content else {}
+
+                # 1. Extract ratios & volume band from Steadfast Score API
+                raw_delivery_ratio = data.get('delivery_ratio')
+                raw_cancellation_ratio = data.get('cancellation_ratio') if data.get('cancellation_ratio') is not None else data.get('return_ratio')
+                raw_volume_band = str(data.get('volume_band') or 'none').lower()
+                if raw_volume_band in ('none', 'null', ''):
+                    volume_band = 'none'
+                else:
+                    volume_band = raw_volume_band
+
+                total_reports = int(data.get('total_reports') or 0)
                 
-                # Extract parcel delivery metrics from Steadfast response
-                total_parcels = int(data.get('total_parcels') or data.get('total_parcel') or data.get('total_orders') or 0)
+                # Format fraud categories
+                raw_categories = data.get('fraud_categories') or {}
+                categories_list = []
+                if isinstance(raw_categories, dict):
+                    for k, v in raw_categories.items():
+                        clean_name = k.replace('_', ' ').title()
+                        categories_list.append(f"{clean_name} ({v})")
+                elif isinstance(raw_categories, list):
+                    for item in raw_categories:
+                        categories_list.append(str(item).replace('_', ' ').title())
+
+                delivery_ratio = float(raw_delivery_ratio) if raw_delivery_ratio is not None else None
+                cancellation_ratio = float(raw_cancellation_ratio) if raw_cancellation_ratio is not None else None
+
+                # Fallback to parcel counts if present (legacy)
+                total_parcels = int(data.get('Total_parcels') or data.get('total_parcels') or data.get('total_parcel') or data.get('total_orders') or 0)
                 total_delivered = int(data.get('total_delivered') or data.get('delivered') or data.get('total_delivered_parcels') or 0)
                 total_cancelled = int(data.get('total_cancelled') or data.get('cancelled') or data.get('total_cancelled_parcels') or data.get('total_returned') or 0)
-                
-                if total_parcels < (total_delivered + total_cancelled):
-                    total_parcels = total_delivered + total_cancelled
 
-                if total_parcels > 0:
+                # Compute success & return rate
+                if delivery_ratio is not None:
+                    success_rate = round(delivery_ratio, 1)
+                    return_rate = round(cancellation_ratio, 1) if cancellation_ratio is not None else round(100.0 - success_rate, 1)
+                elif total_parcels > 0:
                     success_rate = round((total_delivered / total_parcels) * 100, 1)
+                    return_rate = round((total_cancelled / total_parcels) * 100, 1)
                 else:
-                    success_rate = 100.0 if (total_delivered == 0 and total_cancelled == 0) else 0.0
+                    success_rate = 100.0 if (volume_band == 'none' and total_reports == 0) else 0.0
+                    return_rate = 0.0
+
+                volume_band_titles = {
+                    'high': 'High Activity',
+                    'medium': 'Medium Activity',
+                    'low': 'Low Activity',
+                    'none': 'No History',
+                }
+                volume_band_display = volume_band_titles.get(volume_band, volume_band.capitalize())
 
                 # Risk classification
-                if total_parcels == 0:
+                if volume_band == 'none' and total_reports == 0 and delivery_ratio is None and total_parcels == 0:
                     risk_level = "NEW"
                     risk_title = "⚪ নতুন নম্বর (Steadfast-এ পূর্বের রেকর্ড নেই)"
                     risk_label = "New / Clean"
                     badge_class = "bg-slate-100 text-slate-800 border-slate-300"
-                    risk_desc = "Steadfast কুরিয়ার নেটওয়ার্কে এই নম্বরে পূর্বে কোনো পার্সেল ডেলিভারি রেকর্ড পাওয়া যায়নি।"
-                elif total_cancelled > 0 and success_rate < 65:
+                    risk_desc = "Steadfast কুরিয়ার নেটওয়ার্কে এই নম্বরে পূর্বে কোনো পার্সেল বা ফ্রড রিপোর্ট পাওয়া যায়নি।"
+                elif total_reports > 0 or (cancellation_ratio is not None and cancellation_ratio >= 35) or (delivery_ratio is not None and delivery_ratio <= 65) or (total_cancelled > 0 and success_rate < 65):
                     risk_level = "HIGH_RISK"
-                    risk_title = "🔴 উচ্চ ঝুঁকিপূর্ণ (High Cancellation / Refusal Rate)"
+                    risk_title = "🔴 উচ্চ ঝুঁকিপূর্ণ (High Cancellation / Fraud Reports)"
                     risk_label = "High Risk"
                     badge_class = "bg-rose-100 text-rose-800 border-rose-300"
-                    risk_desc = f"Steadfast-এ {total_parcels}টি অর্ডারের মধ্যে {total_cancelled}টি বাতিল/ফেরত হয়েছে (ডেলিভারি রেট {success_rate}%)। ক্যাশ অন ডেলিভারিতে পাঠানোর আগে সতর্ক থাকুন।"
-                elif total_cancelled > 0 and success_rate < 85:
+                    
+                    desc_parts = []
+                    if total_reports > 0:
+                        desc_parts.append(f"⚠️ অন্যান্য মার্চেন্টরা এই নম্বরে {total_reports}টি রিপোর্ট করেছেন।")
+                    if cancellation_ratio is not None:
+                        desc_parts.append(f"Steadfast-এ রিটার্ন রেট {return_rate}% (সফল ডেলিভারি {success_rate}%)। এক্টিভিটি: {volume_band_display}।")
+                    elif total_parcels > 0:
+                        desc_parts.append(f"Steadfast-এ {total_parcels}টি অর্ডারের মধ্যে {total_cancelled}টি বাতিল হয়েছে ({return_rate}% রিটার্ন রেট)।")
+                    
+                    desc_parts.append("ক্যাশ অন ডেলিভারিতে পাঠানোর আগে ফোনে কথা বলে অগ্রিম ডেলিভারি চার্জ নেওয়ার পরামর্শ দেওয়া হচ্ছে।")
+                    risk_desc = " ".join(desc_parts)
+
+                elif (cancellation_ratio is not None and cancellation_ratio > 15) or (delivery_ratio is not None and delivery_ratio < 85) or (total_cancelled > 0 and success_rate < 85):
                     risk_level = "MODERATE"
                     risk_title = "🟡 মাঝারি ঝুঁকি (কিছু রিটার্ন রেকর্ড আছে)"
                     risk_label = "Moderate Risk"
                     badge_class = "bg-amber-100 text-amber-800 border-amber-300"
-                    risk_desc = f"Steadfast-এ {total_parcels}টি পার্সেলের মধ্যে {total_delivered}টি ডেলিভার ও {total_cancelled}টি রিটার্ন হয়েছে (সফলতা: {success_rate}%)।"
+                    
+                    desc_parts = []
+                    if total_reports > 0:
+                        desc_parts.append(f"⚠️ {total_reports}টি রিপোর্ট পাওয়া গেছে।")
+                    if cancellation_ratio is not None:
+                        desc_parts.append(f"Steadfast নেটওয়ার্কে ডেলিভারি রেট {success_rate}% এবং রিটার্ন রেট {return_rate}% (এক্টিভিটি: {volume_band_display})।")
+                    elif total_parcels > 0:
+                        desc_parts.append(f"Steadfast-এ {total_parcels}টি অর্ডারের মধ্যে {total_delivered}টি ডেলিভার ও {total_cancelled}টি রিটার্ন হয়েছে।")
+                    
+                    risk_desc = " ".join(desc_parts)
+
                 else:
                     risk_level = "SAFE"
                     risk_title = "🟢 বিশ্বস্ত প্রাপক (Safe / High Delivery Rate)"
                     risk_label = "Safe / Trusted"
                     badge_class = "bg-emerald-100 text-emerald-800 border-emerald-300"
-                    risk_desc = f"Steadfast-এ {total_parcels}টি অর্ডারের মধ্যে {total_delivered}টি সফলভাবে ডেলিভার হয়েছে (সফলতা: {success_rate}%)।"
+                    if delivery_ratio is not None:
+                        risk_desc = f"Steadfast নেটওয়ার্কে ডেলিভারি সফলতার হার {success_rate}% (রিটার্ন রেট {return_rate}%)। এক্টিভিটি: {volume_band_display}। কোনো নেগেটিভ রিপোর্ট নেই।"
+                    elif total_parcels > 0:
+                        risk_desc = f"Steadfast-এ {total_parcels}টি অর্ডারের মধ্যে {total_delivered}টি সফলভাবে ডেলিভার হয়েছে (সফলতা: {success_rate}%)।"
+                    else:
+                        risk_desc = "Steadfast কুরিয়ার নেটওয়ার্কে এই গ্রাহকের কোনো নেগেটিভ রেকর্ড নেই।"
 
                 result = {
                     "success": True,
@@ -299,7 +366,14 @@ class SteadfastCourierService:
                     "total_parcels": total_parcels,
                     "total_delivered": total_delivered,
                     "total_cancelled": total_cancelled,
+                    "total_reports": total_reports,
+                    "delivery_ratio": delivery_ratio,
+                    "cancellation_ratio": cancellation_ratio,
                     "success_rate": success_rate,
+                    "return_rate": return_rate,
+                    "volume_band": volume_band,
+                    "volume_band_display": volume_band_display,
+                    "fraud_categories": categories_list,
                     "risk_level": risk_level,
                     "risk_title": risk_title,
                     "risk_label": risk_label,

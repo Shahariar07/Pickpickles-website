@@ -1,5 +1,6 @@
 import json
 from decimal import Decimal
+from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, HttpResponse, HttpResponseServerError
 from django.urls import reverse
@@ -419,7 +420,12 @@ def sitemap_xml(request):
     Dynamically generates a standard XML Sitemap for search engines like Google, Bing, etc.
     Includes homepage, product pages, category pages, static content with lastmod and priorities.
     """
-    domain = f"{request.scheme}://{request.get_host()}"
+    host = request.get_host()
+    # Force HTTPS for all production/live traffic
+    if settings.DEBUG and ('127.0.0.1' in host or 'localhost' in host):
+        domain = f"{request.scheme}://{host}"
+    else:
+        domain = f"https://{host}"
     
     # 1. Main / Static pages
     urls = [
@@ -488,7 +494,12 @@ def robots_txt(request):
     """
     Dynamically generates robots.txt for search engine crawlers with a pointer to sitemap.xml.
     """
-    domain = f"{request.scheme}://{request.get_host()}"
+    host = request.get_host()
+    # Force HTTPS for all production/live traffic
+    if settings.DEBUG and ('127.0.0.1' in host or 'localhost' in host):
+        domain = f"{request.scheme}://{host}"
+    else:
+        domain = f"https://{host}"
     content = f"""User-agent: *
 Disallow: /admin/
 Disallow: /dashboard/

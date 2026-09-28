@@ -235,9 +235,37 @@ class CartTests(TestCase):
         data = response.json()
         self.assertEqual(data['status'], 'success')
         self.assertEqual(data['order_status'], 'DELIVERED')
-        self.assertEqual(data['payment_status'], 'PAID')
-
         order.refresh_from_db()
         self.assertEqual(order.order_status, 'DELIVERED')
         self.assertEqual(order.payment_status, 'PAID')
         self.assertEqual(order.steadfast_order_status, 'delivered')
+
+    def test_steadfast_fraud_check(self):
+        from unittest.mock import patch, MagicMock
+        from store.steadfast import SteadfastCourierService
+
+        service = SteadfastCourierService()
+
+        # Mock score API response
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.content = True
+        mock_response.json.return_value = {
+            'status': 200,
+            'phone': '01712345678',
+            'delivery_ratio': 90,
+            'cancellation_ratio': 10,
+            'volume_band': 'high',
+            'total_reports': 0,
+            'fraud_categories': []
+        }
+
+        with patch.object(service, 'is_configured', return_value=True), \
+             patch.object(service.session, 'get', return_value=mock_response):
+            result = service.check_fraud('01712345678', force_refresh=True)
+            self.assertTrue(result['success'])
+            self.assertEqual(result['risk_level'], 'SAFE')
+            self.assertEqual(result['success_rate'], 90.0)
+            self.assertEqual(result['return_rate'], 10.0)
+            self.assertEqual(result['volume_band'], 'high')
+

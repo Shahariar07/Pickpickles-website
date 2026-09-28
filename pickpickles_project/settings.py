@@ -232,10 +232,16 @@ STEADFAST_SECRET_KEY = os.environ.get('STEADFAST_SECRET_KEY', '')
 # ==============================================================================
 # 8. Production Security Hardening
 # ==============================================================================
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-SECURE_SSL_REDIRECT = os.environ.get('DJANGO_SECURE_SSL_REDIRECT', 'False').lower() in ('true', '1', 't')
+import sys
+is_runserver = any('runserver' in arg for arg in sys.argv)
 
-if not DEBUG:
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+if is_runserver or DEBUG:
+    SECURE_SSL_REDIRECT = False
+else:
+    SECURE_SSL_REDIRECT = os.environ.get('DJANGO_SECURE_SSL_REDIRECT', 'False').lower() in ('true', '1', 't')
+
+if not DEBUG and not is_runserver:
     SESSION_COOKIE_SECURE = os.environ.get('DJANGO_SESSION_COOKIE_SECURE', 'False').lower() in ('true', '1', 't')
     CSRF_COOKIE_SECURE = os.environ.get('DJANGO_CSRF_COOKIE_SECURE', 'False').lower() in ('true', '1', 't')
     SESSION_COOKIE_HTTPONLY = True
@@ -248,3 +254,7 @@ if not DEBUG:
         SECURE_HSTS_SECONDS = 31536000
         SECURE_HSTS_INCLUDE_SUBDOMAINS = True
         SECURE_HSTS_PRELOAD = True
+else:
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+

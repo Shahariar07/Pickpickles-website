@@ -1148,6 +1148,74 @@ function renderOrdersFraudContent(data, content, badge) {
 
     let sfHtml = '';
     if (sf.success) {
+        let statsGrid = '';
+        if (sf.delivery_ratio !== null && sf.delivery_ratio !== undefined) {
+            statsGrid = `
+                <div class="grid grid-cols-4 gap-1.5 text-center">
+                    <div class="bg-white/90 p-2 rounded-xl border border-current/10 shadow-2xs">
+                        <span class="text-[10px] text-emerald-700 block font-bold">Delivery Rate</span>
+                        <strong class="text-sm sm:text-base font-black text-emerald-700">${sf.success_rate}%</strong>
+                    </div>
+                    <div class="bg-white/90 p-2 rounded-xl border border-current/10 shadow-2xs">
+                        <span class="text-[10px] text-rose-700 block font-bold">Return Rate</span>
+                        <strong class="text-sm sm:text-base font-black text-rose-700">${sf.return_rate}%</strong>
+                    </div>
+                    <div class="bg-white/90 p-2 rounded-xl border border-current/10 shadow-2xs">
+                        <span class="text-[10px] opacity-75 block font-bold">Activity</span>
+                        <strong class="text-xs sm:text-sm font-black text-gray-900">${sf.volume_band_display || (sf.volume_band ? sf.volume_band.toUpperCase() : '--')}</strong>
+                    </div>
+                    <div class="bg-white/90 p-2 rounded-xl border border-current/10 shadow-2xs">
+                        <span class="text-[10px] ${sf.total_reports > 0 ? 'text-rose-700' : 'text-gray-500'} block font-bold">Reports</span>
+                        <strong class="text-sm sm:text-base font-black ${sf.total_reports > 0 ? 'text-rose-700' : 'text-gray-900'}">${sf.total_reports || 0}</strong>
+                    </div>
+                </div>
+            `;
+        } else if (sf.total_parcels > 0) {
+            statsGrid = `
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div class="bg-white/90 p-2 rounded-xl border border-current/10 shadow-2xs">
+                        <span class="text-[10px] opacity-75 block font-bold">Steadfast Parcels</span>
+                        <strong class="text-base font-black text-gray-900">${sf.total_parcels}</strong>
+                    </div>
+                    <div class="bg-white/90 p-2 rounded-xl border border-current/10 shadow-2xs">
+                        <span class="text-[10px] text-emerald-700 block font-bold">Delivered</span>
+                        <strong class="text-base font-black text-emerald-700">${sf.total_delivered}</strong>
+                    </div>
+                    <div class="bg-white/90 p-2 rounded-xl border border-current/10 shadow-2xs">
+                        <span class="text-[10px] text-rose-700 block font-bold">Cancelled / Return</span>
+                        <strong class="text-base font-black text-rose-700">${sf.total_cancelled}</strong>
+                    </div>
+                </div>
+            `;
+        } else {
+            statsGrid = `
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div class="bg-white/90 p-2 rounded-xl border border-current/10 shadow-2xs">
+                        <span class="text-[10px] opacity-75 block font-bold">Activity Status</span>
+                        <strong class="text-xs sm:text-sm font-black text-gray-900">${sf.volume_band_display || 'New / No Record'}</strong>
+                    </div>
+                    <div class="bg-white/90 p-2 rounded-xl border border-current/10 shadow-2xs">
+                        <span class="text-[10px] text-emerald-700 block font-bold">Delivery Success</span>
+                        <strong class="text-sm sm:text-base font-black text-emerald-700">100%</strong>
+                    </div>
+                    <div class="bg-white/90 p-2 rounded-xl border border-current/10 shadow-2xs">
+                        <span class="text-[10px] text-gray-500 block font-bold">Reports</span>
+                        <strong class="text-sm sm:text-base font-black text-gray-900">${sf.total_reports || 0}</strong>
+                    </div>
+                </div>
+            `;
+        }
+
+        let categoriesHtml = '';
+        if (sf.fraud_categories && sf.fraud_categories.length > 0) {
+            categoriesHtml = `
+                <div class="flex items-center gap-1.5 flex-wrap pt-1">
+                    <span class="text-[10px] font-bold text-rose-900 uppercase">Merchant Tags:</span>
+                    ${sf.fraud_categories.map(c => `<span class="bg-rose-200/80 text-rose-900 font-bold text-[10px] px-2 py-0.5 rounded border border-rose-300 shadow-2xs">${c}</span>`).join('')}
+                </div>
+            `;
+        }
+
         sfHtml = `
             <div class="p-4 rounded-2xl border ${sf.badge_class} space-y-2.5">
                 <div class="flex items-center justify-between gap-2 flex-wrap">
@@ -1160,21 +1228,8 @@ function renderOrdersFraudContent(data, content, badge) {
                     </span>
                 </div>
 
-                <!-- 3-Pill Steadfast Stats Grid -->
-                <div class="grid grid-cols-3 gap-2 text-center">
-                    <div class="bg-white/90 p-2 rounded-xl border border-current/10 shadow-2xs">
-                        <span class="text-[10px] opacity-75 block font-bold">Steadfast Parcels</span>
-                        <strong class="text-base font-black text-gray-900">${sf.total_parcels}</strong>
-                    </div>
-                    <div class="bg-white/90 p-2 rounded-xl border border-current/10 shadow-2xs">
-                        <span class="text-[10px] text-emerald-700 block font-bold">Delivered</span>
-                        <strong class="text-base font-black text-emerald-700">${sf.total_delivered}</strong>
-                    </div>
-                    <div class="bg-white/90 p-2 rounded-xl border border-current/10 shadow-2xs">
-                        <span class="text-[10px] text-rose-700 block font-bold">Cancelled / Returned</span>
-                        <strong class="text-base font-black text-rose-700">${sf.total_cancelled}</strong>
-                    </div>
-                </div>
+                ${statsGrid}
+                ${categoriesHtml}
 
                 <p class="text-xs leading-relaxed opacity-90 pt-1">
                     ${sf.risk_desc}
