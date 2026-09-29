@@ -205,11 +205,14 @@ import math
 from decimal import Decimal
 
 
-def calculate_pathao_delivery_fee(weight_grams: int = 600, zone: str = 'INSIDE_DHAKA') -> Decimal:
+def calculate_pathao_delivery_fee(weight_grams: int = 600, zone: str = 'INSIDE_DHAKA', total_items: int = 1) -> Decimal:
     """
     Calculates delivery fee.
-    Flat ৳150 nationwide across Bangladesh (Inside & Outside Dhaka).
+    Special Offer: Order 4 or more items and get FREE delivery!
+    Otherwise: Flat ৳150 nationwide across Bangladesh (Inside & Outside Dhaka).
     """
+    if total_items >= 4:
+        return Decimal('0.00')
     return Decimal('150.00')
 
 

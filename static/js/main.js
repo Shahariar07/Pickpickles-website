@@ -75,6 +75,35 @@ function renderCartDrawer(items, subtotal) {
     const drawerItems = document.getElementById('cartDrawerItems');
     if (!drawerItems) return;
 
+    const totalItems = items ? items.reduce((sum, itm) => sum + (itm.quantity || 0), 0) : 0;
+    const isFreeDelivery = totalItems >= 4;
+    const remainingForFree = Math.max(0, 4 - totalItems);
+    const progressPercent = isFreeDelivery ? 100 : Math.round((totalItems / 4) * 100);
+
+    // Update Drawer Free Delivery Banner
+    const freeMsgEl = document.getElementById('drawerFreeDeliveryMsg');
+    const freeRemainingEl = document.getElementById('drawerFreeDeliveryRemaining');
+    const freePercentEl = document.getElementById('drawerFreeDeliveryPercent');
+    const freeBarEl = document.getElementById('drawerFreeDeliveryBar');
+    const deliveryNoteEl = document.getElementById('drawerDeliveryNote');
+
+    if (freeMsgEl) {
+        if (isFreeDelivery) {
+            freeMsgEl.innerHTML = '🎉 <strong>FREE Delivery Unlocked!</strong>';
+        } else {
+            freeMsgEl.innerHTML = `🚚 Add <strong><span id="drawerFreeDeliveryRemaining">${remainingForFree}</span> more jar${remainingForFree > 1 ? 's' : ''}</strong> for FREE Delivery!`;
+        }
+    }
+    if (freePercentEl) freePercentEl.innerText = `${progressPercent}%`;
+    if (freeBarEl) freeBarEl.style.width = `${progressPercent}%`;
+    if (deliveryNoteEl) {
+        if (isFreeDelivery) {
+            deliveryNoteEl.innerHTML = '<span class="text-emerald-700 font-bold">🎉 FREE Nationwide Delivery Applied!</span>';
+        } else {
+            deliveryNoteEl.innerHTML = '<span class="text-gray-500">Flat ৳150 Nationwide Delivery • <strong>Free on 4+ jars</strong></span>';
+        }
+    }
+
     if (!items || items.length === 0) {
         drawerItems.innerHTML = `
             <div class="text-center py-12 px-4" id="emptyCartMessage">
@@ -214,9 +243,58 @@ async function ajaxUpdateCart(productId, action) {
             const pageSub = document.getElementById('pageCartSubtotal');
             if (pageSub) pageSub.innerText = parseFloat(data.cart_subtotal).toFixed(2);
 
-            const deliveryFee = data.delivery_fee !== undefined ? parseFloat(data.delivery_fee) : 150.00;
+            const deliveryFee = data.delivery_fee !== undefined ? parseFloat(data.delivery_fee) : (data.cart_total_items >= 4 ? 0.00 : 150.00);
             const pageDelivery = document.getElementById('pageCartDeliveryFee');
-            if (pageDelivery) pageDelivery.innerText = `৳${deliveryFee.toFixed(2)}`;
+            const pageOldFee = document.getElementById('pageCartOldFee');
+            const pageDeliveryNote = document.getElementById('pageCartDeliveryNote');
+
+            if (pageDelivery) {
+                if (deliveryFee === 0 || data.cart_total_items >= 4) {
+                    if (pageOldFee) pageOldFee.classList.remove('hidden');
+                    pageDelivery.className = "font-black text-emerald-700 bg-emerald-100 text-xs px-2 py-0.5 rounded-md";
+                    pageDelivery.innerText = "FREE (৳0.00)";
+                    if (pageDeliveryNote) pageDeliveryNote.innerText = "🎉 Enjoy free door-to-door delivery across Bangladesh!";
+                } else {
+                    if (pageOldFee) pageOldFee.classList.add('hidden');
+                    pageDelivery.className = "font-bold text-emerald-800";
+                    pageDelivery.innerText = `৳${deliveryFee.toFixed(2)}`;
+                    if (pageDeliveryNote) pageDeliveryNote.innerText = "Flat ৳150 nationwide delivery across Bangladesh (Free on 4+ jars).";
+                }
+            }
+
+            // Update Cart Page Free Delivery Progress Banner
+            const pageFreeBanner = document.getElementById('freeDeliveryBanner');
+            const pageFreeIcon = document.getElementById('freeDeliveryIcon');
+            const pageFreeText = document.getElementById('freeDeliveryText');
+            const pageFreeProgress = document.getElementById('freeDeliveryProgressBar');
+            const pageFreeSubtext = document.getElementById('freeDeliverySubtext');
+
+            const totalItems = data.cart_total_items || 0;
+            const isFree = totalItems >= 4;
+            const needed = Math.max(0, 4 - totalItems);
+            const percent = isFree ? 100 : Math.round((totalItems / 4) * 100);
+
+            if (pageFreeBanner) {
+                if (isFree) {
+                    pageFreeBanner.className = "p-3.5 rounded-2xl border transition-all bg-emerald-50 border-emerald-200 text-emerald-950";
+                    if (pageFreeIcon) pageFreeIcon.innerText = "🎉";
+                    if (pageFreeText) pageFreeText.innerHTML = "<strong>FREE Delivery Unlocked!</strong> (4+ jars offer)";
+                    if (pageFreeProgress) {
+                        pageFreeProgress.className = "h-2 rounded-full transition-all duration-500 bg-emerald-600";
+                        pageFreeProgress.style.width = "100%";
+                    }
+                    if (pageFreeSubtext) pageFreeSubtext.innerText = "Special discount applied: Nationwide shipping charge is ৳0.";
+                } else {
+                    pageFreeBanner.className = "p-3.5 rounded-2xl border transition-all bg-amber-50/90 border-amber-200 text-amber-950";
+                    if (pageFreeIcon) pageFreeIcon.innerText = "🚚";
+                    if (pageFreeText) pageFreeText.innerHTML = `Add <strong><span id="freeDeliveryRemaining">${needed}</span> more jar${needed > 1 ? 's' : ''}</strong> for <strong>FREE Delivery</strong>!`;
+                    if (pageFreeProgress) {
+                        pageFreeProgress.className = "h-2 rounded-full transition-all duration-500 bg-amber-500";
+                        pageFreeProgress.style.width = `${percent}%`;
+                    }
+                    if (pageFreeSubtext) pageFreeSubtext.innerText = "Order 4 or more items to get 100% free delivery nationwide!";
+                }
+            }
 
             const pageTot = document.getElementById('pageCartTotal');
             if (pageTot) {

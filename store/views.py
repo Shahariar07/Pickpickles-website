@@ -124,6 +124,8 @@ def cart_view(request):
         'billing_weight_kg': billing_weight_kg,
         'delivery_fee': delivery_fee,
         'grand_total': grand_total,
+        'free_delivery_unlocked': cart.is_free_delivery(),
+        'items_needed_for_free_delivery': cart.items_needed_for_free_delivery(),
     })
 
 
@@ -168,6 +170,8 @@ def cart_add(request, product_id):
             'billing_weight_kg': cart.get_billing_weight_kg(),
             'delivery_fee': float(cart.get_delivery_fee('INSIDE_DHAKA')),
             'grand_total': float(cart.get_total_price('INSIDE_DHAKA')),
+            'free_delivery_unlocked': cart.is_free_delivery(),
+            'items_needed_for_free_delivery': cart.items_needed_for_free_delivery(),
             'items': items_data,
             'added_product': {
                 'id': product.id,
@@ -211,6 +215,8 @@ def cart_remove(request, product_id):
             'billing_weight_kg': cart.get_billing_weight_kg(),
             'delivery_fee': float(cart.get_delivery_fee('INSIDE_DHAKA')),
             'grand_total': float(cart.get_total_price('INSIDE_DHAKA')),
+            'free_delivery_unlocked': cart.is_free_delivery(),
+            'items_needed_for_free_delivery': cart.items_needed_for_free_delivery(),
             'items': items_data,
         })
 
@@ -270,6 +276,8 @@ def cart_update_ajax(request):
             'billing_weight_kg': cart.get_billing_weight_kg(),
             'delivery_fee': delivery_fee,
             'grand_total': grand_total,
+            'free_delivery_unlocked': cart.is_free_delivery(),
+            'items_needed_for_free_delivery': cart.items_needed_for_free_delivery(),
             'item_quantity': item_qty,
             'item_total': item_total,
             'items': items_data,
@@ -284,7 +292,7 @@ def shipping_calc_ajax(request):
     weight_grams = cart.get_total_weight_grams()
     weight_kg = cart.get_total_weight_kg()
     
-    delivery_fee = calculate_pathao_delivery_fee(weight_grams, zone)
+    delivery_fee = cart.get_delivery_fee(zone)
     subtotal = cart.get_subtotal()
     total = subtotal + delivery_fee
     
@@ -297,6 +305,8 @@ def shipping_calc_ajax(request):
         'delivery_fee': float(delivery_fee),
         'subtotal': float(subtotal),
         'total': float(total),
+        'free_delivery_unlocked': cart.is_free_delivery(),
+        'items_needed_for_free_delivery': cart.items_needed_for_free_delivery(),
     })
 
 
@@ -358,8 +368,8 @@ def checkout(request):
         form = CheckoutForm(initial={'delivery_zone': 'INSIDE_DHAKA', 'payment_method': 'COD'})
 
     selected_zone = request.GET.get('zone', 'INSIDE_DHAKA')
-    delivery_fee_inside = calculate_pathao_delivery_fee(total_weight_grams, 'INSIDE_DHAKA')
-    delivery_fee_outside = calculate_pathao_delivery_fee(total_weight_grams, 'OUTSIDE_DHAKA')
+    delivery_fee_inside = cart.get_delivery_fee('INSIDE_DHAKA')
+    delivery_fee_outside = cart.get_delivery_fee('OUTSIDE_DHAKA')
     
     delivery_fee = delivery_fee_inside if selected_zone == 'INSIDE_DHAKA' else delivery_fee_outside
     subtotal = cart.get_subtotal()
@@ -377,6 +387,8 @@ def checkout(request):
         'delivery_fee_outside': delivery_fee_outside,
         'grand_total': total,
         'total_amount': total,
+        'free_delivery_unlocked': cart.is_free_delivery(),
+        'items_needed_for_free_delivery': cart.items_needed_for_free_delivery(),
     }
     return render(request, 'store/checkout.html', context)
 

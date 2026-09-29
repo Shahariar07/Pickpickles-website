@@ -575,7 +575,7 @@ def edit_order_customer(request, order_number):
                 pass
         elif zone:
             from store.models import calculate_pathao_delivery_fee
-            order.delivery_fee = calculate_pathao_delivery_fee(order.total_weight_grams, order.delivery_zone)
+            order.delivery_fee = calculate_pathao_delivery_fee(order.total_weight_grams, order.delivery_zone, total_items=order.total_items_count)
 
         order.total_amount = order.subtotal + order.delivery_fee
         order.save()
@@ -849,8 +849,9 @@ def create_manual_order(request):
                 return redirect('dashboard:orders')
 
             # Delivery Fee based on Pathao gross weight calculation (850g per jar)
+            total_items_count = sum(itm['quantity'] for itm in valid_items)
             total_gross_weight_grams = sum((itm.get('gross_weight_grams', 850) or 850) * itm['quantity'] for itm in valid_items)
-            default_fee = calculate_pathao_delivery_fee(total_gross_weight_grams, delivery_zone)
+            default_fee = calculate_pathao_delivery_fee(total_gross_weight_grams, delivery_zone, total_items=total_items_count)
             delivery_fee_str = request.POST.get('delivery_fee', '').strip()
             try:
                 delivery_fee = Decimal(delivery_fee_str) if delivery_fee_str else default_fee

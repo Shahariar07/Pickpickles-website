@@ -72,21 +72,27 @@
 
                     <div class="space-y-4">
                         <!-- Weight & Delivery Info Banner -->
-                        <div class="bg-amber-50/90 border-2 border-amber-200/90 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                        <div class="{% if free_delivery_unlocked %}bg-emerald-50/90 border-2 border-emerald-200/90{% else %}bg-amber-50/90 border-2 border-amber-200/90{% endif %} rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
                             <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center text-base shadow-xs flex-shrink-0">
+                                <div class="w-10 h-10 rounded-xl {% if free_delivery_unlocked %}bg-emerald-600{% else %}bg-amber-500{% endif %} text-white flex items-center justify-center text-base shadow-xs flex-shrink-0">
                                     <i class="fa-solid fa-box-open"></i>
                                 </div>
                                 <div>
-                                    <span class="font-black text-xs text-slate-950 block">Nationwide Flat Delivery</span>
+                                    <span class="font-black text-xs text-slate-950 block">
+                                        {% if free_delivery_unlocked %}
+                                            🎉 FREE Nationwide Delivery Applied!
+                                        {% else %}
+                                            Nationwide Flat Delivery
+                                        {% endif %}
+                                    </span>
                                     <span class="text-[11px] text-slate-700 font-semibold" id="checkoutWeightDetail">
-                                        Total Weight: <strong class="text-amber-900 font-black"><span id="checkoutWeightKg">{{ total_weight_kg }}</span> kg</strong> (<span id="checkoutWeightGrams">{{ total_weight_grams }}</span>g) • Flat ৳150 Everywhere
+                                        Total Weight: <strong class="{% if free_delivery_unlocked %}text-emerald-900{% else %}text-amber-900{% endif %} font-black"><span id="checkoutWeightKg">{{ total_weight_kg }}</span> kg</strong> (<span id="checkoutWeightGrams">{{ total_weight_grams }}</span>g) • {% if free_delivery_unlocked %}100% Free for 4+ Jars!{% else %}Flat ৳150 Everywhere{% endif %}
                                     </span>
                                 </div>
                             </div>
-                            <span class="inline-flex items-center gap-1.5 text-[11px] font-black bg-white text-emerald-800 border border-emerald-300 px-3 py-1 rounded-full shadow-2xs self-start sm:self-center">
-                                <i class="fa-solid fa-truck-fast text-emerald-600"></i>
-                                <span>Express Delivery</span>
+                            <span class="inline-flex items-center gap-1.5 text-[11px] font-black {% if free_delivery_unlocked %}bg-emerald-600 text-white border border-emerald-700{% else %}bg-white text-emerald-800 border border-emerald-300{% endif %} px-3 py-1 rounded-full shadow-2xs self-start sm:self-center">
+                                <i class="fa-solid fa-truck-fast"></i>
+                                <span>{% if free_delivery_unlocked %}FREE Delivery{% else %}Express Delivery{% endif %}</span>
                             </span>
                         </div>
 
@@ -104,7 +110,7 @@
                                             <span class="text-[11px] text-slate-600 font-medium">Fast door-to-door home delivery</span>
                                         </div>
                                     </div>
-                                    <span class="font-display font-black text-sm text-emerald-900" id="zone_inside_price">৳{{ delivery_fee_inside }}</span>
+                                    <span class="font-display font-black text-sm text-emerald-900" id="zone_inside_price">{% if free_delivery_unlocked %}FREE (৳0){% else %}৳{{ delivery_fee_inside }}{% endif %}</span>
                                 </label>
 
                                 <!-- Outside Dhaka (Nationwide) -->
@@ -116,7 +122,7 @@
                                             <span class="text-[11px] text-slate-600 font-medium">All 64 districts nationwide delivery</span>
                                         </div>
                                     </div>
-                                    <span class="font-display font-black text-sm text-slate-800" id="zone_outside_price">৳{{ delivery_fee_outside }}</span>
+                                    <span class="font-display font-black text-sm {% if free_delivery_unlocked %}text-emerald-900{% else %}text-slate-800{% endif %}" id="zone_outside_price">{% if free_delivery_unlocked %}FREE (৳0){% else %}৳{{ delivery_fee_outside }}{% endif %}</span>
                                 </label>
                             </div>
                         </div>
@@ -299,9 +305,17 @@
                         <span>Items Subtotal</span>
                         <span class="font-black text-slate-950 text-sm">৳<span id="checkoutSubtotal">{{ cart_subtotal }}</span></span>
                     </div>
-                    <div class="flex justify-between text-slate-700 font-bold">
+                    <div class="flex justify-between items-center text-slate-700 font-bold">
                         <span>Delivery Fee</span>
-                        <span class="font-black text-slate-950 text-sm">৳<span id="checkoutDeliveryFee">{{ delivery_fee }}</span></span>
+                        <div class="text-right">
+                            {% if free_delivery_unlocked %}
+                                <span class="text-xs text-slate-400 line-through mr-1" id="checkoutOldFee">৳150.00</span>
+                                <span class="font-black text-emerald-700 bg-emerald-100 text-xs px-2 py-0.5 rounded-md" id="checkoutDeliveryFee">FREE (৳0.00)</span>
+                            {% else %}
+                                <span class="text-xs text-slate-400 line-through mr-1 hidden" id="checkoutOldFee">৳150.00</span>
+                                <span class="font-black text-slate-950 text-sm" id="checkoutDeliveryFee">৳{{ delivery_fee }}</span>
+                            {% endif %}
+                        </div>
                     </div>
                     <div class="border-t-2 border-slate-200 pt-3 flex justify-between items-baseline text-base">
                         <span class="font-black text-slate-950">Grand Total</span>
@@ -341,10 +355,14 @@
 <script>
     const subtotalValue = parseFloat("{{ cart_subtotal }}");
     const totalWeightGrams = parseInt("{{ total_weight_grams|default:600 }}");
+    const totalItemsCount = parseInt("{{ cart_total_items|default:1 }}");
     const feeInside = parseFloat("{{ delivery_fee_inside|default:150 }}");
     const feeOutside = parseFloat("{{ delivery_fee_outside|default:150 }}");
 
     function calculateDeliveryFee(weightGrams, zone) {
+        if (totalItemsCount >= 4) {
+            return 0.0;
+        }
         if (zone === 'OUTSIDE_DHAKA') {
             return feeOutside;
         }
@@ -382,14 +400,25 @@
 
         const insidePriceEl = document.getElementById('zone_inside_price');
         const outsidePriceEl = document.getElementById('zone_outside_price');
-        if (insidePriceEl) insidePriceEl.innerText = `৳${insidePrice}`;
-        if (outsidePriceEl) outsidePriceEl.innerText = `৳${outsidePrice}`;
+        if (insidePriceEl) insidePriceEl.innerText = totalItemsCount >= 4 ? 'FREE (৳0)' : `৳${insidePrice}`;
+        if (outsidePriceEl) outsidePriceEl.innerText = totalItemsCount >= 4 ? 'FREE (৳0)' : `৳${outsidePrice}`;
 
         const fee = calculateDeliveryFee(totalWeightGrams, selectedZone);
         const total = subtotalValue + fee;
 
         const feeEl = document.getElementById('checkoutDeliveryFee');
-        if (feeEl) feeEl.innerText = fee.toFixed(2);
+        const oldFeeEl = document.getElementById('checkoutOldFee');
+        if (feeEl) {
+            if (fee === 0) {
+                if (oldFeeEl) oldFeeEl.classList.remove('hidden');
+                feeEl.className = "font-black text-emerald-700 bg-emerald-100 text-xs px-2 py-0.5 rounded-md";
+                feeEl.innerText = "FREE (৳0.00)";
+            } else {
+                if (oldFeeEl) oldFeeEl.classList.add('hidden');
+                feeEl.className = "font-black text-slate-950 text-sm";
+                feeEl.innerText = `৳${fee.toFixed(2)}`;
+            }
+        }
 
         const totalEl = document.getElementById('checkoutTotal');
         if (totalEl) totalEl.innerText = total.toFixed(2);

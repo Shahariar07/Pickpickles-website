@@ -57,6 +57,30 @@
         <div class="lg:col-span-4 bg-white p-6 rounded-3xl border border-gray-200 shadow-md space-y-4">
             <h3 class="font-display font-black text-lg text-gray-900 border-b border-gray-100 pb-3">Order Summary</h3>
 
+            <!-- Free Delivery Progress / Incentive Banner -->
+            <div id="freeDeliveryBanner" class="p-3.5 rounded-2xl border transition-all {% if free_delivery_unlocked %}bg-emerald-50 border-emerald-200 text-emerald-950{% else %}bg-amber-50/90 border-amber-200 text-amber-950{% endif %}">
+                <div class="flex items-center gap-2 text-xs font-black">
+                    <span id="freeDeliveryIcon">{% if free_delivery_unlocked %}🎉{% else %}🚚{% endif %}</span>
+                    <span id="freeDeliveryText">
+                        {% if free_delivery_unlocked %}
+                            <strong>FREE Delivery Unlocked!</strong> (4+ jars offer)
+                        {% else %}
+                            Add <strong><span id="freeDeliveryRemaining">{{ items_needed_for_free_delivery }}</span> more jar{% if items_needed_for_free_delivery > 1 %}s{% endif %}</strong> for <strong>FREE Delivery</strong>!
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="w-full bg-black/10 rounded-full h-2 mt-2 overflow-hidden">
+                    <div id="freeDeliveryProgressBar" class="h-2 rounded-full transition-all duration-500 {% if free_delivery_unlocked %}bg-emerald-600{% else %}bg-amber-500{% endif %}" style="width: {% if free_delivery_unlocked %}100{% elif cart|length == 3 %}75{% elif cart|length == 2 %}50{% elif cart|length == 1 %}25{% else %}0{% endif %}%;"></div>
+                </div>
+                <p class="text-[10px] mt-1.5 opacity-80" id="freeDeliverySubtext">
+                    {% if free_delivery_unlocked %}
+                        Special discount applied: Nationwide shipping charge is ৳0.
+                    {% else %}
+                        Order 4 or more items to get 100% free delivery nationwide!
+                    {% endif %}
+                </p>
+            </div>
+
             <div class="space-y-2 text-sm">
                 <div class="flex justify-between text-gray-600">
                     <span>Jars Subtotal</span>
@@ -66,11 +90,25 @@
                     <span>Total Weight</span>
                     <span class="font-bold text-amber-900"><span id="pageCartWeightKg">{{ total_weight_kg }}</span> kg</span>
                 </div>
-                <div class="flex justify-between text-gray-600">
-                    <span>Delivery Fee (Flat Rate)</span>
-                    <span class="font-bold text-emerald-800" id="pageCartDeliveryFee">৳{{ delivery_fee }}</span>
+                <div class="flex justify-between items-center text-gray-600">
+                    <span>Delivery Fee</span>
+                    <div class="text-right">
+                        {% if free_delivery_unlocked %}
+                            <span class="text-xs text-gray-400 line-through mr-1" id="pageCartOldFee">৳150.00</span>
+                            <span class="font-black text-emerald-700 bg-emerald-100 text-xs px-2 py-0.5 rounded-md" id="pageCartDeliveryFee">FREE (৳0.00)</span>
+                        {% else %}
+                            <span class="text-xs text-gray-400 line-through mr-1 hidden" id="pageCartOldFee">৳150.00</span>
+                            <span class="font-bold text-emerald-800" id="pageCartDeliveryFee">৳{{ delivery_fee }}</span>
+                        {% endif %}
+                    </div>
                 </div>
-                <p class="text-[11px] text-gray-400">Flat ৳150 nationwide delivery across Bangladesh.</p>
+                <p class="text-[11px] text-gray-400" id="pageCartDeliveryNote">
+                    {% if free_delivery_unlocked %}
+                        🎉 Enjoy free door-to-door delivery across Bangladesh!
+                    {% else %}
+                        Flat ৳150 nationwide delivery across Bangladesh (Free on 4+ jars).
+                    {% endif %}
+                </p>
             </div>
 
             <div class="border-t border-gray-100 pt-3 flex justify-between items-baseline">
