@@ -763,6 +763,66 @@
         });
     </script>
 
+    {% if auto_whatsapp_url %}
+    <!-- ⭐ WhatsApp Shipping & Storage Instruction Auto-Opener Modal -->
+    <div id="whatsappAutoModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+        <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-emerald-100 text-center space-y-4 transform transition-all scale-100">
+            <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-3xl shadow-inner">
+                <i class="fa-brands fa-whatsapp"></i>
+            </div>
+            <div>
+                <span class="inline-block text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 mb-1.5">🚚 Shipping Out Notification</span>
+                <h3 class="font-display font-black text-lg text-gray-900">ডেলিভারি ও সংরক্ষণ নির্দেশিকা</h3>
+                <p class="text-xs text-gray-600 mt-1">
+                    অর্ডার <strong>#{{ auto_whatsapp_order_number }}</strong> ডেলিভারির জন্য পাঠানো হয়েছে! কাস্টমারের WhatsApp-এ আচারের সংরক্ষণ নির্দেশিকা পাঠানোর জন্য উইন্ডো ওপেন করা হয়েছে।
+                </p>
+            </div>
+            
+            <div class="bg-emerald-50/90 border border-emerald-200 rounded-2xl p-3.5 text-left text-xs text-emerald-950 space-y-1.5">
+                <div class="font-bold flex items-center gap-1.5 text-emerald-800">
+                    <i class="fa-solid fa-circle-info"></i> নির্দেশিকায় যা অন্তর্ভুক্ত আছে:
+                </div>
+                <div class="text-[11px] text-gray-700 pl-4 space-y-1 leading-relaxed">
+                    <div>🧊 <strong>পার্সেল পেয়েই নরমাল ফ্রিজে রাখা:</strong> ১০০% তেলমুক্ত ও প্রাকৃতিক ভিনেগার ব্রাইনে তৈরি (১ মাস ফ্রেশ থাকবে)।</div>
+                    <div>🥄 <strong>শুকনো চামচ ব্যবহার:</strong> সবসময় শুকনো ও পরিষ্কার চামচ/কাঁটাচামচ ব্যবহার।</div>
+                    <div>🥗 <strong>ঠান্ডা পরিবেশন:</strong> মুচমুচে ও সর্বোচ্চ ক্রাঞ্চি স্বাদ পেতে ঠান্ডা পরিবেশন।</div>
+                    <div>📦 <strong>কুরিয়ার ও ট্র্যাকিং:</strong> লাইভ ট্র্যাকিং লিংক ও বিলিং কালেকশন তথ্য।</div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 pt-1">
+                <a href="{{ auto_whatsapp_url }}" id="directWaLink" target="_blank" onclick="closeWaAutoModal()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs py-3 px-4 rounded-xl shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition active:scale-95">
+                    <i class="fa-brands fa-whatsapp text-base"></i>
+                    <span>WhatsApp-এ মেসেজ পাঠান</span>
+                </a>
+                <button type="button" onclick="closeWaAutoModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs py-3 px-4 rounded-xl transition cursor-pointer">
+                    বন্ধ করুন
+                </button>
+            </div>
+        </div>
+    </div>
+    <script>
+        function closeWaAutoModal() {
+            const modal = document.getElementById('whatsappAutoModal');
+            if (modal) {
+                modal.classList.add('opacity-0', 'pointer-events-none');
+                setTimeout(() => modal.remove(), 250);
+            }
+        }
+        // Automatically attempt to open WhatsApp in new tab
+        (function() {
+            try {
+                const waUrl = "{{ auto_whatsapp_url|escapejs }}";
+                if (waUrl) {
+                    window.open(waUrl, '_blank');
+                }
+            } catch (e) {
+                console.warn('Auto WhatsApp popup blocked:', e);
+            }
+        })();
+    </script>
+    {% endif %}
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>

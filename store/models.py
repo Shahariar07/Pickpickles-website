@@ -678,6 +678,77 @@ class Order(models.Model):
             return f"https://merchant.pathao.com/tracking?consignment_id={cid}" if cid else "https://merchant.pathao.com/tracking"
         return None
 
+    @property
+    def whatsapp_phone_international(self):
+        """
+        Formats customer phone into standard WhatsApp format (8801XXXXXXXXX).
+        """
+        digits = ''.join(c for c in (self.customer_phone or '') if c.isdigit())
+        if not digits:
+            return ''
+        if digits.startswith('880'):
+            return digits
+        if digits.startswith('0'):
+            return f"88{digits}"
+        if len(digits) == 10 and digits.startswith('1'):
+            return f"880{digits}"
+        if len(digits) >= 10:
+            return f"880{digits[-10:]}"
+        return f"880{digits}"
+
+    def get_whatsapp_shipping_instruction_message(self):
+        """
+        Generates a beautifully formatted WhatsApp message with order dispatch details
+        and essential pickle storage guidelines (সংরক্ষণ নির্দেশিকা).
+        """
+        items_list = []
+        for itm in self.items.all():
+            items_list.append(f"🥒 {itm.product_name} x {itm.quantity}")
+        items_text = "\n".join(items_list) if items_list else "🥒 Pickpickles Homemade Jars"
+
+        payment_line = "✅ *পেমেন্ট:* পরিশোধিত (Paid)" if self.payment_status == 'PAID' else f"💵 *ক্যাশ অন ডেলিভারি (COD কালেকশন):* ৳{self.total_amount}"
+
+        msg = f"""🥒 *Pickpickles — আপনার অর্ডার ডেলিভারিতে বের হয়েছে!* 🚚✨
+
+প্রিয় *{self.customer_name}*,
+আপনার Pickpickles অর্ডার *#{self.order_number}* প্রস্তুত করে Steadfast Courier-এর মাধ্যমে ডেলিভারির জন্য পাঠানো হয়েছে। খুব দ্রুতই ডেলিভারি রাইডার আপনার সাথে যোগাযোগ করে পার্সেলটি পৌঁছে দিবেন।
+
+📋 *অর্ডারের বিবরণ:*
+{items_text}
+{payment_line}
+
+━━━━━━━━━━━━━━━━━━━━
+🧊 *আচার সংরক্ষণ ও ব্যবহারের জরুরি নির্দেশিকা:*
+━━━━━━━━━━━━━━━━━━━━
+১. ❄️ *পার্সেল পেয়েই নরমাল ফ্রিজে রাখুন:*
+আমাদের আচার ১০০% তেলমুক্ত ও প্রাকৃতিক ভিনেগার ব্রাইনে তৈরি। আচারের সর্বোচ্চ ক্রাঞ্চিনেস ও ফ্রেশনেস বজায় রাখতে পার্সেলটি রিসিভ করার পর জারের ঢাকনা শক্ত করে সরাসরি নরমাল ফ্রিজে (৪°-৮°C) রাখুন। ফ্রিজে এটি ১ মাস পর্যন্ত একদম টাটকা ও মুচমুচে থাকবে।
+
+২. 🥄 *পরিষ্কার ও শুকনো চামচ ব্যবহার করুন:*
+বয়ম থেকে আচার তোলার সময় সবসময় শুকনো ও পরিষ্কার চামচ/কাঁটাচামচ ব্যবহার করুন। কোনো অবস্থাতেই ভেজা হাত বা ভেজা চামচ ব্যবহার করবেন না যাতে ভিনেগার ব্রাইন ফ্রেশ থাকে।
+
+৩. 🥗 *ঠান্ডা ঠান্ডা পরিবেশন করুন:*
+ফ্রিজ থেকে বের করে ঠান্ডা পরিবেশন করলে সর্বোচ্চ ক্রাঞ্চি ও লোভনীয় স্বাদ উপভোগ করতে পারবেন।
+
+৪. 🔒 *ব্যবহার শেষে মুখ শক্ত করে বন্ধ রাখুন:*
+খাওয়ার পর জারের মুখ শক্ত করে আটকে আবার ফ্রিজে রেখে দিন।
+
+যে কোনো তথ্যে বা সহায়তায় আমাদের মেসেজ দিতে পারেন। Pickpickles-এর সাথে থাকার জন্য ধন্যবাদ! 💚
+🌐 *Website:* https://pickpickles.xyz"""
+        return msg.strip()
+
+    @property
+    def whatsapp_shipping_instruction_url(self):
+        """
+        Generates direct WhatsApp API web link to send storage guidelines to customer.
+        """
+        import urllib.parse
+        phone = self.whatsapp_phone_international
+        if not phone:
+            return ''
+        text = self.get_whatsapp_shipping_instruction_message()
+        encoded_text = urllib.parse.quote(text)
+        return f"https://api.whatsapp.com/send?phone={phone}&text={encoded_text}"
+
     def sync_pathao_status(self):
         """
         Syncs live consignment tracking status from Pathao Courier Developer API and updates order_status.

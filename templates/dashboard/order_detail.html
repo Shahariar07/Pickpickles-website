@@ -83,6 +83,13 @@
             </button>
             {% endif %}
 
+            {% if order.customer_phone %}
+            <a href="{{ order.whatsapp_shipping_instruction_url }}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black px-3.5 py-2 rounded-xl shadow-2xs flex items-center gap-1.5 transition" title="Send WhatsApp Delivery & Pickle Storage Instructions to Customer">
+                <i class="fa-brands fa-whatsapp text-sm"></i>
+                <span>সংরক্ষণ নির্দেশিকা</span>
+            </a>
+            {% endif %}
+
             <a href="{% url 'dashboard:order_invoice' order.order_number %}" target="_blank" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-800 text-xs font-bold px-3.5 py-2 rounded-xl shadow-2xs flex items-center gap-1.5 transition">
                 <i class="fa-solid fa-print text-gray-500"></i>
                 <span>Print Slip</span>
@@ -166,6 +173,12 @@
             </form>
 
             {% elif order.order_status == 'OUT_FOR_DELIVERY' %}
+            {% if order.customer_phone %}
+            <a href="{{ order.whatsapp_shipping_instruction_url }}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl shadow-2xs flex items-center gap-1.5 transition" title="Send WhatsApp Storage Guidelines to Customer">
+                <i class="fa-brands fa-whatsapp text-sm"></i>
+                <span>সংরক্ষণ নির্দেশিকা পাঠান</span>
+            </a>
+            {% endif %}
             <form action="{% url 'dashboard:update_order_status_quick' order.order_number %}" method="POST" class="inline-block">
                 {% csrf_token %}
                 <input type="hidden" name="status" value="DELIVERED">
@@ -222,9 +235,17 @@
                     <input type="text" name="customer_notes" value="{{ order.delivery_instruction }}" placeholder="Delivery & customer instruction..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs text-gray-900 focus:bg-white focus:ring-1 focus:ring-brand-500">
                 </div>
 
-                <button type="submit" class="w-full bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs py-2 rounded-xl shadow-xs transition cursor-pointer">
-                    Update Status & Notes
-                </button>
+                <div class="flex items-center justify-between gap-2 pt-1">
+                    <button type="submit" class="flex-1 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs py-2 rounded-xl shadow-xs transition cursor-pointer">
+                        Update Status & Notes
+                    </button>
+                    {% if order.customer_phone %}
+                    <a href="{{ order.whatsapp_shipping_instruction_url }}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-xl text-xs font-bold shadow-xs inline-flex items-center gap-1.5 transition" title="Send WhatsApp Pickle Storage Guidelines">
+                        <i class="fa-brands fa-whatsapp text-sm"></i>
+                        <span>সংরক্ষণ নির্দেশিকা</span>
+                    </a>
+                    {% endif %}
+                </div>
             </form>
 
             <!-- 2. Customer Profile & Fraud Check Card (MIDDLE) -->
@@ -251,9 +272,14 @@
                         <a href="tel:{{ order.customer_phone }}" class="text-emerald-700 font-bold hover:underline bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 inline-flex items-center gap-1.5">
                             <i class="fa-solid fa-phone text-[10px]"></i> <span>{{ order.customer_phone }}</span>
                         </a>
-                        <a href="https://wa.me/880{{ order.customer_phone|slice:'-10:' }}?text=Hello%20{{ order.customer_name|urlencode }},%20from%20Pickpickles%20regarding%20order%20#{{ order.order_number }}" target="_blank" class="text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-200 font-bold inline-flex items-center gap-1.5">
-                            <i class="fa-brands fa-whatsapp text-sm text-emerald-600"></i> <span>WhatsApp</span>
+                        <a href="https://wa.me/880{{ order.customer_phone|slice:'-10:' }}?text=Hello%20{{ order.customer_name|urlencode }},%20from%20Pickpickles%20regarding%20order%20#{{ order.order_number }}" target="_blank" class="text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-200 font-bold inline-flex items-center gap-1.5" title="Direct WhatsApp Chat">
+                            <i class="fa-brands fa-whatsapp text-sm text-emerald-600"></i> <span>Chat</span>
                         </a>
+                        {% if order.customer_phone %}
+                        <a href="{{ order.whatsapp_shipping_instruction_url }}" target="_blank" class="text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-2.5 py-1 rounded-lg border border-emerald-300 font-black inline-flex items-center gap-1.5" title="Send Pickle Storage Instructions on WhatsApp">
+                            <i class="fa-brands fa-whatsapp text-sm text-emerald-700"></i> <span>সংরক্ষণ নির্দেশিকা</span>
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
 

@@ -497,6 +497,11 @@ def order_detail(request, order_number):
             if new_status == 'DELIVERED' and not new_payment_status and order.payment_status == 'UNPAID':
                 order.payment_status = 'PAID'
 
+            # Trigger automatic WhatsApp delivery & storage instruction popup when shipping out
+            if new_status == 'OUT_FOR_DELIVERY' and order.customer_phone:
+                request.session['auto_whatsapp_url'] = order.whatsapp_shipping_instruction_url
+                request.session['auto_whatsapp_order_number'] = order.order_number
+
         if new_payment_status:
             order.payment_status = new_payment_status
             
@@ -526,11 +531,23 @@ def update_order_status_quick(request, order_number):
             # When marked as DELIVERED, automatically mark money as collected (PAID)
             if new_status == 'DELIVERED' and order.payment_status == 'UNPAID':
                 order.payment_status = 'PAID'
+
+            # Trigger automatic WhatsApp delivery & storage instruction when shipping out
+            if new_status == 'OUT_FOR_DELIVERY' and order.customer_phone:
+                request.session['auto_whatsapp_url'] = order.whatsapp_shipping_instruction_url
+                request.session['auto_whatsapp_order_number'] = order.order_number
+
             order.save()
             messages.success(request, f'Order #{order.order_number} status changed to {order.get_order_status_display()}')
             
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'success': True, 'new_status': new_status, 'status_display': order.get_order_status_display()})
+            return JsonResponse({
+                'success': True,
+                'new_status': new_status,
+                'status_display': order.get_order_status_display(),
+                'whatsapp_url': order.whatsapp_shipping_instruction_url if (new_status == 'OUT_FOR_DELIVERY' and order.customer_phone) else '',
+                'should_open_whatsapp': (new_status == 'OUT_FOR_DELIVERY' and bool(order.customer_phone))
+            })
             
     return redirect(request.META.get('HTTP_REFERER') or 'dashboard:index')
 

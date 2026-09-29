@@ -309,3 +309,46 @@ class CartTests(TestCase):
             self.assertEqual(result['return_rate'], 10.0)
             self.assertEqual(result['volume_band'], 'high')
 
+    def test_whatsapp_shipping_instruction_message_and_url(self):
+        from store.models import Order, OrderItem
+
+        order = Order.objects.create(
+            customer_name='Mahmudul Hasan',
+            customer_phone='01712345678',
+            delivery_address='Dhanmondi 27',
+            delivery_city='Dhaka',
+            delivery_zone='INSIDE_DHAKA',
+            subtotal=Decimal('760.00'),
+            delivery_fee=Decimal('150.00'),
+            total_amount=Decimal('910.00'),
+            payment_method='COD',
+            payment_status='UNPAID',
+            order_status='OUT_FOR_DELIVERY',
+            steadfast_consignment_id='CID12345',
+            steadfast_tracking_code='TRK9988'
+        )
+        OrderItem.objects.create(
+            order=order,
+            product=self.product,
+            product_name="Classic Garlic Spears",
+            unit_price=Decimal("380.00"),
+            quantity=2,
+            total_price=Decimal("760.00")
+        )
+
+        self.assertEqual(order.whatsapp_phone_international, '8801712345678')
+        
+        msg = order.get_whatsapp_shipping_instruction_message()
+        self.assertIn('Mahmudul Hasan', msg)
+        self.assertIn(order.order_number, msg)
+        self.assertIn('Classic Garlic Spears x 2', msg)
+        self.assertIn('নরমাল ফ্রিজে রাখুন', msg)
+        self.assertIn('শুকনো চামচ ব্যবহার করুন', msg)
+        self.assertIn('ঠান্ডা ঠান্ডা পরিবেশন করুন', msg)
+        self.assertIn('Steadfast Courier', msg)
+        self.assertIn('https://pickpickles.xyz', msg)
+
+        wa_url = order.whatsapp_shipping_instruction_url
+        self.assertTrue(wa_url.startswith('https://api.whatsapp.com/send?phone=8801712345678&text='))
+
+

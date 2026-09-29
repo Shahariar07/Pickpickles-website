@@ -322,6 +322,17 @@
                                 </button>
                                 {% endif %}
 
+                                {% if order.customer_phone %}
+                                <a 
+                                    href="{{ order.whatsapp_shipping_instruction_url }}" 
+                                    target="_blank" 
+                                    class="p-1 text-emerald-600 hover:text-emerald-800 rounded transition" 
+                                    title="WhatsApp Delivery & Pickle Storage Instructions"
+                                >
+                                    <i class="fa-brands fa-whatsapp text-sm"></i>
+                                </a>
+                                {% endif %}
+
                                 <a 
                                     href="{% url 'dashboard:order_detail' order.order_number %}" 
                                     class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-[11px] px-2.5 py-1 rounded-lg transition"

@@ -39,6 +39,12 @@ def cart_context(request):
     except Exception:
         trash_orders_count = 0
         
+    auto_whatsapp_url = None
+    auto_whatsapp_order_number = None
+    if hasattr(request, 'session') and 'auto_whatsapp_url' in request.session:
+        auto_whatsapp_url = request.session.pop('auto_whatsapp_url', None)
+        auto_whatsapp_order_number = request.session.pop('auto_whatsapp_order_number', None)
+
     try:
         if not hasattr(request, 'session'):
             return {
@@ -50,6 +56,8 @@ def cart_context(request):
                 'META_PIXEL_ID': meta_pixel_id,
                 'GOOGLE_ANALYTICS_ID': google_analytics_id,
                 'global_trash_count': trash_orders_count,
+                'auto_whatsapp_url': auto_whatsapp_url,
+                'auto_whatsapp_order_number': auto_whatsapp_order_number,
             }
         cart = Cart(request)
         return {
@@ -61,6 +69,8 @@ def cart_context(request):
             'META_PIXEL_ID': meta_pixel_id,
             'GOOGLE_ANALYTICS_ID': google_analytics_id,
             'global_trash_count': trash_orders_count,
+            'auto_whatsapp_url': auto_whatsapp_url,
+            'auto_whatsapp_order_number': auto_whatsapp_order_number,
         }
     except Exception:
         return {
@@ -72,4 +82,6 @@ def cart_context(request):
             'META_PIXEL_ID': meta_pixel_id,
             'GOOGLE_ANALYTICS_ID': google_analytics_id,
             'global_trash_count': trash_orders_count,
+            'auto_whatsapp_url': auto_whatsapp_url,
+            'auto_whatsapp_order_number': auto_whatsapp_order_number,
         }
