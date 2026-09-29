@@ -18,14 +18,23 @@ from django.db.models.functions import Coalesce
 
 
 def index(request):
-    # Auto-calculate best seller product based on total shipped/delivered units
-    best_seller = Product.objects.annotate(
+    # Auto-calculate top 3 best seller products based on total shipped/delivered units
+    best_sellers_qs = Product.objects.annotate(
         total_sold=Coalesce(
             Sum('order_items__quantity', filter=Q(order_items__order__is_deleted=False) & Q(order_items__order__order_status__in=['OUT_FOR_DELIVERY', 'DELIVERED'])),
             Value(0),
             output_field=IntegerField()
         )
-    ).order_by('-total_sold', '-is_featured', 'id').first()
+    ).order_by('-total_sold', '-is_featured', 'id')
+
+    top_best_sellers = list(best_sellers_qs[:3])
+    if len(top_best_sellers) < 3:
+        needed = 3 - len(top_best_sellers)
+        existing_ids = [p.id for p in top_best_sellers]
+        fallback_products = list(Product.objects.exclude(id__in=existing_ids).order_by('-is_featured', 'id')[:needed])
+        top_best_sellers.extend(fallback_products)
+
+    best_seller = top_best_sellers[0] if top_best_sellers else None
 
     featured_products = Product.objects.filter(is_featured=True).order_by('id')
     all_products = Product.objects.annotate(
@@ -48,6 +57,7 @@ def index(request):
 
     context = {
         'best_seller': best_seller,
+        'top_best_sellers': top_best_sellers,
         'featured_products': featured_products,
         'all_products': all_products,
         'total_products_count': total_products_count,
