@@ -1,15 +1,33 @@
+import os
 import time
 from django.conf import settings
 from .cart import Cart
 from .models import Category
 
-# Cached server start time for production
-_SERVER_START_TIME = int(time.time())
+
+def _get_dynamic_static_version():
+    """
+    Returns the latest mtime of core static files so browsers instantly
+    fetch updated CSS/JS whenever files are uploaded or modified,
+    without requiring manual hard refreshes or cache clearing.
+    """
+    try:
+        latest_mtime = 0
+        static_dirs = getattr(settings, 'STATICFILES_DIRS', [])
+        for sdir in static_dirs:
+            for fname in ['css/style.css', 'js/main.js']:
+                fpath = os.path.join(sdir, fname)
+                if os.path.exists(fpath):
+                    latest_mtime = max(latest_mtime, int(os.path.getmtime(fpath)))
+        if latest_mtime > 0:
+            return latest_mtime
+    except Exception:
+        pass
+    return int(time.time())
 
 
 def cart_context(request):
-    # Dynamic timestamp in development for instant reload, server start time in production
-    static_version = int(time.time()) if getattr(settings, 'DEBUG', False) else _SERVER_START_TIME
+    static_version = _get_dynamic_static_version()
     meta_pixel_id = getattr(settings, 'META_PIXEL_ID', '')
     google_analytics_id = getattr(settings, 'GOOGLE_ANALYTICS_ID', '')
     
