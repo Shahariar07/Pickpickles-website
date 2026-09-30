@@ -230,7 +230,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # 7. Third-party Tracking & Couriers (Strictly from .env)
 # ==============================================================================
 # Analytics
-META_PIXEL_ID = os.environ.get('META_PIXEL_ID', '')
+META_PIXEL_ID = os.environ.get('META_PIXEL_ID', '1370929971728479')
 GOOGLE_ANALYTICS_ID = os.environ.get('GOOGLE_ANALYTICS_ID', '')
 
 # Pathao Courier API
