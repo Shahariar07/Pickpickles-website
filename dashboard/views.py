@@ -11,12 +11,13 @@ from django.db.models import Sum, Count, Q
 from django.utils import timezone
 from django.http import HttpResponse, JsonResponse
 from decimal import Decimal
+from django.core.cache import cache
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib.auth.models import User
 from store.models import Order, OrderItem, Product, Category, Review, calculate_pathao_delivery_fee
 from store.pathao import PathaoCourierService
 from store.steadfast import SteadfastCourierService
-from .models import Expense, ExpenseCategory, DamageLog, OrderReturn, StockLog
+from .models import Expense, ExpenseCategory, DamageLog, OrderReturn, StockLog, ProductionBatch, BatchItem
 
 
 def is_staff_user(user):
@@ -54,22 +55,95 @@ def dashboard_index(request):
     now = timezone.now()
     today = now.date()
     
-    # Ensure damage and returns expenses are synchronized
+    # Ensure damage and returns expenses are synchronized (throttled)
     ensure_damage_and_returns_expenses_synced(user=request.user)
     
-    # Basic Metrics
-    total_orders_count = Order.objects.count()
-    today_orders = Order.objects.filter(created_at__date=today)
-    today_orders_count = today_orders.count()
-    
-    # Realized / Collected Revenue (Only orders that are DELIVERED or PAID)
-    delivered_paid_orders = Order.objects.filter(Q(order_status='DELIVERED') | Q(payment_status='PAID'))
-    total_revenue = delivered_paid_orders.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-    today_revenue = delivered_paid_orders.filter(created_at__date=today).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-    
-    # Pipeline Revenue (Uncollected active orders currently in delivery queue)
-    pipeline_orders = Order.objects.filter(~Q(order_status__in=['DELIVERED', 'CANCELLED']) & ~Q(payment_status='PAID'))
-    pipeline_revenue = pipeline_orders.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+    current_year = today.year
+    current_month = today.month
+
+    if current_month == 1:
+        last_month = 12
+        last_month_year = current_year - 1
+    else:
+        last_month = current_month - 1
+        last_month_year = current_year
+
+    prev_year = current_year - 1
+
+    import calendar
+    month_names_bn = {
+        1: 'জানুয়ারি', 2: 'ফেব্রুয়ারি', 3: 'মার্চ', 4: 'এপ্রিল',
+        5: 'মে', 6: 'জুন', 7: 'জুলাই', 8: 'আগস্ট',
+        9: 'সেপ্টেম্বর', 10: 'অক্টোবর', 11: 'নভেম্বর', 12: 'ডিসেম্বর'
+    }
+
+    this_month_label = f"{calendar.month_name[current_month]} {current_year}"
+    this_month_label_bn = f"{month_names_bn.get(current_month, '')} {current_year}"
+    last_month_label = f"{calendar.month_name[last_month]} {last_month_year}"
+    last_month_label_bn = f"{month_names_bn.get(last_month, '')} {last_month_year}"
+    this_year_label = f"{current_year}"
+    prev_year_label = f"{prev_year}"
+
+    # Consolidated Ultra-fast Single Batch Aggregation Query for all metrics
+    order_metrics = Order.objects.aggregate(
+        total_orders_count=Count('id'),
+        today_orders_count=Count('id', filter=Q(created_at__date=today)),
+        today_orders_sum=Sum('total_amount', filter=Q(created_at__date=today) & ~Q(order_status='CANCELLED')),
+        today_revenue=Sum('total_amount', filter=Q(created_at__date=today) & (Q(order_status='DELIVERED') | Q(payment_status='PAID'))),
+        
+        this_month_orders_count=Count('id', filter=Q(created_at__year=current_year, created_at__month=current_month)),
+        this_month_orders_sum=Sum('total_amount', filter=Q(created_at__year=current_year, created_at__month=current_month) & ~Q(order_status='CANCELLED')),
+        this_month_delivered_sum=Sum('total_amount', filter=Q(created_at__year=current_year, created_at__month=current_month) & (Q(order_status='DELIVERED') | Q(payment_status='PAID'))),
+        this_month_delivered_count=Count('id', filter=Q(created_at__year=current_year, created_at__month=current_month, order_status='DELIVERED')),
+        this_month_active_count=Count('id', filter=Q(created_at__year=current_year, created_at__month=current_month, order_status__in=['PENDING', 'CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY'])),
+        
+        last_month_orders_count=Count('id', filter=Q(created_at__year=last_month_year, created_at__month=last_month)),
+        last_month_orders_sum=Sum('total_amount', filter=Q(created_at__year=last_month_year, created_at__month=last_month) & ~Q(order_status='CANCELLED')),
+        last_month_delivered_sum=Sum('total_amount', filter=Q(created_at__year=last_month_year, created_at__month=last_month) & (Q(order_status='DELIVERED') | Q(payment_status='PAID'))),
+        last_month_delivered_count=Count('id', filter=Q(created_at__year=last_month_year, created_at__month=last_month, order_status='DELIVERED')),
+        
+        this_year_orders_count=Count('id', filter=Q(created_at__year=current_year)),
+        this_year_orders_sum=Sum('total_amount', filter=Q(created_at__year=current_year) & ~Q(order_status='CANCELLED')),
+        this_year_delivered_sum=Sum('total_amount', filter=Q(created_at__year=current_year) & (Q(order_status='DELIVERED') | Q(payment_status='PAID'))),
+        this_year_delivered_count=Count('id', filter=Q(created_at__year=current_year, order_status='DELIVERED')),
+        
+        prev_year_orders_count=Count('id', filter=Q(created_at__year=prev_year)),
+        prev_year_orders_sum=Sum('total_amount', filter=Q(created_at__year=prev_year) & ~Q(order_status='CANCELLED')),
+        prev_year_delivered_sum=Sum('total_amount', filter=Q(created_at__year=prev_year) & (Q(order_status='DELIVERED') | Q(payment_status='PAID'))),
+        prev_year_delivered_count=Count('id', filter=Q(created_at__year=prev_year, order_status='DELIVERED')),
+        
+        total_revenue=Sum('total_amount', filter=Q(order_status='DELIVERED') | Q(payment_status='PAID')),
+        pipeline_revenue=Sum('total_amount', filter=~Q(order_status__in=['DELIVERED', 'CANCELLED']) & ~Q(payment_status='PAID')),
+    )
+
+    total_orders_count = order_metrics['total_orders_count'] or 0
+    today_orders_count = order_metrics['today_orders_count'] or 0
+    today_orders_sum = order_metrics['today_orders_sum'] or 0
+    today_revenue = order_metrics['today_revenue'] or 0
+
+    this_month_orders_count = order_metrics['this_month_orders_count'] or 0
+    this_month_orders_sum = order_metrics['this_month_orders_sum'] or 0
+    this_month_delivered_sum = order_metrics['this_month_delivered_sum'] or 0
+    this_month_delivered_count = order_metrics['this_month_delivered_count'] or 0
+    this_month_active_count = order_metrics['this_month_active_count'] or 0
+
+    last_month_orders_count = order_metrics['last_month_orders_count'] or 0
+    last_month_orders_sum = order_metrics['last_month_orders_sum'] or 0
+    last_month_delivered_sum = order_metrics['last_month_delivered_sum'] or 0
+    last_month_delivered_count = order_metrics['last_month_delivered_count'] or 0
+
+    this_year_orders_count = order_metrics['this_year_orders_count'] or 0
+    this_year_orders_sum = order_metrics['this_year_orders_sum'] or 0
+    this_year_delivered_sum = order_metrics['this_year_delivered_sum'] or 0
+    this_year_delivered_count = order_metrics['this_year_delivered_count'] or 0
+
+    prev_year_orders_count = order_metrics['prev_year_orders_count'] or 0
+    prev_year_orders_sum = order_metrics['prev_year_orders_sum'] or 0
+    prev_year_delivered_sum = order_metrics['prev_year_delivered_sum'] or 0
+    prev_year_delivered_count = order_metrics['prev_year_delivered_count'] or 0
+
+    total_revenue = order_metrics['total_revenue'] or 0
+    pipeline_revenue = order_metrics['pipeline_revenue'] or 0
     
     # Expenses & Net Profit
     total_expenses = Expense.objects.aggregate(Sum('amount'))['amount__sum'] or 0
@@ -85,11 +159,17 @@ def dashboard_index(request):
     delivered_count = status_counts_dict.get('DELIVERED', 0)
     cancelled_count = status_counts_dict.get('CANCELLED', 0)
     
-    # Advanced KPIs
+    # Advanced KPIs (Single aggregation query for jars)
+    jar_stats = OrderItem.objects.aggregate(
+        delivered_jars=Sum('quantity', filter=Q(order__order_status='DELIVERED') | Q(order__payment_status='PAID')),
+        total_jars=Sum('quantity', filter=Q(order__order_status__in=['OUT_FOR_DELIVERY', 'DELIVERED'])),
+        pipeline_jars=Sum('quantity', filter=Q(order__order_status__in=['PENDING', 'CONFIRMED', 'PACKING'])),
+    )
+    delivered_jars_sold = jar_stats['delivered_jars'] or 0
+    total_jars_sold = jar_stats['total_jars'] or 0
+    pipeline_jars_sold = jar_stats['pipeline_jars'] or 0
+
     avg_order_val = round(float(total_revenue) / delivered_count, 1) if delivered_count > 0 else 0
-    delivered_jars_sold = OrderItem.objects.filter(order__in=delivered_paid_orders).aggregate(Sum('quantity'))['quantity__sum'] or 0
-    total_jars_sold = OrderItem.objects.filter(order__order_status__in=['OUT_FOR_DELIVERY', 'DELIVERED']).aggregate(Sum('quantity'))['quantity__sum'] or 0
-    pipeline_jars_sold = OrderItem.objects.filter(order__order_status__in=['PENDING', 'CONFIRMED', 'PACKING']).aggregate(Sum('quantity'))['quantity__sum'] or 0
     delivery_rate = round((delivered_count / total_orders_count) * 100, 1) if total_orders_count > 0 else 0
     
     # Inventory & Low Stock Tracking (Ultra-fast 1-Query Batch Demand)
@@ -155,7 +235,10 @@ def dashboard_index(request):
         orders_series.append(stat['count'])
 
     # 2. Dynamic Product Sales Performance Breakdown (Auto-synced from Inventory & OrderItems of Shipped/Delivered Orders)
-    order_items_qs = OrderItem.objects.filter(order__order_status__in=['OUT_FOR_DELIVERY', 'DELIVERED'])
+    order_items_qs = OrderItem.objects.filter(
+        order__is_deleted=False,
+        order__order_status__in=['OUT_FOR_DELIVERY', 'DELIVERED']
+    )
     
     # Aggregate sales by product_id and product_name
     sales_by_id = {}
@@ -194,6 +277,7 @@ def dashboard_index(request):
         product_stats.append({
             'id': prod.id,
             'name': prod.name,
+            'is_featured': getattr(prod, 'is_featured', False),
             'quantity': qty,
             'sales': sales,
             'stock': prod.stock_count,
@@ -207,13 +291,19 @@ def dashboard_index(request):
             product_stats.append({
                 'id': None,
                 'name': stat['name'],
+                'is_featured': False,
                 'quantity': stat['qty'],
                 'sales': stat['sales'],
                 'stock': 0,
             })
 
-    # Sort descending by quantity sold, and secondarily by product name
-    product_stats.sort(key=lambda x: (-x['quantity'], x['name']))
+    # Sort descending by quantity sold, then featured status, then by product ID (lower ID / Product 1 comes first), then name
+    product_stats.sort(key=lambda x: (
+        -x['quantity'],
+        0 if x.get('is_featured') else 1,
+        x.get('id') if x.get('id') is not None else 999999,
+        x['name']
+    ))
 
     product_labels = [p['name'] for p in product_stats]
     product_qty_data = [p['quantity'] for p in product_stats]
@@ -287,9 +377,33 @@ def dashboard_index(request):
         'best_seller': best_seller,
         'total_orders_count': total_orders_count,
         'today_orders_count': today_orders_count,
+        'today_orders_sum': today_orders_sum,
         'today_revenue': today_revenue,
         'total_revenue': total_revenue,
         'pipeline_revenue': pipeline_revenue,
+        'this_month_orders_sum': this_month_orders_sum,
+        'this_month_orders_count': this_month_orders_count,
+        'this_month_delivered_sum': this_month_delivered_sum,
+        'this_month_delivered_count': this_month_delivered_count,
+        'this_month_active_count': this_month_active_count,
+        'this_month_label': this_month_label,
+        'this_month_label_bn': this_month_label_bn,
+        'last_month_orders_sum': last_month_orders_sum,
+        'last_month_orders_count': last_month_orders_count,
+        'last_month_delivered_sum': last_month_delivered_sum,
+        'last_month_delivered_count': last_month_delivered_count,
+        'last_month_label': last_month_label,
+        'last_month_label_bn': last_month_label_bn,
+        'this_year_orders_sum': this_year_orders_sum,
+        'this_year_orders_count': this_year_orders_count,
+        'this_year_delivered_sum': this_year_delivered_sum,
+        'this_year_delivered_count': this_year_delivered_count,
+        'this_year_label': this_year_label,
+        'prev_year_orders_sum': prev_year_orders_sum,
+        'prev_year_orders_count': prev_year_orders_count,
+        'prev_year_delivered_sum': prev_year_delivered_sum,
+        'prev_year_delivered_count': prev_year_delivered_count,
+        'prev_year_label': prev_year_label,
         'total_expenses': total_expenses,
         'net_profit': net_profit,
         'profit_margin': profit_margin,
@@ -329,11 +443,35 @@ def orders_list(request):
     cancelled_count = status_counts.get('CANCELLED', 0)
     total_orders_count = sum(status_counts.values())
 
-    orders = Order.objects.all().prefetch_related('items', 'items__product')
+    orders = Order.objects.all().prefetch_related('items', 'items__product').order_by('-created_at', '-id')
     status_filter = request.GET.get('status', 'ALL')
+    period_filter = request.GET.get('period', 'ALL')
     search_query = request.GET.get('q', '').strip()
     zone_filter = request.GET.get('zone', 'ALL')
     payment_filter = request.GET.get('payment', 'ALL')
+
+    now = timezone.now()
+    today = now.date()
+    current_year = today.year
+    current_month = today.month
+    if current_month == 1:
+        last_month = 12
+        last_month_year = current_year - 1
+    else:
+        last_month = current_month - 1
+        last_month_year = current_year
+    prev_year = current_year - 1
+
+    if period_filter == 'today':
+        orders = orders.filter(created_at__date=today)
+    elif period_filter == 'this_month':
+        orders = orders.filter(created_at__year=current_year, created_at__month=current_month)
+    elif period_filter == 'last_month':
+        orders = orders.filter(created_at__year=last_month_year, created_at__month=last_month)
+    elif period_filter == 'this_year':
+        orders = orders.filter(created_at__year=current_year)
+    elif period_filter == 'prev_year':
+        orders = orders.filter(created_at__year=prev_year)
 
     if status_filter and status_filter != 'ALL':
         orders = orders.filter(order_status=status_filter)
@@ -406,6 +544,7 @@ def orders_list(request):
         'cancelled_count': cancelled_count,
         'trash_count': Order.trash_objects.count(),
         'status_filter': status_filter,
+        'period_filter': period_filter,
         'zone_filter': zone_filter,
         'payment_filter': payment_filter,
         'search_query': search_query,
@@ -1320,6 +1459,14 @@ def stock_manager(request):
                 messages.error(request, 'Please enter a valid production quantity (at least 1 jar) for one or more pickle items.')
                 return redirect('dashboard:stock_manager')
 
+            # Create ProductionBatch record
+            p_batch = ProductionBatch.objects.create(
+                batch_number=batch_ref,
+                production_date=prod_date_obj or today,
+                notes=notes,
+                created_by=request.user if request.user.is_authenticated else None
+            )
+
             total_added_jars = 0
             updated_product_names = []
 
@@ -1331,6 +1478,14 @@ def stock_manager(request):
                     prod.stock_count = new_stock
                     prod.is_in_stock = True
                     prod.save(update_fields=['stock_count', 'is_in_stock'])
+
+                    # Create BatchItem record
+                    BatchItem.objects.create(
+                        batch=p_batch,
+                        product=prod,
+                        quantity=add_qty,
+                        notes=f"{prod.name}: +{add_qty} jars"
+                    )
 
                     log = StockLog.objects.create(
                         product=prod,
@@ -1465,6 +1620,284 @@ def stock_manager(request):
         'total_target_inventory': total_target_inventory,
     }
     return render(request, 'dashboard/stock_manager.html', context)
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def production_batches_list(request):
+    """
+    Dedicated Production Batches Manager & Timeline.
+    Shows every single batch produced (Batch #1, Batch #2, etc.), date prepared, total jars, flavors breakdown, and notes.
+    """
+    now = timezone.now()
+    today = now.date()
+    search_query = request.GET.get('q', '').strip()
+    date_filter = request.GET.get('date_range', 'all')
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        # 1. CREATE NEW BATCH
+        if action == 'create_batch':
+            batch_ref = request.POST.get('batch_reference', '').strip()
+            notes = request.POST.get('notes', '').strip()
+            prod_date_str = request.POST.get('production_date', '').strip()
+            total_cost_str = request.POST.get('total_cost_bdt', '0').strip()
+
+            try:
+                total_cost = Decimal(total_cost_str) if total_cost_str else Decimal('0.00')
+            except Exception:
+                total_cost = Decimal('0.00')
+
+            prod_date_obj = today
+            if prod_date_str:
+                try:
+                    prod_date_obj = datetime.datetime.strptime(prod_date_str, '%Y-%m-%d').date()
+                except ValueError:
+                    prod_date_obj = today
+
+            # Auto-suggest batch name if left blank
+            if not batch_ref:
+                last_b = ProductionBatch.objects.order_by('-id').first()
+                next_n = (last_b.id + 1) if last_b else 1
+                batch_ref = f"Batch #{next_n}"
+
+            items_to_add = []
+            for key, val in request.POST.items():
+                if key.startswith('batch_qty_') and val:
+                    try:
+                        p_id = int(key.replace('batch_qty_', ''))
+                        q_int = int(val)
+                        if q_int > 0:
+                            items_to_add.append((p_id, q_int))
+                    except (ValueError, TypeError):
+                        pass
+
+            if not items_to_add:
+                messages.error(request, 'দয়া করে অন্তত ১টি আচারের পরিমাণ (Jars) লিখুন।')
+                return redirect('dashboard:production_batches')
+
+            # Create ProductionBatch
+            batch = ProductionBatch.objects.create(
+                batch_number=batch_ref,
+                production_date=prod_date_obj,
+                notes=notes,
+                total_cost_bdt=total_cost,
+                created_by=request.user if request.user.is_authenticated else None
+            )
+
+            total_added_jars = 0
+            updated_product_names = []
+
+            for p_id, add_qty in items_to_add:
+                prod = Product.objects.filter(id=p_id).first()
+                if prod:
+                    prev_stock = prod.stock_count
+                    new_stock = prev_stock + add_qty
+                    prod.stock_count = new_stock
+                    prod.is_in_stock = True
+                    prod.save(update_fields=['stock_count', 'is_in_stock'])
+
+                    # Create BatchItem
+                    BatchItem.objects.create(
+                        batch=batch,
+                        product=prod,
+                        quantity=add_qty,
+                        notes=f"{prod.name}: +{add_qty} jars"
+                    )
+
+                    # Log Stock Transaction
+                    log = StockLog.objects.create(
+                        product=prod,
+                        log_type='RESTOCK',
+                        quantity_delta=add_qty,
+                        previous_stock=prev_stock,
+                        resulting_stock=new_stock,
+                        reference=batch_ref,
+                        notes=notes or f"Production Batch ({batch_ref}): +{add_qty} jars",
+                        created_by=request.user if request.user.is_authenticated else None
+                    )
+                    if prod_date_obj:
+                        prod_datetime = timezone.make_aware(datetime.datetime.combine(prod_date_obj, timezone.now().time())) if timezone.is_naive(datetime.datetime.combine(prod_date_obj, timezone.now().time())) else datetime.datetime.combine(prod_date_obj, timezone.now().time())
+                        StockLog.objects.filter(id=log.id).update(created_at=prod_datetime)
+
+                    total_added_jars += add_qty
+                    updated_product_names.append(f"{prod.name} (+{add_qty})")
+
+            messages.success(
+                request,
+                f'🎉 "{batch_ref}" সফলভাবে যুক্ত হয়েছে! মোট +{total_added_jars}টি জার তৈরি হয়েছে ({prod_date_obj.strftime("%d %b, %Y")})।'
+            )
+            return redirect('dashboard:production_batch_detail', batch_id=batch.id)
+
+    batches_qs = ProductionBatch.objects.prefetch_related('items__product', 'created_by').all().order_by('-production_date', '-id')
+
+    if search_query:
+        batches_qs = batches_qs.filter(
+            Q(batch_number__icontains=search_query) |
+            Q(notes__icontains=search_query) |
+            Q(items__product__name__icontains=search_query)
+        ).distinct()
+
+    if date_filter == 'today':
+        batches_qs = batches_qs.filter(production_date=today)
+    elif date_filter == '7days':
+        start_date = today - datetime.timedelta(days=7)
+        batches_qs = batches_qs.filter(production_date__gte=start_date)
+    elif date_filter == '30days':
+        start_date = today - datetime.timedelta(days=30)
+        batches_qs = batches_qs.filter(production_date__gte=start_date)
+    elif date_filter == 'this_month':
+        start_date = today.replace(day=1)
+        batches_qs = batches_qs.filter(production_date__gte=start_date)
+    elif date_filter == 'custom':
+        custom_from = request.GET.get('from')
+        custom_to = request.GET.get('to')
+        if custom_from:
+            try:
+                f_date = datetime.datetime.strptime(custom_from, '%Y-%m-%d').date()
+                batches_qs = batches_qs.filter(production_date__gte=f_date)
+            except ValueError:
+                pass
+        if custom_to:
+            try:
+                t_date = datetime.datetime.strptime(custom_to, '%Y-%m-%d').date()
+                batches_qs = batches_qs.filter(production_date__lte=t_date)
+            except ValueError:
+                pass
+
+    all_batches_list = list(batches_qs)
+    total_batches_count = len(all_batches_list)
+    total_jars_produced = sum(b.total_jars for b in all_batches_list)
+    total_retail_value = sum(b.total_retail_value for b in all_batches_list)
+    avg_jars_per_batch = round(total_jars_produced / total_batches_count, 1) if total_batches_count > 0 else 0
+
+    # Auto-suggest next batch reference
+    last_batch = ProductionBatch.objects.order_by('-id').first()
+    next_batch_num = 1
+    if last_batch and last_batch.batch_number:
+        import re
+        m = re.search(r'(\d+)', last_batch.batch_number)
+        if m:
+            try:
+                next_batch_num = int(m.group(1)) + 1
+            except Exception:
+                pass
+    suggested_batch_ref = f"Batch #{next_batch_num}"
+
+    # All active products for batch creation modal
+    all_products = Product.objects.all().select_related('category').order_by('name')
+
+    # Pagination
+    page_number = request.GET.get('page', 1)
+    paginator = Paginator(all_batches_list, 15)
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    context = {
+        'batches': page_obj,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'total_batches_count': total_batches_count,
+        'total_jars_produced': total_jars_produced,
+        'total_retail_value': total_retail_value,
+        'avg_jars_per_batch': avg_jars_per_batch,
+        'suggested_batch_ref': suggested_batch_ref,
+        'all_products': all_products,
+        'search_query': search_query,
+        'date_filter': date_filter,
+        'today_date': today.strftime('%Y-%m-%d'),
+    }
+    return render(request, 'dashboard/production_batches.html', context)
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def production_batch_detail(request, batch_id):
+    """
+    Detailed breakdown page for an individual production batch.
+    Shows exact date, quantities added per flavor, unit prices, notes, and remaining stock.
+    """
+    batch = get_object_or_404(
+        ProductionBatch.objects.prefetch_related('items__product__category', 'created_by'),
+        id=batch_id
+    )
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'edit_batch_info':
+            batch.batch_number = request.POST.get('batch_number', batch.batch_number).strip() or batch.batch_number
+            batch.notes = request.POST.get('notes', '').strip()
+            prod_date_str = request.POST.get('production_date', '').strip()
+            if prod_date_str:
+                try:
+                    batch.production_date = datetime.datetime.strptime(prod_date_str, '%Y-%m-%d').date()
+                except ValueError:
+                    pass
+            cost_str = request.POST.get('total_cost_bdt', '').strip()
+            if cost_str:
+                try:
+                    batch.total_cost_bdt = Decimal(cost_str)
+                except Exception:
+                    pass
+            batch.save()
+            messages.success(request, f'ব্যাচ "{batch.batch_number}" এর তথ্য সফলভাবে আপডেট হয়েছে।')
+            return redirect('dashboard:production_batch_detail', batch_id=batch.id)
+
+    items = list(batch.items.select_related('product__category').all())
+    total_jars = sum(i.quantity for i in items)
+    total_retail_value = sum(i.total_retail_value for i in items)
+
+    context = {
+        'batch': batch,
+        'items': items,
+        'total_jars': total_jars,
+        'total_retail_value': total_retail_value,
+        'today_date': timezone.now().date().strftime('%Y-%m-%d'),
+    }
+    return render(request, 'dashboard/production_batch_detail.html', context)
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def delete_production_batch(request, batch_id):
+    """
+    Delete a production batch with optional stock reversion.
+    """
+    if request.method == 'POST':
+        batch = get_object_or_404(ProductionBatch, id=batch_id)
+        batch_name = batch.batch_number
+        revert_stock = request.POST.get('revert_stock') in ('1', 'true', 'on', 'yes')
+
+        if revert_stock:
+            for item in batch.items.select_related('product'):
+                if item.product:
+                    prev_stock = item.product.stock_count
+                    new_stock = max(0, prev_stock - item.quantity)
+                    item.product.stock_count = new_stock
+                    if new_stock == 0:
+                        item.product.is_in_stock = False
+                    item.product.save(update_fields=['stock_count', 'is_in_stock'])
+
+                    StockLog.objects.create(
+                        product=item.product,
+                        log_type='MANUAL_ADJUSTMENT',
+                        quantity_delta=-item.quantity,
+                        previous_stock=prev_stock,
+                        resulting_stock=new_stock,
+                        reference=f"Reverted {batch_name}",
+                        notes=f"Batch {batch_name} deleted - reverted {item.quantity} jars from stock.",
+                        created_by=request.user if request.user.is_authenticated else None
+                    )
+
+        batch.delete()
+        revert_msg = " এবং স্টক থেকে জার সংখ্যা বিয়োগ করা হয়েছে।" if revert_stock else "।"
+        messages.success(request, f'প্রোডাকশন ব্যাচ "{batch_name}" সফলভাবে মুছে ফেলা হয়েছে{revert_msg}')
+        return redirect('dashboard:production_batches')
+
+    return redirect('dashboard:production_batches')
+
 
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
@@ -1782,11 +2215,17 @@ def sync_order_return_state(order_return, new_status, courier_fee=None, notes=No
     return order_return
 
 
-def ensure_damage_and_returns_expenses_synced(user=None):
+def ensure_damage_and_returns_expenses_synced(user=None, force=False):
     """
     Guarantees that all DamageLogs and OrderReturns are properly represented in the Expense ledger.
     Backfills any unlinked DamageLogs or OrderReturn courier fees.
     """
+    if not force:
+        cache_key = 'damage_returns_synced_flag'
+        if cache.get(cache_key):
+            return
+        cache.set(cache_key, True, timeout=600)  # Throttled to once every 10 minutes
+
     today = timezone.now().date()
     
     # 1. Backfill any DamageLog without an Expense
@@ -3216,42 +3655,46 @@ def customer_insights_api(request):
     formatted_phone = f"0{last_10}" if len(last_10) == 10 else phone
     
     # Live Courier Tracking check (Pathao & Steadfast)
-    pathao_svc = PathaoCourierService()
-    steadfast_svc = SteadfastCourierService()
+    check_live_api = request.GET.get('live', '').lower() in ('1', 'true', 'yes') or request.GET.get('force', '').lower() in ('1', 'true', 'yes')
+    pathao_svc = PathaoCourierService() if check_live_api else None
+    steadfast_svc = SteadfastCourierService() if check_live_api else None
     courier_consignments = []
     
     orders_data = []
     for o in matching_orders.order_by('-created_at')[:8]:
-        c_status = o.active_courier_status or ''
-        # If order has Steadfast consignment, check live info
-        if o.steadfast_consignment_id and steadfast_svc.is_configured():
+        c_status = o.active_courier_status or o.steadfast_order_status or o.pathao_order_status or ''
+        # If live check is explicitly requested and order has Steadfast consignment, check live info
+        if check_live_api and steadfast_svc and o.steadfast_consignment_id and steadfast_svc.is_configured():
             try:
                 info_res = steadfast_svc.get_delivery_status_by_cid(o.steadfast_consignment_id)
                 if info_res.get('success') and info_res.get('delivery_status'):
                     c_status = info_res.get('delivery_status')
-                    courier_consignments.append({
-                        'courier': 'Steadfast',
-                        'consignment_id': o.steadfast_consignment_id,
-                        'order_number': o.order_number,
-                        'status': c_status,
-                    })
             except Exception:
                 pass
-        # If order has Pathao consignment, check live info
-        elif o.pathao_consignment_id and pathao_svc.is_configured():
+        # If live check is explicitly requested and order has Pathao consignment, check live info
+        elif check_live_api and pathao_svc and o.pathao_consignment_id and pathao_svc.is_configured():
             try:
                 info_res = pathao_svc.get_order_info(o.pathao_consignment_id)
                 if info_res.get('success'):
                     p_info = info_res.get('data', {})
                     c_status = p_info.get('order_status') or p_info.get('delivery_status') or c_status
-                    courier_consignments.append({
-                        'courier': 'Pathao',
-                        'consignment_id': o.pathao_consignment_id,
-                        'order_number': o.order_number,
-                        'status': c_status,
-                    })
             except Exception:
                 pass
+
+        if o.steadfast_consignment_id:
+            courier_consignments.append({
+                'courier': 'Steadfast',
+                'consignment_id': o.steadfast_consignment_id,
+                'order_number': o.order_number,
+                'status': c_status,
+            })
+        elif o.pathao_consignment_id:
+            courier_consignments.append({
+                'courier': 'Pathao',
+                'consignment_id': o.pathao_consignment_id,
+                'order_number': o.order_number,
+                'status': c_status,
+            })
 
         orders_data.append({
             'order_number': o.order_number,

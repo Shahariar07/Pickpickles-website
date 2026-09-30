@@ -109,10 +109,12 @@ WSGI_APPLICATION = 'pickpickles_project.wsgi.application'
 
 
 # ==============================================================================
-# 3. Database Configuration (PostgreSQL / SQLite Auto-detection)
+# 3. Database Configuration (PostgreSQL / SQLite Auto-detection & Fallback)
 # ==============================================================================
 DB_ENGINE = os.environ.get('DB_ENGINE', '').strip().lower()
 DB_NAME = os.environ.get('DB_NAME', '').strip()
+DB_HOST = os.environ.get('DB_HOST', '127.0.0.1').strip()
+DB_PORT = os.environ.get('DB_PORT', '5432').strip()
 
 is_postgres = (
     'postgres' in DB_ENGINE or
@@ -120,7 +122,7 @@ is_postgres = (
 )
 
 if is_postgres and DB_NAME:
-    # Check if postgres driver (psycopg or psycopg2) is installed
+    # 1. Check if postgres driver (psycopg or psycopg2) is installed
     try:
         import psycopg  # noqa: F401
     except ImportError:
@@ -129,6 +131,16 @@ if is_postgres and DB_NAME:
         except ImportError:
             is_postgres = False
 
+    # 2. Check if local PostgreSQL server port is accepting TCP connections
+    if is_postgres and DB_HOST in ('127.0.0.1', 'localhost', '::1'):
+        import socket
+        try:
+            with socket.create_connection((DB_HOST, int(DB_PORT)), timeout=0.8):
+                pass
+        except (socket.timeout, ConnectionRefusedError, OSError):
+            is_postgres = False
+            print(f"[Pickpickles Notice] PostgreSQL is not running on {DB_HOST}:{DB_PORT}. Auto-falling back to local SQLite database (db.sqlite3).")
+
 if is_postgres and DB_NAME:
     DATABASES = {
         'default': {
@@ -136,8 +148,8 @@ if is_postgres and DB_NAME:
             'NAME': DB_NAME,
             'USER': os.environ.get('DB_USER', 'postgres').strip(),
             'PASSWORD': os.environ.get('DB_PASSWORD', '').strip(),
-            'HOST': os.environ.get('DB_HOST', '127.0.0.1').strip(),
-            'PORT': os.environ.get('DB_PORT', '5432').strip(),
+            'HOST': DB_HOST,
+            'PORT': DB_PORT,
             'CONN_MAX_AGE': int(os.environ.get('DB_CONN_MAX_AGE', '600')),
             'OPTIONS': {
                 'connect_timeout': 10,
@@ -150,7 +162,14 @@ else:
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
             'OPTIONS': {
-                'timeout': 20,
+                'timeout': 30,
+                'init_command': (
+                    'PRAGMA journal_mode = WAL;'
+                    'PRAGMA synchronous = NORMAL;'
+                    'PRAGMA cache_size = -64000;'
+                    'PRAGMA busy_timeout = 30000;'
+                    'PRAGMA mmap_size = 268435456;'
+                ),
             },
         }
     }

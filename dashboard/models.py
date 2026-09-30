@@ -176,3 +176,51 @@ class StockLog(models.Model):
         sign = '+' if self.quantity_delta > 0 else ''
         return f"{self.product.name}: {sign}{self.quantity_delta} ({self.get_log_type_display()}) -> Stock: {self.resulting_stock}"
 
+
+class ProductionBatch(models.Model):
+    batch_number = models.CharField(max_length=150, help_text="e.g. Batch #1, Batch #2, Winter Special 2026")
+    production_date = models.DateField(default=timezone.now, help_text="Date when this batch was prepared/bottled")
+    notes = models.TextField(blank=True, help_text="Batch preparation notes, ingredients, brine formulation, or chef remarks")
+    total_cost_bdt = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Total production cost for this batch in BDT")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='production_batches')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-production_date', '-id']
+
+    @property
+    def total_jars(self):
+        return sum(item.quantity for item in self.items.all())
+
+    @property
+    def total_flavors(self):
+        return self.items.count()
+
+    @property
+    def total_retail_value(self):
+        return sum(item.quantity * float(item.product.price_bdt or 0) for item in self.items.select_related('product'))
+
+    def __str__(self):
+        return f"{self.batch_number} ({self.production_date.strftime('%d %b %Y')})"
+
+
+class BatchItem(models.Model):
+    batch = models.ForeignKey(ProductionBatch, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey('store.Product', on_delete=models.CASCADE, related_name='batch_items')
+    quantity = models.PositiveIntegerField(help_text="Number of jars produced for this flavor")
+    unit_cost_bdt = models.DecimalField(max_digits=8, decimal_places=2, default=0.00, help_text="Estimated cost per jar")
+    notes = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['product__name']
+
+    @property
+    def total_retail_value(self):
+        return self.quantity * float(self.product.price_bdt or 0)
+
+    def __str__(self):
+        return f"{self.batch.batch_number} - {self.product.name} (+{self.quantity} jars)"
+
+

@@ -114,6 +114,7 @@
             <!-- Search Form -->
             <form method="GET" action="{% url 'dashboard:orders' %}" class="flex-1 max-w-md">
                 <input type="hidden" name="status" value="{{ status_filter }}">
+                <input type="hidden" name="period" value="{{ period_filter }}">
                 <input type="hidden" name="zone" value="{{ zone_filter }}">
                 <input type="hidden" name="payment" value="{{ payment_filter }}">
                 <input type="hidden" name="per_page" value="{{ per_page }}">
@@ -126,13 +127,27 @@
                 </div>
             </form>
 
-            <!-- Delivery Zone Filter -->
-            <div class="flex flex-wrap items-center gap-3">
+            <!-- Filters (Period & Delivery Zone) -->
+            <div class="flex flex-wrap items-center gap-4">
+                <!-- Period Filter -->
+                <div class="flex items-center gap-1 text-xs font-semibold flex-wrap">
+                    <span class="text-gray-400 font-bold mr-1 flex items-center gap-1">
+                        <i class="fa-solid fa-calendar-day text-brand-600 text-[11px]"></i> Period:
+                    </span>
+                    <a href="?status={{ status_filter }}&period=ALL&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-2.5 py-1 rounded-xl {% if period_filter == 'ALL' or not period_filter %}bg-brand-700 text-white font-bold{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">All</a>
+                    <a href="?status={{ status_filter }}&period=today&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-2.5 py-1 rounded-xl {% if period_filter == 'today' %}bg-emerald-700 text-white font-bold{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Today</a>
+                    <a href="?status={{ status_filter }}&period=this_month&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-2.5 py-1 rounded-xl {% if period_filter == 'this_month' %}bg-emerald-700 text-white font-bold{% else %}bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200{% endif %}">This Month</a>
+                    <a href="?status={{ status_filter }}&period=last_month&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-2.5 py-1 rounded-xl {% if period_filter == 'last_month' %}bg-blue-700 text-white font-bold{% else %}bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200{% endif %}">Last Month</a>
+                    <a href="?status={{ status_filter }}&period=this_year&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-2.5 py-1 rounded-xl {% if period_filter == 'this_year' %}bg-indigo-700 text-white font-bold{% else %}bg-indigo-50 text-indigo-800 hover:bg-indigo-100 border border-indigo-200{% endif %}">This Year</a>
+                    <a href="?status={{ status_filter }}&period=prev_year&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-2.5 py-1 rounded-xl {% if period_filter == 'prev_year' %}bg-amber-800 text-white font-bold{% else %}bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200{% endif %}">Prev Year</a>
+                </div>
+
+                <!-- Delivery Zone Filter -->
                 <div class="flex items-center gap-1 text-xs font-semibold">
                     <span class="text-gray-400 font-bold mr-1">Zone:</span>
-                    <a href="?status={{ status_filter }}&zone=ALL&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-2.5 py-1 rounded-xl {% if zone_filter == 'ALL' %}bg-brand-700 text-white font-bold{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">All</a>
-                    <a href="?status={{ status_filter }}&zone=INSIDE_DHAKA&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-2.5 py-1 rounded-xl {% if zone_filter == 'INSIDE_DHAKA' %}bg-brand-700 text-white font-bold{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Inside Dhaka</a>
-                    <a href="?status={{ status_filter }}&zone=OUTSIDE_DHAKA&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-2.5 py-1 rounded-xl {% if zone_filter == 'OUTSIDE_DHAKA' %}bg-brand-700 text-white font-bold{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Outside Dhaka</a>
+                    <a href="?status={{ status_filter }}&period={{ period_filter }}&zone=ALL&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-2.5 py-1 rounded-xl {% if zone_filter == 'ALL' %}bg-brand-700 text-white font-bold{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">All</a>
+                    <a href="?status={{ status_filter }}&period={{ period_filter }}&zone=INSIDE_DHAKA&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-2.5 py-1 rounded-xl {% if zone_filter == 'INSIDE_DHAKA' %}bg-brand-700 text-white font-bold{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Inside Dhaka</a>
+                    <a href="?status={{ status_filter }}&period={{ period_filter }}&zone=OUTSIDE_DHAKA&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-2.5 py-1 rounded-xl {% if zone_filter == 'OUTSIDE_DHAKA' %}bg-brand-700 text-white font-bold{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Outside Dhaka</a>
                 </div>
             </div>
 
@@ -140,31 +155,31 @@
 
         <!-- Status Filter Tabs with Icons & Distinct Colors -->
         <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-bold scrollbar-none border-t border-gray-100 pt-3">
-            <a href="?status=ALL&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition flex items-center gap-1.5 {% if status_filter == 'ALL' %}bg-gray-900 text-white shadow-xs{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+            <a href="?status=ALL&period={{ period_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition flex items-center gap-1.5 {% if status_filter == 'ALL' %}bg-gray-900 text-white shadow-xs{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
                 <i class="fa-solid fa-list-check"></i>
                 <span>All Orders ({{ total_orders_count }})</span>
             </a>
-            <a href="?status=PENDING&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition flex items-center gap-1.5 {% if status_filter == 'PENDING' %}bg-amber-600 text-white shadow-xs{% else %}bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200/60{% endif %}">
+            <a href="?status=PENDING&period={{ period_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition flex items-center gap-1.5 {% if status_filter == 'PENDING' %}bg-amber-600 text-white shadow-xs{% else %}bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200/60{% endif %}">
                 <i class="fa-solid fa-clock {% if status_filter == 'PENDING' %}text-white{% else %}text-amber-600{% endif %}"></i>
                 <span>Pending ({{ pending_count }})</span>
             </a>
-            <a href="?status=CONFIRMED&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition flex items-center gap-1.5 {% if status_filter == 'CONFIRMED' %}bg-blue-600 text-white shadow-xs{% else %}bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200/60{% endif %}">
+            <a href="?status=CONFIRMED&period={{ period_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition flex items-center gap-1.5 {% if status_filter == 'CONFIRMED' %}bg-blue-600 text-white shadow-xs{% else %}bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200/60{% endif %}">
                 <i class="fa-solid fa-circle-check {% if status_filter == 'CONFIRMED' %}text-white{% else %}text-blue-600{% endif %}"></i>
                 <span>Confirmed ({{ confirmed_count }})</span>
             </a>
-            <a href="?status=PACKING&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition flex items-center gap-1.5 {% if status_filter == 'PACKING' %}bg-purple-600 text-white shadow-xs{% else %}bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200/60{% endif %}">
+            <a href="?status=PACKING&period={{ period_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition flex items-center gap-1.5 {% if status_filter == 'PACKING' %}bg-purple-600 text-white shadow-xs{% else %}bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200/60{% endif %}">
                 <i class="fa-solid fa-box-open {% if status_filter == 'PACKING' %}text-white{% else %}text-purple-600{% endif %}"></i>
                 <span>Packing ({{ packing_count }})</span>
             </a>
-            <a href="?status=OUT_FOR_DELIVERY&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition flex items-center gap-1.5 {% if status_filter == 'OUT_FOR_DELIVERY' %}bg-indigo-600 text-white shadow-xs{% else %}bg-indigo-50 text-indigo-800 hover:bg-indigo-100 border border-indigo-200/60{% endif %}">
+            <a href="?status=OUT_FOR_DELIVERY&period={{ period_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition flex items-center gap-1.5 {% if status_filter == 'OUT_FOR_DELIVERY' %}bg-indigo-600 text-white shadow-xs{% else %}bg-indigo-50 text-indigo-800 hover:bg-indigo-100 border border-indigo-200/60{% endif %}">
                 <i class="fa-solid fa-truck-fast {% if status_filter == 'OUT_FOR_DELIVERY' %}text-white{% else %}text-indigo-600{% endif %}"></i>
                 <span>Shipping ({{ out_for_delivery_count }})</span>
             </a>
-            <a href="?status=DELIVERED&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition flex items-center gap-1.5 {% if status_filter == 'DELIVERED' %}bg-emerald-600 text-white shadow-xs{% else %}bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200/60{% endif %}">
+            <a href="?status=DELIVERED&period={{ period_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition flex items-center gap-1.5 {% if status_filter == 'DELIVERED' %}bg-emerald-600 text-white shadow-xs{% else %}bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200/60{% endif %}">
                 <i class="fa-solid fa-circle-check {% if status_filter == 'DELIVERED' %}text-white{% else %}text-emerald-600{% endif %}"></i>
                 <span>Delivered ({{ delivered_count }})</span>
             </a>
-            <a href="?status=CANCELLED&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition flex items-center gap-1.5 {% if status_filter == 'CANCELLED' %}bg-rose-600 text-white shadow-xs{% else %}bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200/60{% endif %}">
+            <a href="?status=CANCELLED&period={{ period_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition flex items-center gap-1.5 {% if status_filter == 'CANCELLED' %}bg-rose-600 text-white shadow-xs{% else %}bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200/60{% endif %}">
                 <i class="fa-solid fa-circle-xmark {% if status_filter == 'CANCELLED' %}text-white{% else %}text-rose-600{% endif %}"></i>
                 <span>Cancelled ({{ cancelled_count }})</span>
             </a>
@@ -385,6 +400,7 @@
             <!-- Per Page Selector Form -->
             <form method="GET" action="{% url 'dashboard:orders' %}" class="inline-flex items-center gap-1.5 ml-1">
                 <input type="hidden" name="status" value="{{ status_filter }}">
+                <input type="hidden" name="period" value="{{ period_filter }}">
                 <input type="hidden" name="zone" value="{{ zone_filter }}">
                 <input type="hidden" name="payment" value="{{ payment_filter }}">
                 <input type="hidden" name="q" value="{{ search_query }}">
@@ -409,10 +425,10 @@
                 
                 <!-- First & Prev Page -->
                 {% if page_obj.has_previous %}
-                <a href="?page=1&status={{ status_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}" class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="First Page">
+                <a href="?page=1&status={{ status_filter }}&period={{ period_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}" class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="First Page">
                     <i class="fa-solid fa-angles-left text-[10px]"></i>
                 </a>
-                <a href="?page={{ page_obj.previous_page_number }}&status={{ status_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}" class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="Previous Page">
+                <a href="?page={{ page_obj.previous_page_number }}&status={{ status_filter }}&period={{ period_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}" class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="Previous Page">
                     <i class="fa-solid fa-chevron-left text-[10px]"></i>
                     <span class="hidden sm:inline text-[11px]">Prev</span>
                 </a>
@@ -436,7 +452,7 @@
                             {{ p }}
                         </span>
                         {% else %}
-                        <a href="?page={{ p }}&status={{ status_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}" class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-700 hover:bg-brand-50 hover:text-brand-900 hover:border-brand-300 transition border border-gray-200 text-xs shadow-2xs">
+                        <a href="?page={{ p }}&status={{ status_filter }}&period={{ period_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}" class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-700 hover:bg-brand-50 hover:text-brand-900 hover:border-brand-300 transition border border-gray-200 text-xs shadow-2xs">
                             {{ p }}
                         </a>
                         {% endif %}
@@ -445,11 +461,11 @@
 
                 <!-- Next & Last Page -->
                 {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}&status={{ status_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}" class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="Next Page">
+                <a href="?page={{ page_obj.next_page_number }}&status={{ status_filter }}&period={{ period_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}" class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="Next Page">
                     <span class="hidden sm:inline text-[11px]">Next</span>
                     <i class="fa-solid fa-chevron-right text-[10px]"></i>
                 </a>
-                <a href="?page={{ paginator.num_pages }}&status={{ status_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}" class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="Last Page">
+                <a href="?page={{ paginator.num_pages }}&status={{ status_filter }}&period={{ period_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}" class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="Last Page">
                     <i class="fa-solid fa-angles-right text-[10px]"></i>
                 </a>
                 {% else %}

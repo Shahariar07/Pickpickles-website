@@ -1,22 +1,25 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en" class="h-full">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Pickpickles Merchant Dashboard{% endblock %}</title>
-    
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
-    
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap"
+        rel="stylesheet">
+
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
+
     <!-- Chart.js 4.x -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -42,50 +45,66 @@
         }
     </script>
 </head>
+
 <body class="bg-gray-100 text-gray-800 font-sans antialiased h-full overflow-x-hidden">
 
     <div class="min-h-full flex flex-col md:flex-row">
-        
+
         <!-- Mobile Top Bar with Drawer Toggle -->
-        <div class="md:hidden bg-brand-900 text-white px-3 sm:px-4 py-3.5 flex items-center justify-between sticky top-0 z-40 border-b border-brand-800 shadow-md">
+        <div
+            class="md:hidden bg-brand-900 text-white px-3 sm:px-4 py-3.5 flex items-center justify-between sticky top-0 z-40 border-b border-brand-800 shadow-md">
             <div class="flex items-center gap-2.5 min-w-0">
-                <button type="button" onclick="toggleSidebar()" class="p-2 rounded-xl text-gray-300 hover:text-white hover:bg-brand-800 focus:outline-none transition shrink-0">
+                <button type="button" onclick="toggleSidebar()"
+                    class="p-2 rounded-xl text-gray-300 hover:text-white hover:bg-brand-800 focus:outline-none transition shrink-0">
                     <i class="fa-solid fa-bars text-lg"></i>
                 </button>
                 <a href="{% url 'dashboard:index' %}" class="flex items-center gap-2 min-w-0 truncate">
-                    <img src="{% static 'images/logo.png' %}" alt="Pickpickles Logo" class="w-8 h-8 rounded-full object-cover border border-brand-400/40 shrink-0">
-                    <span class="font-display font-extrabold text-base sm:text-lg tracking-tight text-white truncate">PICK<span class="text-brand-accent">PICKLES</span></span>
+                    <img src="{% static 'images/logo.png' %}" alt="Pickpickles Logo"
+                        class="w-8 h-8 rounded-full object-cover border border-brand-400/40 shrink-0">
+                    <span
+                        class="font-display font-extrabold text-base sm:text-lg tracking-tight text-white truncate">PICK<span
+                            class="text-brand-accent">PICKLES</span></span>
                 </a>
             </div>
 
             <!-- Mobile Notification & Sound Icons -->
             <div class="flex items-center gap-1.5 shrink-0">
                 <!-- Sound Toggle Mobile -->
-                <button type="button" onclick="toggleNotificationSound()" id="mobileSoundToggleBtn" title="Toggle Sound Alert" class="p-2 rounded-xl text-brand-accent hover:bg-brand-800 text-sm transition">
+                <button type="button" onclick="toggleNotificationSound()" id="mobileSoundToggleBtn"
+                    title="Toggle Sound Alert"
+                    class="p-2 rounded-xl text-brand-accent hover:bg-brand-800 text-sm transition">
                     <i id="mobileSoundIcon" class="fa-solid fa-volume-high"></i>
                 </button>
 
                 <!-- Notifications Bell Mobile -->
                 <div class="relative">
-                    <button type="button" onclick="toggleNotificationDropdown('mobileNotificationDropdown')" class="p-2 rounded-xl text-gray-300 hover:text-white hover:bg-brand-800 transition relative">
+                    <button type="button" onclick="toggleNotificationDropdown('mobileNotificationDropdown')"
+                        class="p-2 rounded-xl text-gray-300 hover:text-white hover:bg-brand-800 transition relative">
                         <i class="fa-solid fa-bell text-base"></i>
-                        <span id="mobileNotificationBadge" class="hidden absolute top-1 right-1 min-w-[16px] h-4 px-1 bg-rose-500 text-[9px] font-black text-white rounded-full flex items-center justify-center animate-pulse">0</span>
+                        <span id="mobileNotificationBadge"
+                            class="hidden absolute top-1 right-1 min-w-[16px] h-4 px-1 bg-rose-500 text-[9px] font-black text-white rounded-full flex items-center justify-center animate-pulse">0</span>
                     </button>
                     <!-- Mobile Notification Dropdown Panel -->
-                    <div id="mobileNotificationDropdown" class="hidden absolute right-0 mt-2 w-72 bg-white text-gray-800 rounded-2xl shadow-2xl border border-gray-200 py-3 z-50">
+                    <div id="mobileNotificationDropdown"
+                        class="hidden absolute right-0 mt-2 w-72 bg-white text-gray-800 rounded-2xl shadow-2xl border border-gray-200 py-3 z-50">
                         <div class="px-4 pb-2 border-b border-gray-100 flex items-center justify-between">
                             <span class="font-bold text-xs text-gray-900">Pending Orders</span>
-                            <span id="mobilePendingCountText" class="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">0 pending</span>
+                            <span id="mobilePendingCountText"
+                                class="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">0
+                                pending</span>
                         </div>
-                        <div id="mobileNotificationList" class="max-h-60 overflow-y-auto divide-y divide-gray-100 text-xs">
+                        <div id="mobileNotificationList"
+                            class="max-h-60 overflow-y-auto divide-y divide-gray-100 text-xs">
                             <div class="p-4 text-center text-gray-400 text-xs">No pending orders</div>
                         </div>
-                        <div class="px-3 py-2 bg-gray-50 border-t border-gray-100 flex items-center justify-between text-[11px]">
+                        <div
+                            class="px-3 py-2 bg-gray-50 border-t border-gray-100 flex items-center justify-between text-[11px]">
                             <span class="text-gray-600 font-semibold flex items-center gap-1">
                                 <i class="fa-solid fa-clock text-amber-600"></i>
                                 <span>Reminder:</span>
                             </span>
-                            <select id="mobileReminderIntervalSelect" onchange="changeReminderInterval(this.value)" class="text-[11px] font-bold bg-white border border-gray-200 rounded-lg px-2 py-1 text-gray-700">
+                            <select id="mobileReminderIntervalSelect" onchange="changeReminderInterval(this.value)"
+                                class="text-[11px] font-bold bg-white border border-gray-200 rounded-lg px-2 py-1 text-gray-700">
                                 <option value="5">Every 5m</option>
                                 <option value="10" selected>Every 10m (Default)</option>
                                 <option value="15">Every 15m</option>
@@ -93,37 +112,46 @@
                             </select>
                         </div>
                         <div class="pt-2 px-3 border-t border-gray-100">
-                            <a href="{% url 'dashboard:orders' %}" class="block text-center text-[11px] font-bold text-brand-700 hover:text-brand-800 py-1">
+                            <a href="{% url 'dashboard:orders' %}"
+                                class="block text-center text-[11px] font-bold text-brand-700 hover:text-brand-800 py-1">
                                 Open Orders Hub →
                             </a>
                         </div>
                     </div>
                 </div>
 
-                <a href="{% url 'dashboard:logout' %}" class="p-2 rounded-xl bg-rose-900/60 hover:bg-rose-800 text-rose-200 text-xs transition shrink-0 ml-1">
+                <a href="{% url 'dashboard:logout' %}"
+                    class="p-2 rounded-xl bg-rose-900/60 hover:bg-rose-800 text-rose-200 text-xs transition shrink-0 ml-1">
                     <i class="fa-solid fa-right-from-bracket"></i>
                 </a>
             </div>
         </div>
 
         <!-- Mobile Backdrop Overlay -->
-        <div id="sidebarBackdrop" onclick="toggleSidebar()" class="fixed inset-0 bg-black/60 z-40 hidden md:hidden transition-opacity"></div>
+        <div id="sidebarBackdrop" onclick="toggleSidebar()"
+            class="fixed inset-0 bg-black/60 z-40 hidden md:hidden transition-opacity"></div>
 
         <!-- Left Sidebar Navigation -->
-        <aside id="sidebarNav" class="fixed inset-y-0 left-0 z-50 w-64 bg-brand-900 text-white flex flex-col justify-between border-r border-brand-800 shadow-2xl transform -translate-x-full md:translate-x-0 md:static md:inset-auto md:shadow-none transition-transform duration-300 ease-in-out">
-            
+        <aside id="sidebarNav"
+            class="fixed inset-y-0 left-0 z-50 w-64 bg-brand-900 text-white flex flex-col justify-between border-r border-brand-800 shadow-2xl transform -translate-x-full md:translate-x-0 md:static md:inset-auto md:shadow-none transition-transform duration-300 ease-in-out">
+
             <!-- Top Section: Brand & Nav Links -->
             <div class="flex flex-col flex-1 overflow-y-auto">
                 <!-- Brand Header -->
                 <div class="p-5 border-b border-brand-800 flex items-center justify-between">
                     <a href="{% url 'dashboard:index' %}" class="flex items-center gap-3">
-                        <img src="{% static 'images/logo.png' %}" alt="Pickpickles Logo" class="w-10 h-10 rounded-full object-cover border-2 border-brand-400/40 shadow-sm">
+                        <img src="{% static 'images/logo.png' %}" alt="Pickpickles Logo"
+                            class="w-10 h-10 rounded-full object-cover border-2 border-brand-400/40 shadow-sm">
                         <div class="leading-none">
-                            <span class="font-display font-extrabold text-xl tracking-tight text-white">PICK<span class="text-brand-accent">PICKLES</span></span>
-                            <span class="block text-[10px] font-black uppercase text-brand-accent tracking-widest mt-1">Merchant Hub</span>
+                            <span class="font-display font-extrabold text-xl tracking-tight text-white">PICK<span
+                                    class="text-brand-accent">PICKLES</span></span>
+                            <span
+                                class="block text-[10px] font-black uppercase text-brand-accent tracking-widest mt-1">Merchant
+                                Hub</span>
                         </div>
                     </a>
-                    <button type="button" onclick="toggleSidebar()" class="md:hidden text-gray-400 hover:text-white p-1">
+                    <button type="button" onclick="toggleSidebar()"
+                        class="md:hidden text-gray-400 hover:text-white p-1">
                         <i class="fa-solid fa-xmark text-lg"></i>
                     </button>
                 </div>
@@ -132,98 +160,125 @@
                 <div class="p-4 space-y-5">
                     <!-- SECTION 1: OPERATIONS (ORIGINAL) -->
                     <div>
-                        <div class="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest px-3 mb-2">Operations</div>
+                        <div class="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest px-3 mb-2">
+                            Operations</div>
                         <nav class="space-y-1 text-xs font-bold">
                             <!-- Dashboard Overview & Analytics Link -->
-                            <a href="{% url 'dashboard:index' %}" class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'index' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
+                            <a href="{% url 'dashboard:index' %}"
+                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'index' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
                                 <i class="fa-solid fa-chart-line text-brand-accent text-sm w-4 text-center"></i>
                                 <span>Dashboard & Graphs</span>
                             </a>
 
                             <!-- Orders Management Link -->
-                            <a href="{% url 'dashboard:orders' %}" class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'orders' or request.resolver_match.url_name == 'order_detail' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
+                            <a href="{% url 'dashboard:orders' %}"
+                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'orders' or request.resolver_match.url_name == 'order_detail' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
                                 <i class="fa-solid fa-list-check text-brand-accent text-sm w-4 text-center"></i>
                                 <span>Orders & Delivery</span>
-                                <span id="sidebarOrdersPendingBadge" class="hidden ml-auto px-2 py-0.5 text-[10px] font-black bg-amber-500 text-brand-950 rounded-full shadow-xs">0</span>
+                                <span id="sidebarOrdersPendingBadge"
+                                    class="hidden ml-auto px-2 py-0.5 text-[10px] font-black bg-amber-500 text-brand-950 rounded-full shadow-xs">0</span>
                             </a>
 
                             <!-- Inventory Link -->
-                            <a href="{% url 'dashboard:stock_manager' %}" class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'stock_manager' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
+                            <a href="{% url 'dashboard:stock_manager' %}"
+                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'stock_manager' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
                                 <i class="fa-solid fa-boxes-stacked text-brand-accent text-sm w-4 text-center"></i>
                                 <span>Inventory & Stock</span>
                             </a>
 
+                            <!-- Production Batches Link -->
+                            <a href="{% url 'dashboard:production_batches' %}"
+                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'production_batches' or request.resolver_match.url_name == 'production_batch_detail' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
+                                <i class="fa-solid fa-layer-group text-amber-300 text-sm w-4 text-center"></i>
+                                <span>Production Batches</span>
+                                <span class="ml-auto px-1.5 py-0.5 text-[9px] font-black bg-amber-400/20 text-amber-300 rounded border border-amber-400/30">ব্যাচ</span>
+                            </a>
+
                             <!-- Stock Ledger Link -->
-                            <a href="{% url 'dashboard:stock_ledger' %}" class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'stock_ledger' or request.resolver_match.url_name == 'product_stock_ledger' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
+                            <a href="{% url 'dashboard:stock_ledger' %}"
+                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'stock_ledger' or request.resolver_match.url_name == 'product_stock_ledger' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
                                 <i class="fa-solid fa-clock-rotate-left text-brand-accent text-sm w-4 text-center"></i>
                                 <span>Stock Ledger / History</span>
                             </a>
 
                             <!-- Damage & Returns Link -->
-                            <a href="{% url 'dashboard:damage_returns' %}" class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'damage_returns' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
+                            <a href="{% url 'dashboard:damage_returns' %}"
+                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'damage_returns' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
                                 <i class="fa-solid fa-triangle-exclamation text-amber-400 text-sm w-4 text-center"></i>
                                 <span>Damage & Returns</span>
                             </a>
 
                             <!-- Expenses & Profit Tracking Link -->
-                            <a href="{% url 'dashboard:expenses' %}" class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'expenses' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
+                            <a href="{% url 'dashboard:expenses' %}"
+                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'expenses' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
                                 <i class="fa-solid fa-receipt text-brand-accent text-sm w-4 text-center"></i>
                                 <span>Expenses Tracking</span>
                             </a>
 
                             <!-- Financial Statement Link -->
-                            <a href="{% url 'dashboard:statement' %}" class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'statement' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
-                                <i class="fa-solid fa-file-invoice-dollar text-brand-accent text-sm w-4 text-center"></i>
+                            <a href="{% url 'dashboard:statement' %}"
+                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'statement' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
+                                <i
+                                    class="fa-solid fa-file-invoice-dollar text-brand-accent text-sm w-4 text-center"></i>
                                 <span>P&L Statement</span>
                             </a>
 
                             <!-- Pricing & Profitability Intelligence Link -->
-                            <a href="{% url 'dashboard:business_profitability' %}" class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'business_profitability' %}bg-emerald-600 text-white shadow-md shadow-emerald-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
+                            <a href="{% url 'dashboard:business_profitability' %}"
+                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'business_profitability' %}bg-emerald-600 text-white shadow-md shadow-emerald-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
                                 <i class="fa-solid fa-calculator text-amber-300 text-sm w-4 text-center"></i>
                                 <span>Pricing & Profitability</span>
-                                <span class="ml-auto px-1.5 py-0.5 text-[9px] font-black bg-amber-400/20 text-amber-300 rounded border border-amber-400/30">Smart</span>
+                                <span
+                                    class="ml-auto px-1.5 py-0.5 text-[9px] font-black bg-amber-400/20 text-amber-300 rounded border border-amber-400/30">Smart</span>
                             </a>
                         </nav>
                     </div>
 
                     <!-- SECTION 2: ADMIN MANAGEMENT -->
                     <div>
-                        <div class="text-[10px] font-extrabold text-brand-accent uppercase tracking-widest px-3 mb-2 flex items-center justify-between">
+                        <div
+                            class="text-[10px] font-extrabold text-brand-accent uppercase tracking-widest px-3 mb-2 flex items-center justify-between">
                             <span>Admin Management</span>
                             <i class="fa-solid fa-sliders text-[10px]"></i>
                         </div>
                         <nav class="space-y-1 text-xs font-bold">
                             <!-- Pickle Categories -->
-                            <a href="{% url 'dashboard:pickle_categories' %}" class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'pickle_categories' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
+                            <a href="{% url 'dashboard:pickle_categories' %}"
+                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'pickle_categories' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
                                 <i class="fa-solid fa-tags text-brand-accent text-sm w-4 text-center"></i>
                                 <span>Pickle Categories</span>
                             </a>
 
                             <!-- Expense Categories -->
-                            <a href="{% url 'dashboard:expense_categories' %}" class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'expense_categories' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
+                            <a href="{% url 'dashboard:expense_categories' %}"
+                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'expense_categories' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
                                 <i class="fa-solid fa-folder-tree text-brand-accent text-sm w-4 text-center"></i>
                                 <span>Expense Categories</span>
                             </a>
 
                             {% if request.user.is_superuser %}
                             <!-- Staff & Admin Users -->
-                            <a href="{% url 'dashboard:admin_users' %}" class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'admin_users' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
+                            <a href="{% url 'dashboard:admin_users' %}"
+                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'admin_users' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
                                 <i class="fa-solid fa-user-shield text-brand-accent text-sm w-4 text-center"></i>
                                 <span>Staff & Admin Users</span>
                             </a>
                             {% endif %}
 
                             <!-- Customer Reviews -->
-                            <a href="{% url 'dashboard:reviews' %}" class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'reviews' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
+                            <a href="{% url 'dashboard:reviews' %}"
+                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'reviews' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
                                 <i class="fa-solid fa-star text-brand-accent text-sm w-4 text-center"></i>
                                 <span>Customer Reviews</span>
                             </a>
 
                             <!-- Orders Trash & Archive -->
-                            <a href="{% url 'dashboard:orders_trash' %}" class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'orders_trash' %}bg-rose-700 text-white shadow-md shadow-rose-700/30 font-extrabold{% else %}text-rose-200/80 hover:text-white hover:bg-rose-900/40{% endif %}">
+                            <a href="{% url 'dashboard:orders_trash' %}"
+                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'orders_trash' %}bg-rose-700 text-white shadow-md shadow-rose-700/30 font-extrabold{% else %}text-rose-200/80 hover:text-white hover:bg-rose-900/40{% endif %}">
                                 <i class="fa-solid fa-trash-can text-rose-400 text-sm w-4 text-center"></i>
                                 <span>Orders Trash Bin</span>
-                                <span class="ml-auto px-2 py-0.5 text-[10px] font-black {% if global_trash_count > 0 %}bg-rose-500 text-white animate-pulse{% else %}bg-rose-950/60 text-rose-300{% endif %} rounded-full shadow-2xs">
+                                <span
+                                    class="ml-auto px-2 py-0.5 text-[10px] font-black {% if global_trash_count > 0 %}bg-rose-500 text-white animate-pulse{% else %}bg-rose-950/60 text-rose-300{% endif %} rounded-full shadow-2xs">
                                     {{ global_trash_count }}
                                 </span>
                             </a>
@@ -232,17 +287,20 @@
 
                     <!-- SECTION 3: QUICK LINKS -->
                     <div>
-                        <div class="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest px-3 mb-2">Quick Links</div>
+                        <div class="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest px-3 mb-2">Quick
+                            Links</div>
                         <nav class="space-y-1 text-xs font-bold">
                             <!-- Storefront Link -->
-                            <a href="{% url 'store:index' %}" target="_blank" class="px-3.5 py-2 rounded-2xl text-gray-300 hover:text-white hover:bg-brand-800 transition flex items-center gap-3">
+                            <a href="{% url 'store:index' %}" target="_blank"
+                                class="px-3.5 py-2 rounded-2xl text-gray-300 hover:text-white hover:bg-brand-800 transition flex items-center gap-3">
                                 <i class="fa-solid fa-store text-brand-accent text-sm w-4 text-center"></i>
                                 <span>View Live Store</span>
                                 <i class="fa-solid fa-arrow-up-right-from-square text-[10px] ml-auto opacity-60"></i>
                             </a>
 
                             <!-- Django Admin Native -->
-                            <a href="/admin/" target="_blank" class="px-3.5 py-2 rounded-2xl text-gray-400 hover:text-white hover:bg-brand-800 transition flex items-center gap-3">
+                            <a href="/admin/" target="_blank"
+                                class="px-3.5 py-2 rounded-2xl text-gray-400 hover:text-white hover:bg-brand-800 transition flex items-center gap-3">
                                 <i class="fa-solid fa-sliders text-brand-accent text-sm w-4 text-center"></i>
                                 <span>Django Admin</span>
                                 <i class="fa-solid fa-arrow-up-right-from-square text-[10px] ml-auto opacity-60"></i>
@@ -254,17 +312,21 @@
 
             <!-- Bottom User Profile Card & Logout -->
             <div class="p-4 border-t border-brand-800 bg-brand-950/40">
-                <div class="flex items-center justify-between gap-3 p-2 bg-brand-800/40 rounded-2xl border border-brand-700/50">
+                <div
+                    class="flex items-center justify-between gap-3 p-2 bg-brand-800/40 rounded-2xl border border-brand-700/50">
                     <div class="flex items-center gap-2.5 overflow-hidden">
-                        <div class="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center font-black text-xs text-brand-accent">
+                        <div
+                            class="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center font-black text-xs text-brand-accent">
                             {{ user.username|slice:":1"|upper|default:"A" }}
                         </div>
                         <div class="truncate">
-                            <span class="block text-xs font-bold text-white truncate">{{ user.username|default:"Admin" }}</span>
+                            <span class="block text-xs font-bold text-white truncate">{{ user.username|default:"Admin"
+                                }}</span>
                             <span class="block text-[10px] text-emerald-400 font-medium">● Logged In</span>
                         </div>
                     </div>
-                    <a href="{% url 'dashboard:logout' %}" title="Logout" class="p-2 rounded-xl bg-rose-900/40 hover:bg-rose-800 text-rose-200 transition text-xs flex items-center justify-center">
+                    <a href="{% url 'dashboard:logout' %}" title="Logout"
+                        class="p-2 rounded-xl bg-rose-900/40 hover:bg-rose-800 text-rose-200 transition text-xs flex items-center justify-center">
                         <i class="fa-solid fa-right-from-bracket"></i>
                     </a>
                 </div>
@@ -274,58 +336,73 @@
 
         <!-- Main Content Area -->
         <div class="flex-1 flex flex-col min-w-0 overflow-y-auto relative">
-            
+
             <!-- Desktop Top Navigation Header -->
-            <header class="hidden md:flex items-center justify-between px-6 py-3.5 bg-white border-b border-gray-200 sticky top-0 z-30 shadow-2xs">
+            <header
+                class="hidden md:flex items-center justify-between px-6 py-3.5 bg-white border-b border-gray-200 sticky top-0 z-30 shadow-2xs">
                 <div class="flex items-center gap-3">
-                    <div class="flex items-center gap-2 bg-emerald-50 text-emerald-800 border border-emerald-200/80 px-3 py-1 rounded-full text-xs font-bold shadow-2xs">
+                    <div
+                        class="flex items-center gap-2 bg-emerald-50 text-emerald-800 border border-emerald-200/80 px-3 py-1 rounded-full text-xs font-bold shadow-2xs">
                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                         <span>Live Order Monitoring</span>
                     </div>
-                    <span id="pendingReminderNotice" class="hidden items-center gap-1.5 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full animate-pulse">
+                    <span id="pendingReminderNotice"
+                        class="hidden items-center gap-1.5 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full animate-pulse">
                         <i class="fa-solid fa-clock"></i> <span id="reminderIntervalBadgeText">10m Alert Active</span>
                     </span>
-                    <span class="text-xs text-gray-400 font-semibold hidden lg:inline">• 10m recurring sound alert when pending orders exist</span>
+                    <span class="text-xs text-gray-400 font-semibold hidden lg:inline">• 10m recurring sound alert when
+                        pending orders exist</span>
                 </div>
 
                 <div class="flex items-center gap-3">
                     <!-- Sound Toggle Button -->
-                    <button type="button" id="desktopSoundToggleBtn" onclick="toggleNotificationSound()" class="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 transition shadow-2xs">
+                    <button type="button" id="desktopSoundToggleBtn" onclick="toggleNotificationSound()"
+                        class="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 transition shadow-2xs">
                         <i id="desktopSoundIcon" class="fa-solid fa-volume-high text-brand-600"></i>
                         <span id="desktopSoundText">Sound: ON</span>
                     </button>
 
                     <!-- Test Chime Button -->
-                    <button type="button" onclick="playChimeSound(true)" title="Click to test notification chime" class="px-2.5 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition flex items-center gap-1.5">
+                    <button type="button" onclick="playChimeSound(true)" title="Click to test notification chime"
+                        class="px-2.5 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition flex items-center gap-1.5">
                         <i class="fa-solid fa-play text-[10px] text-brand-600"></i>
                         <span>Test Chime</span>
                     </button>
 
                     <!-- Notification Bell Dropdown (Desktop) -->
                     <div class="relative">
-                        <button type="button" id="desktopNotificationBellBtn" onclick="toggleNotificationDropdown('desktopNotificationDropdown')" class="relative p-2.5 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 transition flex items-center justify-center">
+                        <button type="button" id="desktopNotificationBellBtn"
+                            onclick="toggleNotificationDropdown('desktopNotificationDropdown')"
+                            class="relative p-2.5 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 transition flex items-center justify-center">
                             <i class="fa-solid fa-bell text-base text-gray-700"></i>
-                            <span id="desktopNotificationBadge" class="hidden absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-sm animate-bounce">0</span>
+                            <span id="desktopNotificationBadge"
+                                class="hidden absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-sm animate-bounce">0</span>
                         </button>
 
                         <!-- Notification Dropdown Menu -->
-                        <div id="desktopNotificationDropdown" class="hidden absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 py-3 z-50 transition-all">
+                        <div id="desktopNotificationDropdown"
+                            class="hidden absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 py-3 z-50 transition-all">
                             <div class="px-4 pb-2.5 border-b border-gray-100 flex items-center justify-between">
                                 <div class="flex items-center gap-2">
                                     <i class="fa-solid fa-bell text-brand-600"></i>
                                     <span class="font-display font-bold text-sm text-gray-900">Order Alerts</span>
                                 </div>
-                                <span id="desktopPendingCountText" class="text-[11px] font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">0 pending</span>
+                                <span id="desktopPendingCountText"
+                                    class="text-[11px] font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">0
+                                    pending</span>
                             </div>
-                            <div id="desktopNotificationList" class="max-h-72 overflow-y-auto divide-y divide-gray-100 text-xs">
+                            <div id="desktopNotificationList"
+                                class="max-h-72 overflow-y-auto divide-y divide-gray-100 text-xs">
                                 <div class="p-4 text-center text-gray-400 text-xs">No pending orders</div>
                             </div>
-                            <div class="px-4 py-2 bg-gray-50 border-t border-gray-100 flex items-center justify-between text-xs">
+                            <div
+                                class="px-4 py-2 bg-gray-50 border-t border-gray-100 flex items-center justify-between text-xs">
                                 <span class="text-gray-600 font-semibold flex items-center gap-1.5">
                                     <i class="fa-solid fa-clock text-amber-600"></i>
                                     <span>Sound Reminder:</span>
                                 </span>
-                                <select id="desktopReminderIntervalSelect" onchange="changeReminderInterval(this.value)" class="text-xs font-bold bg-white border border-gray-200 rounded-lg px-2 py-1 text-gray-700 focus:outline-none focus:border-brand-500 cursor-pointer">
+                                <select id="desktopReminderIntervalSelect" onchange="changeReminderInterval(this.value)"
+                                    class="text-xs font-bold bg-white border border-gray-200 rounded-lg px-2 py-1 text-gray-700 focus:outline-none focus:border-brand-500 cursor-pointer">
                                     <option value="5">Every 5 min</option>
                                     <option value="10" selected>Every 10 min (Default)</option>
                                     <option value="15">Every 15 min</option>
@@ -333,7 +410,8 @@
                                 </select>
                             </div>
                             <div class="pt-2 px-3 border-t border-gray-100 flex items-center justify-between">
-                                <a href="{% url 'dashboard:orders' %}" class="w-full text-center text-xs font-bold text-brand-700 hover:text-brand-800 py-1.5 rounded-xl hover:bg-brand-50 transition">
+                                <a href="{% url 'dashboard:orders' %}"
+                                    class="w-full text-center text-xs font-bold text-brand-700 hover:text-brand-800 py-1.5 rounded-xl hover:bg-brand-50 transition">
                                     View Full Orders Queue →
                                 </a>
                             </div>
@@ -341,7 +419,8 @@
                     </div>
 
                     <!-- Direct Orders Hub Button -->
-                    <a href="{% url 'dashboard:orders' %}" class="bg-brand-700 hover:bg-brand-800 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow-sm">
+                    <a href="{% url 'dashboard:orders' %}"
+                        class="bg-brand-700 hover:bg-brand-800 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow-sm">
                         <i class="fa-solid fa-list-check text-brand-accent"></i>
                         <span>Orders Hub</span>
                     </a>
@@ -352,7 +431,8 @@
             {% if messages %}
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">
                 {% for message in messages %}
-                <div class="p-3.5 mb-2 rounded-2xl text-xs sm:text-sm font-semibold border shadow-xs {% if message.tags == 'success' %}bg-emerald-50 text-emerald-900 border-emerald-200{% elif message.tags == 'error' %}bg-rose-50 text-rose-900 border-rose-200{% else %}bg-blue-50 text-blue-900 border-blue-200{% endif %} flex items-center justify-between">
+                <div
+                    class="p-3.5 mb-2 rounded-2xl text-xs sm:text-sm font-semibold border shadow-xs {% if message.tags == 'success' %}bg-emerald-50 text-emerald-900 border-emerald-200{% elif message.tags == 'error' %}bg-rose-50 text-rose-900 border-rose-200{% else %}bg-blue-50 text-blue-900 border-blue-200{% endif %} flex items-center justify-between">
                     <span>{{ message }}</span>
                     <button onclick="this.parentElement.remove()" class="text-gray-400 hover:text-gray-700">✕</button>
                 </div>
@@ -378,7 +458,9 @@
     <audio id="orderNotificationAudio" src="{% static 'audio/order_alert.wav' %}" preload="auto"></audio>
 
     <!-- Floating Real-Time Order Alert Banner Container -->
-    <div id="liveOrderToastContainer" class="fixed top-16 right-4 sm:right-6 z-50 flex flex-col gap-3 pointer-events-none max-w-sm w-full sm:w-96"></div>
+    <div id="liveOrderToastContainer"
+        class="fixed top-16 right-4 sm:right-6 z-50 flex flex-col gap-3 pointer-events-none max-w-sm w-full sm:w-96">
+    </div>
 
     <!-- Toggle Script for Mobile Sidebar -->
     <script>
@@ -410,7 +492,7 @@
                         orderAudio.pause();
                         orderAudio.currentTime = 0;
                         orderAudio.muted = false;
-                    }).catch(() => {});
+                    }).catch(() => { });
                 }
             }
         }, { once: true });
@@ -473,7 +555,7 @@
             const dropdown = document.getElementById(dropdownId);
             if (!dropdown) return;
             const isHidden = dropdown.classList.contains('hidden');
-            
+
             // Close any other open dropdowns first
             document.querySelectorAll('#desktopNotificationDropdown, #mobileNotificationDropdown').forEach(el => {
                 el.classList.add('hidden');
@@ -489,8 +571,8 @@
         }
 
         // Close dropdown when clicking outside
-        document.addEventListener('click', function(e) {
-            if (!e.target.closest('#desktopNotificationBellBtn') && 
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('#desktopNotificationBellBtn') &&
                 !e.target.closest('#desktopNotificationDropdown') &&
                 !e.target.closest('#mobileNotificationDropdown') &&
                 !e.target.closest('button[onclick*="mobileNotificationDropdown"]')) {
@@ -548,7 +630,7 @@
                         body: `${order.customer_name} - ৳${order.total_amount} (${order.delivery_city})`,
                         icon: '{% static "images/logo.png" %}'
                     });
-                } catch(e) {}
+                } catch (e) { }
             }
 
             // Auto-dismiss after 15 seconds
@@ -747,7 +829,7 @@
         }
 
         // Initialize UI and start polling
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             updateSoundUI();
             updateReminderIntervalUI();
             pollOrderNotifications();
@@ -755,7 +837,7 @@
             setInterval(pollOrderNotifications, 30000);
 
             // Immediately poll when user switches back to this tab
-            document.addEventListener('visibilitychange', function() {
+            document.addEventListener('visibilitychange', function () {
                 if (!document.hidden) {
                     pollOrderNotifications();
                 }
@@ -765,37 +847,48 @@
 
     {% if auto_whatsapp_url %}
     <!-- ⭐ WhatsApp Shipping & Storage Instruction Auto-Opener Modal -->
-    <div id="whatsappAutoModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-        <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-emerald-100 text-center space-y-4 transform transition-all scale-100">
-            <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-3xl shadow-inner">
+    <div id="whatsappAutoModal"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+        <div
+            class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-emerald-100 text-center space-y-4 transform transition-all scale-100">
+            <div
+                class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-3xl shadow-inner">
                 <i class="fa-brands fa-whatsapp"></i>
             </div>
             <div>
-                <span class="inline-block text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 mb-1.5">🚚 Shipping Out Notification</span>
+                <span
+                    class="inline-block text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 mb-1.5">🚚
+                    Shipping Out Notification</span>
                 <h3 class="font-display font-black text-lg text-gray-900">ডেলিভারি ও সংরক্ষণ নির্দেশিকা</h3>
                 <p class="text-xs text-gray-600 mt-1">
-                    অর্ডার <strong>#{{ auto_whatsapp_order_number }}</strong> ডেলিভারির জন্য পাঠানো হয়েছে! কাস্টমারের WhatsApp-এ আচারের সংরক্ষণ নির্দেশিকা পাঠানোর জন্য উইন্ডো ওপেন করা হয়েছে।
+                    অর্ডার <strong>#{{ auto_whatsapp_order_number }}</strong> ডেলিভারির জন্য পাঠানো হয়েছে! কাস্টমারের
+                    WhatsApp-এ আচারের সংরক্ষণ নির্দেশিকা পাঠানোর জন্য উইন্ডো ওপেন করা হয়েছে।
                 </p>
             </div>
-            
-            <div class="bg-emerald-50/90 border border-emerald-200 rounded-2xl p-3.5 text-left text-xs text-emerald-950 space-y-1.5">
+
+            <div
+                class="bg-emerald-50/90 border border-emerald-200 rounded-2xl p-3.5 text-left text-xs text-emerald-950 space-y-1.5">
                 <div class="font-bold flex items-center gap-1.5 text-emerald-800">
                     <i class="fa-solid fa-circle-info"></i> নির্দেশিকায় যা অন্তর্ভুক্ত আছে:
                 </div>
                 <div class="text-[11px] text-gray-700 pl-4 space-y-1 leading-relaxed">
-                    <div>🧊 <strong>পার্সেল পেয়েই নরমাল ফ্রিজে রাখা:</strong> ১০০% তেলমুক্ত ও প্রাকৃতিক ভিনেগার ব্রাইনে তৈরি (১ মাস ফ্রেশ থাকবে)।</div>
+                    <div>🧊 <strong>পার্সেল পেয়েই নরমাল ফ্রিজে রাখা:</strong> ১০০% তেলমুক্ত ও প্রাকৃতিক ভিনেগার ব্রাইনে
+                        তৈরি (১ মাস ফ্রেশ থাকবে)।</div>
                     <div>🥄 <strong>শুকনো চামচ ব্যবহার:</strong> সবসময় শুকনো ও পরিষ্কার চামচ/কাঁটাচামচ ব্যবহার।</div>
-                    <div>🥗 <strong>ঠান্ডা পরিবেশন:</strong> মুচমুচে ও সর্বোচ্চ ক্রাঞ্চি স্বাদ পেতে ঠান্ডা পরিবেশন।</div>
+                    <div>🥗 <strong>ঠান্ডা পরিবেশন:</strong> মুচমুচে ও সর্বোচ্চ ক্রাঞ্চি স্বাদ পেতে ঠান্ডা পরিবেশন।
+                    </div>
                     <div>📦 <strong>কুরিয়ার ও ট্র্যাকিং:</strong> লাইভ ট্র্যাকিং লিংক ও বিলিং কালেকশন তথ্য।</div>
                 </div>
             </div>
 
             <div class="flex items-center gap-2 pt-1">
-                <a href="{{ auto_whatsapp_url }}" id="directWaLink" target="_blank" onclick="closeWaAutoModal()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs py-3 px-4 rounded-xl shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition active:scale-95">
+                <a href="{{ auto_whatsapp_url }}" id="directWaLink" target="_blank" onclick="closeWaAutoModal()"
+                    class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs py-3 px-4 rounded-xl shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition active:scale-95">
                     <i class="fa-brands fa-whatsapp text-base"></i>
                     <span>WhatsApp-এ মেসেজ পাঠান</span>
                 </a>
-                <button type="button" onclick="closeWaAutoModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs py-3 px-4 rounded-xl transition cursor-pointer">
+                <button type="button" onclick="closeWaAutoModal()"
+                    class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs py-3 px-4 rounded-xl transition cursor-pointer">
                     বন্ধ করুন
                 </button>
             </div>
@@ -810,7 +903,7 @@
             }
         }
         // Automatically attempt to open WhatsApp in new tab
-        (function() {
+        (function () {
             try {
                 const waUrl = "{{ auto_whatsapp_url|escapejs }}";
                 if (waUrl) {
@@ -825,5 +918,5 @@
 
     {% block extra_js %}{% endblock %}
 </body>
-</html>
 
+</html>
