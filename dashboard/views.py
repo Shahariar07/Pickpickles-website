@@ -1622,12 +1622,56 @@ def stock_manager(request):
     return render(request, 'dashboard/stock_manager.html', context)
 
 
+def sync_production_batches_from_stock_logs():
+    """
+    Auto-detects and backfills any historical restock/batch transactions from StockLog into ProductionBatch & BatchItem.
+    """
+    restock_logs = StockLog.objects.filter(
+        Q(log_type='RESTOCK') | Q(reference__icontains='Batch')
+    ).exclude(log_type__in=['RETURN_RESTOCKED', 'ORDER_CANCELLED']).order_by('created_at')
+
+    if not restock_logs.exists():
+        return
+
+    # Group by (reference, date)
+    batch_groups = {}
+    for l in restock_logs:
+        date_key = l.created_at.date()
+        ref = (l.reference or 'Production Batch').strip()
+        key = (ref, date_key)
+        if key not in batch_groups:
+            batch_groups[key] = []
+        batch_groups[key].append(l)
+
+    for (ref, date_key), items in batch_groups.items():
+        batch, created = ProductionBatch.objects.get_or_create(
+            batch_number=ref,
+            production_date=date_key,
+            defaults={
+                'notes': items[0].notes,
+                'created_by': items[0].created_by
+            }
+        )
+        for itm in items:
+            BatchItem.objects.get_or_create(
+                batch=batch,
+                product=itm.product,
+                defaults={
+                    'quantity': abs(itm.quantity_delta),
+                    'notes': itm.notes
+                }
+            )
+
+
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def production_batches_list(request):
     """
     Dedicated Production Batches Manager & Timeline.
     Shows every single batch produced (Batch #1, Batch #2, etc.), date prepared, total jars, flavors breakdown, and notes.
     """
+    # Auto-sync any existing server batches from StockLog
+    sync_production_batches_from_stock_logs()
+
     now = timezone.now()
     today = now.date()
     search_query = request.GET.get('q', '').strip()
@@ -1787,9 +1831,17 @@ def production_batches_list(request):
     # All active products for batch creation modal
     all_products = Product.objects.all().select_related('category').order_by('name')
 
-    # Pagination
+    # Pagination configuration
     page_number = request.GET.get('page', 1)
-    paginator = Paginator(all_batches_list, 15)
+    per_page = request.GET.get('per_page', 10)
+    try:
+        per_page = int(per_page)
+        if per_page not in [5, 10, 20, 50, 100]:
+            per_page = 10
+    except (ValueError, TypeError):
+        per_page = 10
+
+    paginator = Paginator(all_batches_list, per_page)
     try:
         page_obj = paginator.page(page_number)
     except PageNotAnInteger:
@@ -1797,10 +1849,17 @@ def production_batches_list(request):
     except EmptyPage:
         page_obj = paginator.page(paginator.num_pages)
 
+    try:
+        elided_page_range = paginator.get_elided_page_range(number=page_obj.number, on_each_side=2, on_ends=1)
+    except Exception:
+        elided_page_range = paginator.page_range
+
     context = {
         'batches': page_obj,
         'page_obj': page_obj,
         'paginator': paginator,
+        'elided_page_range': elided_page_range,
+        'per_page': per_page,
         'total_batches_count': total_batches_count,
         'total_jars_produced': total_jars_produced,
         'total_retail_value': total_retail_value,
