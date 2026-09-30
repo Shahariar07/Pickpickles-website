@@ -86,7 +86,7 @@
                 </div>
 
                 <div class="mt-1.5">
-                    <span class="text-[8px] font-extrabold text-gray-400 uppercase tracking-wider block">Total Order Sum</span>
+                    <span class="text-[8px] font-extrabold text-gray-400 uppercase tracking-wider block">Delivered Sales (আদায়কৃত)</span>
                     <div class="font-display font-black text-lg sm:text-xl text-emerald-800 leading-none mt-0.5 tracking-tight">
                         ৳{{ this_month_orders_sum|floatformat:0|default:"0" }}
                     </div>
@@ -97,7 +97,7 @@
                         {{ this_month_orders_count }} Orders &rarr;
                     </a>
                     <span class="text-gray-500 font-semibold text-[9px]">
-                        Paid: <strong class="text-emerald-700 font-bold">৳{{ this_month_delivered_sum|floatformat:0|default:"0" }}</strong>
+                        Delivered: <strong class="text-emerald-700 font-bold">{{ this_month_delivered_count }}</strong>{% if this_month_active_count > 0 %}<span class="text-amber-600 font-bold ml-1">({{ this_month_active_count }} Active)</span>{% endif %}
                     </span>
                 </div>
             </div>
@@ -117,7 +117,7 @@
                 </div>
 
                 <div class="mt-1.5">
-                    <span class="text-[8px] font-extrabold text-gray-400 uppercase tracking-wider block">Total Order Sum</span>
+                    <span class="text-[8px] font-extrabold text-gray-400 uppercase tracking-wider block">Delivered Sales (আদায়কৃত)</span>
                     <div class="font-display font-black text-lg sm:text-xl text-blue-900 leading-none mt-0.5 tracking-tight">
                         ৳{{ last_month_orders_sum|floatformat:0|default:"0" }}
                     </div>
@@ -128,7 +128,7 @@
                         {{ last_month_orders_count }} Orders &rarr;
                     </a>
                     <span class="text-gray-500 font-semibold text-[9px]">
-                        Paid: <strong class="text-blue-800 font-bold">৳{{ last_month_delivered_sum|floatformat:0|default:"0" }}</strong>
+                        Delivered: <strong class="text-blue-800 font-bold">{{ last_month_delivered_count }} Orders</strong>
                     </span>
                 </div>
             </div>
@@ -148,7 +148,7 @@
                 </div>
 
                 <div class="mt-1.5">
-                    <span class="text-[8px] font-extrabold text-gray-400 uppercase tracking-wider block">Yearly Order Sum</span>
+                    <span class="text-[8px] font-extrabold text-gray-400 uppercase tracking-wider block">Delivered Sales (আদায়কৃত)</span>
                     <div class="font-display font-black text-lg sm:text-xl text-indigo-900 leading-none mt-0.5 tracking-tight">
                         ৳{{ this_year_orders_sum|floatformat:0|default:"0" }}
                     </div>
@@ -159,7 +159,7 @@
                         {{ this_year_orders_count }} Orders &rarr;
                     </a>
                     <span class="text-gray-500 font-semibold text-[9px]">
-                        Paid: <strong class="text-indigo-800 font-bold">৳{{ this_year_delivered_sum|floatformat:0|default:"0" }}</strong>
+                        Delivered: <strong class="text-indigo-800 font-bold">{{ this_year_delivered_count }} Orders</strong>
                     </span>
                 </div>
             </div>
@@ -179,7 +179,7 @@
                 </div>
 
                 <div class="mt-1.5">
-                    <span class="text-[8px] font-extrabold text-gray-400 uppercase tracking-wider block">Yearly Order Sum</span>
+                    <span class="text-[8px] font-extrabold text-gray-400 uppercase tracking-wider block">Delivered Sales (আদায়কৃত)</span>
                     <div class="font-display font-black text-lg sm:text-xl text-amber-950 leading-none mt-0.5 tracking-tight">
                         ৳{{ prev_year_orders_sum|floatformat:0|default:"0" }}
                     </div>
@@ -190,7 +190,7 @@
                         {{ prev_year_orders_count }} Orders &rarr;
                     </a>
                     <span class="text-gray-500 font-semibold text-[9px]">
-                        Paid: <strong class="text-amber-800 font-bold">৳{{ prev_year_delivered_sum|floatformat:0|default:"0" }}</strong>
+                        Delivered: <strong class="text-amber-800 font-bold">{{ prev_year_delivered_count }} Orders</strong>
                     </span>
                 </div>
             </div>

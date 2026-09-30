@@ -88,27 +88,29 @@ def dashboard_index(request):
     order_metrics = Order.objects.aggregate(
         total_orders_count=Count('id'),
         today_orders_count=Count('id', filter=Q(created_at__date=today)),
-        today_orders_sum=Sum('total_amount', filter=Q(created_at__date=today) & ~Q(order_status='CANCELLED')),
+        today_orders_sum=Sum('total_amount', filter=Q(created_at__date=today) & (Q(order_status='DELIVERED') | Q(payment_status='PAID'))),
         today_revenue=Sum('total_amount', filter=Q(created_at__date=today) & (Q(order_status='DELIVERED') | Q(payment_status='PAID'))),
         
         this_month_orders_count=Count('id', filter=Q(created_at__year=current_year, created_at__month=current_month)),
-        this_month_orders_sum=Sum('total_amount', filter=Q(created_at__year=current_year, created_at__month=current_month) & ~Q(order_status='CANCELLED')),
+        this_month_orders_sum=Sum('total_amount', filter=Q(created_at__year=current_year, created_at__month=current_month) & (Q(order_status='DELIVERED') | Q(payment_status='PAID'))),
         this_month_delivered_sum=Sum('total_amount', filter=Q(created_at__year=current_year, created_at__month=current_month) & (Q(order_status='DELIVERED') | Q(payment_status='PAID'))),
         this_month_delivered_count=Count('id', filter=Q(created_at__year=current_year, created_at__month=current_month, order_status='DELIVERED')),
         this_month_active_count=Count('id', filter=Q(created_at__year=current_year, created_at__month=current_month, order_status__in=['PENDING', 'CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY'])),
+        this_month_pipeline_sum=Sum('total_amount', filter=Q(created_at__year=current_year, created_at__month=current_month) & ~Q(order_status__in=['DELIVERED', 'CANCELLED']) & ~Q(payment_status='PAID')),
         
         last_month_orders_count=Count('id', filter=Q(created_at__year=last_month_year, created_at__month=last_month)),
-        last_month_orders_sum=Sum('total_amount', filter=Q(created_at__year=last_month_year, created_at__month=last_month) & ~Q(order_status='CANCELLED')),
+        last_month_orders_sum=Sum('total_amount', filter=Q(created_at__year=last_month_year, created_at__month=last_month) & (Q(order_status='DELIVERED') | Q(payment_status='PAID'))),
         last_month_delivered_sum=Sum('total_amount', filter=Q(created_at__year=last_month_year, created_at__month=last_month) & (Q(order_status='DELIVERED') | Q(payment_status='PAID'))),
         last_month_delivered_count=Count('id', filter=Q(created_at__year=last_month_year, created_at__month=last_month, order_status='DELIVERED')),
+        last_month_pipeline_sum=Sum('total_amount', filter=Q(created_at__year=last_month_year, created_at__month=last_month) & ~Q(order_status__in=['DELIVERED', 'CANCELLED']) & ~Q(payment_status='PAID')),
         
         this_year_orders_count=Count('id', filter=Q(created_at__year=current_year)),
-        this_year_orders_sum=Sum('total_amount', filter=Q(created_at__year=current_year) & ~Q(order_status='CANCELLED')),
+        this_year_orders_sum=Sum('total_amount', filter=Q(created_at__year=current_year) & (Q(order_status='DELIVERED') | Q(payment_status='PAID'))),
         this_year_delivered_sum=Sum('total_amount', filter=Q(created_at__year=current_year) & (Q(order_status='DELIVERED') | Q(payment_status='PAID'))),
         this_year_delivered_count=Count('id', filter=Q(created_at__year=current_year, order_status='DELIVERED')),
         
         prev_year_orders_count=Count('id', filter=Q(created_at__year=prev_year)),
-        prev_year_orders_sum=Sum('total_amount', filter=Q(created_at__year=prev_year) & ~Q(order_status='CANCELLED')),
+        prev_year_orders_sum=Sum('total_amount', filter=Q(created_at__year=prev_year) & (Q(order_status='DELIVERED') | Q(payment_status='PAID'))),
         prev_year_delivered_sum=Sum('total_amount', filter=Q(created_at__year=prev_year) & (Q(order_status='DELIVERED') | Q(payment_status='PAID'))),
         prev_year_delivered_count=Count('id', filter=Q(created_at__year=prev_year, order_status='DELIVERED')),
         
@@ -126,11 +128,13 @@ def dashboard_index(request):
     this_month_delivered_sum = order_metrics['this_month_delivered_sum'] or 0
     this_month_delivered_count = order_metrics['this_month_delivered_count'] or 0
     this_month_active_count = order_metrics['this_month_active_count'] or 0
+    this_month_pipeline_sum = order_metrics['this_month_pipeline_sum'] or 0
 
     last_month_orders_count = order_metrics['last_month_orders_count'] or 0
     last_month_orders_sum = order_metrics['last_month_orders_sum'] or 0
     last_month_delivered_sum = order_metrics['last_month_delivered_sum'] or 0
     last_month_delivered_count = order_metrics['last_month_delivered_count'] or 0
+    last_month_pipeline_sum = order_metrics['last_month_pipeline_sum'] or 0
 
     this_year_orders_count = order_metrics['this_year_orders_count'] or 0
     this_year_orders_sum = order_metrics['this_year_orders_sum'] or 0
@@ -162,8 +166,8 @@ def dashboard_index(request):
     # Advanced KPIs (Single aggregation query for jars)
     jar_stats = OrderItem.objects.aggregate(
         delivered_jars=Sum('quantity', filter=Q(order__order_status='DELIVERED') | Q(order__payment_status='PAID')),
-        total_jars=Sum('quantity', filter=Q(order__order_status__in=['OUT_FOR_DELIVERY', 'DELIVERED'])),
-        pipeline_jars=Sum('quantity', filter=Q(order__order_status__in=['PENDING', 'CONFIRMED', 'PACKING'])),
+        total_jars=Sum('quantity', filter=Q(order__order_status='DELIVERED') | Q(order__payment_status='PAID')),
+        pipeline_jars=Sum('quantity', filter=~Q(order__order_status__in=['DELIVERED', 'CANCELLED']) & ~Q(order__payment_status='PAID')),
     )
     delivered_jars_sold = jar_stats['delivered_jars'] or 0
     total_jars_sold = jar_stats['total_jars'] or 0
@@ -207,7 +211,7 @@ def dashboard_index(request):
 
     low_stock_count = len(low_stock_products)
 
-    # 1. 10-Day Sales & Revenue Trend Calculation (Optimized: 1 batch query instead of 20 loop queries)
+    # 1. 10-Day Sales & Revenue Trend Calculation (Delivered orders only)
     days_to_plot = 10
     start_plot_date = today - datetime.timedelta(days=days_to_plot)
     recent_trend_orders = list(Order.objects.filter(
@@ -219,9 +223,8 @@ def dashboard_index(request):
         d = ord_info['created_at__date']
         if d not in daily_stats:
             daily_stats[d] = {'count': 0, 'rev': 0.0}
-        if ord_info['order_status'] != 'CANCELLED':
-            daily_stats[d]['count'] += 1
         if ord_info['order_status'] == 'DELIVERED' or ord_info['payment_status'] == 'PAID':
+            daily_stats[d]['count'] += 1
             daily_stats[d]['rev'] += float(ord_info['total_amount'] or 0)
 
     date_labels = []
@@ -234,10 +237,11 @@ def dashboard_index(request):
         revenue_series.append(stat['rev'])
         orders_series.append(stat['count'])
 
-    # 2. Dynamic Product Sales Performance Breakdown (Auto-synced from Inventory & OrderItems of Shipped/Delivered Orders)
+    # 2. Dynamic Product Sales Performance Breakdown (Strictly DELIVERED / PAID orders)
     order_items_qs = OrderItem.objects.filter(
-        order__is_deleted=False,
-        order__order_status__in=['OUT_FOR_DELIVERY', 'DELIVERED']
+        order__is_deleted=False
+    ).filter(
+        Q(order__order_status='DELIVERED') | Q(order__payment_status='PAID')
     )
     
     # Aggregate sales by product_id and product_name
@@ -320,15 +324,25 @@ def dashboard_index(request):
             'sales': product_stats[0]['sales'],
         }
 
-    # 3. Payment Methods Breakdown (Single aggregation query)
-    pay_counts = dict(Order.objects.values('payment_method').annotate(cnt=Count('id')).values_list('payment_method', 'cnt'))
+    # 3. Payment Methods Breakdown (Delivered/Paid orders only)
+    pay_counts = dict(
+        Order.objects.filter(Q(order_status='DELIVERED') | Q(payment_status='PAID'))
+        .values('payment_method')
+        .annotate(cnt=Count('id'))
+        .values_list('payment_method', 'cnt')
+    )
     cod_count = pay_counts.get('COD', 0)
     bkash_count = pay_counts.get('BKASH_ONLINE', 0) + pay_counts.get('BKASH', 0)
     nagad_count = pay_counts.get('NAGAD', 0)
     payment_data = [cod_count, bkash_count, nagad_count]
 
-    # 4. Delivery Zone Breakdown (Single aggregation query)
-    zone_counts = dict(Order.objects.values('delivery_zone').annotate(cnt=Count('id')).values_list('delivery_zone', 'cnt'))
+    # 4. Delivery Zone Breakdown (Delivered/Paid orders only)
+    zone_counts = dict(
+        Order.objects.filter(Q(order_status='DELIVERED') | Q(payment_status='PAID'))
+        .values('delivery_zone')
+        .annotate(cnt=Count('id'))
+        .values_list('delivery_zone', 'cnt')
+    )
     inside_dhaka_count = zone_counts.get('INSIDE_DHAKA', 0)
     outside_dhaka_count = zone_counts.get('OUTSIDE_DHAKA', 0)
 
@@ -386,12 +400,14 @@ def dashboard_index(request):
         'this_month_delivered_sum': this_month_delivered_sum,
         'this_month_delivered_count': this_month_delivered_count,
         'this_month_active_count': this_month_active_count,
+        'this_month_pipeline_sum': this_month_pipeline_sum,
         'this_month_label': this_month_label,
         'this_month_label_bn': this_month_label_bn,
         'last_month_orders_sum': last_month_orders_sum,
         'last_month_orders_count': last_month_orders_count,
         'last_month_delivered_sum': last_month_delivered_sum,
         'last_month_delivered_count': last_month_delivered_count,
+        'last_month_pipeline_sum': last_month_pipeline_sum,
         'last_month_label': last_month_label,
         'last_month_label_bn': last_month_label_bn,
         'this_year_orders_sum': this_year_orders_sum,
