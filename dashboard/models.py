@@ -224,3 +224,32 @@ class BatchItem(models.Model):
         return f"{self.batch.batch_number} - {self.product.name} (+{self.quantity} jars)"
 
 
+class BlacklistedCustomer(models.Model):
+    phone = models.CharField(max_length=20, unique=True, db_index=True, help_text="Clean recipient phone number (e.g. 017XXXXXXXX)")
+    customer_name = models.CharField(max_length=150, blank=True, help_text="Optional customer name for reference")
+    ip_address = models.GenericIPAddressField(null=True, blank=True, help_text="Optional IP address")
+    reason = models.CharField(max_length=255, default="Fake orders / prank harassment / repeated refusal", help_text="Reason for blocking")
+    is_active = models.BooleanField(default=True, db_index=True, help_text="Active block status")
+    blocked_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Blacklisted Customer'
+        verbose_name_plural = 'Blacklisted Customers'
+
+    @classmethod
+    def is_phone_blocked(cls, phone_number):
+        if not phone_number:
+            return False
+        clean = ''.join(c for c in str(phone_number) if c.isdigit())
+        last_10 = clean[-10:] if len(clean) >= 10 else clean
+        if not last_10:
+            return False
+        return cls.objects.filter(is_active=True, phone__icontains=last_10).exists()
+
+    def __str__(self):
+        return f"{self.phone} ({self.customer_name or 'Unknown'}) - {self.reason}"
+
+

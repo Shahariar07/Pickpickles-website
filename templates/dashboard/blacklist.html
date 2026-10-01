@@ -1,0 +1,407 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Blacklist & Fraud Security Manager | Pickpickles{% endblock %}
+
+{% block content %}
+<div class="space-y-5 max-w-full">
+
+    <!-- 1. Header Banner -->
+    <div class="bg-gradient-to-r from-rose-900 via-slate-900 to-brand-900 text-white p-5 rounded-3xl shadow-lg border border-rose-800/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="space-y-1">
+            <div class="flex items-center gap-2 flex-wrap">
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-500/20 text-rose-300 border border-rose-400/30">
+                    <i class="fa-solid fa-shield-virus text-xs mr-1 text-rose-400"></i> ANTI-FRAUD SECURITY
+                </span>
+                <span class="text-xs text-rose-200/80 font-semibold">• Fake & Harassment Order Protection</span>
+            </div>
+            <h1 class="font-display font-black text-xl sm:text-2xl text-white tracking-tight">
+                Customer Blacklist & Restrictions
+            </h1>
+            <p class="text-xs text-slate-300">
+                Manage blocked phone numbers and IPs to prevent mischievous or spam orders from placing COD checkouts.
+            </p>
+        </div>
+
+        <!-- Quick Action / Add Button -->
+        <div class="flex items-center gap-2 flex-wrap shrink-0">
+            <button type="button" onclick="document.getElementById('addBlacklistModal').classList.remove('hidden')"
+                class="bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-md flex items-center gap-2 transition cursor-pointer">
+                <i class="fa-solid fa-user-slash"></i>
+                <span>Block New Phone</span>
+            </button>
+            <a href="{% url 'dashboard:orders' %}"
+                class="bg-white/10 hover:bg-white/20 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl border border-white/20 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-boxes-packing"></i>
+                <span>Orders Queue</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- 2. KPI Summary Tiles -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs">
+            <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Total Listed</span>
+            <div class="font-display font-black text-xl text-slate-900 mt-0.5">{{ total_count }} Numbers</div>
+        </div>
+        <div class="bg-white p-3.5 rounded-2xl border border-rose-200/90 bg-rose-50/20 shadow-2xs">
+            <span class="text-[10px] font-black text-rose-700 uppercase tracking-wider block">Actively Blocked</span>
+            <div class="font-display font-black text-xl text-rose-700 mt-0.5">{{ active_count }} Active</div>
+        </div>
+        <div class="bg-white p-3.5 rounded-2xl border border-emerald-200/90 bg-emerald-50/20 shadow-2xs">
+            <span class="text-[10px] font-black text-emerald-800 uppercase tracking-wider block">Rate Limiter</span>
+            <div class="font-display font-black text-sm text-emerald-800 mt-1 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Active (1hr Limit)
+            </div>
+        </div>
+        <div class="bg-white p-3.5 rounded-2xl border border-indigo-200/90 bg-indigo-50/20 shadow-2xs">
+            <span class="text-[10px] font-black text-indigo-800 uppercase tracking-wider block">Bot Honeypot</span>
+            <div class="font-display font-black text-sm text-indigo-800 mt-1 flex items-center gap-1.5">
+                <i class="fa-solid fa-robot text-xs text-indigo-600"></i> Invisible Trap Armed
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Search & Filter Bar -->
+    <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
+        <form method="GET" class="w-full sm:w-80 flex items-center gap-2">
+            <div class="relative w-full">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="text" name="q" value="{{ query }}" placeholder="Search phone, name, reason..."
+                    class="w-full pl-9 pr-3.5 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500 bg-slate-50/50">
+            </div>
+            <button type="submit" class="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition cursor-pointer">
+                Search
+            </button>
+            {% if query %}
+            <a href="{% url 'dashboard:blacklist_manager' %}" class="text-xs text-slate-500 hover:text-slate-800 font-bold px-2 py-2">
+                Clear
+            </a>
+            {% endif %}
+        </form>
+
+        <span class="text-xs text-slate-500 font-semibold">
+            Showing <strong class="text-slate-900">{% if paginator.count %}{{ page_obj.start_index }}-{{ page_obj.end_index }}{% else %}0{% endif %}</strong> of <strong class="text-slate-900">{{ paginator.count }}</strong> entries
+        </span>
+    </div>
+
+    <!-- 4. Blacklist Table -->
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50/90 text-slate-500 uppercase tracking-wider font-extrabold text-[10px] border-b border-slate-200">
+                    <tr>
+                        <th class="px-5 py-3.5">Recipient Phone</th>
+                        <th class="px-5 py-3.5">Customer Name</th>
+                        <th class="px-5 py-3.5">Block Reason</th>
+                        <th class="px-5 py-3.5">Status</th>
+                        <th class="px-5 py-3.5">Date Added</th>
+                        <th class="px-5 py-3.5 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for item in blacklist_items %}
+                    <tr class="hover:bg-slate-50/60 transition group">
+                        <td class="px-5 py-3.5 font-mono font-black text-slate-900 flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full {% if item.is_active %}bg-rose-500{% else %}bg-slate-300{% endif %}"></span>
+                            <span class="text-sm">{{ item.phone }}</span>
+                        </td>
+                        <td class="px-5 py-3.5 font-bold text-slate-800">
+                            {{ item.customer_name|default:"—" }}
+                        </td>
+                        <td class="px-5 py-3.5 font-medium text-slate-600 max-w-xs truncate">
+                            {{ item.reason }}
+                        </td>
+                        <td class="px-5 py-3.5">
+                            {% if item.is_active %}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-300">
+                                🚫 Blocked
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-slate-100 text-slate-600 border border-slate-300">
+                                ⚪ Whitelisted (Inactive)
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-3.5 text-slate-500 font-semibold text-[11px]">
+                            {{ item.created_at|date:"d M Y, h:i A" }}
+                        </td>
+                        <td class="px-5 py-3.5 text-right space-x-1.5 whitespace-nowrap">
+                            <!-- Toggle Active/Inactive with Custom Modal -->
+                            <button type="button" 
+                                onclick="openBlacklistActionModal('{{ item.id }}', '{{ item.phone }}', '{{ item.customer_name|escapejs }}', 'toggle', {% if item.is_active %}true{% else %}false{% endif %})" 
+                                class="text-xs font-bold px-3 py-1.5 rounded-xl transition cursor-pointer {% if item.is_active %}bg-slate-100 hover:bg-slate-200 text-slate-700{% else %}bg-rose-600 hover:bg-rose-700 text-white{% endif %}">
+                                {% if item.is_active %}Unblock & Recover{% else %}Activate Block{% endif %}
+                            </button>
+
+                            <!-- Delete Entry with Custom Modal -->
+                            <button type="button" 
+                                onclick="openBlacklistActionModal('{{ item.id }}', '{{ item.phone }}', '{{ item.customer_name|escapejs }}', 'delete', false)" 
+                                class="text-rose-600 hover:text-rose-800 hover:bg-rose-50 p-1.5 rounded-lg transition cursor-pointer" title="Delete">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-5 py-12 text-center text-slate-400 font-medium">
+                            <i class="fa-solid fa-shield-halved text-3xl mb-2 text-slate-300 block"></i>
+                            No phone numbers found in blacklist.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Controls Bar -->
+        {% if paginator.count > 0 %}
+        <div class="p-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/50">
+            <!-- Left: Showing range & per_page selector -->
+            <div class="flex items-center gap-2 text-xs text-slate-500">
+                <span>Showing <strong>{{ page_obj.start_index }}-{{ page_obj.end_index }}</strong> of <strong>{{ paginator.count }}</strong></span>
+                <span>•</span>
+                <form method="GET" action="{% url 'dashboard:blacklist_manager' %}" class="inline-flex items-center gap-1.5">
+                    {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
+                    <label for="per_page_select" class="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">Per page:</label>
+                    <select id="per_page_select" name="per_page" onchange="this.form.submit()" class="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 cursor-pointer focus:ring-2 focus:ring-rose-500 focus:outline-none shadow-2xs">
+                        <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+                        <option value="15" {% if per_page == 15 %}selected{% endif %}>15</option>
+                        <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
+                        <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                        <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+                    </select>
+                </form>
+            </div>
+
+            <!-- Right: Page Navigator -->
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="text-xs text-slate-600 font-bold bg-white px-2.5 py-1 rounded-xl border border-slate-200 shadow-2xs">
+                    Page <strong class="text-slate-900 font-black">{{ page_obj.number }}</strong> of <strong class="text-slate-900 font-black">{{ paginator.num_pages }}</strong>
+                </span>
+
+                {% if paginator.num_pages > 1 %}
+                <nav class="flex items-center gap-1 text-xs font-bold" aria-label="Blacklist Pagination">
+                    <!-- First & Prev -->
+                    {% if page_obj.has_previous %}
+                    <a href="?page=1{% if query %}&q={{ query|urlencode }}{% endif %}&per_page={{ per_page }}" class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 bg-white hover:bg-slate-100 hover:text-slate-900 transition border border-slate-200 shadow-2xs" title="First Page">
+                        <i class="fa-solid fa-angles-left text-[10px]"></i>
+                    </a>
+                    <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query|urlencode }}{% endif %}&per_page={{ per_page }}" class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-slate-600 bg-white hover:bg-slate-100 hover:text-slate-900 transition border border-slate-200 shadow-2xs" title="Previous Page">
+                        <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                        <span class="hidden sm:inline text-[11px]">Prev</span>
+                    </a>
+                    {% else %}
+                    <span class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-300 border border-slate-100 cursor-not-allowed">
+                        <i class="fa-solid fa-angles-left text-[10px]"></i>
+                    </span>
+                    <span class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-slate-300 border border-slate-100 cursor-not-allowed">
+                        <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                        <span class="hidden sm:inline text-[11px]">Prev</span>
+                    </span>
+                    {% endif %}
+
+                    <!-- Page Number Pills -->
+                    <div class="flex items-center gap-1 mx-1">
+                        {% for p in elided_page_range %}
+                            {% if p == page_obj.paginator.ELLIPSIS or p == '…' or p == '...' %}
+                            <span class="w-8 h-8 flex items-center justify-center text-slate-400 font-bold text-xs">…</span>
+                            {% elif p == page_obj.number %}
+                            <span class="w-8 h-8 rounded-xl flex items-center justify-center bg-rose-600 text-white font-extrabold text-xs shadow-xs ring-2 ring-rose-400/20">
+                                {{ p }}
+                            </span>
+                            {% else %}
+                            <a href="?page={{ p }}{% if query %}&q={{ query|urlencode }}{% endif %}&per_page={{ per_page }}" class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-700 bg-white hover:bg-rose-50 hover:text-rose-900 hover:border-rose-300 transition border border-slate-200 text-xs shadow-2xs">
+                                {{ p }}
+                            </a>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    <!-- Next & Last -->
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query|urlencode }}{% endif %}&per_page={{ per_page }}" class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-slate-600 bg-white hover:bg-slate-100 hover:text-slate-900 transition border border-slate-200 shadow-2xs" title="Next Page">
+                        <span class="hidden sm:inline text-[11px]">Next</span>
+                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                    </a>
+                    <a href="?page={{ paginator.num_pages }}{% if query %}&q={{ query|urlencode }}{% endif %}&per_page={{ per_page }}" class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 bg-white hover:bg-slate-100 hover:text-slate-900 transition border border-slate-200 shadow-2xs" title="Last Page">
+                        <i class="fa-solid fa-angles-right text-[10px]"></i>
+                    </a>
+                    {% else %}
+                    <span class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-slate-300 border border-slate-100 cursor-not-allowed">
+                        <span class="hidden sm:inline text-[11px]">Next</span>
+                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                    </span>
+                    <span class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-300 border border-slate-100 cursor-not-allowed">
+                        <i class="fa-solid fa-angles-right text-[10px]"></i>
+                    </span>
+                    {% endif %}
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- ADD BLACKLIST MODAL -->
+<div id="addBlacklistModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4 backdrop-blur-xs">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative">
+        <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-lg shrink-0">
+                    <i class="fa-solid fa-user-slash"></i>
+                </div>
+                <div>
+                    <h3 class="font-display font-black text-base text-gray-900">Block New Number (নাম্বার ব্লক করুন)</h3>
+                    <p class="text-xs text-gray-500 font-medium">Customer Fraud & Spammer Control</p>
+                </div>
+            </div>
+            <button type="button" onclick="document.getElementById('addBlacklistModal').classList.add('hidden')"
+                class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition cursor-pointer">
+                <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+        </div>
+
+        <form method="POST" class="space-y-3" onsubmit="const b = document.getElementById('addBlSubmitBtn'); if(b){b.disabled=true; b.innerHTML='<i class=\'fa-solid fa-spinner fa-spin text-xs\'></i> Adding...';}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add">
+            
+            <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1">Phone Number (মোবাইল নাম্বার) *</label>
+                <input type="text" name="phone" required placeholder="01XXXXXXXXX"
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50/60 focus:bg-white focus:border-rose-500 focus:ring-2 focus:ring-rose-200 text-sm font-mono font-bold text-gray-900 outline-none transition">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1">Customer Name (কাস্টমার নাম - ঐচ্ছিক)</label>
+                <input type="text" name="customer_name" placeholder="e.g. Shakil Ahmed / Fake Spammer"
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50/60 focus:bg-white focus:border-rose-500 focus:ring-2 focus:ring-rose-200 text-xs text-gray-900 outline-none transition">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1">Reason for Blocking (ব্লক করার কারণ)</label>
+                <input type="text" name="reason" value="Fake orders / repeated courier refusal"
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50/60 focus:bg-white focus:border-rose-500 focus:ring-2 focus:ring-rose-200 text-xs text-gray-900 outline-none transition">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1">IP Address (আইপি অ্যাড্রেস - ঐচ্ছিক)</label>
+                <input type="text" name="ip_address" placeholder="e.g. 103.xxx.xxx.xxx"
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50/60 focus:bg-white focus:border-rose-500 focus:ring-2 focus:ring-rose-200 text-xs font-mono text-gray-900 outline-none transition">
+            </div>
+
+            <div class="pt-2 flex items-center justify-end gap-2.5 border-t border-gray-100">
+                <button type="button" onclick="document.getElementById('addBlacklistModal').classList.add('hidden')"
+                    class="px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs transition cursor-pointer">
+                    Cancel (বাতিল)
+                </button>
+                <button type="submit" id="addBlSubmitBtn"
+                    class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-black text-xs shadow-md transition cursor-pointer flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-ban"></i>
+                    <span>Yes, Block Number (ব্লক করুন)</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- BLACKLIST ACTION CONFIRMATION MODAL (EXACT SAME AS ORDER DETAILS) -->
+<div id="blacklistActionConfirmModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4 backdrop-blur-xs">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative">
+        <div class="flex items-center gap-3 pb-3 border-b border-gray-100">
+            <div id="blActionIconBox" class="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-lg shrink-0">
+                <i id="blActionIcon" class="fa-solid fa-ban"></i>
+            </div>
+            <div>
+                <h3 id="blActionTitle" class="font-display font-black text-base text-gray-900">Confirm Action</h3>
+                <p id="blActionSubtitle" class="text-xs text-gray-500 font-medium">Customer Fraud & Spammer Control</p>
+            </div>
+        </div>
+
+        <div class="space-y-2">
+            <p id="blActionMessage" class="text-xs text-gray-700 leading-relaxed font-medium">
+                Are you sure you want to perform this action?
+            </p>
+            <div class="bg-gray-50 p-3 rounded-2xl border border-gray-200 space-y-1 text-xs">
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-500">Customer:</span>
+                    <strong id="blActionCustomerName" class="text-gray-900 font-bold">—</strong>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-500">Phone Number:</span>
+                    <strong id="blActionCustomerPhone" class="text-gray-900 font-mono font-bold">—</strong>
+                </div>
+            </div>
+        </div>
+
+        <form id="blActionForm" method="POST" action="{% url 'dashboard:blacklist_manager' %}" onsubmit="const b = document.getElementById('blActionConfirmBtn'); if(b){b.disabled=true; b.innerHTML='<i class=\'fa-solid fa-spinner fa-spin text-xs\'></i> Processing...';}">
+            {% csrf_token %}
+            <input type="hidden" name="action" id="blActionInput" value="toggle">
+            <input type="hidden" name="entry_id" id="blEntryIdInput" value="">
+            
+            <div class="flex items-center justify-end gap-2.5 pt-2">
+                <button type="button" onclick="closeBlacklistActionModal()" class="px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs transition cursor-pointer">
+                    Cancel (বাতিল)
+                </button>
+                <button type="submit" id="blActionConfirmBtn" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs transition shadow-md cursor-pointer flex items-center justify-center gap-1.5">
+                    <span id="blActionBtnText">Yes, Confirm</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openBlacklistActionModal(entryId, phone, customerName, actionType, isActive) {
+    const modal = document.getElementById('blacklistActionConfirmModal');
+    const iconBox = document.getElementById('blActionIconBox');
+    const icon = document.getElementById('blActionIcon');
+    const title = document.getElementById('blActionTitle');
+    const msg = document.getElementById('blActionMessage');
+    const nameEl = document.getElementById('blActionCustomerName');
+    const phoneEl = document.getElementById('blActionCustomerPhone');
+    const actionInput = document.getElementById('blActionInput');
+    const entryIdInput = document.getElementById('blEntryIdInput');
+    const confirmBtn = document.getElementById('blActionConfirmBtn');
+    const btnText = document.getElementById('blActionBtnText');
+
+    if (entryIdInput) entryIdInput.value = entryId;
+    if (actionInput) actionInput.value = actionType;
+    if (nameEl) nameEl.textContent = customerName || 'Customer';
+    if (phoneEl) phoneEl.textContent = phone;
+
+    if (actionType === 'delete') {
+        if (iconBox) iconBox.className = "w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-lg shrink-0";
+        if (icon) icon.className = "fa-solid fa-trash-can";
+        if (title) title.textContent = "Confirm Permanent Delete (স্থায়ীভাবে মুছে ফেলুন)";
+        if (msg) msg.innerHTML = "আপনি কি নিশ্চিত যে এই নাম্বারটি ব্লকলিস্ট থেকে <strong>স্থায়ীভাবে ডিলিট</strong> করতে চান?";
+        if (confirmBtn) confirmBtn.className = "px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs transition shadow-md cursor-pointer flex items-center justify-center gap-1.5";
+        if (btnText) btnText.textContent = "Yes, Delete Permanently (মুছে ফেলুন)";
+    } else if (isActive) {
+        // Currently Active Block -> Action is to Unblock / Recover
+        if (iconBox) iconBox.className = "w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-lg shrink-0";
+        if (icon) icon.className = "fa-solid fa-shield-heart";
+        if (title) title.textContent = "Confirm Customer Unblock (কাস্টমার আনব্লক)";
+        if (msg) msg.innerHTML = "আপনি কি নিশ্চিত যে এই কাস্টমারকে <strong>আনব্লক (Recover)</strong> করতে চান? আনব্লক করার পর গ্রাহক আবার ওয়েবসাইটে Cash on Delivery অর্ডার দিতে পারবে।";
+        if (confirmBtn) confirmBtn.className = "px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition shadow-md cursor-pointer flex items-center justify-center gap-1.5";
+        if (btnText) btnText.textContent = "Yes, Unblock & Recover (আনব্লক করুন)";
+    } else {
+        // Currently Inactive -> Action is to Activate Block
+        if (iconBox) iconBox.className = "w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-lg shrink-0";
+        if (icon) icon.className = "fa-solid fa-ban";
+        if (title) title.textContent = "Confirm Customer Block (কাস্টমার ব্লক)";
+        if (msg) msg.innerHTML = "আপনি কি নিশ্চিত যে এই কাস্টমারকে <strong>ব্লক (Blacklist)</strong> করতে চান? ব্লক করা হলে এই নাম্বার থেকে কোনো নতুন Cash on Delivery অর্ডার গ্রহণ করা হবে না।";
+        if (confirmBtn) confirmBtn.className = "px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs transition shadow-md cursor-pointer flex items-center justify-center gap-1.5";
+        if (btnText) btnText.textContent = "Yes, Block Number (ব্লক করুন)";
+    }
+
+    modal?.classList.remove('hidden');
+}
+
+function closeBlacklistActionModal() {
+    document.getElementById('blacklistActionConfirmModal')?.classList.add('hidden');
+}
+</script>
+{% endblock %}

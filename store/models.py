@@ -247,10 +247,17 @@ class Order(models.Model):
         ('CANCELLED', 'Cancelled / Returned'),
     ]
 
+    GENDER_CHOICES = [
+        ('FEMALE', 'Female (মহিলা)'),
+        ('MALE', 'Male (পুরুষ)'),
+        ('UNKNOWN', 'Unspecified (অনির্ধারিত)'),
+    ]
+
     order_number = models.CharField(max_length=32, unique=True, editable=False)
     
     # Customer Details
     customer_name = models.CharField(max_length=150)
+    customer_gender = models.CharField(max_length=20, choices=GENDER_CHOICES, default='UNKNOWN', db_index=True, help_text="Auto-detected customer gender from name")
     customer_phone = models.CharField(max_length=20, db_index=True)
     customer_email = models.EmailField(blank=True, null=True)
     
@@ -297,6 +304,10 @@ class Order(models.Model):
     is_deleted = models.BooleanField(default=False, db_index=True, help_text="Soft deleted / moved to trash")
     deleted_at = models.DateTimeField(null=True, blank=True, help_text="Timestamp when moved to trash")
     
+    # Status Timestamps for Precise Financial & Analytics Reporting
+    confirmed_at = models.DateTimeField(null=True, blank=True, db_index=True, help_text="Timestamp when order was confirmed")
+    delivered_at = models.DateTimeField(null=True, blank=True, db_index=True, help_text="Timestamp when parcel was delivered to customer")
+
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -315,6 +326,9 @@ class Order(models.Model):
             models.Index(fields=['is_deleted', 'order_status']),
             models.Index(fields=['payment_status']),
             models.Index(fields=['delivery_zone']),
+            models.Index(fields=['delivered_at']),
+            models.Index(fields=['confirmed_at']),
+            models.Index(fields=['customer_gender']),
         ]
 
 
@@ -330,6 +344,35 @@ class Order(models.Model):
         self.save(update_fields=['is_deleted', 'deleted_at'])
 
     def save(self, *args, **kwargs):
+        from django.utils import timezone
+        now = timezone.now()
+
+        # Auto-detect gender from name if unspecified
+        if self.customer_name and (not self.customer_gender or self.customer_gender == 'UNKNOWN'):
+            try:
+                from store.gender_detector import detect_gender_from_name
+                detected = detect_gender_from_name(self.customer_name)
+                if detected and detected != 'UNKNOWN':
+                    self.customer_gender = detected
+            except Exception:
+                pass
+
+        # Auto-record confirmed_at when order moves to confirmed or later stages
+        if self.order_status in ['CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED']:
+            if not self.confirmed_at:
+                self.confirmed_at = now
+        elif self.order_status in ['PENDING', 'CANCELLED'] and not self.id:
+            self.confirmed_at = None
+
+        # Auto-record delivered_at when order status reaches DELIVERED
+        if self.order_status == 'DELIVERED':
+            if not self.delivered_at:
+                self.delivered_at = now
+            if self.payment_status == 'UNPAID':
+                self.payment_status = 'PAID'
+        elif self.order_status in ['PENDING', 'CANCELLED'] and self.delivered_at:
+            self.delivered_at = None
+
         if not self.order_number:
             import re
             # Sequential periodical order numbering starting from PKP-00001 (e.g. PKP-00001, PKP-00002, ...)
@@ -480,6 +523,34 @@ class Order(models.Model):
         from django.db.models import Sum
         clean_digits = ''.join(c for c in (self.customer_phone or '') if c.isdigit())
         last_10 = clean_digits[-10:] if len(clean_digits) >= 10 else clean_digits
+
+        # 0. Check if customer is manually blacklisted / blocked in the system
+        if last_10:
+            try:
+                from dashboard.models import BlacklistedCustomer
+                if BlacklistedCustomer.is_phone_blocked(last_10):
+                    return {
+                        'score': 0,
+                        'rate': '0%',
+                        'stars': '0.0',
+                        'total_orders': 1,
+                        'delivered_count': 0,
+                        'cancelled_count': 1,
+                        'returned_count': 1,
+                        'in_transit_count': 0,
+                        'total_spent': 0,
+                        'courier_fault_count': 0,
+                        'badge_class': 'bg-rose-600 text-white border-rose-700 shadow-xs font-black',
+                        'icon': 'fa-solid fa-ban text-white',
+                        'label': '🚫 Blacklisted Spammer',
+                        'short_label': '🚫 Blocked',
+                        'risk_level': 'BLACKLISTED',
+                        'risk_title': '🚫 Blacklisted Spammer (অর্ডার নিষিদ্ধ)',
+                        'text': 'This phone number is actively blacklisted / blocked in store settings'
+                    }
+            except Exception:
+                pass
+
         if not last_10:
             return {
                 'score': 100,
@@ -491,6 +562,7 @@ class Order(models.Model):
                 'returned_count': 0,
                 'in_transit_count': 1,
                 'total_spent': 0,
+                'courier_fault_count': 0,
                 'badge_class': 'bg-emerald-100 text-emerald-800 border-emerald-300',
                 'icon': 'fa-solid fa-circle-check text-emerald-600',
                 'label': '🟢 Good Client',

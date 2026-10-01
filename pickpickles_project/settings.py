@@ -247,6 +247,10 @@ STEADFAST_BASE_URL = _raw_sf_url.replace('portal.steadfast.com.bd', 'portal.pack
 STEADFAST_API_KEY = os.environ.get('STEADFAST_API_KEY', '')
 STEADFAST_SECRET_KEY = os.environ.get('STEADFAST_SECRET_KEY', '')
 
+# Cloudflare Turnstile Smart Bot Protection (Free & Optional)
+CLOUDFLARE_TURNSTILE_SITE_KEY = os.environ.get('CLOUDFLARE_TURNSTILE_SITE_KEY', '')
+CLOUDFLARE_TURNSTILE_SECRET_KEY = os.environ.get('CLOUDFLARE_TURNSTILE_SECRET_KEY', '')
+
 
 # ==============================================================================
 # 8. Production Security Hardening
@@ -276,4 +280,3 @@ if not DEBUG and not is_runserver:
 else:
     SESSION_COOKIE_SECURE = False
     CSRF_COOKIE_SECURE = False
-

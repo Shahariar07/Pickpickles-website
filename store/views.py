@@ -321,6 +321,20 @@ def checkout(request):
     billing_weight_kg = cart.get_billing_weight_kg()
 
     if request.method == 'POST':
+        # 1. Anti-Fraud & Security Verification (Honeypot, Blacklist, Rate Limiting)
+        from store.security import check_rate_limit_and_blacklist, verify_cloudflare_turnstile, record_successful_order_rate
+        
+        submitted_phone = request.POST.get('customer_phone', '').strip()
+        is_allowed, sec_err = check_rate_limit_and_blacklist(request, submitted_phone)
+        if not is_allowed:
+            messages.error(request, sec_err)
+            return redirect('store:checkout')
+
+        is_turnstile_valid, cf_err = verify_cloudflare_turnstile(request)
+        if not is_turnstile_valid:
+            messages.error(request, cf_err)
+            return redirect('store:checkout')
+
         form = CheckoutForm(request.POST)
         if form.is_valid():
             order = form.save(commit=False)
@@ -356,6 +370,9 @@ def checkout(request):
                     quantity=qty,
                     total_price=item['total_price']
                 )
+
+            # Record order attempt for rate limiting
+            record_successful_order_rate(request, order.customer_phone)
 
             # Clear cart session
             cart.clear()

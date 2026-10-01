@@ -17,7 +17,7 @@ from django.contrib.auth.models import User
 from store.models import Order, OrderItem, Product, Category, Review, calculate_pathao_delivery_fee
 from store.pathao import PathaoCourierService
 from store.steadfast import SteadfastCourierService
-from .models import Expense, ExpenseCategory, DamageLog, OrderReturn, StockLog, ProductionBatch, BatchItem
+from .models import Expense, ExpenseCategory, DamageLog, OrderReturn, StockLog, ProductionBatch, BatchItem, BlacklistedCustomer
 
 
 def is_staff_user(user):
@@ -87,32 +87,45 @@ def dashboard_index(request):
     # Consolidated Ultra-fast Single Batch Aggregation Query for all metrics
     order_metrics = Order.objects.aggregate(
         total_orders_count=Count('id'),
-        today_orders_count=Count('id', filter=Q(created_at__date=today)),
-        today_orders_sum=Sum('total_amount', filter=Q(created_at__date=today) & (Q(order_status='DELIVERED') | Q(payment_status='PAID'))),
-        today_revenue=Sum('total_amount', filter=Q(created_at__date=today) & (Q(order_status='DELIVERED') | Q(payment_status='PAID'))),
         
-        this_month_orders_count=Count('id', filter=Q(created_at__year=current_year, created_at__month=current_month)),
-        this_month_orders_sum=Sum('total_amount', filter=Q(created_at__year=current_year, created_at__month=current_month) & (Q(order_status='DELIVERED') | Q(payment_status='PAID'))),
-        this_month_delivered_sum=Sum('total_amount', filter=Q(created_at__year=current_year, created_at__month=current_month) & (Q(order_status='DELIVERED') | Q(payment_status='PAID'))),
-        this_month_delivered_count=Count('id', filter=Q(created_at__year=current_year, created_at__month=current_month, order_status='DELIVERED')),
+        # Today's Incoming Orders (Confirmed & Active)
+        today_orders_count=Count('id', filter=Q(created_at__date=today) & Q(order_status__in=['CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'])),
+        today_all_orders_count=Count('id', filter=Q(created_at__date=today) & ~Q(order_status='CANCELLED')),
+        today_pending_count=Count('id', filter=Q(created_at__date=today, order_status='PENDING')),
+        today_confirmed_sum=Sum('total_amount', filter=Q(created_at__date=today) & Q(order_status__in=['CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'])),
+        
+        # Today's Delivered Cash / Sales (On the exact day parcel is delivered)
+        today_delivered_count=Count('id', filter=Q(order_status='DELIVERED') & (Q(delivered_at__date=today) | Q(delivered_at__isnull=True, updated_at__date=today))),
+        today_delivered_sum=Sum('total_amount', filter=Q(order_status='DELIVERED') & (Q(delivered_at__date=today) | Q(delivered_at__isnull=True, updated_at__date=today))),
+        today_revenue=Sum('total_amount', filter=Q(order_status='DELIVERED') & (Q(delivered_at__date=today) | Q(delivered_at__isnull=True, updated_at__date=today))),
+        
+        # This Month
+        this_month_orders_count=Count('id', filter=Q(created_at__year=current_year, created_at__month=current_month) & Q(order_status__in=['CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'])),
+        this_month_all_orders_count=Count('id', filter=Q(created_at__year=current_year, created_at__month=current_month) & ~Q(order_status='CANCELLED')),
+        this_month_orders_sum=Sum('total_amount', filter=Q(order_status='DELIVERED') & (Q(delivered_at__year=current_year, delivered_at__month=current_month) | Q(delivered_at__isnull=True, created_at__year=current_year, created_at__month=current_month))),
+        this_month_delivered_sum=Sum('total_amount', filter=Q(order_status='DELIVERED') & (Q(delivered_at__year=current_year, delivered_at__month=current_month) | Q(delivered_at__isnull=True, created_at__year=current_year, created_at__month=current_month))),
+        this_month_delivered_count=Count('id', filter=Q(order_status='DELIVERED') & (Q(delivered_at__year=current_year, delivered_at__month=current_month) | Q(delivered_at__isnull=True, created_at__year=current_year, created_at__month=current_month))),
         this_month_active_count=Count('id', filter=Q(created_at__year=current_year, created_at__month=current_month, order_status__in=['PENDING', 'CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY'])),
         this_month_pipeline_sum=Sum('total_amount', filter=Q(created_at__year=current_year, created_at__month=current_month) & ~Q(order_status__in=['DELIVERED', 'CANCELLED']) & ~Q(payment_status='PAID')),
         
-        last_month_orders_count=Count('id', filter=Q(created_at__year=last_month_year, created_at__month=last_month)),
-        last_month_orders_sum=Sum('total_amount', filter=Q(created_at__year=last_month_year, created_at__month=last_month) & (Q(order_status='DELIVERED') | Q(payment_status='PAID'))),
-        last_month_delivered_sum=Sum('total_amount', filter=Q(created_at__year=last_month_year, created_at__month=last_month) & (Q(order_status='DELIVERED') | Q(payment_status='PAID'))),
-        last_month_delivered_count=Count('id', filter=Q(created_at__year=last_month_year, created_at__month=last_month, order_status='DELIVERED')),
+        # Last Month
+        last_month_orders_count=Count('id', filter=Q(created_at__year=last_month_year, created_at__month=last_month) & Q(order_status__in=['CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'])),
+        last_month_orders_sum=Sum('total_amount', filter=Q(order_status='DELIVERED') & (Q(delivered_at__year=last_month_year, delivered_at__month=last_month) | Q(delivered_at__isnull=True, created_at__year=last_month_year, created_at__month=last_month))),
+        last_month_delivered_sum=Sum('total_amount', filter=Q(order_status='DELIVERED') & (Q(delivered_at__year=last_month_year, delivered_at__month=last_month) | Q(delivered_at__isnull=True, created_at__year=last_month_year, created_at__month=last_month))),
+        last_month_delivered_count=Count('id', filter=Q(order_status='DELIVERED') & (Q(delivered_at__year=last_month_year, delivered_at__month=last_month) | Q(delivered_at__isnull=True, created_at__year=last_month_year, created_at__month=last_month))),
         last_month_pipeline_sum=Sum('total_amount', filter=Q(created_at__year=last_month_year, created_at__month=last_month) & ~Q(order_status__in=['DELIVERED', 'CANCELLED']) & ~Q(payment_status='PAID')),
         
-        this_year_orders_count=Count('id', filter=Q(created_at__year=current_year)),
-        this_year_orders_sum=Sum('total_amount', filter=Q(created_at__year=current_year) & (Q(order_status='DELIVERED') | Q(payment_status='PAID'))),
-        this_year_delivered_sum=Sum('total_amount', filter=Q(created_at__year=current_year) & (Q(order_status='DELIVERED') | Q(payment_status='PAID'))),
-        this_year_delivered_count=Count('id', filter=Q(created_at__year=current_year, order_status='DELIVERED')),
+        # This Year
+        this_year_orders_count=Count('id', filter=Q(created_at__year=current_year) & Q(order_status__in=['CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'])),
+        this_year_orders_sum=Sum('total_amount', filter=Q(order_status='DELIVERED') & (Q(delivered_at__year=current_year) | Q(delivered_at__isnull=True, created_at__year=current_year))),
+        this_year_delivered_sum=Sum('total_amount', filter=Q(order_status='DELIVERED') & (Q(delivered_at__year=current_year) | Q(delivered_at__isnull=True, created_at__year=current_year))),
+        this_year_delivered_count=Count('id', filter=Q(order_status='DELIVERED') & (Q(delivered_at__year=current_year) | Q(delivered_at__isnull=True, created_at__year=current_year))),
         
-        prev_year_orders_count=Count('id', filter=Q(created_at__year=prev_year)),
-        prev_year_orders_sum=Sum('total_amount', filter=Q(created_at__year=prev_year) & (Q(order_status='DELIVERED') | Q(payment_status='PAID'))),
-        prev_year_delivered_sum=Sum('total_amount', filter=Q(created_at__year=prev_year) & (Q(order_status='DELIVERED') | Q(payment_status='PAID'))),
-        prev_year_delivered_count=Count('id', filter=Q(created_at__year=prev_year, order_status='DELIVERED')),
+        # Previous Year
+        prev_year_orders_count=Count('id', filter=Q(created_at__year=prev_year) & Q(order_status__in=['CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'])),
+        prev_year_orders_sum=Sum('total_amount', filter=Q(order_status='DELIVERED') & (Q(delivered_at__year=prev_year) | Q(delivered_at__isnull=True, created_at__year=prev_year))),
+        prev_year_delivered_sum=Sum('total_amount', filter=Q(order_status='DELIVERED') & (Q(delivered_at__year=prev_year) | Q(delivered_at__isnull=True, created_at__year=prev_year))),
+        prev_year_delivered_count=Count('id', filter=Q(order_status='DELIVERED') & (Q(delivered_at__year=prev_year) | Q(delivered_at__isnull=True, created_at__year=prev_year))),
         
         total_revenue=Sum('total_amount', filter=Q(order_status='DELIVERED') | Q(payment_status='PAID')),
         pipeline_revenue=Sum('total_amount', filter=~Q(order_status__in=['DELIVERED', 'CANCELLED']) & ~Q(payment_status='PAID')),
@@ -120,10 +133,16 @@ def dashboard_index(request):
 
     total_orders_count = order_metrics['total_orders_count'] or 0
     today_orders_count = order_metrics['today_orders_count'] or 0
-    today_orders_sum = order_metrics['today_orders_sum'] or 0
+    today_all_orders_count = order_metrics['today_all_orders_count'] or 0
+    today_pending_count = order_metrics['today_pending_count'] or 0
+    today_confirmed_sum = order_metrics['today_confirmed_sum'] or 0
+    today_delivered_count = order_metrics['today_delivered_count'] or 0
+    today_delivered_sum = order_metrics['today_delivered_sum'] or 0
     today_revenue = order_metrics['today_revenue'] or 0
+    today_orders_sum = today_delivered_sum
 
     this_month_orders_count = order_metrics['this_month_orders_count'] or 0
+    this_month_all_orders_count = order_metrics['this_month_all_orders_count'] or 0
     this_month_orders_sum = order_metrics['this_month_orders_sum'] or 0
     this_month_delivered_sum = order_metrics['this_month_delivered_sum'] or 0
     this_month_delivered_count = order_metrics['this_month_delivered_count'] or 0
@@ -211,21 +230,37 @@ def dashboard_index(request):
 
     low_stock_count = len(low_stock_products)
 
-    # 1. 10-Day Sales & Revenue Trend Calculation (Delivered orders only)
+    # 1. 10-Day Sales & Revenue Trend Calculation
+    # - Orders Series: Confirmed orders that arrived on each date
+    # - Revenue Series: Realized revenue of parcels delivered on each date
     days_to_plot = 10
     start_plot_date = today - datetime.timedelta(days=days_to_plot)
-    recent_trend_orders = list(Order.objects.filter(
-        created_at__date__gte=start_plot_date
-    ).values('created_at__date', 'order_status', 'payment_status', 'total_amount'))
 
-    daily_stats = {}
-    for ord_info in recent_trend_orders:
+    # Fetch incoming confirmed orders grouped by created_at date
+    incoming_confirmed_orders = list(Order.objects.filter(
+        created_at__date__gte=start_plot_date,
+        order_status__in=['CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED']
+    ).values('created_at__date', 'total_amount'))
+
+    # Fetch delivered orders grouped by delivered_at date (or updated_at / created_at fallback)
+    delivered_orders = list(Order.objects.filter(
+        order_status='DELIVERED'
+    ).filter(
+        Q(delivered_at__date__gte=start_plot_date) |
+        Q(delivered_at__isnull=True, updated_at__date__gte=start_plot_date)
+    ).values('delivered_at__date', 'updated_at__date', 'created_at__date', 'total_amount'))
+
+    daily_orders_map = {}
+    daily_revenue_map = {}
+
+    for ord_info in incoming_confirmed_orders:
         d = ord_info['created_at__date']
-        if d not in daily_stats:
-            daily_stats[d] = {'count': 0, 'rev': 0.0}
-        if ord_info['order_status'] == 'DELIVERED' or ord_info['payment_status'] == 'PAID':
-            daily_stats[d]['count'] += 1
-            daily_stats[d]['rev'] += float(ord_info['total_amount'] or 0)
+        daily_orders_map[d] = daily_orders_map.get(d, 0) + 1
+
+    for ord_info in delivered_orders:
+        d = ord_info['delivered_at__date'] or ord_info['updated_at__date'] or ord_info['created_at__date']
+        if d and d >= start_plot_date:
+            daily_revenue_map[d] = daily_revenue_map.get(d, 0.0) + float(ord_info['total_amount'] or 0)
 
     date_labels = []
     revenue_series = []
@@ -233,9 +268,8 @@ def dashboard_index(request):
     for i in range(days_to_plot - 1, -1, -1):
         target_date = today - datetime.timedelta(days=i)
         date_labels.append(target_date.strftime('%b %d'))
-        stat = daily_stats.get(target_date, {'count': 0, 'rev': 0.0})
-        revenue_series.append(stat['rev'])
-        orders_series.append(stat['count'])
+        revenue_series.append(round(daily_revenue_map.get(target_date, 0.0), 2))
+        orders_series.append(daily_orders_map.get(target_date, 0))
 
     # 2. Dynamic Product Sales Performance Breakdown (Strictly DELIVERED / PAID orders)
     order_items_qs = OrderItem.objects.filter(
@@ -364,6 +398,22 @@ def dashboard_index(request):
         chart_cat_labels = ['Packaging & Jars', 'Cucumbers & Veggies', 'Vinegar & Spices', 'Courier & Logistics']
         chart_cat_data = [0, 0, 0, 0]
 
+    # 6. Customer Gender Demographic Analytics
+    gender_agg = Order.objects.filter(is_deleted=False).aggregate(
+        total_g_orders=Count('id'),
+        female_count=Count('id', filter=Q(customer_gender='FEMALE')),
+        male_count=Count('id', filter=Q(customer_gender='MALE')),
+        unknown_count=Count('id', filter=Q(customer_gender='UNKNOWN') | Q(customer_gender__isnull=True)),
+    )
+    total_g_orders = gender_agg['total_g_orders'] or 0
+    female_orders_count = gender_agg['female_count'] or 0
+    male_orders_count = gender_agg['male_count'] or 0
+    unknown_orders_count = gender_agg['unknown_count'] or 0
+
+    female_pct = round((female_orders_count / total_g_orders * 100), 1) if total_g_orders > 0 else 0.0
+    male_pct = round((male_orders_count / total_g_orders * 100), 1) if total_g_orders > 0 else 0.0
+    unknown_pct = round((unknown_orders_count / total_g_orders * 100), 1) if total_g_orders > 0 else 0.0
+
     # JSON Serialized for Chart.js
     chart_data = {
         'trendLabels': date_labels,
@@ -381,16 +431,29 @@ def dashboard_index(request):
         'catData': chart_cat_data,
         'comparisonLabels': ['Gross Revenue (৳)', 'Total Costs (৳)', 'Net Profit / Balance (৳)'],
         'comparisonData': [float(total_revenue), float(total_expenses), float(net_profit)],
+        'genderLabels': ['Female Customers (মহিলা)', 'Male Customers (পুরুষ)', 'Unspecified (অন্যান্য)'],
+        'genderData': [female_orders_count, male_orders_count, unknown_orders_count],
     }
 
     # Recent orders preview for analytics dashboard
     recent_orders = Order.objects.all().prefetch_related('items')[:5]
 
     context = {
+        'female_orders_count': female_orders_count,
+        'male_orders_count': male_orders_count,
+        'unknown_orders_count': unknown_orders_count,
+        'female_pct': female_pct,
+        'male_pct': male_pct,
+        'unknown_pct': unknown_pct,
         'recent_orders': recent_orders,
         'best_seller': best_seller,
         'total_orders_count': total_orders_count,
         'today_orders_count': today_orders_count,
+        'today_all_orders_count': today_all_orders_count,
+        'today_pending_count': today_pending_count,
+        'today_confirmed_sum': today_confirmed_sum,
+        'today_delivered_count': today_delivered_count,
+        'today_delivered_sum': today_delivered_sum,
         'today_orders_sum': today_orders_sum,
         'today_revenue': today_revenue,
         'total_revenue': total_revenue,
@@ -3920,13 +3983,154 @@ def steadfast_fraud_check_api(request):
         'success_rate': round((delivered_local / total_local * 100), 1) if total_local > 0 else 100,
     }
 
+    # Check if currently blacklisted
+    is_blocked = BlacklistedCustomer.is_phone_blocked(last_10)
+
     return JsonResponse({
         'success': True,
         'phone': formatted_phone,
         'from_cache': fraud_result.get('from_cache', False),
         'steadfast': fraud_result,
         'local': local_summary,
+        'is_blacklisted': is_blocked,
     })
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def blacklist_manager(request):
+    """
+    Manager view for viewing, adding, searching, and managing blacklisted phones & IPs.
+    """
+    query = request.GET.get('q', '').strip()
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'add':
+            phone = request.POST.get('phone', '').strip()
+            name = request.POST.get('customer_name', '').strip()
+            reason = request.POST.get('reason', '').strip() or "Fake orders / prank harassment"
+            ip_addr = request.POST.get('ip_address', '').strip() or None
+            
+            clean_digits = ''.join(c for c in phone if c.isdigit())
+            if clean_digits:
+                obj, created = BlacklistedCustomer.objects.update_or_create(
+                    phone=clean_digits,
+                    defaults={
+                        'customer_name': name,
+                        'reason': reason,
+                        'ip_address': ip_addr,
+                        'is_active': True,
+                        'blocked_by': request.user if request.user.is_authenticated else None,
+                    }
+                )
+                if created:
+                    messages.success(request, f"Phone #{clean_digits} has been added to the Blacklist.")
+                else:
+                    messages.info(request, f"Blacklist entry for #{clean_digits} updated.")
+            else:
+                messages.error(request, "Please provide a valid phone number.")
+                
+        elif action == 'toggle':
+            entry_id = request.POST.get('entry_id')
+            entry = get_object_or_404(BlacklistedCustomer, id=entry_id)
+            entry.is_active = not entry.is_active
+            entry.save(update_fields=['is_active'])
+            status_txt = "Active Block" if entry.is_active else "Unblocked (Whitelist)"
+            messages.success(request, f"Entry for {entry.phone} is now {status_txt}.")
+            
+        elif action == 'delete':
+            entry_id = request.POST.get('entry_id')
+            entry = get_object_or_404(BlacklistedCustomer, id=entry_id)
+            entry.delete()
+            messages.success(request, f"Removed {entry.phone} permanently from Blacklist.")
+
+        return redirect('dashboard:blacklist_manager')
+
+    blacklist_qs = BlacklistedCustomer.objects.all().order_by('-created_at', '-id')
+    if query:
+        clean_q = ''.join(c for c in query if c.isdigit())
+        blacklist_qs = blacklist_qs.filter(
+            Q(phone__icontains=clean_q or query) |
+            Q(customer_name__icontains=query) |
+            Q(reason__icontains=query) |
+            Q(ip_address__icontains=query)
+        )
+
+    total_count = BlacklistedCustomer.objects.count()
+    active_count = BlacklistedCustomer.objects.filter(is_active=True).count()
+
+    # Pagination configuration
+    page_number = request.GET.get('page', 1)
+    per_page = request.GET.get('per_page', 15)
+    try:
+        per_page = int(per_page)
+        if per_page not in [10, 15, 25, 50, 100]:
+            per_page = 15
+    except (ValueError, TypeError):
+        per_page = 15
+
+    paginator = Paginator(blacklist_qs, per_page)
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    elided_page_range = paginator.get_elided_page_range(page_obj.number, on_each_side=2, on_ends=1) if paginator.num_pages > 1 else []
+
+    return render(request, 'dashboard/blacklist.html', {
+        'blacklist_items': page_obj.object_list,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'elided_page_range': elided_page_range,
+        'per_page': per_page,
+        'query': query,
+        'total_count': total_count,
+        'active_count': active_count,
+    })
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def toggle_blacklist_ajax(request):
+    """
+    1-Click AJAX API to block or unblock a phone number directly from Order views.
+    """
+    if request.method == 'POST':
+        phone = request.POST.get('phone', '').strip()
+        name = request.POST.get('customer_name', '').strip()
+        reason = request.POST.get('reason', '').strip() or "Fake order / courier refusal"
+        
+        clean_digits = ''.join(c for c in phone if c.isdigit())
+        if not clean_digits:
+            return JsonResponse({'success': False, 'error': 'Invalid phone number'}, status=400)
+            
+        last_10 = clean_digits[-10:] if len(clean_digits) >= 10 else clean_digits
+        existing = BlacklistedCustomer.objects.filter(phone__icontains=last_10).first()
+        
+        if existing:
+            existing.is_active = not existing.is_active
+            existing.save(update_fields=['is_active'])
+            return JsonResponse({
+                'success': True,
+                'is_blacklisted': existing.is_active,
+                'message': f"Customer {'blocked' if existing.is_active else 'unblocked'} successfully."
+            })
+        else:
+            new_entry = BlacklistedCustomer.objects.create(
+                phone=clean_digits,
+                customer_name=name,
+                reason=reason,
+                is_active=True,
+                blocked_by=request.user if request.user.is_authenticated else None
+            )
+            return JsonResponse({
+                'success': True,
+                'is_blacklisted': True,
+                'message': f"Phone {clean_digits} has been blacklisted."
+            })
+            
+    return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
 
 
 

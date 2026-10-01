@@ -227,6 +227,15 @@
                         <td class="py-3 px-4 align-middle">
                             <div class="flex items-center gap-1.5 flex-wrap">
                                 <span class="font-bold text-gray-900 truncate">{{ order.customer_name }}</span>
+                                {% if order.customer_gender == 'FEMALE' %}
+                                <span class="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-pink-50 text-pink-700 border border-pink-200 shrink-0" title="Female Customer">
+                                    👩 Female
+                                </span>
+                                {% elif order.customer_gender == 'MALE' %}
+                                <span class="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-blue-50 text-blue-700 border border-blue-200 shrink-0" title="Male Customer">
+                                    👨 Male
+                                </span>
+                                {% endif %}
                                 <span class="text-[9px] font-bold px-1.5 py-0.2 rounded border {{ order.customer_score.badge_class }} shrink-0" title="{{ order.customer_score.text }}">
                                     {{ order.customer_score.short_label }}
                                 </span>
@@ -874,13 +883,16 @@
                 <span class="text-xs text-gray-400 font-bold uppercase tracking-wider">Phone:</span>
                 <strong id="fraud_modal_phone" class="font-mono text-sm text-gray-900 font-black">01XXXXXXXXX</strong>
             </div>
-            <div class="flex items-center gap-1.5">
+            <div class="flex items-center gap-1.5 flex-wrap">
                 <a id="fraud_modal_call_btn" href="#" class="bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold px-2.5 py-1 rounded-xl shadow-2xs transition inline-flex items-center gap-1">
                     <i class="fa-solid fa-phone text-[10px]"></i> <span>Call</span>
                 </a>
                 <a id="fraud_modal_wa_btn" href="#" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-2.5 py-1 rounded-xl shadow-2xs transition inline-flex items-center gap-1">
                     <i class="fa-brands fa-whatsapp text-sm"></i> <span>WhatsApp</span>
                 </a>
+                <button id="fraud_modal_blacklist_btn" type="button" onclick="toggleBlacklistFromModal()" class="bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-bold px-2.5 py-1 rounded-xl border border-rose-300 shadow-2xs transition inline-flex items-center gap-1 cursor-pointer">
+                    <i class="fa-solid fa-ban text-[10px]"></i> <span id="fraud_modal_blacklist_txt">Block Number</span>
+                </button>
             </div>
         </div>
 
@@ -889,8 +901,49 @@
             <div class="py-8 text-center space-y-2">
                 <i class="fa-solid fa-circle-notch fa-spin text-cyan-600 text-2xl"></i>
                 <p class="text-xs text-gray-600 font-bold">Connecting to Steadfast Courier API & Analyzing History...</p>
+            </div>
         </div>
 
+    </div>
+</div>
+
+<!-- ORDERS LIST BLACKLIST & RECOVER CONFIRMATION MODAL -->
+<div id="ordersBlacklistConfirmModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4 backdrop-blur-xs">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative">
+        <div class="flex items-center gap-3 pb-3 border-b border-gray-100">
+            <div id="ordersBlModalIconBox" class="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-lg shrink-0">
+                <i id="ordersBlModalIcon" class="fa-solid fa-ban"></i>
+            </div>
+            <div>
+                <h3 id="ordersBlModalTitle" class="font-display font-black text-base text-gray-900">Confirm Action</h3>
+                <p class="text-xs text-gray-500 font-medium">Customer Fraud & Spammer Control</p>
+            </div>
+        </div>
+
+        <div class="space-y-2">
+            <p id="ordersBlModalMessage" class="text-xs text-gray-700 leading-relaxed font-medium">
+                Are you sure you want to perform this action?
+            </p>
+            <div class="bg-gray-50 p-3 rounded-2xl border border-gray-200 space-y-1 text-xs">
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-500">Customer:</span>
+                    <strong id="ordersBlModalName" class="text-gray-900 font-bold">—</strong>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-500">Phone Number:</span>
+                    <strong id="ordersBlModalPhone" class="text-gray-900 font-mono font-bold">—</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2.5 pt-2">
+            <button type="button" onclick="closeOrdersBlacklistConfirmModal()" class="px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs transition cursor-pointer">
+                Cancel (বাতিল)
+            </button>
+            <button type="button" id="ordersBlModalConfirmBtn" onclick="executeOrdersBlacklistToggle()" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs transition shadow-md cursor-pointer flex items-center justify-center gap-1.5">
+                <span id="ordersBlModalBtnText">Yes, Block Number</span>
+            </button>
+        </div>
     </div>
 </div>
 
@@ -1161,6 +1214,121 @@ async function openFraudModal(phone, customerName, orderNumber, isForce = false)
     }
 }
 
+let isModalPhoneBlocked = false;
+
+function updateBlacklistBtnStyle(isBlocked) {
+    isModalPhoneBlocked = !!isBlocked;
+    const btn = document.getElementById('fraud_modal_blacklist_btn');
+    const txt = document.getElementById('fraud_modal_blacklist_txt');
+    if (!btn || !txt) return;
+    
+    if (isBlocked) {
+        btn.className = "bg-rose-700 hover:bg-rose-800 text-white text-xs font-black px-2.5 py-1 rounded-xl shadow-xs transition inline-flex items-center gap-1 cursor-pointer";
+        btn.innerHTML = '<i class="fa-solid fa-ban text-[10px]"></i> <span id="fraud_modal_blacklist_txt">Unblock Phone</span>';
+    } else {
+        btn.className = "bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-bold px-2.5 py-1 rounded-xl border border-rose-300 shadow-2xs transition inline-flex items-center gap-1 cursor-pointer";
+        btn.innerHTML = '<i class="fa-solid fa-ban text-[10px]"></i> <span id="fraud_modal_blacklist_txt">Block Number</span>';
+    }
+}
+
+function toggleBlacklistFromModal() {
+    if (!currentFraudModalContext.phone) return;
+
+    const modal = document.getElementById('ordersBlacklistConfirmModal');
+    const iconBox = document.getElementById('ordersBlModalIconBox');
+    const icon = document.getElementById('ordersBlModalIcon');
+    const title = document.getElementById('ordersBlModalTitle');
+    const msg = document.getElementById('ordersBlModalMessage');
+    const nameEl = document.getElementById('ordersBlModalName');
+    const phoneEl = document.getElementById('ordersBlModalPhone');
+    const confirmBtn = document.getElementById('ordersBlModalConfirmBtn');
+    const btnText = document.getElementById('ordersBlModalBtnText');
+
+    if (nameEl) nameEl.textContent = currentFraudModalContext.customerName || 'Customer';
+    if (phoneEl) phoneEl.textContent = currentFraudModalContext.phone;
+
+    if (isModalPhoneBlocked) {
+        // Recover / Unblock State
+        if (iconBox) iconBox.className = "w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-lg shrink-0";
+        if (icon) icon.className = "fa-solid fa-shield-heart";
+        if (title) title.textContent = "Confirm Customer Unblock (কাস্টমার আনব্লক)";
+        if (msg) msg.innerHTML = "আপনি কি নিশ্চিত যে এই কাস্টমারকে <strong>আনব্লক (Recover)</strong> করতে চান? আনব্লক করলে গ্রাহক আবার ওয়েবসাইটে Cash on Delivery অর্ডার দিতে পারবে।";
+        if (confirmBtn) confirmBtn.className = "px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition shadow-md cursor-pointer flex items-center justify-center gap-1.5";
+        if (btnText) btnText.textContent = "Yes, Unblock & Recover (আনব্লক করুন)";
+    } else {
+        // Block State
+        if (iconBox) iconBox.className = "w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-lg shrink-0";
+        if (icon) icon.className = "fa-solid fa-ban";
+        if (title) title.textContent = "Confirm Customer Block (কাস্টমার ব্লক)";
+        if (msg) msg.innerHTML = "আপনি কি নিশ্চিত যে এই কাস্টমারকে <strong>ব্লক (Blacklist)</strong> করতে চান? ব্লক করা হলে এই নাম্বার থেকে কোনো নতুন Cash on Delivery অর্ডার গ্রহণ করা হবে না।";
+        if (confirmBtn) confirmBtn.className = "px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs transition shadow-md cursor-pointer flex items-center justify-center gap-1.5";
+        if (btnText) btnText.textContent = "Yes, Block Number (ব্লক করুন)";
+    }
+
+    modal?.classList.remove('hidden');
+}
+
+function closeOrdersBlacklistConfirmModal() {
+    document.getElementById('ordersBlacklistConfirmModal')?.classList.add('hidden');
+}
+
+async function executeOrdersBlacklistToggle() {
+    const confirmBtn = document.getElementById('ordersBlModalConfirmBtn');
+    const originalText = confirmBtn ? confirmBtn.innerHTML : '';
+    if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i> Processing...';
+    }
+
+    try {
+        const formData = new FormData();
+        formData.append('phone', currentFraudModalContext.phone);
+        formData.append('customer_name', currentFraudModalContext.customerName || '');
+        formData.append('reason', 'Blocked via Orders Queue');
+        
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                          document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                          
+        const res = await fetch('/dashboard/api/toggle-blacklist/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+            updateBlacklistBtnStyle(data.is_blacklisted);
+            const clean = currentFraudModalContext.phone.replace(/[^0-9]/g, '');
+            const cleanPhone = clean.length > 11 ? clean.slice(-11) : clean;
+            if (clientOrdersFraudCache[cleanPhone]) {
+                clientOrdersFraudCache[cleanPhone].is_blacklisted = data.is_blacklisted;
+            }
+            closeOrdersBlacklistConfirmModal();
+            const notifMsg = data.is_blacklisted ? 
+                `🚫 নাম্বার <strong>${currentFraudModalContext.phone}</strong> সফলভাবে ব্লক করা হয়েছে।` : 
+                `✅ নাম্বার <strong>${currentFraudModalContext.phone}</strong> সফলভাবে আনব্লক (Recover) করা হয়েছে।`;
+            if (typeof showToast === 'function') {
+                showToast(notifMsg, data.is_blacklisted ? 'error' : 'success', 4000);
+            }
+        } else {
+            if (typeof showToast === 'function') {
+                showToast(data.error || 'Failed to update blacklist', 'error');
+            }
+        }
+    } catch (err) {
+        if (typeof showToast === 'function') {
+            showToast('Network error while toggling blacklist', 'error');
+        }
+    } finally {
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = originalText;
+        }
+    }
+}
+
 function renderOrdersFraudContent(data, content, badge) {
     if (badge) {
         if (data.from_cache) {
@@ -1169,6 +1337,9 @@ function renderOrdersFraudContent(data, content, badge) {
             badge.classList.add('hidden');
         }
     }
+
+    // Update Blacklist Button state
+    updateBlacklistBtnStyle(data.is_blacklisted);
 
     const sf = data.steadfast || {};
     const local = data.local || {};

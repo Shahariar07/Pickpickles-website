@@ -175,40 +175,72 @@
 {% block extra_js %}
 {% if META_PIXEL_ID %}
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    if (typeof fbq === 'function') {
-        fbq('track', 'Purchase', {
-            value: {{ order.total_amount|floatformat:2 }},
-            currency: 'BDT',
-            content_type: 'product',
-            order_id: '{{ order.order_number|escapejs }}',
-            num_items: {{ order.items.count|default:1 }}
-        });
+(function() {
+    function fireMetaPurchase() {
+        if (typeof fbq === 'function') {
+            fbq('track', 'Purchase', {
+                content_type: 'product',
+                content_ids: [{% for item in order.items.all %}'{{ item.product.id|default:item.product_name|escapejs }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+                contents: [
+                    {% for item in order.items.all %}
+                    {
+                        id: '{{ item.product.id|default:item.product_name|escapejs }}',
+                        name: '{{ item.product_name|escapejs }}',
+                        quantity: {{ item.quantity }},
+                        item_price: {{ item.unit_price|floatformat:2 }}
+                    }{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                value: {{ order.total_amount|floatformat:2 }},
+                currency: 'BDT',
+                order_id: '{{ order.order_number|escapejs }}',
+                num_items: {{ order.items.count|default:1 }}
+            });
+            console.log("✅ [Meta Pixel] Purchase event tracked for Order: {{ order.order_number }} | Total: ৳{{ order.total_amount }}");
+        } else {
+            console.warn("⚠️ [Meta Pixel] fbq function not found on page.");
+        }
     }
-});
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', fireMetaPurchase);
+    } else {
+        fireMetaPurchase();
+    }
+})();
 </script>
 {% endif %}
 {% if GOOGLE_ANALYTICS_ID %}
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    if (typeof gtag === 'function') {
-        gtag('event', 'purchase', {
-            transaction_id: '{{ order.order_number|escapejs }}',
-            value: {{ order.total_amount|floatformat:2 }},
-            currency: 'BDT',
-            shipping: {{ order.delivery_fee|floatformat:2 }},
-            items: [
-                {% for item in order.items.all %}
-                {
-                    item_name: '{{ item.product_name|escapejs }}',
-                    price: {{ item.unit_price|floatformat:2 }},
-                    quantity: {{ item.quantity }}
-                }{% if not forloop.last %},{% endif %}
-                {% endfor %}
-            ]
-        });
+(function() {
+    function fireGA4Purchase() {
+        if (typeof gtag === 'function') {
+            gtag('event', 'purchase', {
+                transaction_id: '{{ order.order_number|escapejs }}',
+                value: {{ order.total_amount|floatformat:2 }},
+                currency: 'BDT',
+                shipping: {{ order.delivery_fee|floatformat:2 }},
+                items: [
+                    {% for item in order.items.all %}
+                    {
+                        item_id: '{{ item.product.id|default:item.product_name|escapejs }}',
+                        item_name: '{{ item.product_name|escapejs }}',
+                        price: {{ item.unit_price|floatformat:2 }},
+                        quantity: {{ item.quantity }}
+                    }{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ]
+            });
+            console.log("✅ [GA4] Purchase event tracked for Order: {{ order.order_number }}");
+        }
     }
-});
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', fireGA4Purchase);
+    } else {
+        fireGA4Purchase();
+    }
+})();
 </script>
 {% endif %}
 {% endblock %}

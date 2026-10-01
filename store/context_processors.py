@@ -30,6 +30,7 @@ def cart_context(request):
     static_version = _get_dynamic_static_version()
     meta_pixel_id = getattr(settings, 'META_PIXEL_ID', '')
     google_analytics_id = getattr(settings, 'GOOGLE_ANALYTICS_ID', '')
+    cloudflare_turnstile_site_key = getattr(settings, 'CLOUDFLARE_TURNSTILE_SITE_KEY', '')
     
     trash_orders_count = 0
     try:
@@ -55,6 +56,7 @@ def cart_context(request):
                 'STATIC_VERSION': static_version,
                 'META_PIXEL_ID': meta_pixel_id,
                 'GOOGLE_ANALYTICS_ID': google_analytics_id,
+                'CLOUDFLARE_TURNSTILE_SITE_KEY': cloudflare_turnstile_site_key,
                 'global_trash_count': trash_orders_count,
                 'auto_whatsapp_url': auto_whatsapp_url,
                 'auto_whatsapp_order_number': auto_whatsapp_order_number,
@@ -68,6 +70,7 @@ def cart_context(request):
             'STATIC_VERSION': static_version,
             'META_PIXEL_ID': meta_pixel_id,
             'GOOGLE_ANALYTICS_ID': google_analytics_id,
+            'CLOUDFLARE_TURNSTILE_SITE_KEY': cloudflare_turnstile_site_key,
             'global_trash_count': trash_orders_count,
             'auto_whatsapp_url': auto_whatsapp_url,
             'auto_whatsapp_order_number': auto_whatsapp_order_number,
@@ -81,6 +84,7 @@ def cart_context(request):
             'STATIC_VERSION': static_version,
             'META_PIXEL_ID': meta_pixel_id,
             'GOOGLE_ANALYTICS_ID': google_analytics_id,
+            'CLOUDFLARE_TURNSTILE_SITE_KEY': cloudflare_turnstile_site_key,
             'global_trash_count': trash_orders_count,
             'auto_whatsapp_url': auto_whatsapp_url,
             'auto_whatsapp_order_number': auto_whatsapp_order_number,

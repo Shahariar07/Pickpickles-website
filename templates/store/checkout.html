@@ -335,6 +335,20 @@
                     </p>
                 </div>
 
+                <!-- Invisible Honeypot Anti-Spam Bot Trap -->
+                <div style="position: absolute; left: -9999px; top: -9999px; opacity: 0; pointer-events: none;" aria-hidden="true">
+                    <label for="website_security_token">Security Verification (Do not fill)</label>
+                    <input type="text" name="website_security_token" id="website_security_token" tabindex="-1" autocomplete="off">
+                </div>
+
+                <!-- Optional Cloudflare Turnstile Smart Protection -->
+                {% if CLOUDFLARE_TURNSTILE_SITE_KEY %}
+                <div class="flex justify-center my-2">
+                    <div class="cf-turnstile" data-sitekey="{{ CLOUDFLARE_TURNSTILE_SITE_KEY }}" data-action="checkout" data-theme="light"></div>
+                </div>
+                <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+                {% endif %}
+
                 <!-- Submit Button -->
                 <button type="submit" id="submitOrderBtn"
                     class="w-full bg-[#15803d] hover:bg-[#166534] active:scale-[0.99] text-white font-display font-black text-base py-4 rounded-2xl shadow-xl shadow-emerald-700/30 flex items-center justify-center gap-2 transition-all cursor-pointer">

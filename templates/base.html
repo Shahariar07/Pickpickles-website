@@ -60,7 +60,6 @@
     <link rel="stylesheet" href="{% static 'css/style.css' %}?v={{ STATIC_VERSION }}">
 
     <!-- Meta Pixel Code -->
-    {% if META_PIXEL_ID %}
     <script>
     !function(f,b,e,v,n,t,s)
     {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -70,13 +69,12 @@
     t.src=v;s=b.getElementsByTagName(e)[0];
     s.parentNode.insertBefore(t,s)}(window, document,'script',
     'https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', '{{ META_PIXEL_ID }}');
+    fbq('init', '{{ META_PIXEL_ID|default:"1370929971728479" }}');
     fbq('track', 'PageView');
     </script>
     <noscript><img height="1" width="1" style="display:none"
-    src="https://www.facebook.com/tr?id={{ META_PIXEL_ID }}&ev=PageView&noscript=1"
+    src="https://www.facebook.com/tr?id={{ META_PIXEL_ID|default:'1370929971728479' }}&ev=PageView&noscript=1"
     /></noscript>
-    {% endif %}
     <!-- End Meta Pixel Code -->
 
     <!-- Google Analytics 4 (GA4) -->
