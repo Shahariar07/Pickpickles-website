@@ -587,106 +587,7 @@
 
         </div>
 
-        <!-- Row 4: Customer Demographics & Gender Breakdown (New AI Feature) -->
-        <div class="bg-white p-5 sm:p-6 rounded-3xl border border-pink-200/80 bg-gradient-to-br from-pink-50/20 via-white to-blue-50/20 shadow-sm space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3.5 border-b border-pink-100 gap-3">
-                <div class="flex items-center gap-3">
-                    <span class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-400 text-white flex items-center justify-center text-base shadow-md">
-                        <i class="fa-solid fa-venus-mars"></i>
-                    </span>
-                    <div>
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <h3 class="font-display font-black text-base sm:text-lg text-gray-900">
-                                Customer Demographics (কাস্টমার জেন্ডার অনুপাত)
-                            </h3>
-                            <span class="px-2 py-0.5 rounded-full text-[9px] font-black bg-pink-100 text-pink-800 border border-pink-200">
-                                <i class="fa-solid fa-wand-magic-sparkles mr-1 text-pink-600"></i>AI Name Classifier
-                            </span>
-                        </div>
-                        <p class="text-xs text-gray-500">নাম বিশ্লেষণ অনুযায়ী ছেলে বনাম মেয়ে ক্রেতার পরিসংখ্যান ও শতাংশ</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="text-xs font-bold text-gray-600 bg-white px-3 py-1.5 rounded-xl border border-gray-200 shadow-2xs">
-                        মোট বিশ্লেষিত অর্ডার: <strong class="text-gray-900 font-black">{{ total_orders_count }}</strong>
-                    </span>
-                </div>
-            </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-                <!-- Doughnut Chart (4 Cols) -->
-                <div class="lg:col-span-5 relative h-56 sm:h-64 w-full flex items-center justify-center">
-                    <canvas id="customerGenderChart"></canvas>
-                </div>
-
-                <!-- Demographic Stats & Progress Bars (7 Cols) -->
-                <div class="lg:col-span-7 space-y-3.5">
-                    
-                    <!-- Female Customer Card -->
-                    <div class="bg-white/90 p-3.5 rounded-2xl border border-pink-200/90 shadow-2xs hover:border-pink-300 transition-all space-y-2">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-2">
-                                <span class="w-7 h-7 rounded-xl bg-pink-100 text-pink-600 flex items-center justify-center text-xs font-black">
-                                    👩
-                                </span>
-                                <div>
-                                    <span class="font-display font-black text-xs text-gray-900 block">Female Customers (মহিলা ক্রেতা)</span>
-                                    <span class="text-[10px] text-gray-400">গৃহিণী ও নারী পিকল লাভার্স</span>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <span class="font-display font-black text-base text-pink-600 leading-none">{{ female_pct }}%</span>
-                                <span class="text-[10px] text-gray-500 block font-bold">{{ female_orders_count }} টি অর্ডার</span>
-                            </div>
-                        </div>
-                        <!-- Progress bar -->
-                        <div class="w-full bg-pink-100/70 h-2 rounded-full overflow-hidden">
-                            <div class="bg-gradient-to-r from-pink-500 to-rose-400 h-2 rounded-full transition-all duration-1000" style="width: {{ female_pct }}%;"></div>
-                        </div>
-                    </div>
-
-                    <!-- Male Customer Card -->
-                    <div class="bg-white/90 p-3.5 rounded-2xl border border-blue-200/90 shadow-2xs hover:border-blue-300 transition-all space-y-2">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-2">
-                                <span class="w-7 h-7 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-black">
-                                    👨
-                                </span>
-                                <div>
-                                    <span class="font-display font-black text-xs text-gray-900 block">Male Customers (পুরুষ ক্রেতা)</span>
-                                    <span class="text-[10px] text-gray-400">পিকল ও ঝাল ফুড লাভার্স</span>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <span class="font-display font-black text-base text-blue-600 leading-none">{{ male_pct }}%</span>
-                                <span class="text-[10px] text-gray-500 block font-bold">{{ male_orders_count }} টি অর্ডার</span>
-                            </div>
-                        </div>
-                        <!-- Progress bar -->
-                        <div class="w-full bg-blue-100/70 h-2 rounded-full overflow-hidden">
-                            <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full transition-all duration-1000" style="width: {{ male_pct }}%;"></div>
-                        </div>
-                    </div>
-
-                    <!-- Unspecified Card -->
-                    {% if unknown_orders_count > 0 %}
-                    <div class="bg-white/90 p-3 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between">
-                        <div class="flex items-center gap-2">
-                            <span class="w-6 h-6 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-xs">
-                                ❓
-                            </span>
-                            <span class="font-bold text-xs text-gray-700">Unspecified / Nickname (অন্যান্য)</span>
-                        </div>
-                        <div class="text-right flex items-center gap-2">
-                            <span class="text-xs font-bold text-gray-500">{{ unknown_orders_count }} টি অর্ডার</span>
-                            <span class="font-black text-xs text-slate-700 bg-slate-100 px-2 py-0.5 rounded-lg">{{ unknown_pct }}%</span>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                </div>
-            </div>
-        </div>
 
     </div>
 
@@ -742,15 +643,6 @@
                         <td class="py-3.5 px-3.5">
                             <div class="flex items-center gap-1.5 flex-wrap">
                                 <span class="font-bold text-gray-900">{{ order.customer_name }}</span>
-                                {% if order.customer_gender == 'FEMALE' %}
-                                <span class="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-pink-50 text-pink-700 border border-pink-200" title="Female Customer">
-                                    👩 Female
-                                </span>
-                                {% elif order.customer_gender == 'MALE' %}
-                                <span class="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-blue-50 text-blue-700 border border-blue-200" title="Male Customer">
-                                    👨 Male
-                                </span>
-                                {% endif %}
                                 {% if order.delivery_instruction %}
                                 <span class="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs" title="Instruction: {{ order.delivery_instruction }}">
                                     <i class="fa-solid fa-note-sticky text-amber-600 text-[8px]"></i> Note
@@ -1106,52 +998,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // 6. Customer Demographics (Gender Ratio) Doughnut
-    const genderEl = document.getElementById('customerGenderChart');
-    if (genderEl) {
-        const genderCtx = genderEl.getContext('2d');
-        const totalGenderData = (data.genderData || []).reduce((a, b) => a + b, 0);
-        new Chart(genderCtx, {
-            type: 'doughnut',
-            data: {
-                labels: totalGenderData > 0 ? data.genderLabels : ['No Orders Analyzed'],
-                datasets: [{
-                    data: totalGenderData > 0 ? data.genderData : [1],
-                    backgroundColor: totalGenderData > 0 ? [
-                        '#ec4899', // Female (Pink)
-                        '#3b82f6', // Male (Blue)
-                        '#94a3b8'  // Unspecified (Slate)
-                    ] : ['#e2e8f0'],
-                    borderWidth: 3,
-                    borderColor: '#ffffff',
-                    hoverOffset: totalGenderData > 0 ? 6 : 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '68%',
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: { boxWidth: 12, font: { size: 11, weight: 'bold' }, padding: 12 }
-                    },
-                    tooltip: {
-                        backgroundColor: '#0f172a',
-                        padding: 12,
-                        cornerRadius: 10,
-                        callbacks: {
-                            label: function(ctx) {
-                                const val = ctx.parsed;
-                                const pct = totalGenderData > 0 ? ((val / totalGenderData) * 100).toFixed(1) : 0;
-                                return ` ${ctx.label}: ${val} orders (${pct}%)`;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
+
 
 });
 </script>

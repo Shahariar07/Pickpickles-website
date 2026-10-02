@@ -398,22 +398,6 @@ def dashboard_index(request):
         chart_cat_labels = ['Packaging & Jars', 'Cucumbers & Veggies', 'Vinegar & Spices', 'Courier & Logistics']
         chart_cat_data = [0, 0, 0, 0]
 
-    # 6. Customer Gender Demographic Analytics
-    gender_agg = Order.objects.filter(is_deleted=False).aggregate(
-        total_g_orders=Count('id'),
-        female_count=Count('id', filter=Q(customer_gender='FEMALE')),
-        male_count=Count('id', filter=Q(customer_gender='MALE')),
-        unknown_count=Count('id', filter=Q(customer_gender='UNKNOWN') | Q(customer_gender__isnull=True)),
-    )
-    total_g_orders = gender_agg['total_g_orders'] or 0
-    female_orders_count = gender_agg['female_count'] or 0
-    male_orders_count = gender_agg['male_count'] or 0
-    unknown_orders_count = gender_agg['unknown_count'] or 0
-
-    female_pct = round((female_orders_count / total_g_orders * 100), 1) if total_g_orders > 0 else 0.0
-    male_pct = round((male_orders_count / total_g_orders * 100), 1) if total_g_orders > 0 else 0.0
-    unknown_pct = round((unknown_orders_count / total_g_orders * 100), 1) if total_g_orders > 0 else 0.0
-
     # JSON Serialized for Chart.js
     chart_data = {
         'trendLabels': date_labels,
@@ -431,20 +415,12 @@ def dashboard_index(request):
         'catData': chart_cat_data,
         'comparisonLabels': ['Gross Revenue (৳)', 'Total Costs (৳)', 'Net Profit / Balance (৳)'],
         'comparisonData': [float(total_revenue), float(total_expenses), float(net_profit)],
-        'genderLabels': ['Female Customers (মহিলা)', 'Male Customers (পুরুষ)', 'Unspecified (অন্যান্য)'],
-        'genderData': [female_orders_count, male_orders_count, unknown_orders_count],
     }
 
     # Recent orders preview for analytics dashboard
     recent_orders = Order.objects.all().prefetch_related('items')[:5]
 
     context = {
-        'female_orders_count': female_orders_count,
-        'male_orders_count': male_orders_count,
-        'unknown_orders_count': unknown_orders_count,
-        'female_pct': female_pct,
-        'male_pct': male_pct,
-        'unknown_pct': unknown_pct,
         'recent_orders': recent_orders,
         'best_seller': best_seller,
         'total_orders_count': total_orders_count,

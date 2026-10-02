@@ -227,15 +227,6 @@
                         <td class="py-3 px-4 align-middle">
                             <div class="flex items-center gap-1.5 flex-wrap">
                                 <span class="font-bold text-gray-900 truncate">{{ order.customer_name }}</span>
-                                {% if order.customer_gender == 'FEMALE' %}
-                                <span class="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-pink-50 text-pink-700 border border-pink-200 shrink-0" title="Female Customer">
-                                    👩 Female
-                                </span>
-                                {% elif order.customer_gender == 'MALE' %}
-                                <span class="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-blue-50 text-blue-700 border border-blue-200 shrink-0" title="Male Customer">
-                                    👨 Male
-                                </span>
-                                {% endif %}
                                 <span class="text-[9px] font-bold px-1.5 py-0.2 rounded border {{ order.customer_score.badge_class }} shrink-0" title="{{ order.customer_score.text }}">
                                     {{ order.customer_score.short_label }}
                                 </span>

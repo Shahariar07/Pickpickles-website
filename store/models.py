@@ -247,17 +247,10 @@ class Order(models.Model):
         ('CANCELLED', 'Cancelled / Returned'),
     ]
 
-    GENDER_CHOICES = [
-        ('FEMALE', 'Female (মহিলা)'),
-        ('MALE', 'Male (পুরুষ)'),
-        ('UNKNOWN', 'Unspecified (অনির্ধারিত)'),
-    ]
-
     order_number = models.CharField(max_length=32, unique=True, editable=False)
     
     # Customer Details
     customer_name = models.CharField(max_length=150)
-    customer_gender = models.CharField(max_length=20, choices=GENDER_CHOICES, default='UNKNOWN', db_index=True, help_text="Auto-detected customer gender from name")
     customer_phone = models.CharField(max_length=20, db_index=True)
     customer_email = models.EmailField(blank=True, null=True)
     
@@ -328,7 +321,6 @@ class Order(models.Model):
             models.Index(fields=['delivery_zone']),
             models.Index(fields=['delivered_at']),
             models.Index(fields=['confirmed_at']),
-            models.Index(fields=['customer_gender']),
         ]
 
 
@@ -346,16 +338,6 @@ class Order(models.Model):
     def save(self, *args, **kwargs):
         from django.utils import timezone
         now = timezone.now()
-
-        # Auto-detect gender from name if unspecified
-        if self.customer_name and (not self.customer_gender or self.customer_gender == 'UNKNOWN'):
-            try:
-                from store.gender_detector import detect_gender_from_name
-                detected = detect_gender_from_name(self.customer_name)
-                if detected and detected != 'UNKNOWN':
-                    self.customer_gender = detected
-            except Exception:
-                pass
 
         # Auto-record confirmed_at when order moves to confirmed or later stages
         if self.order_status in ['CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED']:
