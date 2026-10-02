@@ -53,6 +53,14 @@
                 </div>
             </div>
 
+            <!-- Cloudflare Turnstile Smart Bot Protection -->
+            {% if CLOUDFLARE_TURNSTILE_SITE_KEY %}
+            <div class="flex justify-center py-1">
+                <div class="cf-turnstile" data-sitekey="{{ CLOUDFLARE_TURNSTILE_SITE_KEY }}" data-action="login" data-theme="dark"></div>
+            </div>
+            <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+            {% endif %}
+
             <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white font-bold text-xs py-3.5 px-4 rounded-xl shadow-lg transition">
                 Sign In to Orders Portal
             </button>

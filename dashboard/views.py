@@ -29,6 +29,13 @@ def dashboard_login(request):
         return redirect('dashboard:index')
 
     if request.method == 'POST':
+        # Cloudflare Turnstile Bot Protection
+        from store.security import verify_cloudflare_turnstile
+        is_turnstile_valid, cf_err = verify_cloudflare_turnstile(request, expected_action="login")
+        if not is_turnstile_valid:
+            messages.error(request, cf_err or "Please complete the Cloudflare security check.")
+            return render(request, 'dashboard/login.html')
+
         username = request.POST.get('username')
         password = request.POST.get('password')
         user = authenticate(request, username=username, password=password)

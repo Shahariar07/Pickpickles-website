@@ -85,6 +85,13 @@ def product_detail(request, slug):
     is_best_seller = (best_seller and best_seller.id == product.id)
 
     if request.method == 'POST':
+        # Cloudflare Turnstile Bot Protection
+        from store.security import verify_cloudflare_turnstile
+        is_turnstile_valid, cf_err = verify_cloudflare_turnstile(request, expected_action="review")
+        if not is_turnstile_valid:
+            messages.error(request, cf_err or "Please complete the Cloudflare security verification.")
+            return redirect('store:product_detail', slug=slug)
+
         review_form = ReviewForm(request.POST)
         if review_form.is_valid():
             new_review = review_form.save(commit=False)

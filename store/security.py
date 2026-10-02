@@ -97,7 +97,7 @@ def verify_cloudflare_turnstile(request, expected_action="checkout"):
 
     turnstile_token = request.POST.get('cf-turnstile-response', '')
     if not turnstile_token or not isinstance(turnstile_token, str):
-        return False, "Please complete the Cloudflare security verification before placing order."
+        return False, "Please complete the Cloudflare security verification before proceeding."
 
     token_clean = turnstile_token.strip()
     if len(token_clean) == 0 or len(token_clean) > 2048:
