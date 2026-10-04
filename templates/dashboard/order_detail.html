@@ -1042,23 +1042,47 @@ function renderSteadfastFraudUI(data, resultBox, cacheIndicator) {
     if (data.steadfast && data.steadfast.success) {
         const sf = data.steadfast;
         let statsGrid = '';
+        let ratioBar = '';
+
         if (sf.delivery_ratio !== null && sf.delivery_ratio !== undefined) {
+            const delRate = sf.success_rate !== null ? sf.success_rate : sf.delivery_ratio;
+            const retRate = sf.return_rate !== null ? sf.return_rate : (sf.cancellation_ratio || 0);
+
+            ratioBar = `
+                <div class="space-y-1 pt-1">
+                    <div class="flex items-center justify-between text-[10px] font-extrabold">
+                        <span class="text-emerald-700 flex items-center gap-1">
+                            <i class="fa-solid fa-circle-check"></i> Delivery: ${delRate}%
+                        </span>
+                        <span class="text-rose-700 flex items-center gap-1">
+                            <i class="fa-solid fa-circle-xmark"></i> Return: ${retRate}%
+                        </span>
+                    </div>
+                    <div class="w-full bg-gray-200/80 rounded-full h-2 overflow-hidden flex shadow-inner">
+                        <div class="bg-gradient-to-r from-emerald-500 to-teal-500 h-2 transition-all duration-500" style="width: ${Math.min(Math.max(delRate, 0), 100)}%"></div>
+                        <div class="bg-gradient-to-r from-rose-500 to-red-500 h-2 transition-all duration-500" style="width: ${Math.min(Math.max(retRate, 0), 100)}%"></div>
+                    </div>
+                </div>
+            `;
+
             statsGrid = `
                 <div class="grid grid-cols-4 gap-1.5 text-center">
-                    <div class="bg-white/90 p-1.5 rounded-xl border border-current/10 shadow-2xs">
-                        <span class="text-[10px] text-emerald-700 block font-bold">Delivery Rate</span>
-                        <strong class="text-sm font-black text-emerald-700">${sf.success_rate}%</strong>
+                    <div class="bg-white/95 p-1.5 rounded-xl border border-emerald-200/60 shadow-2xs">
+                        <span class="text-[9px] text-emerald-700 block font-black uppercase tracking-wider">Delivery Rate</span>
+                        <strong class="text-sm font-black text-emerald-700">${delRate}%</strong>
                     </div>
-                    <div class="bg-white/90 p-1.5 rounded-xl border border-current/10 shadow-2xs">
-                        <span class="text-[10px] text-rose-700 block font-bold">Return Rate</span>
-                        <strong class="text-sm font-black text-rose-700">${sf.return_rate}%</strong>
+                    <div class="bg-white/95 p-1.5 rounded-xl border border-rose-200/60 shadow-2xs">
+                        <span class="text-[9px] text-rose-700 block font-black uppercase tracking-wider">Return Rate</span>
+                        <strong class="text-sm font-black text-rose-700">${retRate}%</strong>
                     </div>
-                    <div class="bg-white/90 p-1.5 rounded-xl border border-current/10 shadow-2xs">
-                        <span class="text-[10px] opacity-75 block font-bold">Activity</span>
-                        <strong class="text-xs font-black text-gray-900">${sf.volume_band_display || (sf.volume_band ? sf.volume_band.toUpperCase() : '--')}</strong>
+                    <div class="bg-white/95 p-1.5 rounded-xl border border-cyan-200/60 shadow-2xs">
+                        <span class="text-[9px] text-cyan-800 block font-black uppercase tracking-wider">Activity</span>
+                        <strong class="text-[11px] font-black text-gray-900 block truncate" title="${sf.volume_band_display || sf.volume_band}">
+                            ${sf.volume_range ? sf.volume_range : (sf.volume_band_display || (sf.volume_band ? sf.volume_band.toUpperCase() : '--'))}
+                        </strong>
                     </div>
-                    <div class="bg-white/90 p-1.5 rounded-xl border border-current/10 shadow-2xs">
-                        <span class="text-[10px] ${sf.total_reports > 0 ? 'text-rose-700' : 'text-gray-500'} block font-bold">Reports</span>
+                    <div class="bg-white/95 p-1.5 rounded-xl border ${sf.total_reports > 0 ? 'border-rose-300 bg-rose-50/50' : 'border-gray-200'} shadow-2xs">
+                        <span class="text-[9px] ${sf.total_reports > 0 ? 'text-rose-700 font-black' : 'text-gray-500 font-bold'} block uppercase tracking-wider">Reports</span>
                         <strong class="text-sm font-black ${sf.total_reports > 0 ? 'text-rose-700' : 'text-gray-900'}">${sf.total_reports || 0}</strong>
                     </div>
                 </div>
@@ -1066,16 +1090,16 @@ function renderSteadfastFraudUI(data, resultBox, cacheIndicator) {
         } else if (sf.total_parcels > 0) {
             statsGrid = `
                 <div class="grid grid-cols-3 gap-1.5 text-center">
-                    <div class="bg-white/90 p-1.5 rounded-xl border border-current/10 shadow-2xs">
-                        <span class="text-[10px] opacity-75 block font-bold">Steadfast Total</span>
+                    <div class="bg-white/95 p-1.5 rounded-xl border border-gray-200 shadow-2xs">
+                        <span class="text-[9px] opacity-75 block font-bold uppercase">Steadfast Total</span>
                         <strong class="text-sm font-black text-gray-900">${sf.total_parcels}</strong>
                     </div>
-                    <div class="bg-white/90 p-1.5 rounded-xl border border-current/10 shadow-2xs">
-                        <span class="text-[10px] text-emerald-700 block font-bold">Delivered</span>
+                    <div class="bg-white/95 p-1.5 rounded-xl border border-emerald-200 shadow-2xs">
+                        <span class="text-[9px] text-emerald-700 block font-bold uppercase">Delivered</span>
                         <strong class="text-sm font-black text-emerald-700">${sf.total_delivered}</strong>
                     </div>
-                    <div class="bg-white/90 p-1.5 rounded-xl border border-current/10 shadow-2xs">
-                        <span class="text-[10px] text-rose-700 block font-bold">Cancelled / Return</span>
+                    <div class="bg-white/95 p-1.5 rounded-xl border border-rose-200 shadow-2xs">
+                        <span class="text-[9px] text-rose-700 block font-bold uppercase">Cancelled</span>
                         <strong class="text-sm font-black text-rose-700">${sf.total_cancelled}</strong>
                     </div>
                 </div>
@@ -1083,16 +1107,16 @@ function renderSteadfastFraudUI(data, resultBox, cacheIndicator) {
         } else {
             statsGrid = `
                 <div class="grid grid-cols-3 gap-1.5 text-center">
-                    <div class="bg-white/90 p-1.5 rounded-xl border border-current/10 shadow-2xs">
-                        <span class="text-[10px] opacity-75 block font-bold">Activity</span>
-                        <strong class="text-xs font-black text-gray-900">${sf.volume_band_display || 'New / Clean'}</strong>
+                    <div class="bg-white/95 p-1.5 rounded-xl border border-gray-200 shadow-2xs">
+                        <span class="text-[9px] opacity-75 block font-bold uppercase">Activity</span>
+                        <strong class="text-xs font-black text-gray-900">New / None</strong>
                     </div>
-                    <div class="bg-white/90 p-1.5 rounded-xl border border-current/10 shadow-2xs">
-                        <span class="text-[10px] text-emerald-700 block font-bold">Delivery Success</span>
-                        <strong class="text-sm font-black text-emerald-700">100%</strong>
+                    <div class="bg-white/95 p-1.5 rounded-xl border border-emerald-200 shadow-2xs">
+                        <span class="text-[9px] text-emerald-700 block font-bold uppercase">Steadfast Status</span>
+                        <strong class="text-xs font-black text-emerald-700">Clean Record</strong>
                     </div>
-                    <div class="bg-white/90 p-1.5 rounded-xl border border-current/10 shadow-2xs">
-                        <span class="text-[10px] text-gray-500 block font-bold">Reports</span>
+                    <div class="bg-white/95 p-1.5 rounded-xl border border-gray-200 shadow-2xs">
+                        <span class="text-[9px] text-gray-500 block font-bold uppercase">Reports</span>
                         <strong class="text-sm font-black text-gray-900">${sf.total_reports || 0}</strong>
                     </div>
                 </div>
@@ -1109,22 +1133,38 @@ function renderSteadfastFraudUI(data, resultBox, cacheIndicator) {
             `;
         }
 
+        let doubtfulNotice = '';
+        if (sf.doubtful_reports) {
+            doubtfulNotice = `
+                <div class="text-[10px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 inline-flex items-center gap-1 font-semibold">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-600"></i>
+                    <span>Some reports on this number are flagged as doubtful/unverified</span>
+                </div>
+            `;
+        }
+
         resultBox.innerHTML = `
-            <div class="p-3 rounded-xl border ${sf.badge_class} space-y-2">
+            <div class="p-3.5 rounded-xl border ${sf.badge_class} space-y-2.5">
                 <div class="flex items-center justify-between gap-1 flex-wrap">
                     <span class="font-extrabold flex items-center gap-1.5 text-xs">
                         <i class="fa-solid fa-shield-halved"></i>
                         <span>${sf.risk_title}</span>
                     </span>
-                    <span class="text-[10px] font-black uppercase tracking-wider bg-white/90 px-2 py-0.5 rounded shadow-2xs">
-                        ${sf.success_rate}% Delivery Rate
-                    </span>
+                    ${sf.delivery_ratio !== null && sf.delivery_ratio !== undefined ? `
+                    <span class="text-[10px] font-black uppercase tracking-wider bg-white/90 px-2 py-0.5 rounded shadow-2xs text-gray-800">
+                        ${sf.volume_band_display || 'Active'}
+                    </span>` : `
+                    <span class="text-[10px] font-black uppercase tracking-wider bg-white/90 px-2 py-0.5 rounded shadow-2xs text-gray-600">
+                        New Customer
+                    </span>`}
                 </div>
 
                 ${statsGrid}
+                ${ratioBar}
                 ${categoriesHtml}
+                ${doubtfulNotice}
 
-                <p class="text-[11px] leading-relaxed opacity-90 pt-0.5">
+                <p class="text-[11px] leading-relaxed opacity-95 pt-0.5 border-t border-current/10 font-medium">
                     ${sf.risk_desc}
                 </p>
             </div>

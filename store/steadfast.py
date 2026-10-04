@@ -108,6 +108,8 @@ class SteadfastCourierService:
             "recipient_address": recipient_address,
             "cod_amount": cod_amount,
             "note": note,
+            "total_lot": 1,
+            "delivery_type": 0,
         }
 
         try:
@@ -118,6 +120,7 @@ class SteadfastCourierService:
                 consignment = data.get('consignment', {})
                 consignment_id = consignment.get('consignment_id')
                 tracking_code = consignment.get('tracking_code') or str(consignment_id)
+                tracking_link = consignment.get('tracking_link') or f"https://steadfast.com.bd/tracking/{tracking_code}"
                 raw_status = consignment.get('status') or 'in_review'
 
                 # Save details onto Order model
@@ -131,6 +134,7 @@ class SteadfastCourierService:
                     "success": True,
                     "consignment_id": consignment_id,
                     "tracking_code": tracking_code,
+                    "tracking_link": tracking_link,
                     "message": f"Parcel successfully booked with Steadfast Courier! Tracking: {tracking_code}"
                 }
             else:
@@ -209,8 +213,8 @@ class SteadfastCourierService:
 
     def check_fraud(self, phone: str, force_refresh: bool = False) -> dict:
         """
-        Check customer delivery history and fraud risk by phone number across Steadfast Courier network.
-        Endpoint: GET /fraud_check/score/{phone} (updated to Steadfast Courier 2026 score API)
+        Check customer delivery history and fraud reputation by phone number across Steadfast Courier network.
+        Official Endpoint: GET /fraud_check/score/{phone}
         """
         if not phone:
             return {"success": False, "message": "Phone number is required"}
@@ -223,7 +227,7 @@ class SteadfastCourierService:
         if len(clean_phone) > 11:
             clean_phone = clean_phone[-11:]
 
-        cache_key = f"sf_fraud_v4_{clean_phone}"
+        cache_key = f"sf_fraud_v5_{clean_phone}"
 
         # 1. Tier-1: Process In-Memory Cache (0.001ms instantaneous lookup)
         if not force_refresh and clean_phone in _sf_fraud_mem_cache:
@@ -262,13 +266,17 @@ class SteadfastCourierService:
                 # 1. Extract ratios & volume band from Steadfast Score API
                 raw_delivery_ratio = data.get('delivery_ratio')
                 raw_cancellation_ratio = data.get('cancellation_ratio') if data.get('cancellation_ratio') is not None else data.get('return_ratio')
+                
                 raw_volume_band = str(data.get('volume_band') or 'none').lower()
                 if raw_volume_band in ('none', 'null', ''):
                     volume_band = 'none'
                 else:
                     volume_band = raw_volume_band
 
+                volume_range = str(data.get('volume_range') or '').strip()
+
                 total_reports = int(data.get('total_reports') or 0)
+                doubtful_reports = bool(data.get('doubtful_reports', False))
                 
                 # Format fraud categories
                 raw_categories = data.get('fraud_categories') or {}
@@ -289,7 +297,7 @@ class SteadfastCourierService:
                 total_delivered = int(data.get('total_delivered') or data.get('delivered') or data.get('total_delivered_parcels') or 0)
                 total_cancelled = int(data.get('total_cancelled') or data.get('cancelled') or data.get('total_cancelled_parcels') or data.get('total_returned') or 0)
 
-                # Compute success & return rate
+                # Compute display rates
                 if delivery_ratio is not None:
                     success_rate = round(delivery_ratio, 1)
                     return_rate = round(cancellation_ratio, 1) if cancellation_ratio is not None else round(100.0 - success_rate, 1)
@@ -297,25 +305,28 @@ class SteadfastCourierService:
                     success_rate = round((total_delivered / total_parcels) * 100, 1)
                     return_rate = round((total_cancelled / total_parcels) * 100, 1)
                 else:
-                    success_rate = 100.0 if (volume_band == 'none' and total_reports == 0) else 0.0
-                    return_rate = 0.0
+                    success_rate = None
+                    return_rate = None
 
                 volume_band_titles = {
-                    'high': 'High Activity',
-                    'medium': 'Medium Activity',
-                    'low': 'Low Activity',
+                    'very_high': 'Very High Activity (200+)',
+                    'high': 'High Activity (21–200)',
+                    'medium': 'Medium Activity (6–20)',
+                    'low': 'Low Activity (1–5)',
                     'none': 'No History',
                 }
                 volume_band_display = volume_band_titles.get(volume_band, volume_band.capitalize())
+                if volume_range and volume_range not in volume_band_display:
+                    volume_band_display = f"{volume_band_display} [{volume_range}]"
 
-                # Risk classification
+                # Accurate risk classification according to Steadfast Courier 2026 guidelines
                 if volume_band == 'none' and total_reports == 0 and delivery_ratio is None and total_parcels == 0:
                     risk_level = "NEW"
-                    risk_title = "⚪ নতুন নম্বর (Steadfast-এ পূর্বের রেকর্ড নেই)"
+                    risk_title = "⚪ নতুন গ্রাহক (Steadfast-এ পূর্বের রেকর্ড নেই)"
                     risk_label = "New / Clean"
                     badge_class = "bg-slate-100 text-slate-800 border-slate-300"
-                    risk_desc = "Steadfast কুরিয়ার নেটওয়ার্কে এই নম্বরে পূর্বে কোনো পার্সেল বা ফ্রড রিপোর্ট পাওয়া যায়নি।"
-                elif total_reports > 0 or (cancellation_ratio is not None and cancellation_ratio >= 35) or (delivery_ratio is not None and delivery_ratio <= 65) or (total_cancelled > 0 and success_rate < 65):
+                    risk_desc = "Steadfast কুরিয়ার নেটওয়ার্কে এই নম্বরে পূর্বে কোনো পার্সেল বা ফ্রড রিপোর্ট পাওয়া যায়নি। নতুন কাস্টমার হিসেবে স্বাভাবিক অর্ডার নিশ্চিতকরণ কল করা যেতে পারে।"
+                elif total_reports > 0 or (cancellation_ratio is not None and cancellation_ratio >= 30) or (delivery_ratio is not None and delivery_ratio <= 65) or (total_cancelled > 0 and (success_rate or 0) < 65):
                     risk_level = "HIGH_RISK"
                     risk_title = "🔴 উচ্চ ঝুঁকিপূর্ণ (High Cancellation / Fraud Reports)"
                     risk_label = "High Risk"
@@ -324,15 +335,15 @@ class SteadfastCourierService:
                     desc_parts = []
                     if total_reports > 0:
                         desc_parts.append(f"⚠️ অন্যান্য মার্চেন্টরা এই নম্বরে {total_reports}টি রিপোর্ট করেছেন।")
-                    if cancellation_ratio is not None:
-                        desc_parts.append(f"Steadfast-এ রিটার্ন রেট {return_rate}% (সফল ডেলিভারি {success_rate}%)। এক্টিভিটি: {volume_band_display}।")
+                    if cancellation_ratio is not None and delivery_ratio is not None:
+                        desc_parts.append(f"Steadfast নেটওয়ার্কে রিটার্ন রেট {return_rate}% (সফল ডেলিভারি {success_rate}%)। অ্যাক্টিভিটি: {volume_band_display}।")
                     elif total_parcels > 0:
                         desc_parts.append(f"Steadfast-এ {total_parcels}টি অর্ডারের মধ্যে {total_cancelled}টি বাতিল হয়েছে ({return_rate}% রিটার্ন রেট)।")
                     
-                    desc_parts.append("ক্যাশ অন ডেলিভারিতে পাঠানোর আগে ফোনে কথা বলে অগ্রিম ডেলিভারি চার্জ নেওয়ার পরামর্শ দেওয়া হচ্ছে।")
+                    desc_parts.append("পরামর্শ: ক্যাশ অন ডেলিভারিতে পাঠানোর আগে ফোনে কথা বলে অগ্রিম ডেলিভারি চার্জ নেওয়ার পরামর্শ দেওয়া হচ্ছে।")
                     risk_desc = " ".join(desc_parts)
 
-                elif (cancellation_ratio is not None and cancellation_ratio > 15) or (delivery_ratio is not None and delivery_ratio < 85) or (total_cancelled > 0 and success_rate < 85):
+                elif (cancellation_ratio is not None and cancellation_ratio > 15) or (delivery_ratio is not None and delivery_ratio < 80) or (total_cancelled > 0 and (success_rate or 0) < 80):
                     risk_level = "MODERATE"
                     risk_title = "🟡 মাঝারি ঝুঁকি (কিছু রিটার্ন রেকর্ড আছে)"
                     risk_label = "Moderate Risk"
@@ -341,11 +352,12 @@ class SteadfastCourierService:
                     desc_parts = []
                     if total_reports > 0:
                         desc_parts.append(f"⚠️ {total_reports}টি রিপোর্ট পাওয়া গেছে।")
-                    if cancellation_ratio is not None:
-                        desc_parts.append(f"Steadfast নেটওয়ার্কে ডেলিভারি রেট {success_rate}% এবং রিটার্ন রেট {return_rate}% (এক্টিভিটি: {volume_band_display})।")
+                    if cancellation_ratio is not None and delivery_ratio is not None:
+                        desc_parts.append(f"Steadfast নেটওয়ার্কে ডেলিভারি রেট {success_rate}% এবং রিটার্ন রেট {return_rate}% (অ্যাক্টিভিটি: {volume_band_display})।")
                     elif total_parcels > 0:
                         desc_parts.append(f"Steadfast-এ {total_parcels}টি অর্ডারের মধ্যে {total_delivered}টি ডেলিভার ও {total_cancelled}টি রিটার্ন হয়েছে।")
                     
+                    desc_parts.append("পরামর্শ: পার্সেল পাঠানোর আগে ঠিকানা ও ফোন নম্বর ফোনে যাচাই করে নিন।")
                     risk_desc = " ".join(desc_parts)
 
                 else:
@@ -354,11 +366,11 @@ class SteadfastCourierService:
                     risk_label = "Safe / Trusted"
                     badge_class = "bg-emerald-100 text-emerald-800 border-emerald-300"
                     if delivery_ratio is not None:
-                        risk_desc = f"Steadfast নেটওয়ার্কে ডেলিভারি সফলতার হার {success_rate}% (রিটার্ন রেট {return_rate}%)। এক্টিভিটি: {volume_band_display}। কোনো নেগেটিভ রিপোর্ট নেই।"
+                        risk_desc = f"Steadfast নেটওয়ার্কে সফল ডেলিভারির হার {success_rate}% (রিটার্ন রেট {return_rate}%)। অ্যাক্টিভিটি: {volume_band_display}। কোনো নেগেটিভ রিপোর্ট নেই।"
                     elif total_parcels > 0:
                         risk_desc = f"Steadfast-এ {total_parcels}টি অর্ডারের মধ্যে {total_delivered}টি সফলভাবে ডেলিভার হয়েছে (সফলতা: {success_rate}%)।"
                     else:
-                        risk_desc = "Steadfast কুরিয়ার নেটওয়ার্কে এই গ্রাহকের কোনো নেগেটিভ রেকর্ড নেই।"
+                        risk_desc = "Steadfast কুরিয়ার নেটওয়ার্কে এই গ্রাহকের কোনো নেগেটিভ রেকর্ড নেই। নির্দ্বিধায় সিওডিতে পাঠানো যাবে।"
 
                 result = {
                     "success": True,
@@ -367,11 +379,13 @@ class SteadfastCourierService:
                     "total_delivered": total_delivered,
                     "total_cancelled": total_cancelled,
                     "total_reports": total_reports,
+                    "doubtful_reports": doubtful_reports,
                     "delivery_ratio": delivery_ratio,
                     "cancellation_ratio": cancellation_ratio,
                     "success_rate": success_rate,
                     "return_rate": return_rate,
                     "volume_band": volume_band,
+                    "volume_range": volume_range,
                     "volume_band_display": volume_band_display,
                     "fraud_categories": categories_list,
                     "risk_level": risk_level,
@@ -392,8 +406,7 @@ class SteadfastCourierService:
                 return result
 
             elif res.status_code == 429:
-                # Steadfast API rate limiting (e.g. max 10 requests reached)
-                # If we have a previously cached result, fallback to it
+                # Steadfast API rate limiting
                 cached = cache.get(cache_key) or _sf_fraud_mem_cache.get(clean_phone)
                 if cached:
                     cached_copy = dict(cached)
@@ -415,7 +428,6 @@ class SteadfastCourierService:
                 }
         except requests.exceptions.Timeout:
             logger.warning(f"Steadfast fraud check timed out for {clean_phone}")
-            # Fallback to cache on timeout if available
             cached = cache.get(cache_key) or _sf_fraud_mem_cache.get(clean_phone)
             if cached:
                 cached_copy = dict(cached)
