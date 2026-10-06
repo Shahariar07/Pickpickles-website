@@ -163,13 +163,6 @@ else:
             'NAME': BASE_DIR / 'db.sqlite3',
             'OPTIONS': {
                 'timeout': 30,
-                'init_command': (
-                    'PRAGMA journal_mode = WAL;'
-                    'PRAGMA synchronous = NORMAL;'
-                    'PRAGMA cache_size = -64000;'
-                    'PRAGMA busy_timeout = 30000;'
-                    'PRAGMA mmap_size = 268435456;'
-                ),
             },
         }
     }
