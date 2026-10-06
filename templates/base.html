@@ -391,7 +391,7 @@
                 <span class="text-[10px] text-emerald-700 font-extrabold" id="drawerFreeDeliveryPercent">{% if cart_total_items >= 4 or free_delivery_unlocked %}100%{% elif cart_total_items == 3 %}75%{% elif cart_total_items == 2 %}50%{% elif cart_total_items == 1 %}25%{% else %}0%{% endif %}</span>
             </div>
             <div class="w-full bg-emerald-200/60 rounded-full h-1.5 overflow-hidden">
-                <div id="drawerFreeDeliveryBar" class="bg-emerald-600 h-1.5 rounded-full transition-all duration-300" style="width: {% if cart_total_items >= 4 or free_delivery_unlocked %}100{% elif cart_total_items == 3 %}75{% elif cart_total_items == 2 %}50{% elif cart_total_items == 1 %}25%{% else %}0{% endif %}%;"></div>
+                <div id="drawerFreeDeliveryBar" class="bg-emerald-600 h-1.5 rounded-full transition-all duration-300" style="width: {% if cart_total_items >= 4 or free_delivery_unlocked %}100{% elif cart_total_items == 3 %}75{% elif cart_total_items == 2 %}50{% elif cart_total_items == 1 %}25{% else %}0{% endif %}%;"></div>
             </div>
         </div>
 

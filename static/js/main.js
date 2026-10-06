@@ -70,17 +70,14 @@ function showToast(message) {
     }, 3200);
 }
 
-// Render dynamic cart items inside Drawer
-function renderCartDrawer(items, subtotal) {
-    const drawerItems = document.getElementById('cartDrawerItems');
-    if (!drawerItems) return;
+// Unified Free Delivery Progress Updater (Drawer & Cart Page)
+function updateFreeDeliveryProgress(totalItems) {
+    const count = parseInt(totalItems, 10) || 0;
+    const isFreeDelivery = count >= 4;
+    const remainingForFree = Math.max(0, 4 - count);
+    const progressPercent = isFreeDelivery ? 100 : Math.min(100, Math.round((count / 4) * 100));
 
-    const totalItems = items ? items.reduce((sum, itm) => sum + (itm.quantity || 0), 0) : 0;
-    const isFreeDelivery = totalItems >= 4;
-    const remainingForFree = Math.max(0, 4 - totalItems);
-    const progressPercent = isFreeDelivery ? 100 : Math.round((totalItems / 4) * 100);
-
-    // Update Drawer Free Delivery Banner
+    // 1. Drawer Elements
     const freeMsgEl = document.getElementById('drawerFreeDeliveryMsg');
     const freeRemainingEl = document.getElementById('drawerFreeDeliveryRemaining');
     const freePercentEl = document.getElementById('drawerFreeDeliveryPercent');
@@ -103,6 +100,44 @@ function renderCartDrawer(items, subtotal) {
             deliveryNoteEl.innerHTML = '<span class="text-gray-500">Flat ৳150 Nationwide Delivery • <strong>Free on 4+ jars</strong></span>';
         }
     }
+
+    // 2. Cart Page Banner Elements
+    const pageFreeBanner = document.getElementById('freeDeliveryBanner');
+    const pageFreeIcon = document.getElementById('freeDeliveryIcon');
+    const pageFreeText = document.getElementById('freeDeliveryText');
+    const pageFreeProgress = document.getElementById('freeDeliveryProgressBar');
+    const pageFreeSubtext = document.getElementById('freeDeliverySubtext');
+
+    if (pageFreeBanner) {
+        if (isFreeDelivery) {
+            pageFreeBanner.className = "p-3.5 rounded-2xl border transition-all bg-emerald-50 border-emerald-200 text-emerald-950";
+            if (pageFreeIcon) pageFreeIcon.innerText = "🎉";
+            if (pageFreeText) pageFreeText.innerHTML = "<strong>FREE Delivery Unlocked!</strong> (4+ jars offer)";
+            if (pageFreeProgress) {
+                pageFreeProgress.className = "h-2 rounded-full transition-all duration-500 bg-emerald-600";
+                pageFreeProgress.style.width = "100%";
+            }
+            if (pageFreeSubtext) pageFreeSubtext.innerText = "Special discount applied: Nationwide shipping charge is ৳0.";
+        } else {
+            pageFreeBanner.className = "p-3.5 rounded-2xl border transition-all bg-amber-50/90 border-amber-200 text-amber-950";
+            if (pageFreeIcon) pageFreeIcon.innerText = "🚚";
+            if (pageFreeText) pageFreeText.innerHTML = `Add <strong><span id="freeDeliveryRemaining">${remainingForFree}</span> more jar${remainingForFree > 1 ? 's' : ''}</strong> for <strong>FREE Delivery</strong>!`;
+            if (pageFreeProgress) {
+                pageFreeProgress.className = "h-2 rounded-full transition-all duration-500 bg-amber-500";
+                pageFreeProgress.style.width = `${progressPercent}%`;
+            }
+            if (pageFreeSubtext) pageFreeSubtext.innerText = "Order 4 or more items to get 100% free delivery nationwide!";
+        }
+    }
+}
+
+// Render dynamic cart items inside Drawer
+function renderCartDrawer(items, subtotal) {
+    const drawerItems = document.getElementById('cartDrawerItems');
+    if (!drawerItems) return;
+
+    const totalItems = items ? items.reduce((sum, itm) => sum + (itm.quantity || 0), 0) : 0;
+    updateFreeDeliveryProgress(totalItems);
 
     if (!items || items.length === 0) {
         drawerItems.innerHTML = `
@@ -143,7 +178,7 @@ function renderCartDrawer(items, subtotal) {
     }
 }
 
-// AJAX Add To Cart
+// AJAX Add To Cart (Silently adds item, updates badges & progress bar, does NOT open drawer automatically)
 async function ajaxAddToCart(productId, quantity = 1) {
     const formData = new FormData();
     formData.append('quantity', quantity);
@@ -182,14 +217,13 @@ async function ajaxAddToCart(productId, quantity = 1) {
                 renderCartDrawer(data.items, data.cart_subtotal);
             }
             showToast(data.message || 'Added to your pickle jar bag!');
-            toggleCartDrawer(true);
+            // NOTE: Drawer will not open automatically per user request.
         } else {
             showToast(data.error || 'Failed to add item to bag');
         }
     } catch (err) {
         console.error('Error adding to cart:', err);
         showToast('Added to bag! Refreshing...');
-        // Fallback standard submit
         window.location.reload();
     }
 }
@@ -262,40 +296,6 @@ async function ajaxUpdateCart(productId, action) {
                 }
             }
 
-            // Update Cart Page Free Delivery Progress Banner
-            const pageFreeBanner = document.getElementById('freeDeliveryBanner');
-            const pageFreeIcon = document.getElementById('freeDeliveryIcon');
-            const pageFreeText = document.getElementById('freeDeliveryText');
-            const pageFreeProgress = document.getElementById('freeDeliveryProgressBar');
-            const pageFreeSubtext = document.getElementById('freeDeliverySubtext');
-
-            const totalItems = data.cart_total_items || 0;
-            const isFree = totalItems >= 4;
-            const needed = Math.max(0, 4 - totalItems);
-            const percent = isFree ? 100 : Math.round((totalItems / 4) * 100);
-
-            if (pageFreeBanner) {
-                if (isFree) {
-                    pageFreeBanner.className = "p-3.5 rounded-2xl border transition-all bg-emerald-50 border-emerald-200 text-emerald-950";
-                    if (pageFreeIcon) pageFreeIcon.innerText = "🎉";
-                    if (pageFreeText) pageFreeText.innerHTML = "<strong>FREE Delivery Unlocked!</strong> (4+ jars offer)";
-                    if (pageFreeProgress) {
-                        pageFreeProgress.className = "h-2 rounded-full transition-all duration-500 bg-emerald-600";
-                        pageFreeProgress.style.width = "100%";
-                    }
-                    if (pageFreeSubtext) pageFreeSubtext.innerText = "Special discount applied: Nationwide shipping charge is ৳0.";
-                } else {
-                    pageFreeBanner.className = "p-3.5 rounded-2xl border transition-all bg-amber-50/90 border-amber-200 text-amber-950";
-                    if (pageFreeIcon) pageFreeIcon.innerText = "🚚";
-                    if (pageFreeText) pageFreeText.innerHTML = `Add <strong><span id="freeDeliveryRemaining">${needed}</span> more jar${needed > 1 ? 's' : ''}</strong> for <strong>FREE Delivery</strong>!`;
-                    if (pageFreeProgress) {
-                        pageFreeProgress.className = "h-2 rounded-full transition-all duration-500 bg-amber-500";
-                        pageFreeProgress.style.width = `${percent}%`;
-                    }
-                    if (pageFreeSubtext) pageFreeSubtext.innerText = "Order 4 or more items to get 100% free delivery nationwide!";
-                }
-            }
-
             const pageTot = document.getElementById('pageCartTotal');
             if (pageTot) {
                 const total = data.grand_total !== undefined ? parseFloat(data.grand_total) : (parseFloat(data.cart_subtotal) + deliveryFee);
@@ -320,11 +320,22 @@ function updateCartBadges(count, subtotal) {
     const drawerItemCount = document.getElementById('drawerItemCount');
     const drawerSubtotal = document.getElementById('drawerSubtotal');
 
-    if (badge) badge.innerText = count;
-    if (mobileBadge) mobileBadge.innerText = count;
+    if (badge) {
+        badge.innerText = count;
+        badge.classList.remove('opacity-75');
+        badge.classList.add('scale-125');
+        setTimeout(() => badge.classList.remove('scale-125'), 300);
+    }
+    if (mobileBadge) {
+        mobileBadge.innerText = count;
+        mobileBadge.classList.add('scale-125');
+        setTimeout(() => mobileBadge.classList.remove('scale-125'), 300);
+    }
     if (mobileSubtotal && subtotal !== undefined) mobileSubtotal.innerText = parseFloat(subtotal).toFixed(2);
     if (drawerItemCount) drawerItemCount.innerText = count;
     if (drawerSubtotal && subtotal !== undefined) drawerSubtotal.innerText = parseFloat(subtotal).toFixed(2);
+
+    updateFreeDeliveryProgress(count || 0);
 }
 
 // Attach event listener for product detail page add to cart form if present
@@ -346,3 +357,4 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+

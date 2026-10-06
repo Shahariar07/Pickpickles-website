@@ -1,4 +1,4 @@
-from django.test import TestCase, Client
+from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from store.models import Category, Product, calculate_pathao_delivery_fee
 from decimal import Decimal
@@ -38,6 +38,7 @@ class CartTests(TestCase):
 
     def test_free_delivery_on_four_items_in_cart_and_checkout(self):
         from store.models import Order
+        from django.test import override_settings
         # Add 4 jars to cart
         add_url = reverse('store:cart_add', args=[self.product.id])
         response = self.client.post(
@@ -63,7 +64,8 @@ class CartTests(TestCase):
             'delivery_zone': 'INSIDE_DHAKA',
             'payment_method': 'COD',
         }
-        res = self.client.post(reverse('store:checkout'), checkout_data)
+        with override_settings(CLOUDFLARE_TURNSTILE_SECRET_KEY=''):
+            res = self.client.post(reverse('store:checkout'), checkout_data)
         self.assertEqual(res.status_code, 302)
 
         order = Order.objects.latest('created_at')
@@ -129,7 +131,8 @@ class CartTests(TestCase):
             'delivery_zone': 'INSIDE_DHAKA',
             'payment_method': 'COD',
         }
-        response = self.client.post(reverse('store:checkout'), checkout_data)
+        with override_settings(CLOUDFLARE_TURNSTILE_SECRET_KEY=''):
+            response = self.client.post(reverse('store:checkout'), checkout_data)
         self.assertEqual(response.status_code, 302)
         
         order = Order.objects.latest('created_at')

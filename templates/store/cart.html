@@ -70,7 +70,7 @@
                     </span>
                 </div>
                 <div class="w-full bg-black/10 rounded-full h-2 mt-2 overflow-hidden">
-                    <div id="freeDeliveryProgressBar" class="h-2 rounded-full transition-all duration-500 {% if free_delivery_unlocked %}bg-emerald-600{% else %}bg-amber-500{% endif %}" style="width: {% if free_delivery_unlocked %}100{% elif cart|length == 3 %}75{% elif cart|length == 2 %}50{% elif cart|length == 1 %}25{% else %}0{% endif %}%;"></div>
+                    <div id="freeDeliveryProgressBar" class="h-2 rounded-full transition-all duration-500 {% if free_delivery_unlocked or cart_total_items >= 4 %}bg-emerald-600{% else %}bg-amber-500{% endif %}" style="width: {% if free_delivery_unlocked or cart_total_items >= 4 %}100{% elif cart_total_items == 3 %}75{% elif cart_total_items == 2 %}50{% elif cart_total_items == 1 %}25{% else %}0{% endif %}%;"></div>
                 </div>
                 <p class="text-[10px] mt-1.5 opacity-80" id="freeDeliverySubtext">
                     {% if free_delivery_unlocked %}
