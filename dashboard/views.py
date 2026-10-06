@@ -4122,5 +4122,51 @@ def toggle_blacklist_ajax(request):
     return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
 
 
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def jar_stickers_generator(request):
+    """
+    Studio for designing, customizing, and printing high-resolution glass jar bottle stickers,
+    panoramic wrap-around labels, jar lid seals, and neck safety strips.
+    """
+    products = Product.objects.all().order_by('name')
+    batches = ProductionBatch.objects.all().order_by('-created_at')[:15] if 'ProductionBatch' in globals() else []
+
+    # Map product info into a clean JSON structure for client-side instant reactive switching
+    products_payload = []
+    for p in products:
+        products_payload.append({
+            'id': p.id,
+            'name': p.name,
+            'tagline': p.tagline or '',
+            'description': p.description or '',
+            'flavor_profile': p.flavor_profile or '',
+            'pairing_suggestions': p.pairing_suggestions or '',
+            'jar_weight_grams': p.jar_weight_grams or 600,
+            'gross_weight_grams': getattr(p, 'gross_weight_grams', 850) or 850,
+            'price_bdt': str(p.price_bdt),
+            'ingredients': p.ingredients or 'Fresh Local Vegetables, Filtered Water, Pure Cane Vinegar, Himalayan Pink Salt, Fresh Garlic, Yellow Mustard Seeds, Black Peppercorns.',
+            'shelf_life': p.shelf_life or 'Always keep refrigerated for maximum crunch. Best enjoyed within 1 month.',
+            'image_url': p.primary_image_url if hasattr(p, 'primary_image_url') else (p.image.url if p.image else '/static/images/logo.png'),
+        })
+
+    today_str = timezone.now().strftime('%d %b %Y')
+    exp_str = (timezone.now() + datetime.timedelta(days=30)).strftime('%d %b %Y')
+
+    context = {
+        'products': products,
+        'products_json': json.dumps(products_payload),
+        'batches': batches,
+        'today_str': today_str,
+        'exp_str': exp_str,
+        'default_batch_no': f"PK-{timezone.now().strftime('%Y%m')}-B01",
+        'brand_name': "PICKPICKLES",
+        'brand_hotline': "01794271523",
+        'brand_facebook': "facebook.com/pickpickles07",
+        'brand_website': "www.pickpickles.com",
+    }
+    return render(request, 'dashboard/jar_stickers.html', context)
+
+
+
 
 
