@@ -18,10 +18,13 @@ from django.db.models.functions import Coalesce
 
 
 def index(request):
-    # Auto-calculate top 3 best seller products based on total shipped/delivered units
+    # Auto-calculate top 3 best seller products based on total delivered/paid sales (matching dashboard ranking)
     best_sellers_qs = Product.objects.annotate(
         total_sold=Coalesce(
-            Sum('order_items__quantity', filter=Q(order_items__order__is_deleted=False) & Q(order_items__order__order_status__in=['OUT_FOR_DELIVERY', 'DELIVERED'])),
+            Sum('order_items__quantity', filter=Q(order_items__order__is_deleted=False) & (
+                Q(order_items__order__order_status__in=['DELIVERED', 'OUT_FOR_DELIVERY']) |
+                Q(order_items__order__payment_status='PAID')
+            )),
             Value(0),
             output_field=IntegerField()
         )
@@ -39,7 +42,10 @@ def index(request):
     featured_products = Product.objects.filter(is_featured=True).order_by('id')
     all_products = Product.objects.annotate(
         total_sold=Coalesce(
-            Sum('order_items__quantity', filter=Q(order_items__order__is_deleted=False) & Q(order_items__order__order_status__in=['OUT_FOR_DELIVERY', 'DELIVERED'])),
+            Sum('order_items__quantity', filter=Q(order_items__order__is_deleted=False) & (
+                Q(order_items__order__order_status__in=['DELIVERED', 'OUT_FOR_DELIVERY']) |
+                Q(order_items__order__payment_status='PAID')
+            )),
             Value(0),
             output_field=IntegerField()
         )
@@ -76,7 +82,10 @@ def product_detail(request, slug):
 
     best_seller = Product.objects.annotate(
         total_sold=Coalesce(
-            Sum('order_items__quantity', filter=Q(order_items__order__is_deleted=False) & Q(order_items__order__order_status__in=['OUT_FOR_DELIVERY', 'DELIVERED'])),
+            Sum('order_items__quantity', filter=Q(order_items__order__is_deleted=False) & (
+                Q(order_items__order__order_status__in=['DELIVERED', 'OUT_FOR_DELIVERY']) |
+                Q(order_items__order__payment_status='PAID')
+            )),
             Value(0),
             output_field=IntegerField()
         )
@@ -126,6 +135,7 @@ def cart_view(request):
     return render(request, 'store/cart.html', {
         'cart': cart,
         'cart_subtotal': subtotal,
+        'cart_total_items': len(cart),
         'total_weight_grams': total_weight_grams,
         'total_weight_kg': total_weight_kg,
         'billing_weight_kg': billing_weight_kg,
@@ -403,6 +413,7 @@ def checkout(request):
         'cart': cart,
         'form': form,
         'cart_subtotal': subtotal,
+        'cart_total_items': len(cart),
         'total_weight_grams': total_weight_grams,
         'total_weight_kg': total_weight_kg,
         'billing_weight_kg': billing_weight_kg,

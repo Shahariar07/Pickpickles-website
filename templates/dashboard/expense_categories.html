@@ -53,13 +53,26 @@
                 <tbody class="divide-y divide-gray-100 font-medium">
                     {% for cat in category_stats %}
                     <tr class="hover:bg-gray-50/60 transition">
-                        <!-- Name & Icon -->
+                        <!-- Name & Icon with Hierarchy -->
                         <td class="p-4">
                             <div class="flex items-center gap-3">
                                 <div class="w-9 h-9 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center text-sm border border-rose-200 flex-shrink-0">
                                     <i class="fa-solid {{ cat.icon|default:'fa-receipt' }}"></i>
                                 </div>
-                                <span class="font-bold text-gray-900 text-sm">{{ cat.name }}</span>
+                                <div>
+                                    {% if cat.parent_name %}
+                                    <div class="flex items-center gap-1.5 text-[10px] text-gray-500 font-bold mb-0.5">
+                                        <span class="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded font-bold">{{ cat.parent_name }}</span>
+                                        <i class="fa-solid fa-arrow-right text-[8px] text-gray-400"></i>
+                                    </div>
+                                    <span class="font-bold text-gray-900 text-sm">{{ cat.name }}</span>
+                                    {% else %}
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-black text-gray-900 text-sm">{{ cat.name }}</span>
+                                        <span class="bg-brand-50 text-brand-700 border border-brand-200 text-[10px] px-2 py-0.5 rounded-full font-extrabold">Main Head</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
                             </div>
                         </td>
 
@@ -90,7 +103,7 @@
                         <!-- Actions -->
                         <td class="p-4 text-right">
                             <div class="flex items-center justify-end gap-2">
-                                <button type="button" onclick="openEditExpCatModal('{{ cat.id }}', '{{ cat.name|escapejs }}', '{{ cat.description|escapejs }}', '{{ cat.icon|escapejs }}')" class="bg-gray-100 hover:bg-brand-50 hover:text-brand-800 text-gray-700 px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 transition">
+                                <button type="button" onclick="openEditExpCatModal('{{ cat.id }}', '{{ cat.name|escapejs }}', '{{ cat.description|escapejs }}', '{{ cat.icon|escapejs }}', '{{ cat.parent_id|default:'' }}')" class="bg-gray-100 hover:bg-brand-50 hover:text-brand-800 text-gray-700 px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 transition">
                                     <i class="fa-solid fa-pen-to-square text-brand-600"></i>
                                     <span>Edit</span>
                                 </button>
@@ -210,24 +223,38 @@
 <div id="addExpCatModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative">
         <div class="flex items-center justify-between border-b border-gray-100 pb-3">
-            <h3 class="font-display font-black text-lg text-gray-900">Add Expense Category</h3>
+            <div>
+                <h3 class="font-display font-black text-lg text-gray-900">Add Expense Category</h3>
+                <p class="text-[11px] text-gray-400 font-semibold">নতুন খরচ হেড বা সাব-ক্যাটাগরি তৈরি করুন</p>
+            </div>
             <button type="button" onclick="closeAddExpCatModal()" class="text-gray-400 hover:text-gray-700 text-lg p-1">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
 
-        <form method="POST" class="space-y-3 text-xs">
+        <form method="POST" class="space-y-3.5 text-xs">
             {% csrf_token %}
             <input type="hidden" name="action" value="create_category">
 
             <div>
+                <label class="font-bold text-gray-700 block mb-1">Parent Category (মূল ক্যাটাগরি - ঐচ্ছিক)</label>
+                <select name="parent_id" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500">
+                    <option value="">-- None (This is a Main Category / মূল ক্যাটাগরি) --</option>
+                    {% for p_cat in parent_categories %}
+                    <option value="{{ p_cat.id }}">{{ p_cat.name }}</option>
+                    {% endfor %}
+                </select>
+                <p class="text-[10px] text-gray-400 mt-1">সাব-ক্যাটাগরি তৈরি করতে মূল ক্যাটাগরি সিলেক্ট করুন</p>
+            </div>
+
+            <div>
                 <label class="font-bold text-gray-700 block mb-1">Category Name *</label>
-                <input type="text" name="name" required placeholder="e.g. Employee Wages / শ্রমিকের মজুরি" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white">
+                <input type="text" name="name" required placeholder="e.g. Cucumber (শসা) or Employee Wages" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500">
             </div>
 
             <div>
                 <label class="font-bold text-gray-700 block mb-1">Icon (FontAwesome Class)</label>
-                <input type="text" name="icon" value="fa-receipt" placeholder="fa-receipt, fa-truck, fa-users, fa-bolt" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
+                <input type="text" name="icon" value="fa-receipt" placeholder="fa-receipt, fa-carrot, fa-truck, fa-bolt" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
             </div>
 
             <div>
@@ -247,20 +274,33 @@
 <div id="editExpCatModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative">
         <div class="flex items-center justify-between border-b border-gray-100 pb-3">
-            <h3 class="font-display font-black text-lg text-gray-900">Edit Expense Category</h3>
+            <div>
+                <h3 class="font-display font-black text-lg text-gray-900">Edit Expense Category</h3>
+                <p class="text-[11px] text-gray-400 font-semibold">ক্যাটাগরির নাম ও প্যারেন্ট পরিবর্তন করুন</p>
+            </div>
             <button type="button" onclick="closeEditExpCatModal()" class="text-gray-400 hover:text-gray-700 text-lg p-1">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
 
-        <form method="POST" class="space-y-3 text-xs">
+        <form method="POST" class="space-y-3.5 text-xs">
             {% csrf_token %}
             <input type="hidden" name="action" value="edit_category">
             <input type="hidden" id="edit_exp_cat_id" name="category_id" value="">
 
             <div>
+                <label class="font-bold text-gray-700 block mb-1">Parent Category (মূল ক্যাটাগরি - ঐচ্ছিক)</label>
+                <select id="edit_exp_cat_parent" name="parent_id" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500">
+                    <option value="">-- None (This is a Main Category / মূল ক্যাটাগরি) --</option>
+                    {% for p_cat in parent_categories %}
+                    <option value="{{ p_cat.id }}">{{ p_cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
                 <label class="font-bold text-gray-700 block mb-1">Category Name *</label>
-                <input type="text" id="edit_exp_cat_name" name="name" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white">
+                <input type="text" id="edit_exp_cat_name" name="name" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500">
             </div>
 
             <div>
@@ -320,11 +360,15 @@ function openAddExpCatModal() {
 function closeAddExpCatModal() {
     document.getElementById('addExpCatModal').classList.add('hidden');
 }
-function openEditExpCatModal(id, name, desc, icon) {
+function openEditExpCatModal(id, name, desc, icon, parentId) {
     document.getElementById('edit_exp_cat_id').value = id;
     document.getElementById('edit_exp_cat_name').value = name;
     document.getElementById('edit_exp_cat_desc').value = desc;
     document.getElementById('edit_exp_cat_icon').value = icon;
+    const parentSelect = document.getElementById('edit_exp_cat_parent');
+    if (parentSelect) {
+        parentSelect.value = parentId || '';
+    }
     document.getElementById('editExpCatModal').classList.remove('hidden');
 }
 function closeEditExpCatModal() {

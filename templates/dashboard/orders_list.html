@@ -199,7 +199,16 @@
             <table class="w-full text-left border-collapse text-xs">
                 <thead>
                     <tr class="bg-gray-50 border-b border-gray-200 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider">
-                        <th class="py-3 px-4 sm:px-6">Order</th>
+                        <th class="py-3 pl-4 pr-1 sm:pl-6 w-8 align-middle">
+                            <input 
+                                type="checkbox" 
+                                id="selectAllOrdersCheckbox" 
+                                onchange="toggleSelectAllOrders(this)" 
+                                class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300 cursor-pointer"
+                                title="Select All Orders"
+                            >
+                        </th>
+                        <th class="py-3 px-3">Order</th>
                         <th class="py-3 px-4">Customer</th>
                         <th class="py-3 px-4">Items</th>
                         <th class="py-3 px-4">Total</th>
@@ -213,8 +222,23 @@
                         class="hover:bg-gray-50/80 transition-colors group cursor-pointer"
                         onclick="if(!event.target.closest('a, button, select, input, form, label')) { window.location='{% url 'dashboard:order_detail' order.order_number %}'; }"
                     >
+                        <!-- Selection Checkbox -->
+                        <td class="py-3 pl-4 pr-1 sm:pl-6 align-middle" onclick="event.stopPropagation()">
+                            <input 
+                                type="checkbox" 
+                                class="order-select-checkbox w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300 cursor-pointer"
+                                value="{{ order.order_number }}"
+                                data-order-number="{{ order.order_number }}"
+                                data-customer-name="{{ order.customer_name|escapejs }}"
+                                data-phone="{{ order.customer_phone }}"
+                                data-status="{{ order.order_status }}"
+                                data-wa-url="{{ order.whatsapp_shipping_instruction_url|escapejs }}"
+                                onchange="updateSelectedOrdersBar()"
+                            >
+                        </td>
+
                         <!-- Order ID & Time -->
-                        <td class="py-3 px-4 sm:px-6 align-middle">
+                        <td class="py-3 px-3 align-middle">
                             <a href="{% url 'dashboard:order_detail' order.order_number %}" class="font-display font-black text-xs text-brand-800 hover:underline">
                                 #{{ order.order_number }}
                             </a>
@@ -257,9 +281,16 @@
                             <div class="font-display font-black text-xs text-gray-900">
                                 ৳{{ order.total_amount }}
                             </div>
-                            <span class="text-[9px] font-extrabold px-1.5 py-0.2 rounded {% if order.payment_status == 'PAID' %}bg-emerald-50 text-emerald-700{% else %}bg-amber-50 text-amber-700{% endif %}">
-                                {{ order.payment_status }}
-                            </span>
+                            <div class="flex items-center gap-1 flex-wrap mt-0.5">
+                                <span class="text-[9px] font-extrabold px-1.5 py-0.2 rounded {% if order.payment_status == 'PAID' %}bg-emerald-50 text-emerald-700{% else %}bg-amber-50 text-amber-700{% endif %}">
+                                    {{ order.payment_status }}
+                                </span>
+                                {% if order.payment_trx_id %}
+                                <span class="text-[9px] font-mono font-black text-pink-700 bg-pink-50 border border-pink-200 px-1 py-0.2 rounded" title="bKash / MFS TrxID: {{ order.payment_trx_id }}">
+                                    Trx: {{ order.payment_trx_id }}
+                                </span>
+                                {% endif %}
+                            </div>
                         </td>
 
                         <!-- Status Quick Change Selector (Colored Based on Status/Text) -->
@@ -285,34 +316,25 @@
                         <!-- Action -->
                         <td class="py-3 px-4 sm:pr-6 align-middle text-right">
                             <div class="flex items-center justify-end gap-1">
-                                <!-- Fraud Check Button in Table Actions -->
-                                <button 
-                                    type="button" 
-                                    onclick="openFraudModal('{{ order.customer_phone|escapejs }}', '{{ order.customer_name|escapejs }}', '{{ order.order_number }}')"
-                                    class="p-1 text-cyan-700 hover:text-cyan-900 rounded transition cursor-pointer active:scale-95"
-                                    title="Steadfast Fraud Check"
-                                >
-                                    <i class="fa-solid fa-shield-halved"></i>
-                                </button>
-                                
                                 <!-- Steadfast Courier button in table -->
                                 {% if order.steadfast_consignment_id %}
                                 <a 
                                     href="https://steadfast.com.bd/tracking/{{ order.steadfast_tracking_code|default:order.steadfast_consignment_id }}" 
                                     target="_blank" 
-                                    class="p-1 text-cyan-700 hover:text-cyan-900 rounded transition"
+                                    class="p-1.5 text-cyan-700 hover:text-cyan-900 bg-cyan-50 hover:bg-cyan-100 border border-cyan-300 rounded-lg transition active:scale-95 flex items-center justify-center"
                                     title="Track on Steadfast: {{ order.steadfast_tracking_code|default:order.steadfast_consignment_id }}"
                                 >
-                                    <i class="fa-solid fa-truck-fast"></i>
+                                    <i class="fa-solid fa-truck-ramp-box text-xs"></i>
                                 </a>
                                 {% elif order.order_status not in 'DELIVERED,CANCELLED' %}
                                 <button 
                                     type="button" 
+                                    id="sf_btn_{{ order.order_number }}"
                                     onclick="openSteadfastModal('{{ order.order_number }}', '{{ order.customer_name|escapejs }}', '{{ order.customer_phone|escapejs }}', '{{ order.delivery_address|escapejs }}', '{{ order.delivery_city|escapejs }}', '{{ order.get_delivery_zone_display|escapejs }}', '{{ order.total_amount }}', '{{ order.total_items_count }}', '{{ order.payment_status }}')"
-                                    class="p-1 text-cyan-600 hover:text-cyan-800 rounded transition cursor-pointer"
+                                    class="p-1.5 text-cyan-600 hover:text-cyan-800 hover:bg-cyan-50 rounded-lg transition cursor-pointer active:scale-95 flex items-center justify-center"
                                     title="Send to Steadfast Courier"
                                 >
-                                    <i class="fa-solid fa-truck-fast"></i>
+                                    <i class="fa-solid fa-truck-fast text-xs"></i>
                                 </button>
                                 {% endif %}
 
@@ -321,23 +343,24 @@
                                 <a 
                                     href="https://merchant.pathao.com/tracking?consignment_id={{ order.pathao_consignment_id }}" 
                                     target="_blank" 
-                                    class="p-1 text-red-600 hover:text-red-800 rounded transition"
+                                    class="p-1.5 text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 border border-red-300 rounded-lg transition active:scale-95 flex items-center justify-center"
                                     title="Track on Pathao: {{ order.pathao_tracking_code|default:order.pathao_consignment_id }}"
                                 >
-                                    <i class="fa-solid fa-paper-plane"></i>
+                                    <i class="fa-solid fa-motorcycle text-xs"></i>
                                 </a>
                                 {% elif order.order_status not in 'DELIVERED,CANCELLED' %}
                                 <button 
                                     type="button" 
+                                    id="pathao_btn_{{ order.order_number }}"
                                     onclick="openPathaoModal('{{ order.order_number }}', '{{ order.customer_name|escapejs }}', '{{ order.customer_phone|escapejs }}', '{{ order.delivery_address|escapejs }}', '{{ order.delivery_city|escapejs }}', '{{ order.get_delivery_zone_display|escapejs }}', '{{ order.total_amount }}', '{{ order.total_items_count }}', '{{ order.payment_status }}')"
-                                    class="p-1 text-red-600 hover:text-red-800 rounded transition cursor-pointer"
+                                    class="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition cursor-pointer active:scale-95 flex items-center justify-center"
                                     title="Send to Pathao Courier"
                                 >
-                                    <i class="fa-solid fa-paper-plane"></i>
+                                    <i class="fa-solid fa-paper-plane text-xs"></i>
                                 </button>
                                 {% endif %}
 
-                                {% if order.customer_phone %}
+                                {% if order.order_status not in 'DELIVERED,CANCELLED' and order.customer_phone %}
                                 <a 
                                     href="{{ order.whatsapp_shipping_instruction_url }}" 
                                     target="_blank" 
@@ -377,13 +400,44 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="text-center py-12 px-4 text-gray-400 text-xs">
+                        <td colspan="7" class="text-center py-12 px-4 text-gray-400 text-xs">
                             No orders found
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- FLOATING BULK ACTIONS BAR (STICKY AT BOTTOM) -->
+    <div id="bulkActionBar" class="fixed bottom-6 inset-x-0 mx-auto max-w-2xl z-40 hidden px-4 transition-all duration-300 transform translate-y-4 opacity-0">
+        <div class="bg-gray-900/95 backdrop-blur-md text-white px-4 py-3 rounded-2xl shadow-2xl border border-gray-700 flex items-center justify-between gap-3 flex-wrap">
+            <div class="flex items-center gap-2.5">
+                <span class="w-7 h-7 rounded-xl bg-emerald-500/20 text-emerald-400 font-black text-xs flex items-center justify-center border border-emerald-500/30" id="bulkBarCount">0</span>
+                <span class="text-xs font-bold text-gray-200">Selected</span>
+                <button type="button" onclick="selectOnlyShippedOrders()" class="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 hover:underline cursor-pointer pl-1">
+                    Select Shipped ({{ out_for_delivery_count }})
+                </button>
+            </div>
+            <div class="flex items-center gap-2">
+                <button 
+                    type="button" 
+                    onclick="openBulkWhatsAppModal()" 
+                    class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold px-3.5 py-2 rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer active:scale-95"
+                >
+                    <i class="fa-brands fa-whatsapp text-sm"></i>
+                    <span>Send WhatsApp Bulk</span>
+                </button>
+                <button 
+                    type="button" 
+                    onclick="clearOrderSelection()" 
+                    class="bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold px-2.5 py-2 rounded-xl transition cursor-pointer"
+                    title="Clear selection"
+                >
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -536,8 +590,11 @@
                     </select>
                 </div>
                 <div>
-                    <label class="font-bold text-gray-700 block mb-1">Delivery Fee (৳)</label>
-                    <input type="number" step="1" min="0" name="delivery_fee" id="manualDeliveryFeeInput" value="150" oninput="calculateManualOrderTotal()" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="font-bold text-gray-700">Delivery Fee (৳)</label>
+                        <span id="manualFreeDeliveryBadge" class="hidden text-[10px] font-extrabold text-emerald-700 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md">🎉 FREE (4+ Jars)</span>
+                    </div>
+                    <input type="number" step="1" min="0" name="delivery_fee" id="manualDeliveryFeeInput" value="150" oninput="calculateManualOrderTotal(true)" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
                 </div>
             </div>
 
@@ -938,8 +995,81 @@
     </div>
 </div>
 
+<!-- BULK WHATSAPP DISPATCHER MODAL -->
+<div id="bulkWhatsAppModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4 backdrop-blur-xs">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-7 space-y-4 shadow-2xl relative max-h-[92vh] flex flex-col">
+        <!-- Header -->
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3 shrink-0">
+            <div class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-2xl bg-emerald-600/10 text-emerald-600 flex items-center justify-center text-xl font-black">
+                    <i class="fa-brands fa-whatsapp"></i>
+                </div>
+                <div>
+                    <h3 class="font-display font-black text-base text-gray-900">Bulk WhatsApp Shipping Messages</h3>
+                    <p class="text-[11px] text-gray-500 font-medium">Send pickle storage & delivery instructions to selected customers</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeBulkWhatsAppModal()" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 flex items-center justify-center transition cursor-pointer">
+                <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+        </div>
+
+        <!-- Batch Controls & Runner -->
+        <div class="bg-emerald-50/80 border border-emerald-200/90 rounded-2xl p-4 space-y-3 shrink-0">
+            <div class="flex items-center justify-between flex-wrap gap-2 text-xs">
+                <div class="flex items-center gap-2">
+                    <span class="font-bold text-gray-700">Queue Progress:</span>
+                    <span id="bulkWaProgressTxt" class="font-extrabold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">0 / 0 Sent</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="copyAllSelectedPhones()" class="text-[11px] font-bold text-emerald-800 bg-white hover:bg-emerald-100/60 border border-emerald-300 px-2.5 py-1 rounded-lg shadow-2xs transition inline-flex items-center gap-1 cursor-pointer">
+                        <i class="fa-solid fa-copy text-[10px]"></i> <span>Copy Numbers</span>
+                    </button>
+                    <button type="button" onclick="openAllWhatsAppBatch()" class="text-[11px] font-bold text-white bg-emerald-700 hover:bg-emerald-800 px-3 py-1 rounded-lg shadow-2xs transition inline-flex items-center gap-1 cursor-pointer active:scale-95">
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> <span>Open All Tabs</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Next Customer Runner Bar -->
+            <div class="bg-white p-3 rounded-xl border border-emerald-200 flex items-center justify-between gap-2 flex-wrap">
+                <div class="text-xs">
+                    <span class="text-gray-400 block text-[10px] font-bold uppercase tracking-wider">Current / Next Customer:</span>
+                    <strong id="bulkWaCurrentTargetName" class="text-gray-900 font-bold">—</strong>
+                    <span id="bulkWaCurrentTargetPhone" class="text-gray-500 font-mono text-[11px] ml-1"></span>
+                </div>
+                <button 
+                    type="button" 
+                    id="bulkWaNextBtn" 
+                    onclick="sendNextWhatsAppInQueue()" 
+                    class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black px-4 py-2 rounded-xl shadow-md transition inline-flex items-center gap-2 cursor-pointer active:scale-95"
+                >
+                    <i class="fa-brands fa-whatsapp text-sm"></i>
+                    <span>Send & Next ➔</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Customer Queue List -->
+        <div class="overflow-y-auto flex-1 divide-y divide-gray-100 border border-gray-200 rounded-2xl max-h-64" id="bulkWaQueueList">
+            <!-- Populated via JS -->
+        </div>
+
+        <!-- Footer -->
+        <div class="flex items-center justify-between pt-2 border-t border-gray-100 text-xs text-gray-500 shrink-0">
+            <span>Clicking opens recipient's chat with personalized instructions pre-filled</span>
+            <button type="button" onclick="closeBulkWhatsAppModal()" class="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold transition cursor-pointer">
+                Done
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
+let manualDeliveryFeeUserOverridden = false;
+
 function openManualOrderModal() {
+    manualDeliveryFeeUserOverridden = false;
     document.getElementById('manualOrderModal').classList.remove('hidden');
     updateRemoveButtonsState();
     calculateManualOrderTotal();
@@ -995,7 +1125,7 @@ function updateRemoveButtonsState() {
     });
 }
 
-function calculateManualOrderTotal() {
+function calculateManualOrderTotal(isManualFeeChange = false) {
     const container = document.getElementById('manualOrderItemsContainer');
     if (!container) return;
     const rows = container.getElementsByClassName('manual-order-item-row');
@@ -1022,8 +1152,30 @@ function calculateManualOrderTotal() {
     }
 
     const deliveryInput = document.getElementById('manualDeliveryFeeInput');
-    let deliveryFee = deliveryInput ? (parseFloat(deliveryInput.value) || 0) : 150;
+    const freeBadge = document.getElementById('manualFreeDeliveryBadge');
+    
+    if (isManualFeeChange) {
+        manualDeliveryFeeUserOverridden = true;
+    }
+
+    if (!manualDeliveryFeeUserOverridden && deliveryInput) {
+        if (totalJars >= 4) {
+            deliveryInput.value = 0;
+        } else {
+            deliveryInput.value = 150;
+        }
+    }
+
+    let deliveryFee = deliveryInput ? (parseFloat(deliveryInput.value) || 0) : (totalJars >= 4 ? 0 : 150);
     if (deliveryFee < 0) deliveryFee = 0;
+
+    if (freeBadge) {
+        if (totalJars >= 4 || deliveryFee === 0) {
+            freeBadge.classList.remove('hidden');
+        } else {
+            freeBadge.classList.add('hidden');
+        }
+    }
 
     const grandTotal = subtotal + deliveryFee;
 
@@ -1034,7 +1186,13 @@ function calculateManualOrderTotal() {
 
     if (countEl) countEl.textContent = totalJars;
     if (subtotalEl) subtotalEl.textContent = '৳' + subtotal.toFixed(0);
-    if (deliveryEl) deliveryEl.textContent = '৳' + deliveryFee.toFixed(0);
+    if (deliveryEl) {
+        if (deliveryFee === 0 || totalJars >= 4) {
+            deliveryEl.innerHTML = '<span class="text-emerald-700 font-black">FREE (৳0)</span>';
+        } else {
+            deliveryEl.textContent = '৳' + deliveryFee.toFixed(0);
+        }
+    }
     if (grandTotalEl) grandTotalEl.textContent = '৳' + grandTotal.toFixed(0);
 }
 
@@ -1048,7 +1206,9 @@ function closeDeleteOrderModal() {
     document.getElementById('deleteOrderModal').classList.add('hidden');
 }
 
+let currentPathaoOrderNumber = '';
 function openPathaoModal(orderNumber, customerName, customerPhone, deliveryAddress, deliveryCity, deliveryZone, totalAmount, totalJars, paymentStatus) {
+    currentPathaoOrderNumber = orderNumber;
     document.getElementById('pathao_modal_order_number').textContent = '#' + orderNumber;
     document.getElementById('pathao_modal_customer_name').textContent = customerName;
     document.getElementById('pathao_modal_customer_phone').textContent = customerPhone;
@@ -1068,13 +1228,22 @@ function openPathaoModal(orderNumber, customerName, customerPhone, deliveryAddre
         payStatusSpan.textContent = 'Payment: UNPAID (Collect COD)';
     }
 
+    const ptBtn = document.getElementById('pathaoSubmitBtn');
+    if (ptBtn) {
+        ptBtn.disabled = false;
+        ptBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+        ptBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> <span>Confirm & Send to Pathao</span>';
+    }
+
     document.getElementById('pathaoDispatchForm').action = '/dashboard/order/' + orderNumber + '/dispatch-pathao/';
     document.getElementById('pathaoDispatchModal').classList.remove('hidden');
 }
 function closePathaoModal() {
     document.getElementById('pathaoDispatchModal').classList.add('hidden');
 }
+let currentSteadfastOrderNumber = '';
 function openSteadfastModal(orderNumber, customerName, customerPhone, deliveryAddress, deliveryCity, deliveryZone, totalAmount, totalJars, paymentStatus) {
+    currentSteadfastOrderNumber = orderNumber;
     document.getElementById('steadfast_modal_order_number').textContent = '#' + orderNumber;
     document.getElementById('steadfast_modal_customer_name').textContent = customerName;
     document.getElementById('steadfast_modal_customer_phone').textContent = customerPhone;
@@ -1094,12 +1263,58 @@ function openSteadfastModal(orderNumber, customerName, customerPhone, deliveryAd
         payStatusSpan.textContent = 'Payment: UNPAID (Collect COD)';
     }
 
+    const sfBtn = document.getElementById('steadfastSubmitBtn');
+    if (sfBtn) {
+        sfBtn.disabled = false;
+        sfBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+        sfBtn.innerHTML = '<i class="fa-solid fa-truck-fast"></i> <span>Confirm & Send to Steadfast</span>';
+    }
+
     document.getElementById('steadfastDispatchForm').action = '/dashboard/order/' + orderNumber + '/dispatch-steadfast/';
     document.getElementById('steadfastDispatchModal').classList.remove('hidden');
 }
 function closeSteadfastModal() {
     document.getElementById('steadfastDispatchModal').classList.add('hidden');
 }
+
+// Courier submit loading states
+document.addEventListener('DOMContentLoaded', function() {
+    const sfForm = document.getElementById('steadfastDispatchForm');
+    if (sfForm) {
+        sfForm.addEventListener('submit', function() {
+            const btn = document.getElementById('steadfastSubmitBtn');
+            if (btn) {
+                btn.disabled = true;
+                btn.classList.add('opacity-70', 'cursor-not-allowed');
+                btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> <span>Sending to Steadfast API...</span>';
+            }
+            if (currentSteadfastOrderNumber) {
+                const tableBtn = document.getElementById('sf_btn_' + currentSteadfastOrderNumber);
+                if (tableBtn) {
+                    tableBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-cyan-700"></i>';
+                }
+            }
+        });
+    }
+
+    const ptForm = document.getElementById('pathaoDispatchForm');
+    if (ptForm) {
+        ptForm.addEventListener('submit', function() {
+            const btn = document.getElementById('pathaoSubmitBtn');
+            if (btn) {
+                btn.disabled = true;
+                btn.classList.add('opacity-70', 'cursor-not-allowed');
+                btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> <span>Sending to Pathao API...</span>';
+            }
+            if (currentPathaoOrderNumber) {
+                const tableBtn = document.getElementById('pathao_btn_' + currentPathaoOrderNumber);
+                if (tableBtn) {
+                    tableBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-red-600"></i>';
+                }
+            }
+        });
+    }
+});
 
 /* ========================================================
    STEADFAST FRAUD CHECK LIVE MODAL HANDLER (FAST & OPTIMIZED)
@@ -1475,6 +1690,227 @@ function renderOrdersFraudContent(data, content, badge) {
 
 function closeFraudModal() {
     document.getElementById('fraudCheckModal').classList.add('hidden');
+}
+
+/* ========================================================
+   BULK ORDER SELECTION & WHATSAPP BROADCAST HANDLER
+   ======================================================== */
+let bulkSelectedOrdersQueue = [];
+
+function toggleSelectAllOrders(masterCheckbox) {
+    const checkboxes = document.querySelectorAll('.order-select-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = masterCheckbox.checked;
+    });
+    updateSelectedOrdersBar();
+}
+
+function selectOnlyShippedOrders() {
+    const checkboxes = document.querySelectorAll('.order-select-checkbox');
+    let count = 0;
+    checkboxes.forEach(cb => {
+        if (cb.dataset.status === 'OUT_FOR_DELIVERY') {
+            cb.checked = true;
+            count++;
+        } else {
+            cb.checked = false;
+        }
+    });
+    const master = document.getElementById('selectAllOrdersCheckbox');
+    if (master) master.checked = (count > 0 && count === checkboxes.length);
+    updateSelectedOrdersBar();
+}
+
+function clearOrderSelection() {
+    const checkboxes = document.querySelectorAll('.order-select-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = false;
+    });
+    const master = document.getElementById('selectAllOrdersCheckbox');
+    if (master) master.checked = false;
+    updateSelectedOrdersBar();
+}
+
+function updateSelectedOrdersBar() {
+    const checkboxes = document.querySelectorAll('.order-select-checkbox:checked');
+    const bar = document.getElementById('bulkActionBar');
+    const countSpan = document.getElementById('bulkBarCount');
+    const count = checkboxes.length;
+
+    if (countSpan) countSpan.textContent = count;
+
+    if (bar) {
+        if (count > 0) {
+            bar.classList.remove('hidden');
+            requestAnimationFrame(() => {
+                bar.classList.remove('translate-y-4', 'opacity-0');
+            });
+        } else {
+            bar.classList.add('translate-y-4', 'opacity-0');
+            setTimeout(() => {
+                if (document.querySelectorAll('.order-select-checkbox:checked').length === 0) {
+                    bar.classList.add('hidden');
+                }
+            }, 300);
+        }
+    }
+}
+
+function openBulkWhatsAppModal() {
+    const checkedBoxes = Array.from(document.querySelectorAll('.order-select-checkbox:checked'));
+    if (checkedBoxes.length === 0) {
+        alert('Please select at least one order to send WhatsApp message.');
+        return;
+    }
+
+    bulkSelectedOrdersQueue = checkedBoxes.map(cb => ({
+        orderNumber: cb.dataset.orderNumber,
+        customerName: cb.dataset.customerName || 'Customer',
+        phone: cb.dataset.phone || '',
+        status: cb.dataset.status,
+        waUrl: cb.dataset.waUrl || '',
+        sent: false
+    })).filter(item => item.phone && item.waUrl);
+
+    if (bulkSelectedOrdersQueue.length === 0) {
+        alert('None of the selected orders have a valid phone number or WhatsApp message link.');
+        return;
+    }
+
+    renderBulkWaQueue();
+    updateBulkWaRunner();
+    document.getElementById('bulkWhatsAppModal').classList.remove('hidden');
+}
+
+function closeBulkWhatsAppModal() {
+    document.getElementById('bulkWhatsAppModal').classList.add('hidden');
+}
+
+function renderBulkWaQueue() {
+    const container = document.getElementById('bulkWaQueueList');
+    if (!container) return;
+    
+    let html = '';
+    bulkSelectedOrdersQueue.forEach((item, index) => {
+        html += `
+        <div class="p-3 flex items-center justify-between gap-3 hover:bg-gray-50 transition ${item.sent ? 'bg-emerald-50/40' : ''}" id="bulk_wa_row_${index}">
+            <div class="flex items-center gap-2.5 min-w-0">
+                <span class="w-6 h-6 rounded-full ${item.sent ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700'} font-bold text-[11px] flex items-center justify-center shrink-0">
+                    ${item.sent ? '<i class="fa-solid fa-check"></i>' : (index + 1)}
+                </span>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <strong class="text-xs text-gray-900 truncate">${item.customerName}</strong>
+                        <span class="text-[10px] font-mono font-bold text-brand-700">#${item.orderNumber}</span>
+                    </div>
+                    <div class="text-[11px] text-gray-500 font-mono">
+                        ${item.phone}
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+                ${item.sent ? `
+                    <span class="text-[10px] font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300">
+                        <i class="fa-solid fa-circle-check"></i> Sent
+                    </span>
+                ` : ''}
+                <button 
+                    type="button" 
+                    onclick="triggerSingleWaSend(${index})"
+                    class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-2xs transition inline-flex items-center gap-1 cursor-pointer active:scale-95"
+                    title="Open WhatsApp chat for this customer"
+                >
+                    <i class="fa-brands fa-whatsapp text-sm"></i>
+                    <span>${item.sent ? 'Resend' : 'Send'}</span>
+                </button>
+            </div>
+        </div>`;
+    });
+
+    container.innerHTML = html;
+}
+
+function updateBulkWaRunner() {
+    const total = bulkSelectedOrdersQueue.length;
+    const sentCount = bulkSelectedOrdersQueue.filter(i => i.sent).length;
+    
+    const progressSpan = document.getElementById('bulkWaProgressTxt');
+    if (progressSpan) {
+        progressSpan.textContent = `${sentCount} / ${total} Sent`;
+    }
+
+    const nextUnsentIndex = bulkSelectedOrdersQueue.findIndex(i => !i.sent);
+    const targetName = document.getElementById('bulkWaCurrentTargetName');
+    const targetPhone = document.getElementById('bulkWaCurrentTargetPhone');
+    const nextBtn = document.getElementById('bulkWaNextBtn');
+
+    if (nextUnsentIndex !== -1) {
+        const nextCustomer = bulkSelectedOrdersQueue[nextUnsentIndex];
+        if (targetName) targetName.textContent = nextCustomer.customerName + ' (#' + nextCustomer.orderNumber + ')';
+        if (targetPhone) targetPhone.textContent = '• ' + nextCustomer.phone;
+        if (nextBtn) {
+            nextBtn.disabled = false;
+            nextBtn.className = "bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black px-4 py-2 rounded-xl shadow-md transition inline-flex items-center gap-2 cursor-pointer active:scale-95";
+            nextBtn.innerHTML = '<i class="fa-brands fa-whatsapp text-sm"></i> <span>Send & Next ➔</span>';
+        }
+    } else {
+        if (targetName) targetName.textContent = 'All messages sent! 🎉';
+        if (targetPhone) targetPhone.textContent = '';
+        if (nextBtn) {
+            nextBtn.disabled = true;
+            nextBtn.className = "bg-gray-300 text-gray-600 text-xs font-black px-4 py-2 rounded-xl shadow-2xs inline-flex items-center gap-2 cursor-not-allowed";
+            nextBtn.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-600"></i> <span>Completed</span>';
+        }
+    }
+}
+
+function triggerSingleWaSend(index) {
+    if (!bulkSelectedOrdersQueue[index]) return;
+    const customer = bulkSelectedOrdersQueue[index];
+    window.open(customer.waUrl, '_blank');
+    customer.sent = true;
+    renderBulkWaQueue();
+    updateBulkWaRunner();
+}
+
+function sendNextWhatsAppInQueue() {
+    const nextUnsentIndex = bulkSelectedOrdersQueue.findIndex(i => !i.sent);
+    if (nextUnsentIndex !== -1) {
+        triggerSingleWaSend(nextUnsentIndex);
+    }
+}
+
+function openAllWhatsAppBatch() {
+    const unsentList = bulkSelectedOrdersQueue.filter(i => !i.sent);
+    if (unsentList.length === 0) {
+        alert('All selected customers have already been sent.');
+        return;
+    }
+
+    if (!confirm(`Open WhatsApp in browser for ${unsentList.length} customer(s)? (Note: please allow popups if prompted)`)) {
+        return;
+    }
+
+    unsentList.forEach((customer, idx) => {
+        setTimeout(() => {
+            window.open(customer.waUrl, '_blank');
+            customer.sent = true;
+            renderBulkWaQueue();
+            updateBulkWaRunner();
+        }, idx * 400);
+    });
+}
+
+function copyAllSelectedPhones() {
+    const phones = bulkSelectedOrdersQueue.map(i => i.phone).filter(Boolean);
+    if (phones.length === 0) return;
+    const text = phones.join(', ');
+    navigator.clipboard.writeText(text).then(() => {
+        alert(`Copied ${phones.length} phone numbers to clipboard!`);
+    }).catch(() => {
+        prompt('Copy phone numbers:', text);
+    });
 }
 </script>
 

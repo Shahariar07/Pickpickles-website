@@ -278,11 +278,11 @@ def dashboard_index(request):
         revenue_series.append(round(daily_revenue_map.get(target_date, 0.0), 2))
         orders_series.append(daily_orders_map.get(target_date, 0))
 
-    # 2. Dynamic Product Sales Performance Breakdown (Strictly DELIVERED / PAID orders)
+    # 2. Dynamic Product Sales Performance Breakdown (Delivered / Out for Delivery / Paid orders)
     order_items_qs = OrderItem.objects.filter(
         order__is_deleted=False
     ).filter(
-        Q(order__order_status='DELIVERED') | Q(order__payment_status='PAID')
+        Q(order__order_status__in=['DELIVERED', 'OUT_FOR_DELIVERY']) | Q(order__payment_status='PAID')
     )
     
     # Aggregate sales by product_id and product_name
@@ -706,6 +706,13 @@ def order_detail(request, order_number):
         if new_payment_status:
             order.payment_status = new_payment_status
             
+        if request.POST.get('payment_trx_id') is not None:
+            order.payment_trx_id = request.POST.get('payment_trx_id', '').strip()
+        if request.POST.get('payment_sender_number') is not None:
+            order.payment_sender_number = request.POST.get('payment_sender_number', '').strip()
+        if request.POST.get('payment_method'):
+            order.payment_method = request.POST.get('payment_method')
+
         # Unified customer & delivery instruction
         instruction = request.POST.get('customer_notes') or request.POST.get('admin_notes')
         if instruction is not None:
@@ -768,6 +775,10 @@ def edit_order_customer(request, order_number):
         email = request.POST.get('customer_email', '').strip()
         notes = (request.POST.get('customer_notes') or request.POST.get('admin_notes') or '').strip()
         custom_fee = request.POST.get('delivery_fee', '').strip()
+        trx_id = request.POST.get('payment_trx_id')
+        sender_number = request.POST.get('payment_sender_number')
+        pay_method = request.POST.get('payment_method')
+        pay_status = request.POST.get('payment_status')
 
         if name:
             order.customer_name = name
@@ -782,6 +793,14 @@ def edit_order_customer(request, order_number):
         if notes is not None:
             order.customer_notes = notes
             order.admin_notes = notes
+        if trx_id is not None:
+            order.payment_trx_id = trx_id.strip()
+        if sender_number is not None:
+            order.payment_sender_number = sender_number.strip()
+        if pay_method:
+            order.payment_method = pay_method
+        if pay_status:
+            order.payment_status = pay_status
 
         if zone and zone in dict(Order.ZONE_CHOICES):
             order.delivery_zone = zone
@@ -797,7 +816,7 @@ def edit_order_customer(request, order_number):
 
         order.total_amount = order.subtotal + order.delivery_fee
         order.save()
-        messages.success(request, f"Customer & Delivery Address details updated for Order #{order.order_number}!")
+        messages.success(request, f"Customer & Payment details updated for Order #{order.order_number}!")
 
     return redirect('dashboard:order_detail', order_number=order.order_number)
 
@@ -1684,55 +1703,14 @@ def stock_manager(request):
     return render(request, 'dashboard/stock_manager.html', context)
 
 
-def sync_production_batches_from_stock_logs():
-    """
-    Auto-detects and backfills any historical restock/batch transactions from StockLog into ProductionBatch & BatchItem.
-    """
-    restock_logs = StockLog.objects.filter(
-        Q(log_type='RESTOCK') | Q(reference__icontains='Batch')
-    ).exclude(log_type__in=['RETURN_RESTOCKED', 'ORDER_CANCELLED']).order_by('created_at')
-
-    if not restock_logs.exists():
-        return
-
-    # Group by (reference, date)
-    batch_groups = {}
-    for l in restock_logs:
-        date_key = l.created_at.date()
-        ref = (l.reference or 'Production Batch').strip()
-        key = (ref, date_key)
-        if key not in batch_groups:
-            batch_groups[key] = []
-        batch_groups[key].append(l)
-
-    for (ref, date_key), items in batch_groups.items():
-        batch, created = ProductionBatch.objects.get_or_create(
-            batch_number=ref,
-            production_date=date_key,
-            defaults={
-                'notes': items[0].notes,
-                'created_by': items[0].created_by
-            }
-        )
-        for itm in items:
-            BatchItem.objects.get_or_create(
-                batch=batch,
-                product=itm.product,
-                defaults={
-                    'quantity': abs(itm.quantity_delta),
-                    'notes': itm.notes
-                }
-            )
-
-
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def production_batches_list(request):
     """
     Dedicated Production Batches Manager & Timeline.
     Shows every single batch produced (Batch #1, Batch #2, etc.), date prepared, total jars, flavors breakdown, and notes.
     """
-    # Auto-sync any existing server batches from StockLog
-    sync_production_batches_from_stock_logs()
+    # Clean up any phantom 'Reverted ...' batch entries created previously
+    ProductionBatch.objects.filter(batch_number__startswith='Reverted').delete()
 
     now = timezone.now()
     today = now.date()
@@ -2001,19 +1979,13 @@ def delete_production_batch(request, batch_id):
                         item.product.is_in_stock = False
                     item.product.save(update_fields=['stock_count', 'is_in_stock'])
 
-                    StockLog.objects.create(
-                        product=item.product,
-                        log_type='MANUAL_ADJUSTMENT',
-                        quantity_delta=-item.quantity,
-                        previous_stock=prev_stock,
-                        resulting_stock=new_stock,
-                        reference=f"Reverted {batch_name}",
-                        notes=f"Batch {batch_name} deleted - reverted {item.quantity} jars from stock.",
-                        created_by=request.user if request.user.is_authenticated else None
-                    )
+        # Clean up any StockLogs referencing this batch
+        StockLog.objects.filter(reference=batch_name).delete()
+        StockLog.objects.filter(reference__startswith=f"Reverted {batch_name}").delete()
+        StockLog.objects.filter(notes__icontains=batch_name).delete()
 
         batch.delete()
-        revert_msg = " এবং স্টক থেকে জার সংখ্যা বিয়োগ করা হয়েছে।" if revert_stock else "।"
+        revert_msg = " এবং স্টক থেকে জার সংখ্যা সমন্বয় করা হয়েছে।" if revert_stock else "।"
         messages.success(request, f'প্রোডাকশন ব্যাচ "{batch_name}" সফলভাবে মুছে ফেলা হয়েছে{revert_msg}')
         return redirect('dashboard:production_batches')
 
@@ -2790,6 +2762,10 @@ def expense_manager(request):
             try:
                 title = request.POST.get('title').strip()
                 category = request.POST.get('category', 'RAW_MATERIAL')
+                sub_category = request.POST.get('sub_category', '').strip()
+                quantity_raw = request.POST.get('quantity', '').strip()
+                quantity = float(quantity_raw) if quantity_raw else None
+                unit = request.POST.get('unit', 'pcs').strip()
                 amount = float(request.POST.get('amount'))
                 expense_date = request.POST.get('expense_date') or today
                 payment_method = request.POST.get('payment_method', 'CASH')
@@ -2799,6 +2775,9 @@ def expense_manager(request):
                 Expense.objects.create(
                     title=title,
                     category=category,
+                    sub_category=sub_category,
+                    quantity=quantity,
+                    unit=unit,
                     amount=amount,
                     expense_date=expense_date,
                     payment_method=payment_method,
@@ -2816,6 +2795,10 @@ def expense_manager(request):
             try:
                 expense.title = request.POST.get('title', expense.title).strip()
                 expense.category = request.POST.get('category', expense.category)
+                expense.sub_category = request.POST.get('sub_category', '').strip()
+                quantity_raw = request.POST.get('quantity', '').strip()
+                expense.quantity = float(quantity_raw) if quantity_raw else None
+                expense.unit = request.POST.get('unit', expense.unit or 'pcs').strip()
                 expense.amount = float(request.POST.get('amount', expense.amount))
                 if request.POST.get('expense_date'):
                     expense.expense_date = request.POST.get('expense_date')
@@ -2934,6 +2917,14 @@ def expense_manager(request):
     except Exception:
         elided_page_range = paginator.page_range
 
+    # Build parent categories & subcategory mapping for modal selections
+    parent_categories = ExpenseCategory.objects.filter(parent__isnull=True).prefetch_related('subcategories')
+    category_subcat_map = {}
+    for p_cat in parent_categories:
+        sub_list = [{'id': sub.id, 'name': sub.name, 'slug': sub.slug} for sub in p_cat.subcategories.all()]
+        category_subcat_map[p_cat.slug] = sub_list
+        category_subcat_map[p_cat.name] = sub_list
+
     context = {
         'expenses': page_obj,
         'page_obj': page_obj,
@@ -2941,6 +2932,9 @@ def expense_manager(request):
         'elided_page_range': elided_page_range,
         'per_page': per_page,
         'dynamic_categories': ExpenseCategory.objects.all(),
+        'parent_categories': parent_categories,
+        'category_subcat_map_json': json.dumps(category_subcat_map),
+        'unit_choices': Expense.UNIT_CHOICES,
         'category_choices': Expense.CATEGORY_CHOICES,
         'payment_choices': Expense.PAYMENT_CHOICES,
         'category_filter': category_filter,
@@ -3594,10 +3588,12 @@ def expense_categories_manager(request):
         # 1. Add Category
         if action == 'create_category':
             name = request.POST.get('name', '').strip()
+            parent_id = request.POST.get('parent_id')
+            parent = ExpenseCategory.objects.filter(id=parent_id).first() if parent_id else None
             icon = request.POST.get('icon', 'fa-receipt').strip()
             description = request.POST.get('description', '').strip()
             if name:
-                ExpenseCategory.objects.create(name=name, icon=icon, description=description)
+                ExpenseCategory.objects.create(name=name, parent=parent, icon=icon, description=description)
                 messages.success(request, f'Expense Category "{name}" created successfully!')
             else:
                 messages.error(request, 'Category name is required.')
@@ -3607,6 +3603,11 @@ def expense_categories_manager(request):
         elif action == 'edit_category':
             cat = get_object_or_404(ExpenseCategory, id=cat_id)
             cat.name = request.POST.get('name', cat.name).strip()
+            parent_id = request.POST.get('parent_id')
+            if parent_id and str(parent_id) != str(cat.id):
+                cat.parent = ExpenseCategory.objects.filter(id=parent_id).first()
+            elif not parent_id:
+                cat.parent = None
             cat.icon = request.POST.get('icon', cat.icon).strip()
             cat.description = request.POST.get('description', cat.description).strip()
             cat.save()
@@ -3625,8 +3626,7 @@ def expense_categories_manager(request):
             return redirect('dashboard:expense_categories')
 
     # Load categories with stats
-    # Load categories with stats using a single batch query
-    categories = ExpenseCategory.objects.all().order_by('name')
+    categories = ExpenseCategory.objects.all().select_related('parent').order_by('parent__name', 'name')
     exp_summary = Expense.objects.values('category').annotate(spent=Sum('amount'), count=Count('id'))
     exp_map = {row['category']: (row['spent'] or 0, row['count'] or 0) for row in exp_summary}
 
@@ -3645,21 +3645,26 @@ def expense_categories_manager(request):
             'id': cat.id,
             'slug': cat.slug,
             'name': cat.name,
+            'parent_id': cat.parent.id if cat.parent else None,
+            'parent_name': cat.parent.name if cat.parent else None,
             'icon': cat.icon or 'fa-receipt',
             'description': cat.description,
             'spent': spent,
             'count': count
         })
 
+    # Main/Parent Categories for selector dropdown
+    parent_categories = ExpenseCategory.objects.filter(parent__isnull=True).order_by('name')
+
     # Pagination (Default: 10 per page)
     page_number = request.GET.get('page', 1)
-    per_page = request.GET.get('per_page', 10)
+    per_page = request.GET.get('per_page', 20)
     try:
         per_page = int(per_page)
         if per_page not in [10, 20, 50, 100]:
-            per_page = 10
+            per_page = 20
     except (ValueError, TypeError):
-        per_page = 10
+        per_page = 20
 
     paginator = Paginator(category_stats, per_page)
     try:
@@ -3681,6 +3686,7 @@ def expense_categories_manager(request):
         'elided_page_range': elided_page_range,
         'per_page': per_page,
         'total_categories': paginator.count,
+        'parent_categories': parent_categories,
         'total_expenses_all': Expense.objects.aggregate(Sum('amount'))['amount__sum'] or 0,
     }
     return render(request, 'dashboard/expense_categories.html', context)

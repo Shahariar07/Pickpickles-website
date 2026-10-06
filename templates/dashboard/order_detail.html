@@ -230,6 +230,17 @@
                     </div>
                 </div>
 
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="block text-[11px] font-bold text-gray-700 mb-1">bKash / Trx ID</label>
+                        <input type="text" name="payment_trx_id" value="{{ order.payment_trx_id|default:'' }}" placeholder="e.g. 9BKT78291X" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold text-pink-700 focus:bg-white focus:ring-1 focus:ring-pink-500">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-gray-700 mb-1">bKash Sender Phone</label>
+                        <input type="tel" name="payment_sender_number" value="{{ order.payment_sender_number|default:'' }}" placeholder="017XXXXXXXX" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold text-gray-900 focus:bg-white focus:ring-1 focus:ring-brand-500">
+                    </div>
+                </div>
+
                 <div>
                     <label class="block text-[11px] font-bold text-gray-700 mb-1">Customer & Delivery Instruction</label>
                     <input type="text" name="customer_notes" value="{{ order.delivery_instruction }}" placeholder="Delivery & customer instruction..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs text-gray-900 focus:bg-white focus:ring-1 focus:ring-brand-500">
@@ -237,7 +248,7 @@
 
                 <div class="flex items-center justify-between gap-2 pt-1">
                     <button type="submit" class="flex-1 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs py-2 rounded-xl shadow-xs transition cursor-pointer">
-                        Update Status & Notes
+                        Update Status & Payment
                     </button>
                     {% if order.customer_phone %}
                     <a href="{{ order.whatsapp_shipping_instruction_url }}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-xl text-xs font-bold shadow-xs inline-flex items-center gap-1.5 transition" title="Send WhatsApp Pickle Storage Guidelines">
@@ -551,6 +562,63 @@
                     </div>
                 </div>
             </div>
+
+            <!-- 💳 PAYMENT & BKASH TRANSACTION DETAILS CARD -->
+            <div class="bg-white rounded-3xl p-4 sm:p-5 border-2 {% if order.payment_trx_id or 'BKASH' in order.payment_method %}border-pink-300 bg-gradient-to-br from-pink-50/50 via-white to-rose-50/30{% else %}border-gray-200 bg-gray-50/50{% endif %} space-y-3 text-xs shadow-xs">
+                <div class="flex items-center justify-between border-b border-gray-100 pb-2.5 flex-wrap gap-2">
+                    <div class="flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-xl bg-pink-600 text-white flex items-center justify-center font-black text-sm shadow-2xs">
+                            <i class="fa-solid fa-receipt"></i>
+                        </span>
+                        <div>
+                            <h4 class="font-display font-black text-xs sm:text-sm text-gray-900">Payment & Transaction Verification</h4>
+                            <p class="text-[10px] text-gray-500 font-medium">Method: <strong class="text-gray-800">{{ order.get_payment_method_display|default:order.payment_method }}</strong></p>
+                        </div>
+                    </div>
+                    <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded border {% if order.payment_status == 'PAID' %}bg-emerald-100 text-emerald-800 border-emerald-300{% elif order.payment_status == 'PENDING_VERIFICATION' %}bg-amber-100 text-amber-900 border-amber-300{% else %}bg-gray-100 text-gray-700 border-gray-300{% endif %}">
+                        {{ order.get_payment_status_display|default:order.payment_status }}
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <!-- bKash Transaction ID (TrxID) -->
+                    <div class="bg-white p-3 rounded-2xl border border-gray-200/90 shadow-2xs space-y-1">
+                        <span class="text-gray-400 font-bold block text-[10px] uppercase tracking-wider">bKash / MFS Transaction ID</span>
+                        {% if order.payment_trx_id %}
+                        <div class="flex items-center justify-between gap-1.5 pt-0.5">
+                            <strong class="font-mono text-sm sm:text-base font-black text-pink-700 select-all tracking-wider">{{ order.payment_trx_id }}</strong>
+                            <button type="button" onclick="navigator.clipboard.writeText('{{ order.payment_trx_id }}'); alert('Copied TrxID: {{ order.payment_trx_id }}');" class="text-[11px] font-bold text-pink-800 bg-pink-50 hover:bg-pink-100 border border-pink-200 px-2.5 py-1 rounded-lg transition cursor-pointer active:scale-95 shrink-0" title="Copy Transaction ID">
+                                <i class="fa-solid fa-copy"></i> Copy
+                            </button>
+                        </div>
+                        {% else %}
+                        <span class="text-gray-400 font-medium italic block pt-1">No Transaction ID provided</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- bKash Sender Phone -->
+                    <div class="bg-white p-3 rounded-2xl border border-gray-200/90 shadow-2xs space-y-1">
+                        <span class="text-gray-400 font-bold block text-[10px] uppercase tracking-wider">Sender bKash / Phone</span>
+                        {% if order.payment_sender_number %}
+                        <div class="flex items-center justify-between gap-1.5 pt-0.5">
+                            <strong class="font-mono text-sm sm:text-base font-black text-gray-900 select-all">{{ order.payment_sender_number }}</strong>
+                            <a href="tel:{{ order.payment_sender_number }}" class="text-[11px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-lg transition shrink-0" title="Call Sender">
+                                <i class="fa-solid fa-phone"></i> Call
+                            </a>
+                        </div>
+                        {% else %}
+                        <span class="text-gray-400 font-medium italic block pt-1">{{ order.customer_phone }} (Primary Phone)</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if order.bkash_payment_id %}
+                <div class="text-[11px] bg-white p-2.5 rounded-xl border border-gray-200 flex items-center justify-between">
+                    <span class="text-gray-500 font-medium">bKash Gateway ID:</span>
+                    <span class="font-mono font-bold text-gray-800">{{ order.bkash_payment_id }}</span>
+                </div>
+                {% endif %}
+            </div>
         </div>
 
     </div>
@@ -622,6 +690,43 @@
                 </div>
             </div>
 
+            <div class="bg-pink-50/60 p-3 rounded-2xl border border-pink-200/80 space-y-2.5">
+                <div class="flex items-center gap-1.5 text-xs font-black text-pink-900">
+                    <i class="fa-solid fa-receipt text-pink-600"></i>
+                    <span>Payment & bKash Information</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="font-bold text-gray-700 block mb-1">Payment Method</label>
+                        <select name="payment_method" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:ring-2 focus:ring-pink-500">
+                            <option value="COD" {% if order.payment_method == 'COD' %}selected{% endif %}>Cash on Delivery (COD)</option>
+                            <option value="BKASH" {% if order.payment_method == 'BKASH' or order.payment_method == 'BKASH_ONLINE' or order.payment_method == 'BKASH_MANUAL' %}selected{% endif %}>bKash</option>
+                            <option value="NAGAD" {% if order.payment_method == 'NAGAD' or order.payment_method == 'NAGAD_MANUAL' %}selected{% endif %}>Nagad</option>
+                            <option value="CARD" {% if order.payment_method == 'CARD' %}selected{% endif %}>Credit / Debit Card</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="font-bold text-gray-700 block mb-1">Payment Status</label>
+                        <select name="payment_status" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:ring-2 focus:ring-pink-500">
+                            <option value="UNPAID" {% if order.payment_status == 'UNPAID' %}selected{% endif %}>Unpaid</option>
+                            <option value="PAID" {% if order.payment_status == 'PAID' %}selected{% endif %}>Paid & Verified</option>
+                            <option value="PENDING_VERIFICATION" {% if order.payment_status == 'PENDING_VERIFICATION' %}selected{% endif %}>Pending Verification</option>
+                            <option value="REFUNDED" {% if order.payment_status == 'REFUNDED' %}selected{% endif %}>Refunded</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="font-bold text-gray-700 block mb-1">bKash / Trx ID</label>
+                        <input type="text" name="payment_trx_id" value="{{ order.payment_trx_id|default:'' }}" placeholder="e.g. 9BKT78291X" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-pink-700 font-mono font-bold focus:ring-2 focus:ring-pink-500">
+                    </div>
+                    <div>
+                        <label class="font-bold text-gray-700 block mb-1">Sender bKash / Phone</label>
+                        <input type="tel" name="payment_sender_number" value="{{ order.payment_sender_number|default:'' }}" placeholder="017XXXXXXXX" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-mono font-bold focus:ring-2 focus:ring-pink-500">
+                    </div>
+                </div>
+            </div>
+
             <div>
                 <label class="font-bold text-gray-700 block mb-1">Customer & Delivery Instruction</label>
                 <textarea name="customer_notes" rows="2" placeholder="e.g. Call before delivery, leave with guard..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500">{{ order.delivery_instruction }}</textarea>
@@ -631,7 +736,7 @@
                 <button type="button" onclick="closeEditCustomerModal()" class="px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold transition cursor-pointer">Cancel</button>
                 <button type="submit" class="px-5 py-2.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold transition shadow-md cursor-pointer flex items-center gap-1.5">
                     <i class="fa-solid fa-check"></i>
-                    <span>Save Address & Info</span>
+                    <span>Save Order & Payment Info</span>
                 </button>
             </div>
         </form>

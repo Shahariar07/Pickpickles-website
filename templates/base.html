@@ -382,16 +382,16 @@
         <div class="px-4 py-2.5 bg-emerald-50/70 border-b border-emerald-100" id="drawerFreeDeliveryBanner">
             <div class="flex items-center justify-between text-[11px] font-bold text-emerald-950 mb-1">
                 <span id="drawerFreeDeliveryMsg">
-                    {% if cart_total_items >= 4 %}
+                    {% if cart_total_items >= 4 or free_delivery_unlocked %}
                         🎉 <strong>FREE Delivery Unlocked!</strong>
                     {% else %}
-                        🚚 Add <strong><span id="drawerFreeDeliveryRemaining">{% if cart_total_items < 4 %}{{ 4|add:"-"|add:cart_total_items }}{% else %}0{% endif %}</span> more jar(s)</strong> for FREE Delivery!
+                        🚚 Add <strong><span id="drawerFreeDeliveryRemaining">{{ items_needed_for_free_delivery }}</span> more jar(s)</strong> for FREE Delivery!
                     {% endif %}
                 </span>
-                <span class="text-[10px] text-emerald-700 font-extrabold" id="drawerFreeDeliveryPercent">{% if cart_total_items >= 4 %}100%{% elif cart_total_items == 3 %}75%{% elif cart_total_items == 2 %}50%{% elif cart_total_items == 1 %}25%{% else %}0%{% endif %}</span>
+                <span class="text-[10px] text-emerald-700 font-extrabold" id="drawerFreeDeliveryPercent">{% if cart_total_items >= 4 or free_delivery_unlocked %}100%{% elif cart_total_items == 3 %}75%{% elif cart_total_items == 2 %}50%{% elif cart_total_items == 1 %}25%{% else %}0%{% endif %}</span>
             </div>
             <div class="w-full bg-emerald-200/60 rounded-full h-1.5 overflow-hidden">
-                <div id="drawerFreeDeliveryBar" class="bg-emerald-600 h-1.5 rounded-full transition-all duration-300" style="width: {% if cart_total_items >= 4 %}100{% elif cart_total_items == 3 %}75{% elif cart_total_items == 2 %}50{% elif cart_total_items == 1 %}25%{% else %}0{% endif %}%;"></div>
+                <div id="drawerFreeDeliveryBar" class="bg-emerald-600 h-1.5 rounded-full transition-all duration-300" style="width: {% if cart_total_items >= 4 or free_delivery_unlocked %}100{% elif cart_total_items == 3 %}75{% elif cart_total_items == 2 %}50{% elif cart_total_items == 1 %}25%{% else %}0{% endif %}%;"></div>
             </div>
         </div>
 

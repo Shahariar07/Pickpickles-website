@@ -48,6 +48,11 @@
                 <i class="fa-solid fa-pen-to-square text-brand-accent"></i>
                 <span>তথ্য এডিট করুন</span>
             </button>
+
+            <button type="button" onclick="openDeleteBatchModal()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-3.5 py-2.5 rounded-xl border border-rose-200 flex items-center gap-1.5 transition active:scale-95" title="Delete Batch">
+                <i class="fa-solid fa-trash-can"></i>
+                <span>ডিলিট করুন</span>
+            </button>
         </div>
     </div>
 
@@ -296,6 +301,44 @@
     </div>
 </div>
 
+<!-- ========================================== -->
+<!-- 🗑️ DELETE BATCH CONFIRMATION MODAL -->
+<!-- ========================================== -->
+<div id="deleteBatchModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs hidden animate-fade-in">
+    <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-rose-100 space-y-4">
+        <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-xl shrink-0">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div>
+                <h3 class="font-display font-black text-base text-gray-900">ব্যাচ মুছে ফেলবেন?</h3>
+                <p class="text-xs text-gray-500">আপনি <strong class="text-gray-900">{{ batch.batch_number }}</strong> ব্যাচটি ডিলিট করতে যাচ্ছেন।</p>
+            </div>
+        </div>
+
+        <form method="POST" id="deleteBatchForm" action="{% url 'dashboard:delete_production_batch' batch.id %}">
+            {% csrf_token %}
+            
+            <div class="bg-amber-50 p-3.5 rounded-xl border border-amber-200 text-xs space-y-2 mb-4">
+                <label class="flex items-start gap-2 cursor-pointer font-bold text-amber-950">
+                    <input type="checkbox" name="revert_stock" value="1" checked class="mt-0.5 rounded text-amber-600 focus:ring-amber-500">
+                    <span>এই ব্যাচের যোগ করা জারগুলো স্টক (Inventory) থেকে বিয়োগ (Revert) করুন।</span>
+                </label>
+                <p class="text-[11px] text-amber-800/80 font-normal pl-5">টিক দেওয়া থাকলে ইনভেন্টরি থেকে উৎপাদিত জার সংখ্যা মাইনাস হয়ে যাবে। আনটিক রাখলে স্টক অপরিবর্তিত থাকবে।</p>
+            </div>
+
+            <div class="flex items-center justify-end gap-2">
+                <button type="button" onclick="closeDeleteBatchModal()" class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 font-bold text-xs hover:bg-gray-100 transition">
+                    Cancel
+                </button>
+                <button type="submit" class="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-xs transition">
+                    হ্যাঁ, ডিলিট করুন
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
 function openEditBatchModal() {
     document.getElementById('editBatchModal').classList.remove('hidden');
@@ -303,6 +346,14 @@ function openEditBatchModal() {
 
 function closeEditBatchModal() {
     document.getElementById('editBatchModal').classList.add('hidden');
+}
+
+function openDeleteBatchModal() {
+    document.getElementById('deleteBatchModal').classList.remove('hidden');
+}
+
+function closeDeleteBatchModal() {
+    document.getElementById('deleteBatchModal').classList.add('hidden');
 }
 </script>
 {% endblock %}

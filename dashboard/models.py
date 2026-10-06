@@ -6,6 +6,7 @@ from django.utils import timezone
 class ExpenseCategory(models.Model):
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=120, unique=True, blank=True)
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='subcategories')
     icon = models.CharField(max_length=50, default='fa-receipt')
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -23,8 +24,18 @@ class ExpenseCategory(models.Model):
                 self.slug = f"cat-{int(time.time())}"
         super().save(*args, **kwargs)
 
-    def __str__(self):
+    @property
+    def is_parent(self):
+        return self.parent is None
+
+    @property
+    def full_name(self):
+        if self.parent:
+            return f"{self.parent.name} ➔ {self.name}"
         return self.name
+
+    def __str__(self):
+        return self.full_name
 
 
 class Expense(models.Model):
@@ -39,6 +50,17 @@ class Expense(models.Model):
         ('OTHER', 'Operational & Miscellaneous 📋'),
     ]
 
+    UNIT_CHOICES = [
+        ('kg', 'kg (কেজি)'),
+        ('gm', 'gm (গ্রাম)'),
+        ('pcs', 'pcs (পিস/সংখ্যা)'),
+        ('liter', 'liter (লিটার)'),
+        ('ml', 'ml (মিলি)'),
+        ('pack', 'pack (প্যাকেট)'),
+        ('box', 'box (বক্স/কার্টন)'),
+        ('other', 'other (অন্যান্য)'),
+    ]
+
     PAYMENT_CHOICES = [
         ('CASH', 'Cash'),
         ('BKASH', 'bKash'),
@@ -48,6 +70,9 @@ class Expense(models.Model):
 
     title = models.CharField(max_length=200, help_text="e.g. 200pcs 600g Glass Jars with Gold Lids")
     category = models.CharField(max_length=100, choices=CATEGORY_CHOICES, default='RAW_MATERIAL')
+    sub_category = models.CharField(max_length=100, blank=True, help_text="Sub-category (e.g. Cucumber, Carrot, Jar, Vinegar)")
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Quantity or weight purchased")
+    unit = models.CharField(max_length=20, choices=UNIT_CHOICES, default='pcs', blank=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2, help_text="Cost amount in BDT (৳)")
     expense_date = models.DateField(default=timezone.now)
     payment_method = models.CharField(max_length=20, choices=PAYMENT_CHOICES, default='CASH')
@@ -58,6 +83,21 @@ class Expense(models.Model):
 
     class Meta:
         ordering = ['-expense_date', '-created_at']
+
+    @property
+    def quantity_display(self):
+        if not self.quantity:
+            return ""
+        q_str = f"{self.quantity:f}".rstrip('0').rstrip('.')
+        return f"{q_str} {self.unit or ''}".strip()
+
+    @property
+    def unit_price_display(self):
+        if self.quantity and self.quantity > 0:
+            unit_cost = round(float(self.amount) / float(self.quantity), 2)
+            unit_cost_str = f"{unit_cost:f}".rstrip('0').rstrip('.')
+            return f"৳{unit_cost_str}/{self.unit or 'unit'}"
+        return None
 
     @property
     def category_display_name(self):

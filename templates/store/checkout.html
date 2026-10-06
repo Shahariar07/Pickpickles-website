@@ -367,14 +367,15 @@
 </div>
 
 <script>
-    const subtotalValue = parseFloat("{{ cart_subtotal }}");
+    const subtotalValue = parseFloat("{{ cart_subtotal|default:0 }}");
     const totalWeightGrams = parseInt("{{ total_weight_grams|default:600 }}");
-    const totalItemsCount = parseInt("{{ cart_total_items|default:1 }}");
-    const feeInside = parseFloat("{{ delivery_fee_inside|default:150 }}");
-    const feeOutside = parseFloat("{{ delivery_fee_outside|default:150 }}");
+    const totalItemsCount = parseInt("{{ cart_total_items|default:0 }}");
+    const isFreeDelivery = {% if free_delivery_unlocked %}true{% else %}totalItemsCount >= 4{% endif %};
+    const feeInside = isFreeDelivery ? 0.0 : 150.0;
+    const feeOutside = isFreeDelivery ? 0.0 : 150.0;
 
     function calculateDeliveryFee(weightGrams, zone) {
-        if (totalItemsCount >= 4) {
+        if (isFreeDelivery || totalItemsCount >= 4) {
             return 0.0;
         }
         if (zone === 'OUTSIDE_DHAKA') {

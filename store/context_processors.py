@@ -9,16 +9,37 @@ def _get_dynamic_static_version():
     """
     Returns the latest mtime of core static files so browsers instantly
     fetch updated CSS/JS whenever files are uploaded or modified,
-    without requiring manual hard refreshes or cache clearing.
+    without requiring manual hard refreshes or cache clearing by clients.
     """
     try:
         latest_mtime = 0
-        static_dirs = getattr(settings, 'STATICFILES_DIRS', [])
-        for sdir in static_dirs:
+        search_dirs = []
+        
+        # 1. Check STATICFILES_DIRS
+        for d in getattr(settings, 'STATICFILES_DIRS', []):
+            search_dirs.append(str(d))
+            
+        # 2. Check STATIC_ROOT
+        sroot = getattr(settings, 'STATIC_ROOT', None)
+        if sroot:
+            search_dirs.append(str(sroot))
+            
+        # 3. Check BASE_DIR static & staticfiles
+        bdir = getattr(settings, 'BASE_DIR', None)
+        if bdir:
+            search_dirs.append(os.path.join(str(bdir), 'static'))
+            search_dirs.append(os.path.join(str(bdir), 'staticfiles'))
+
+        for sdir in search_dirs:
+            if not sdir or not os.path.exists(sdir):
+                continue
             for fname in ['css/style.css', 'js/main.js']:
                 fpath = os.path.join(sdir, fname)
-                if os.path.exists(fpath):
-                    latest_mtime = max(latest_mtime, int(os.path.getmtime(fpath)))
+                if os.path.isfile(fpath):
+                    mtime = int(os.path.getmtime(fpath))
+                    if mtime > latest_mtime:
+                        latest_mtime = mtime
+                        
         if latest_mtime > 0:
             return latest_mtime
     except Exception:
@@ -52,6 +73,8 @@ def cart_context(request):
                 'cart': [],
                 'cart_total_items': 0,
                 'cart_subtotal': 0,
+                'free_delivery_unlocked': False,
+                'items_needed_for_free_delivery': 4,
                 'site_categories': [],
                 'STATIC_VERSION': static_version,
                 'META_PIXEL_ID': meta_pixel_id,
@@ -66,6 +89,8 @@ def cart_context(request):
             'cart': cart,
             'cart_total_items': len(cart),
             'cart_subtotal': cart.get_subtotal(),
+            'free_delivery_unlocked': cart.is_free_delivery(),
+            'items_needed_for_free_delivery': cart.items_needed_for_free_delivery(),
             'site_categories': Category.objects.all(),
             'STATIC_VERSION': static_version,
             'META_PIXEL_ID': meta_pixel_id,
@@ -80,6 +105,8 @@ def cart_context(request):
             'cart': [],
             'cart_total_items': 0,
             'cart_subtotal': 0,
+            'free_delivery_unlocked': False,
+            'items_needed_for_free_delivery': 4,
             'site_categories': [],
             'STATIC_VERSION': static_version,
             'META_PIXEL_ID': meta_pixel_id,
@@ -89,3 +116,4 @@ def cart_context(request):
             'auto_whatsapp_url': auto_whatsapp_url,
             'auto_whatsapp_order_number': auto_whatsapp_order_number,
         }
+
