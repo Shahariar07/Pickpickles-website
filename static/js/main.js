@@ -178,8 +178,19 @@ function renderCartDrawer(items, subtotal) {
     }
 }
 
-// AJAX Add To Cart (Silently adds item, updates badges & progress bar, does NOT open drawer automatically)
-async function ajaxAddToCart(productId, quantity = 1) {
+// AJAX Add To Cart (Silently adds item, updates badges & progress bar, provides button feedback, does NOT open drawer)
+async function ajaxAddToCart(productId, quantity = 1, btnEl = null) {
+    if (!btnEl && typeof event !== 'undefined' && event && event.currentTarget) {
+        btnEl = event.currentTarget;
+    }
+    
+    let originalBtnHTML = '';
+    if (btnEl) {
+        originalBtnHTML = btnEl.innerHTML;
+        btnEl.disabled = true;
+        btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i> <span>Adding...</span>';
+    }
+
     const formData = new FormData();
     formData.append('quantity', quantity);
     const token = getCsrfToken();
@@ -217,14 +228,28 @@ async function ajaxAddToCart(productId, quantity = 1) {
                 renderCartDrawer(data.items, data.cart_subtotal);
             }
             showToast(data.message || 'Added to your pickle jar bag!');
-            // NOTE: Drawer will not open automatically per user request.
+            
+            if (btnEl) {
+                btnEl.innerHTML = '<i class="fa-solid fa-check text-xs"></i> <span>Added!</span>';
+                setTimeout(() => {
+                    btnEl.innerHTML = originalBtnHTML;
+                    btnEl.disabled = false;
+                }, 1400);
+            }
         } else {
             showToast(data.error || 'Failed to add item to bag');
+            if (btnEl) {
+                btnEl.innerHTML = originalBtnHTML;
+                btnEl.disabled = false;
+            }
         }
     } catch (err) {
         console.error('Error adding to cart:', err);
-        showToast('Added to bag! Refreshing...');
-        window.location.reload();
+        showToast('Item added to jar bag!');
+        if (btnEl) {
+            btnEl.innerHTML = originalBtnHTML;
+            btnEl.disabled = false;
+        }
     }
 }
 

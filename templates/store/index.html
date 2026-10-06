@@ -268,7 +268,7 @@
 
                     <!-- Quick Add Button with AJAX or Stock Out button -->
                     {% if product.is_in_stock %}
-                    <button onclick="ajaxAddToCart({{ product.id }})" class="bg-[#15803d] hover:bg-[#166534] active:scale-95 text-white font-extrabold text-xs sm:text-sm px-4 py-3 rounded-xl shadow-md flex items-center gap-1.5 transition-all">
+                    <button onclick="ajaxAddToCart({{ product.id }}, 1, this)" class="bg-[#15803d] hover:bg-[#166534] active:scale-95 text-white font-extrabold text-xs sm:text-sm px-4 py-3 rounded-xl shadow-md flex items-center gap-1.5 transition-all">
                         <i class="fa-solid fa-plus text-xs"></i>
                         <span>Add to Bag</span>
                     </button>
