@@ -29,7 +29,7 @@
                     <h3 class="font-display font-extrabold text-base sm:text-lg text-gray-900">
                         <a href="{% url 'store:product_detail' item.product.slug %}" class="hover:text-brand-700">{{ item.product.name }}</a>
                     </h3>
-                    <p class="text-xs text-gray-500 mt-0.5">{{ item.product.jar_weight_grams }}g Glass Jar • ৳{{ item.price }} each</p>
+                    <p class="text-xs text-gray-500 mt-0.5">{{ item.product.jar_weight_grams }} g • ৳{{ item.price }} each</p>
                     <span class="inline-block mt-1 text-[10px] bg-brand-50 text-brand-700 font-bold px-2 py-0.5 rounded">{{ item.product.get_cut_style_display }}</span>
                 </div>
 

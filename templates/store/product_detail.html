@@ -30,8 +30,8 @@
                 </div>
 
                 <!-- Weight badge -->
-                <div class="absolute top-4 right-4 bg-brand-800 text-white px-3 py-1.5 rounded-full text-xs font-black shadow-md">
-                    {{ product.jar_weight_grams }}g Glass Jar
+                <div class="absolute top-4 right-4 bg-slate-950/90 backdrop-blur-md text-white px-3.5 py-1.5 rounded-full text-xs font-black shadow-md border border-white/20">
+                    {{ product.jar_weight_grams }} g
                 </div>
 
                 <!-- Refrigerate Immediately Badge -->
@@ -157,6 +157,14 @@
                     <div class="bg-white p-4 rounded-xl border-2 border-slate-200 shadow-xs">
                         <span class="text-[11px] font-black text-slate-500 uppercase tracking-wider block">Best Paired With</span>
                         <p class="text-xs font-bold text-slate-900 mt-0.5">{{ product.pairing_suggestions }}</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border-2 border-slate-200 shadow-xs">
+                        <span class="text-[11px] font-black text-slate-500 uppercase tracking-wider block">Net Weight</span>
+                        <p class="text-xs font-bold text-slate-900 mt-0.5">🫙 {{ product.jar_weight_grams }} g</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border-2 border-slate-200 shadow-xs">
+                        <span class="text-[11px] font-black text-slate-500 uppercase tracking-wider block">Crunch & Style</span>
+                        <p class="text-xs font-bold text-slate-900 mt-0.5">🥒 {{ product.get_cut_style_display }} (⭐ {{ product.crunch_rating }}/5 Crunch)</p>
                     </div>
                 </div>
 

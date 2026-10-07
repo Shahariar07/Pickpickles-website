@@ -45,7 +45,7 @@ class Product(models.Model):
     tagline = models.CharField(max_length=255, help_text="Catchy tagline, e.g., 'Classic Artisanal Deli Crunch with Garlic & Whole Spices'")
     description = models.TextField()
     flavor_profile = models.CharField(max_length=255, default="Garlic, Bay Leaf, Peppercorn, Mustard Seed")
-    pairing_suggestions = models.CharField(max_length=255, default="Smash Burgers, Fried Chicken, Shawarma, Beef Tehari, Biryani, Bhuna Khichuri, Daal-Rice")
+    pairing_suggestions = models.CharField(max_length=255, default="Smash Burgers, Fried Chicken, Shawarma, Beef Tehari, Biryani, Bhuna Khichuri, Steamed Rice")
     cut_style = models.CharField(max_length=20, choices=CUT_CHOICES, default='CHIPS')
     spice_level = models.CharField(max_length=20, choices=SPICE_CHOICES, default='MILD')
     crunch_rating = models.PositiveSmallIntegerField(default=5, help_text="Rating out of 5")
