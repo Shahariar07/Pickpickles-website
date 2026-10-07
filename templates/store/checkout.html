@@ -593,11 +593,17 @@
     // Meta Pixel InitiateCheckout Tracking
     {% if META_PIXEL_ID %}
     if (typeof fbq === 'function') {
-        fbq('track', 'InitiateCheckout', {
-            value: {{ cart_subtotal|default:0|floatformat:2 }},
-            currency: 'BDT',
-            num_items: {{ cart_total_items|default:0 }}
-        });
+        var cartSub = parseFloat("{{ cart_subtotal|default:0|stringformat:'.2f' }}") || 0;
+        var cartCount = parseInt("{{ cart_total_items|default:0 }}", 10) || 1;
+        if (cartSub > 0) {
+            fbq('track', 'InitiateCheckout', {
+                value: cartSub,
+                currency: 'BDT',
+                num_items: cartCount
+            });
+        } else {
+            fbq('track', 'InitiateCheckout');
+        }
     }
     {% endif %}
 </script>

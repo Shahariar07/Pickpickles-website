@@ -178,7 +178,7 @@ function renderCartDrawer(items, subtotal) {
     }
 }
 
-// AJAX Add To Cart (Silently adds item, updates badges & progress bar, provides button feedback, does NOT open drawer)
+// AJAX Add To Cart (Adds item smoothly, updates badges & progress bar, shows toast feedback, does NOT auto-open drawer)
 async function ajaxAddToCart(productId, quantity = 1, btnEl = null) {
     if (!btnEl && typeof event !== 'undefined' && event && event.currentTarget) {
         btnEl = event.currentTarget;
@@ -215,11 +215,14 @@ async function ajaxAddToCart(productId, quantity = 1, btnEl = null) {
         const data = await response.json();
         if (data.success) {
             if (typeof fbq === 'function' && data.added_product) {
+                const addPrice = parseFloat(data.added_product.price) || 0;
+                const addQty = parseInt(data.added_product.quantity, 10) || 1;
+                const totalVal = Math.round(addPrice * addQty * 100) / 100;
                 fbq('track', 'AddToCart', {
-                    content_name: data.added_product.name,
+                    content_name: String(data.added_product.name || ''),
                     content_ids: [String(data.added_product.id)],
                     content_type: 'product',
-                    value: (data.added_product.price * (data.added_product.quantity || 1)),
+                    value: totalVal,
                     currency: 'BDT'
                 });
             }

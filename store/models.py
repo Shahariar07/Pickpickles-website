@@ -65,7 +65,7 @@ class Product(models.Model):
     target_stock_level = models.PositiveIntegerField(default=50, help_text="Ideal target inventory quantity")
     
     ingredients = models.TextField(default="Fresh Cucumbers, Filtered Water, Pure Cane Vinegar, Himalayan Pink Salt, Fresh Garlic, Bay Leaf (Tejpata), Mustard Seeds, Coriander, Black Peppercorn.")
-    shelf_life = models.CharField(max_length=150, default="Always keep refrigerated for maximum crunch. Best enjoyed within 1 month.")
+    shelf_life = models.CharField(max_length=150, default="Always keep refrigerated for maximum crunch. Best enjoyed within 2 months.")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -761,11 +761,12 @@ class Order(models.Model):
         items_text = "\n".join(items_list) if items_list else "🥒 Pickpickles Homemade Jars"
 
         payment_line = "✅ *পেমেন্ট:* পরিশোধিত (Paid)" if self.payment_status == 'PAID' else f"💵 *ক্যাশ অন ডেলিভারি (COD কালেকশন):* ৳{self.total_amount}"
+        courier_name = "Pathao Courier" if (self.courier_provider == 'PATHAO' or self.pathao_consignment_id) and not self.steadfast_consignment_id else "Steadfast Courier"
 
         msg = f"""🥒 *Pickpickles — আপনার অর্ডার ডেলিভারিতে বের হয়েছে!* 🚚✨
 
 প্রিয় *{self.customer_name}*,
-আপনার Pickpickles অর্ডার *#{self.order_number}* প্রস্তুত করে Steadfast Courier-এর মাধ্যমে ডেলিভারির জন্য পাঠানো হয়েছে। খুব দ্রুতই ডেলিভারি রাইডার আপনার সাথে যোগাযোগ করে পার্সেলটি পৌঁছে দিবেন।
+আপনার Pickpickles অর্ডার *#{self.order_number}* প্রস্তুত করে {courier_name}-এর মাধ্যমে ডেলিভারির জন্য পাঠানো হয়েছে। খুব দ্রুতই ডেলিভারি রাইডার আপনার সাথে যোগাযোগ করে পার্সেলটি পৌঁছে দিবেন।
 
 📋 *অর্ডারের বিবরণ:*
 {items_text}
@@ -775,7 +776,7 @@ class Order(models.Model):
 🧊 *আচার সংরক্ষণ ও ব্যবহারের জরুরি নির্দেশিকা:*
 ━━━━━━━━━━━━━━━━━━━━
 ১. ❄️ *পার্সেল পেয়েই নরমাল ফ্রিজে রাখুন:*
-আমাদের আচার ১০০% তেলমুক্ত ও প্রাকৃতিক ভিনেগার ব্রাইনে তৈরি। আচারের সর্বোচ্চ ক্রাঞ্চিনেস ও ফ্রেশনেস বজায় রাখতে পার্সেলটি রিসিভ করার পর জারের ঢাকনা শক্ত করে সরাসরি নরমাল ফ্রিজে (৪°-৮°C) রাখুন। ফ্রিজে এটি ১ মাস পর্যন্ত একদম টাটকা ও মুচমুচে থাকবে।
+আমাদের আচার ১০০% তেলমুক্ত ও প্রাকৃতিক ভিনেগার ব্রাইনে তৈরি। আচারের সর্বোচ্চ ক্রাঞ্চিনেস ও ফ্রেশনেস বজায় রাখতে পার্সেলটি রিসিভ করার পর জারের ঢাকনা শক্ত করে সরাসরি নরমাল ফ্রিজে (৪°-৮°C) রাখুন। ফ্রিজে এটি ২ মাস পর্যন্ত একদম টাটকা ও মুচমুচে থাকবে।
 
 ২. 🥄 *পরিষ্কার ও শুকনো চামচ ব্যবহার করুন:*
 বয়ম থেকে আচার তোলার সময় সবসময় শুকনো ও পরিষ্কার চামচ/কাঁটাচামচ ব্যবহার করুন। কোনো অবস্থাতেই ভেজা হাত বা ভেজা চামচ ব্যবহার করবেন না যাতে ভিনেগার ব্রাইন ফ্রেশ থাকে।

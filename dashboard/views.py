@@ -1429,7 +1429,7 @@ def stock_manager(request):
                     ingredients=ingredients or "Fresh Local Cucumbers, Pure Cane Vinegar, Himalayan Pink Salt, Garlic, Spices.",
                     flavor_profile=flavor_profile or "Crisp, Tangy, Garlic & Whole Spices",
                     pairing_suggestions=pairing_suggestions or "Burgers, Sandwiches, Snacks",
-                    shelf_life=shelf_life or "Always keep refrigerated for maximum crunch. Best enjoyed within 1 month."
+                    shelf_life=shelf_life or "Always keep refrigerated for maximum crunch. Best enjoyed within 2 months."
                 )
                 if 'image' in request.FILES:
                     new_prod.image = request.FILES['image']
@@ -4145,12 +4145,12 @@ def jar_stickers_generator(request):
             'gross_weight_grams': getattr(p, 'gross_weight_grams', 850) or 850,
             'price_bdt': str(p.price_bdt),
             'ingredients': p.ingredients or 'Fresh Local Vegetables, Filtered Water, Pure Cane Vinegar, Himalayan Pink Salt, Fresh Garlic, Yellow Mustard Seeds, Black Peppercorns.',
-            'shelf_life': p.shelf_life or 'Always keep refrigerated for maximum crunch. Best enjoyed within 1 month.',
+            'shelf_life': p.shelf_life or 'Always keep refrigerated for maximum crunch. Best enjoyed within 2 months.',
             'image_url': p.primary_image_url if hasattr(p, 'primary_image_url') else (p.image.url if p.image else '/static/images/logo.png'),
         })
 
     today_str = timezone.now().strftime('%d %b %Y')
-    exp_str = (timezone.now() + datetime.timedelta(days=30)).strftime('%d %b %Y')
+    exp_str = (timezone.now() + datetime.timedelta(days=60)).strftime('%d %b %Y')
 
     context = {
         'products': products,

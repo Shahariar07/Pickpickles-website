@@ -178,6 +178,8 @@
 (function() {
     function fireMetaPurchase() {
         if (typeof fbq === 'function') {
+            var orderTotal = parseFloat("{{ order.total_amount|stringformat:'.2f' }}") || 0;
+            var orderItemsCount = parseInt("{{ order.items.count|default:1 }}", 10) || 1;
             fbq('track', 'Purchase', {
                 content_type: 'product',
                 content_ids: [{% for item in order.items.all %}'{{ item.product.id|default:item.product_name|escapejs }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
@@ -186,15 +188,15 @@
                     {
                         id: '{{ item.product.id|default:item.product_name|escapejs }}',
                         name: '{{ item.product_name|escapejs }}',
-                        quantity: {{ item.quantity }},
-                        item_price: {{ item.unit_price|floatformat:2 }}
+                        quantity: parseInt("{{ item.quantity }}", 10) || 1,
+                        item_price: parseFloat("{{ item.unit_price|stringformat:'.2f' }}") || 0
                     }{% if not forloop.last %},{% endif %}
                     {% endfor %}
                 ],
-                value: {{ order.total_amount|floatformat:2 }},
+                value: orderTotal,
                 currency: 'BDT',
                 order_id: '{{ order.order_number|escapejs }}',
-                num_items: {{ order.items.count|default:1 }}
+                num_items: orderItemsCount
             });
             console.log("✅ [Meta Pixel] Purchase event tracked for Order: {{ order.order_number }} | Total: ৳{{ order.total_amount }}");
         } else {

@@ -635,7 +635,7 @@
 
                 <div>
                     <label class="font-bold text-gray-700 block mb-1">Shelf Life / সংরক্ষণ</label>
-                    <input type="text" name="shelf_life" value="Always keep refrigerated for maximum crunch. Best enjoyed within 1 month." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
+                    <input type="text" name="shelf_life" value="Always keep refrigerated for maximum crunch. Best enjoyed within 2 months." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
                 </div>
 
                 <!-- Image Upload -->
@@ -1018,7 +1018,7 @@ function openEditModal(prod) {
     setVal('edit_stock_count', prod.stockCount || 0);
     setVal('edit_min_stock_threshold', prod.minStockThreshold || 15);
     setVal('edit_target_stock_level', prod.targetStockLevel || 50);
-    setVal('edit_shelf_life', prod.shelfLife || 'Always keep refrigerated for maximum crunch. Best enjoyed within 1 month.');
+    setVal('edit_shelf_life', prod.shelfLife || 'Always keep refrigerated for maximum crunch. Best enjoyed within 2 months.');
     setVal('edit_ingredients', prod.ingredients);
     setVal('edit_flavor_profile', prod.flavorProfile);
     setVal('edit_pairing_suggestions', prod.pairingSuggestions);

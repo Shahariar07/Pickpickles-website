@@ -346,6 +346,7 @@ class CartTests(TestCase):
         self.assertIn(order.order_number, msg)
         self.assertIn('Classic Garlic Spears x 2', msg)
         self.assertIn('নরমাল ফ্রিজে রাখুন', msg)
+        self.assertIn('২ মাস', msg)
         self.assertIn('শুকনো চামচ ব্যবহার করুন', msg)
         self.assertIn('ঠান্ডা ঠান্ডা পরিবেশন করুন', msg)
         self.assertIn('Steadfast Courier', msg)

@@ -171,7 +171,7 @@
                     </div>
                     <div>
                         <strong class="block text-cyan-950 font-black text-xs uppercase tracking-wider">❄️ REFRIGERATE IMMEDIATELY</strong>
-                        <span class="text-[11px] text-cyan-800 font-medium">Keep refrigerated upon delivery to lock in maximum crunch, zest, and freshness for up to 1 month.</span>
+                        <span class="text-[11px] text-cyan-800 font-medium">Keep refrigerated upon delivery to lock in maximum crunch, zest, and freshness for up to 2 months.</span>
                     </div>
                 </div>
             </div>
@@ -269,11 +269,12 @@ function adjustProductQty(delta) {
 // Meta Pixel ViewContent Tracking
 {% if META_PIXEL_ID %}
 if (typeof fbq === 'function') {
+    var prodPrice = parseFloat("{{ product.price_bdt|stringformat:'.2f' }}") || 0;
     fbq('track', 'ViewContent', {
         content_name: '{{ product.name|escapejs }}',
         content_ids: ['{{ product.id }}'],
         content_type: 'product',
-        value: {{ product.price_bdt|floatformat:2 }},
+        value: prodPrice,
         currency: 'BDT'
     });
 }

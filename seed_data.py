@@ -58,7 +58,7 @@ def seed():
             'is_in_stock': True,
             'stock_count': 50,
             'ingredients': 'Fresh Local Cucumbers, Filtered Water, Pure Cane Vinegar, Himalayan Pink Salt, Fresh Garlic Cloves, Dill Herbs, Bay Leaf, Yellow Mustard Seeds, Black Peppercorn.',
-            'shelf_life': 'Always keep refrigerated for maximum crunch. Best enjoyed within 1 month.'
+            'shelf_life': 'Always keep refrigerated for maximum crunch. Best enjoyed within 2 months.'
         },
         {
             'name': 'Pickled Mixed Veggies',
@@ -80,7 +80,7 @@ def seed():
             'is_in_stock': True,
             'stock_count': 50,
             'ingredients': 'Fresh Local Cucumbers, Sweet Carrots, Crisp Bell Peppers (Capsicum), Filtered Water, Pure Cane Vinegar, Himalayan Pink Salt, Brown Cane Sugar, Fresh Garlic Cloves, Yellow Mustard Seeds, Coriander, Black Peppercorn.',
-            'shelf_life': 'Always keep refrigerated for maximum crunch. Best enjoyed within 1 month.'
+            'shelf_life': 'Always keep refrigerated for maximum crunch. Best enjoyed within 2 months.'
         },
         {
             'name': 'Pickled Deshi Onions',
@@ -102,7 +102,7 @@ def seed():
             'is_in_stock': True,
             'stock_count': 50,
             'ingredients': 'Fresh Local Deshi Onions, Filtered Water, Pure Cane Vinegar, Himalayan Pink Salt, Fresh Garlic Cloves, Bay Leaf (Tejpata), Yellow Mustard Seeds, Black Peppercorn, Green Chili.',
-            'shelf_life': 'Always keep refrigerated for maximum crunch. Best enjoyed within 1 month.'
+            'shelf_life': 'Always keep refrigerated for maximum crunch. Best enjoyed within 2 months.'
         },
         {
             'name': 'Pickled Green Peppers',
@@ -124,7 +124,7 @@ def seed():
             'is_in_stock': True,
             'stock_count': 50,
             'ingredients': 'Fresh Local Green Chillies / Peppers, Filtered Water, Pure Cane Vinegar, Himalayan Pink Salt, Fresh Garlic Cloves, Bay Leaf (Tejpata), Yellow Mustard Seeds, Black Peppercorn.',
-            'shelf_life': 'Always keep refrigerated for maximum crunch. Best enjoyed within 1 month.'
+            'shelf_life': 'Always keep refrigerated for maximum crunch. Best enjoyed within 2 months.'
         },
         {
             'name': 'Pickled Beetroot',
@@ -146,7 +146,7 @@ def seed():
             'is_in_stock': True,
             'stock_count': 50,
             'ingredients': 'Fresh Local Beetroots, Filtered Water, Pure Cane Vinegar, Himalayan Pink Salt, Brown Cane Sugar, Fresh Garlic Cloves, Bay Leaf (Tejpata), Yellow Mustard Seeds, Black Peppercorn.',
-            'shelf_life': 'Always keep refrigerated for maximum crunch. Best enjoyed within 1 month.'
+            'shelf_life': 'Always keep refrigerated for maximum crunch. Best enjoyed within 2 months.'
         },
         {
             'name': 'Pickled Pineapple',
@@ -168,7 +168,7 @@ def seed():
             'is_in_stock': True,
             'stock_count': 50,
             'ingredients': 'Fresh Local Pineapples, Filtered Water, Pure Cane Vinegar, Himalayan Pink Salt, Brown Cane Sugar, Crushed Red Chili Flakes, Fresh Green Chillies, Yellow Mustard Seeds, Black Peppercorn.',
-            'shelf_life': 'Always keep refrigerated for maximum freshness. Best enjoyed within 1 month.'
+            'shelf_life': 'Always keep refrigerated for maximum freshness. Best enjoyed within 2 months.'
         },
         {
             'name': 'Pickled Ripe Mango',
@@ -190,7 +190,7 @@ def seed():
             'is_in_stock': True,
             'stock_count': 50,
             'ingredients': 'Fresh Golden Ripe Mangoes, Filtered Water, Pure Cane Vinegar, Himalayan Pink Salt, Brown Cane Sugar, Crushed Red Chili Flakes, Yellow Mustard Seeds, Black Peppercorn.',
-            'shelf_life': 'Always keep refrigerated for maximum freshness. Best enjoyed within 1 month.'
+            'shelf_life': 'Always keep refrigerated for maximum freshness. Best enjoyed within 2 months.'
         },
         {
             'name': 'Pickled Quail Eggs',
@@ -212,7 +212,7 @@ def seed():
             'is_in_stock': True,
             'stock_count': 50,
             'ingredients': 'Farm Fresh Quail Eggs, Filtered Water, Pure Cane Vinegar, Himalayan Pink Salt, Fresh Garlic Cloves, Yellow Mustard Seeds, Black Peppercorn, Red Chili Flakes.',
-            'shelf_life': 'Always keep refrigerated for maximum freshness. Best enjoyed within 1 month.'
+            'shelf_life': 'Always keep refrigerated for maximum freshness. Best enjoyed within 2 months.'
         },
         {
             'name': 'Pickled Bell Peppers',
@@ -234,7 +234,7 @@ def seed():
             'is_in_stock': True,
             'stock_count': 50,
             'ingredients': 'Fresh Bell Peppers (Capsicum), Filtered Water, Pure Cane Vinegar, Himalayan Pink Salt, Brown Cane Sugar, Fresh Garlic Cloves, Bay Leaf (Tejpata), Yellow Mustard Seeds, Black Peppercorn.',
-            'shelf_life': 'Always keep refrigerated for maximum crunch. Best enjoyed within 1 month.'
+            'shelf_life': 'Always keep refrigerated for maximum crunch. Best enjoyed within 2 months.'
         },
         {
             'name': 'Pickled Grapes',
@@ -256,7 +256,7 @@ def seed():
             'is_in_stock': True,
             'stock_count': 50,
             'ingredients': 'Fresh Seedless Green Grapes, Filtered Water, Pure Cane Vinegar, Himalayan Pink Salt, Brown Cane Sugar, Crushed Red Chili Flakes, Bay Leaf (Tejpata), Yellow Mustard Seeds, Black Peppercorn.',
-            'shelf_life': 'Always keep refrigerated for maximum freshness. Best enjoyed within 1 month.'
+            'shelf_life': 'Always keep refrigerated for maximum freshness. Best enjoyed within 2 months.'
         }
     ]
 

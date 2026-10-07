@@ -23,7 +23,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
     <!-- Tailwind Play CDN for utility classes + our custom styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -53,8 +52,9 @@
                     }
                 }
             }
-        }
+        };
     </script>
+    <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- Main Custom CSS with Auto Versioning (Cache Busting) -->
     <link rel="stylesheet" href="{% static 'css/style.css' %}?v={{ STATIC_VERSION }}">
@@ -271,7 +271,7 @@
                         </li>
                         <li class="flex items-center gap-2">
                             <i class="fa-solid fa-snowflake text-brand-accent"></i>
-                            <span>Keep Refrigerated (Up to 1 Month)</span>
+                            <span>Keep Refrigerated (Up to 2 Months)</span>
                         </li>
                         <li class="flex items-center gap-2">
                             <i class="fa-solid fa-money-bill-wave text-brand-accent"></i>
