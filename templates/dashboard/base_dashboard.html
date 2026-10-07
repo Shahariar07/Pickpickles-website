@@ -21,6 +21,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -41,9 +42,8 @@
                     }
                 }
             }
-        };
+        }
     </script>
-    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
 <body class="bg-gray-100 text-gray-800 font-sans antialiased h-full overflow-x-hidden">
@@ -61,9 +61,12 @@
                 <a href="{% url 'dashboard:index' %}" class="flex items-center gap-2 min-w-0 truncate">
                     <img src="{% static 'images/logo.png' %}" alt="Pickpickles Logo"
                         class="w-8 h-8 rounded-full object-cover border border-brand-400/40 shrink-0">
-                    <span
-                        class="font-display font-extrabold text-base sm:text-lg tracking-tight text-white truncate">PICK<span
-                            class="text-brand-accent">PICKLES</span></span>
+                    <div class="leading-none min-w-0 truncate">
+                        <span
+                            class="font-display font-extrabold text-base sm:text-lg tracking-tight text-white truncate block">PICK<span
+                                class="text-brand-accent">PICKLES</span></span>
+                        <span class="block text-[8px] sm:text-[9px] font-bold uppercase text-brand-accent tracking-wider mt-0.5">Homemade Product</span>
+                    </div>
                 </a>
             </div>
 
@@ -147,8 +150,7 @@
                             <span class="font-display font-extrabold text-xl tracking-tight text-white">PICK<span
                                     class="text-brand-accent">PICKLES</span></span>
                             <span
-                                class="block text-[10px] font-black uppercase text-brand-accent tracking-widest mt-1">Merchant
-                                Hub</span>
+                                class="block text-[10px] font-bold uppercase text-brand-accent tracking-wider mt-1">Homemade Product</span>
                         </div>
                     </a>
                     <button type="button" onclick="toggleSidebar()"
@@ -230,15 +232,6 @@
                                 <span>Pricing & Profitability</span>
                                 <span
                                     class="ml-auto px-1.5 py-0.5 text-[9px] font-black bg-amber-400/20 text-amber-300 rounded border border-amber-400/30">Smart</span>
-                            </a>
-
-                            <!-- Jar Stickers & Labels Studio -->
-                            <a href="{% url 'dashboard:jar_stickers' %}"
-                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'jar_stickers' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
-                                <i class="fa-solid fa-stamp text-amber-300 text-sm w-4 text-center"></i>
-                                <span>Bottle Stickers Studio</span>
-                                <span
-                                    class="ml-auto px-1.5 py-0.5 text-[9px] font-black bg-emerald-400/20 text-emerald-300 rounded border border-emerald-400/30">Print</span>
                             </a>
                         </nav>
                     </div>

@@ -45,7 +45,6 @@ urlpatterns = [
     path('api/customer-insights/', views.customer_insights_api, name='api_customer_insights'),
     path('blacklist/', views.blacklist_manager, name='blacklist_manager'),
     path('api/toggle-blacklist/', views.toggle_blacklist_ajax, name='api_toggle_blacklist'),
-    path('stickers/', views.jar_stickers_generator, name='jar_stickers'),
 ]
 
 

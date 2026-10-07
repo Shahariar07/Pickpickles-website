@@ -23,6 +23,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
     <!-- Tailwind Play CDN for utility classes + our custom styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -52,9 +53,8 @@
                     }
                 }
             }
-        };
+        }
     </script>
-    <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- Main Custom CSS with Auto Versioning (Cache Busting) -->
     <link rel="stylesheet" href="{% static 'css/style.css' %}?v={{ STATIC_VERSION }}">
@@ -217,8 +217,13 @@
                     <div class="flex items-center gap-2.5">
                         <img src="{% static 'images/logo.png' %}" alt="Pickpickles"
                             class="w-10 h-10 rounded-full object-cover border border-brand-500/40">
-                        <span class="font-display font-black text-2xl tracking-tight text-white">PICK<span
-                                class="text-brand-accent">PICKLES</span></span>
+                        <div>
+                            <span class="font-display font-black text-2xl tracking-tight text-white leading-none">PICK<span
+                                    class="text-brand-accent">PICKLES</span></span>
+                            <span class="block text-[10px] font-bold uppercase tracking-wider text-brand-accent mt-0.5">
+                                Homemade Product
+                            </span>
+                        </div>
                     </div>
                     <p class="text-sm text-gray-300 leading-relaxed">
                         100% Fresh, homemade vinegar-brined pickles in Bangladesh! Handcrafted with fresh cucumbers,
