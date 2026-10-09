@@ -752,55 +752,128 @@ class Order(models.Model):
 
     def get_whatsapp_shipping_instruction_message(self):
         """
-        Generates a beautifully formatted WhatsApp message with order dispatch details
-        and essential pickle storage guidelines (সংরক্ষণ নির্দেশিকা).
+        Generates a concise, polite & professional WhatsApp message with order dispatch details,
+        key storage tips, and general review options.
         """
         items_list = []
         for itm in self.items.all():
             items_list.append(f"🥒 {itm.product_name} x {itm.quantity}")
         items_text = "\n".join(items_list) if items_list else "🥒 Pickpickles Homemade Jars"
 
-        payment_line = "✅ *পেমেন্ট:* পরিশোধিত (Paid)" if self.payment_status == 'PAID' else f"💵 *ক্যাশ অন ডেলিভারি (COD কালেকশন):* ৳{self.total_amount}"
-        courier_name = "Pathao Courier" if (self.courier_provider == 'PATHAO' or self.pathao_consignment_id) and not self.steadfast_consignment_id else "Steadfast Courier"
+        payment_line = "✅ *পেমেন্ট:* পরিশোধিত (Paid)" if self.payment_status == 'PAID' else f"💵 *ক্যাশ অন ডেলিভারি (COD):* ৳{self.total_amount}"
 
-        msg = f"""🥒 *Pickpickles — আপনার অর্ডার ডেলিভারিতে বের হয়েছে!* 🚚✨
+        msg = f"""🥒 *Pickpickles — অর্ডার প্রেরণের আপডেট* 🚚✨
 
 প্রিয় *{self.customer_name}*,
-আপনার Pickpickles অর্ডার *#{self.order_number}* প্রস্তুত করে {courier_name}-এর মাধ্যমে ডেলিভারির জন্য পাঠানো হয়েছে। খুব দ্রুতই ডেলিভারি রাইডার আপনার সাথে যোগাযোগ করে পার্সেলটি পৌঁছে দিবেন।
 
-📋 *অর্ডারের বিবরণ:*
+আপনার Pickpickles অর্ডার *#{self.order_number}* যত্নসহকারে প্রস্তুত করে কুরিয়ারের মাধ্যমে আপনার ঠিকানায় পাঠিয়ে দেওয়া হয়েছে।
+
+📋 *অর্ডারের সারসংক্ষেপ:*
 {items_text}
 {payment_line}
 
-━━━━━━━━━━━━━━━━━━━━
-🧊 *আচার সংরক্ষণ ও ব্যবহারের জরুরি নির্দেশিকা:*
-━━━━━━━━━━━━━━━━━━━━
-১. ❄️ *পার্সেল পেয়েই নরমাল ফ্রিজে রাখুন:*
-আমাদের আচার ১০০% তেলমুক্ত ও প্রাকৃতিক ভিনেগার ব্রাইনে তৈরি। আচারের সর্বোচ্চ ক্রাঞ্চিনেস ও ফ্রেশনেস বজায় রাখতে পার্সেলটি রিসিভ করার পর জারের ঢাকনা শক্ত করে সরাসরি নরমাল ফ্রিজে (৪°-৮°C) রাখুন। ফ্রিজে এটি ২ মাস পর্যন্ত একদম টাটকা ও মুচমুচে থাকবে।
+🧊 *সংরক্ষণের বিশেষ অনুরোধ:*
+• পার্সেলটি হাতে পাওয়া মাত্রই নরমাল ফ্রিজে রেখে দিন (সর্বোচ্চ ফ্রেশনেস ও ক্রাঞ্চিনেসের জন্য)।
+• জার থেকে নেওয়ার সময় সবসময় পরিষ্কার ও শুকনো চামচ ব্যবহার করুন।
 
-২. 🥄 *পরিষ্কার ও শুকনো চামচ ব্যবহার করুন:*
-বয়ম থেকে আচার তোলার সময় সবসময় শুকনো ও পরিষ্কার চামচ/কাঁটাচামচ ব্যবহার করুন। কোনো অবস্থাতেই ভেজা হাত বা ভেজা চামচ ব্যবহার করবেন না যাতে ভিনেগার ব্রাইন ফ্রেশ থাকে।
+⭐ *আপনার মূল্যবান মতামত (Review & Feedback):*
+পিকল টেস্ট করার পর আপনার অভিজ্ঞতা ও রিভিউ আমাদের সাথে শেয়ার করতে পারেন:
+• 💬 এই মেসেজে সরাসরি রিপ্লাই দিয়ে রেটিং বা মতামত জানাতে পারেন
+• 🌐 ওয়েবসাইটে: https://pickpickles.xyz
+• 📘 ফেসবুক পেজে: https://facebook.com/pickpickles07
 
-৩. 🥗 *ঠান্ডা ঠান্ডা পরিবেশন করুন:*
-ফ্রিজ থেকে বের করে ঠান্ডা পরিবেশন করলে সর্বোচ্চ ক্রাঞ্চি ও লোভনীয় স্বাদ উপভোগ করতে পারবেন।
+আপনার সন্তুষ্টিই আমাদের প্রধান লক্ষ্য। 💚
 
-৪. 🔒 *ব্যবহার শেষে মুখ শক্ত করে বন্ধ রাখুন:*
-খাওয়ার পর জারের মুখ শক্ত করে আটকে আবার ফ্রিজে রেখে দিন।
-
-যে কোনো তথ্যে বা সহায়তায় আমাদের মেসেজ দিতে পারেন। Pickpickles-এর সাথে থাকার জন্য ধন্যবাদ! 💚
-🌐 *Website:* https://pickpickles.xyz"""
+আন্তরিক ধন্যবাদ,
+*টিম Pickpickles*
+🌐 pickpickles.xyz | 📞 01794271523"""
         return msg.strip()
 
     @property
     def whatsapp_shipping_instruction_url(self):
         """
-        Generates direct WhatsApp API web link to send storage guidelines to customer.
+        Generates direct WhatsApp API web link to send storage guidelines and feedback request to customer.
         """
         import urllib.parse
         phone = self.whatsapp_phone_international
         if not phone:
             return ''
         text = self.get_whatsapp_shipping_instruction_message()
+        encoded_text = urllib.parse.quote(text)
+        return f"https://api.whatsapp.com/send?phone={phone}&text={encoded_text}"
+
+    def get_whatsapp_feedback_message(self):
+        """
+        Generates an elegant, respectful feedback request message with general review options.
+        """
+        msg = f"""🥒 *Pickpickles — আপনার অনুভূতি ও মতামত* ⭐✨
+
+প্রিয় *{self.customer_name}*,
+
+আশা করি ভালো আছেন। Pickpickles থেকে নেওয়া আমাদের হোমমেড পিকল আশা করি সঠিকভাবে হাতে পেয়েছেন এবং উপভোগ করছেন।
+
+আমাদের পিকলের স্বাদ ও সার্ভিস সম্পর্কে আপনার কেমন অভিজ্ঞতা হলো? যেকোনো একটি মাধ্যমে আপনার মূল্যবান রিভিউ জানাতে পারেন:
+
+• 💬 এই মেসেজে সরাসরি রিপ্লাই দিয়ে
+• 🌐 আমাদের ওয়েবসাইটে: https://pickpickles.xyz
+• 📘 আমাদের ফেসবুক পেজে: https://facebook.com/pickpickles07
+
+একটি ক্ষুদ্র উদ্যোগ হিসেবে আপনাদের প্রতিটি রিভিউ আমাদের অনুপ্রাণিত করে। 💚
+
+আন্তরিক ধন্যবাদ,
+*টিম Pickpickles*
+🌐 pickpickles.xyz"""
+        return msg.strip()
+
+    @property
+    def whatsapp_feedback_url(self):
+        """
+        Direct WhatsApp link to request customer review & feedback.
+        """
+        import urllib.parse
+        phone = self.whatsapp_phone_international
+        if not phone:
+            return ''
+        text = self.get_whatsapp_feedback_message()
+        encoded_text = urllib.parse.quote(text)
+        return f"https://api.whatsapp.com/send?phone={phone}&text={encoded_text}"
+
+    def get_whatsapp_1month_review_request_message(self):
+        """
+        Generates a polite, highly professional 1-month follow-up message requesting general review.
+        """
+        msg = f"""🥒 *Pickpickles — আপনার মূল্যবান মতামত* ⭐✨
+
+প্রিয় *{self.customer_name}*,
+
+আশা করি ভালো আছেন। কিছুদিন আগে আপনি Pickpickles থেকে আমাদের হোমমেড পিকল গ্রহণ করেছিলেন। আশা করি পিকলের স্বাদ ও ক্রাঞ্চিনেস আপনি উপভোগ করেছেন! 💚
+
+আমাদের পিকলের মান ও সার্ভিস সম্পর্কে আপনার সাধারণ অভিজ্ঞতা ও মূল্যবান রিভিউ আমাদের সেবাকে আরও নিখুঁত করতে সাহায্য করবে।
+
+মাত্র ১ মিনিট সময় দিয়ে যেকোনো মাধ্যমে আপনার রিভিউ জানাতে পারেন:
+
+🌟 *রিভিউ দেওয়ার সহজ মাধ্যম:*
+• 💬 *সরাসরি মেসেজে:* এই মেসেজে রিপ্লাই দিয়ে আপনার অনুভূতি বা রেটিং (১ থেকে ৫ ⭐) লিখে জানাতে পারেন।
+• 🌐 *আমাদের ওয়েবসাইটে:* https://pickpickles.xyz
+• 📘 *আমাদের ফেসবুক পেজে:* https://facebook.com/pickpickles07
+
+Pickpickles-এর সাথে থাকার জন্য আন্তরিক ধন্যবাদ।
+
+শুভকামনায়,
+*টিম Pickpickles*
+🌐 pickpickles.xyz | 📞 01794271523"""
+        return msg.strip()
+
+    @property
+    def whatsapp_1month_review_request_url(self):
+        """
+        Direct WhatsApp link to send 1-month review request message.
+        """
+        import urllib.parse
+        phone = self.whatsapp_phone_international
+        if not phone:
+            return ''
+        text = self.get_whatsapp_1month_review_request_message()
         encoded_text = urllib.parse.quote(text)
         return f"https://api.whatsapp.com/send?phone={phone}&text={encoded_text}"
 
@@ -904,7 +977,7 @@ class OrderItem(models.Model):
 
 
 class Review(models.Model):
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='reviews')
+    product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviews')
     reviewer_name = models.CharField(max_length=100)
     reviewer_location = models.CharField(max_length=100, default="Dhaka, BD")
     rating = models.PositiveSmallIntegerField(default=5)
@@ -916,4 +989,5 @@ class Review(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.reviewer_name} on {self.product.name} ({self.rating}★)"
+        prod = f" on {self.product.name}" if self.product else ""
+        return f"{self.reviewer_name}{prod} ({self.rating}★)"

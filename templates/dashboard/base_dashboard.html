@@ -275,6 +275,14 @@
                                 <span>Customer Reviews</span>
                             </a>
 
+                            <!-- Feedback Reminders (1+ Month Old) -->
+                            <a href="{% url 'dashboard:feedback_reminders' %}"
+                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'feedback_reminders' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-amber-200/90 hover:text-white hover:bg-brand-800{% endif %}">
+                                <i class="fa-solid fa-comments text-amber-400 text-sm w-4 text-center"></i>
+                                <span>Feedback Reminders</span>
+                                <span class="ml-auto px-1.5 py-0.2 text-[9px] font-black bg-amber-500/20 text-amber-300 rounded border border-amber-400/30">1M+</span>
+                            </a>
+
                             <!-- Blacklist & Anti-Fraud Security -->
                             <a href="{% url 'dashboard:blacklist_manager' %}"
                                 class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'blacklist_manager' %}bg-rose-800 text-white shadow-md shadow-rose-800/40 font-extrabold{% else %}text-rose-200/90 hover:text-white hover:bg-rose-900/30{% endif %}">

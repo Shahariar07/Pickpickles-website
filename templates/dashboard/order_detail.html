@@ -289,8 +289,11 @@
                             <i class="fa-brands fa-whatsapp text-sm text-emerald-600"></i> <span>Chat</span>
                         </a>
                         {% if order.customer_phone %}
-                        <a href="{{ order.whatsapp_shipping_instruction_url }}" target="_blank" class="text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-2.5 py-1 rounded-lg border border-emerald-300 font-black inline-flex items-center gap-1.5" title="Send Pickle Storage Instructions on WhatsApp">
-                            <i class="fa-brands fa-whatsapp text-sm text-emerald-700"></i> <span>সংরক্ষণ নির্দেশিকা</span>
+                        <a href="{{ order.whatsapp_shipping_instruction_url }}" target="_blank" class="text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-2.5 py-1 rounded-lg border border-emerald-300 font-bold inline-flex items-center gap-1.5" title="Send WhatsApp Update & Storage Guidelines">
+                            <i class="fa-brands fa-whatsapp text-sm text-emerald-700"></i> <span>মেসেজ ও টিপস</span>
+                        </a>
+                        <a href="{{ order.whatsapp_feedback_url }}" target="_blank" class="text-amber-900 bg-amber-100 hover:bg-amber-200 px-2.5 py-1 rounded-lg border border-amber-300 font-bold inline-flex items-center gap-1.5" title="Ask Customer For Feedback / Review on WhatsApp">
+                            <i class="fa-solid fa-star text-amber-600 text-xs"></i> <span>ফিডব্যাক চান</span>
                         </a>
                         <button type="button" onclick="toggleBlacklistOrderDetail('{{ order.customer_phone }}', '{{ order.customer_name|escapejs }}')" id="orderDetailBlacklistBtn" class="{% if order.customer_score.risk_level == 'BLACKLISTED' %}bg-rose-700 hover:bg-rose-800 text-white font-black{% else %}bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold border border-rose-300{% endif %} px-2.5 py-1 rounded-lg text-xs inline-flex items-center gap-1 cursor-pointer transition shadow-2xs" title="Block or unblock this phone number from placing COD orders">
                             <i class="fa-solid fa-ban text-[10px]"></i> <span id="orderDetailBlacklistTxt">{% if order.customer_score.risk_level == 'BLACKLISTED' %}Unblock Phone{% else %}Block Phone{% endif %}</span>

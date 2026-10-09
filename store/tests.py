@@ -345,14 +345,23 @@ class CartTests(TestCase):
         self.assertIn('Mahmudul Hasan', msg)
         self.assertIn(order.order_number, msg)
         self.assertIn('Classic Garlic Spears x 2', msg)
-        self.assertIn('নরমাল ফ্রিজে রাখুন', msg)
-        self.assertIn('২ মাস', msg)
+        self.assertIn('নরমাল ফ্রিজে', msg)
         self.assertIn('শুকনো চামচ ব্যবহার করুন', msg)
-        self.assertIn('ঠান্ডা ঠান্ডা পরিবেশন করুন', msg)
-        self.assertIn('Steadfast Courier', msg)
-        self.assertIn('https://pickpickles.xyz', msg)
+        self.assertIn('Feedback', msg)
+        self.assertIn('কুরিয়ারের মাধ্যমে', msg)
+        self.assertIn('pickpickles.xyz', msg)
 
         wa_url = order.whatsapp_shipping_instruction_url
         self.assertTrue(wa_url.startswith('https://api.whatsapp.com/send?phone=8801712345678&text='))
+
+        fb_msg = order.get_whatsapp_feedback_message()
+        self.assertIn('Mahmudul Hasan', fb_msg)
+        self.assertIn('মতামত', fb_msg)
+        self.assertTrue(order.whatsapp_feedback_url.startswith('https://api.whatsapp.com/send?phone=8801712345678&text='))
+
+        month_msg = order.get_whatsapp_1month_review_request_message()
+        self.assertIn('Mahmudul Hasan', month_msg)
+        self.assertIn('ফেসবুক পেজে', month_msg)
+        self.assertIn('pickpickles.xyz', month_msg)
 
 

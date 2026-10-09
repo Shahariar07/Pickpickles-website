@@ -188,77 +188,53 @@
 
     </div>
 
-    <!-- Customer Reviews & Feedback Section -->
+    <!-- Customer Reviews & Wall of Love Link -->
     <div class="mt-16 pt-12 border-t border-gray-200">
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            
-            <!-- Left: Reviews List -->
-            <div class="lg:col-span-7 space-y-6">
-                <div class="flex items-center justify-between">
-                    <h3 class="font-display font-black text-2xl text-gray-900">
-                        Customer Reviews ({{ reviews|length }})
-                    </h3>
-                </div>
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+            <div>
+                <span class="text-xs font-black text-brand-700 uppercase tracking-widest block mb-1">Customer Feedback</span>
+                <h3 class="font-display font-black text-2xl md:text-3xl text-gray-900">
+                    Customer Reviews ({{ reviews|length }})
+                </h3>
+            </div>
+            <div class="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+                <a href="{% url 'store:reviews' %}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-50 hover:bg-brand-100 text-brand-900 border border-brand-200 text-xs font-bold transition shadow-xs">
+                    <span>🥒</span> Wall of Love (All Reviews)
+                </a>
+                <a href="{% url 'store:reviews' %}?product={{ product.id }}#write-review" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#092d18] hover:bg-[#072413] text-white text-xs font-bold transition shadow-sm">
+                    <i class="fa-solid fa-pen-nib text-amber-400"></i> Write a Review
+                </a>
+            </div>
+        </div>
 
-                <div class="space-y-4">
-                    {% for r in reviews %}
-                    <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs">
-                        <div class="flex items-center justify-between mb-2">
-                            <div>
-                                <span class="font-bold text-sm text-gray-900">{{ r.reviewer_name }}</span>
-                                <span class="text-xs text-gray-400 ml-2">{{ r.reviewer_location }}</span>
-                            </div>
-                            <div class="text-amber-400 text-xs">
-                                {% for i in "12345"|slice:r.rating %}⭐{% endfor %}
-                            </div>
-                        </div>
-                        <p class="text-xs sm:text-sm text-gray-700 leading-relaxed">{{ r.comment }}</p>
-                        <span class="text-[10px] text-gray-400 block mt-2">{{ r.created_at|date:"M d, Y" }}</span>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {% for r in reviews %}
+            <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs hover:shadow-md transition">
+                <div class="flex items-center justify-between mb-2.5">
+                    <div>
+                        <span class="font-bold text-sm text-gray-900 block">{{ r.reviewer_name }}</span>
+                        <span class="text-[11px] text-gray-400">📍 {{ r.reviewer_location|default:"Verified Customer" }}</span>
                     </div>
-                    {% empty %}
-                    <p class="text-sm text-gray-500 py-4">No reviews yet for this flavor. Be the first to share your crunch experience!</p>
-                    {% endfor %}
+                    <div class="text-amber-400 text-xs font-bold">
+                        {% for i in "12345"|slice:r.rating %}⭐{% endfor %}
+                    </div>
+                </div>
+                <p class="text-xs sm:text-sm text-gray-700 leading-relaxed italic">"{{ r.comment }}"</p>
+                <div class="mt-3 pt-2.5 border-t border-gray-100 flex items-center justify-between text-[10px] text-gray-400">
+                    <span>{{ r.created_at|date:"M d, Y" }}</span>
+                    <span class="text-emerald-700 font-bold">Verified Crunch</span>
                 </div>
             </div>
-
-            <!-- Right: Submit Review Form -->
-            <div class="lg:col-span-5 bg-brand-50/60 p-6 rounded-3xl border border-brand-200">
-                <h4 class="font-display font-bold text-lg text-brand-900 mb-1">Leave a Review</h4>
-                <p class="text-xs text-gray-600 mb-4">Did you enjoy the snap and zest? Let other pickle fans know!</p>
-                
-                <form method="POST" class="space-y-3.5">
-                    {% csrf_token %}
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">Your Name</label>
-                        {{ review_form.reviewer_name }}
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">Your Location (e.g. Uttara, Dhaka)</label>
-                        {{ review_form.reviewer_location }}
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">Crunch & Flavor Rating</label>
-                        {{ review_form.rating }}
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">Your Thoughts / Burger Pairing</label>
-                        {{ review_form.comment }}
-                    </div>
-
-                    <!-- Optional Cloudflare Turnstile Smart Protection -->
-                    {% if CLOUDFLARE_TURNSTILE_SITE_KEY %}
-                    <div class="flex justify-center my-2">
-                        <div class="cf-turnstile" data-sitekey="{{ CLOUDFLARE_TURNSTILE_SITE_KEY }}" data-action="review" data-theme="light"></div>
-                    </div>
-                    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-                    {% endif %}
-
-                    <button type="submit" class="w-full bg-brand-700 hover:bg-brand-800 text-white text-xs font-bold py-3 px-4 rounded-xl shadow-md transition">
-                        Submit My Review
-                    </button>
-                </form>
+            {% empty %}
+            <div class="col-span-full bg-brand-50/50 p-8 rounded-3xl border border-brand-200 text-center">
+                <span class="text-4xl block mb-2">🥒</span>
+                <h4 class="font-display font-bold text-base text-brand-950 mb-1">No reviews yet for {{ product.name }}</h4>
+                <p class="text-xs text-gray-600 mb-4 max-w-md mx-auto">Be the first to share your crunch experience, or check out our full customer review wall!</p>
+                <a href="{% url 'store:reviews' %}?product={{ product.id }}#write-review" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#092d18] hover:bg-[#072413] text-white text-xs font-bold transition shadow-sm">
+                    <i class="fa-solid fa-pen-nib text-amber-400"></i> Write a Review
+                </a>
             </div>
-
+            {% endfor %}
         </div>
     </div>
 

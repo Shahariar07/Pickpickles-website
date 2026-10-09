@@ -8,6 +8,7 @@ from django.utils import timezone
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from .models import Product, Category, Order, OrderItem, Review
 from .cart import Cart
 from .forms import CheckoutForm, ReviewForm
@@ -77,8 +78,7 @@ def index(request):
 def product_detail(request, slug):
     product = get_object_or_404(Product, slug=slug)
     related_products = Product.objects.exclude(id=product.id)[:3]
-    reviews = product.reviews.filter(is_approved=True)
-    review_form = ReviewForm()
+    reviews = product.reviews.filter(is_approved=True).order_by('-created_at')
 
     best_seller = Product.objects.annotate(
         total_sold=Coalesce(
@@ -93,31 +93,86 @@ def product_detail(request, slug):
 
     is_best_seller = (best_seller and best_seller.id == product.id)
 
-    if request.method == 'POST':
-        # Cloudflare Turnstile Bot Protection
-        from store.security import verify_cloudflare_turnstile
-        is_turnstile_valid, cf_err = verify_cloudflare_turnstile(request, expected_action="review")
-        if not is_turnstile_valid:
-            messages.error(request, cf_err or "Please complete the Cloudflare security verification.")
-            return redirect('store:product_detail', slug=slug)
-
-        review_form = ReviewForm(request.POST)
-        if review_form.is_valid():
-            new_review = review_form.save(commit=False)
-            new_review.product = product
-            new_review.save()
-            messages.success(request, 'Thank you! Your pickle review has been posted.')
-            return redirect('store:product_detail', slug=slug)
-
     context = {
         'product': product,
         'is_best_seller': is_best_seller,
         'best_seller': best_seller,
         'related_products': related_products,
         'reviews': reviews,
-        'review_form': review_form,
     }
     return render(request, 'store/product_detail.html', context)
+
+
+def reviews_view(request):
+    """
+    Dedicated public Reviews / Wall of Love page.
+    Displays all approved customer reviews with overall ratings and a quick review submission form.
+    """
+    reviews = Review.objects.filter(is_approved=True).select_related('product').order_by('-created_at')
+    total_reviews_count = reviews.count()
+    
+    avg_rating = 5.0
+    if total_reviews_count > 0:
+        total_stars = sum(r.rating for r in reviews)
+        avg_rating = round(total_stars / total_reviews_count, 1)
+
+    five_star_count = reviews.filter(rating=5).count()
+    five_star_pct = round((five_star_count / total_reviews_count) * 100) if total_reviews_count > 0 else 100
+
+    initial_data = {}
+    selected_prod_id = request.GET.get('product')
+    if selected_prod_id and selected_prod_id.isdigit():
+        initial_data['product'] = int(selected_prod_id)
+
+    review_form = ReviewForm(initial=initial_data)
+
+    if request.method == 'POST':
+        # Cloudflare Turnstile Bot Protection
+        from store.security import verify_cloudflare_turnstile
+        is_turnstile_valid, cf_err = verify_cloudflare_turnstile(request, expected_action="review")
+        if not is_turnstile_valid:
+            messages.error(request, cf_err or "Please complete the Cloudflare security verification.")
+            return redirect('store:reviews')
+
+        review_form = ReviewForm(request.POST)
+        if review_form.is_valid():
+            new_rev = review_form.save(commit=False)
+            # Moderation Protection: New public reviews require admin approval before going live
+            new_rev.is_approved = False
+            new_rev.save()
+            messages.success(request, 'Thank you! Your review has been submitted and will appear on the Wall of Love upon verification. 🥒✨')
+            return redirect('store:reviews')
+        else:
+            messages.error(request, 'Please check your review form details and try again.')
+
+    # Pagination (12 reviews per page)
+    paginator = Paginator(reviews, 12)
+    page_number = request.GET.get('page', 1)
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    try:
+        elided_page_range = paginator.get_elided_page_range(number=page_obj.number, on_each_side=2, on_ends=1)
+    except Exception:
+        elided_page_range = paginator.page_range
+
+    context = {
+        'reviews': page_obj,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'is_paginated': page_obj.has_other_pages(),
+        'elided_page_range': elided_page_range,
+        'total_reviews_count': total_reviews_count,
+        'avg_rating': avg_rating,
+        'five_star_count': five_star_count,
+        'five_star_pct': five_star_pct,
+        'review_form': review_form,
+    }
+    return render(request, 'store/reviews.html', context)
 
 
 from .models import Product, Category, Order, OrderItem, Review, calculate_pathao_delivery_fee

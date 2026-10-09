@@ -133,12 +133,14 @@
                 </div>
 
                 <!-- Desktop Navigation Links -->
-                <nav class="hidden md:flex items-center gap-8 font-semibold text-sm text-gray-700">
+                <nav class="hidden md:flex items-center gap-7 font-semibold text-sm text-gray-700">
                     <a href="{% url 'store:index' %}" class="hover:text-brand-600 transition-colors">Our Pickles</a>
-                    <a href="{% url 'store:index' %}#pickle-menu" class="hover:text-brand-600 transition-colors">Shop
-                        Flavors</a>
-                    <a href="{% url 'store:about_story' %}" class="hover:text-brand-600 transition-colors">Our Pickling
-                        Story & FAQ</a>
+                    <a href="{% url 'store:index' %}#pickle-menu" class="hover:text-brand-600 transition-colors">Shop Flavors</a>
+                    <a href="{% url 'store:about_story' %}" class="hover:text-brand-600 transition-colors">Story & FAQ</a>
+                    <a href="{% url 'store:reviews' %}" class="hover:text-brand-600 transition-colors flex items-center gap-1">
+                        <i class="fa-solid fa-star text-amber-500 text-xs"></i>
+                        <span>Reviews</span>
+                    </a>
                     <a href="{% url 'store:order_track' %}"
                         class="hover:text-brand-600 transition-colors flex items-center gap-1.5">
                         <i class="fa-solid fa-truck-fast text-brand-500 text-xs"></i>
@@ -250,6 +252,8 @@
                     <ul class="space-y-2.5 text-sm">
                         <li><a href="{% url 'store:index' %}#pickle-menu" class="hover:text-white transition">🥒 Pickled
                                 Mixed Veggies</a></li>
+                        <li><a href="{% url 'store:reviews' %}" class="hover:text-white transition">⭐ Customer
+                                Reviews & Ratings</a></li>
                         <li><a href="{% url 'store:about_story' %}" class="hover:text-white transition">📖 Our Pickling
                                 Story & Craft</a></li>
                         <li><a href="{% url 'store:about_story' %}" class="hover:text-white transition">❄️ Storage &

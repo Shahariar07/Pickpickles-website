@@ -1,6 +1,7 @@
 import csv
 import json
 import datetime
+from datetime import timedelta
 import math
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
@@ -2746,6 +2747,100 @@ def reviews_manager(request):
 
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
+def feedback_reminders_manager(request):
+    """
+    Lists customers whose orders are >= 30 days old and have not yet provided feedback/review.
+    Supports pagination, search by customer/phone/order, and 1-click WhatsApp review requests
+    guiding customers to review on Facebook, Website, or WhatsApp.
+    """
+    now = timezone.now()
+
+    # Days filter (default 30 days)
+    days_param = request.GET.get('days', '30')
+    try:
+        min_days = int(days_param)
+        if min_days < 1:
+            min_days = 30
+    except (ValueError, TypeError):
+        min_days = 30
+
+    cutoff_date = now - timedelta(days=min_days)
+
+    # Base query: non-deleted orders placed at least `min_days` ago, excluding cancelled & returned
+    orders_qs = Order.objects.filter(
+        created_at__lte=cutoff_date,
+        is_deleted=False
+    ).exclude(
+        order_status__in=['CANCELLED']
+    ).prefetch_related('items', 'items__product').order_by('-created_at')
+
+    # Get set of all reviewer names (lowercased)
+    reviewed_names = set(
+        r.strip().lower() 
+        for r in Review.objects.values_list('reviewer_name', flat=True) 
+        if r and r.strip()
+    )
+
+    # Search filter
+    q = request.GET.get('q', '').strip()
+    if q:
+        orders_qs = orders_qs.filter(
+            Q(customer_name__icontains=q) |
+            Q(customer_phone__icontains=q) |
+            Q(order_number__icontains=q) |
+            Q(delivery_city__icontains=q)
+        )
+
+    # Filter out customers who already reviewed and calculate days
+    eligible_orders = []
+    for order in orders_qs:
+        cust_name_clean = (order.customer_name or '').strip().lower()
+        if cust_name_clean not in reviewed_names:
+            days_ago = (now.date() - order.created_at.date()).days
+            order.days_ago = days_ago
+            eligible_orders.append(order)
+
+    total_eligible = len(eligible_orders)
+
+    # Pagination (Default: 20 per page)
+    page_number = request.GET.get('page', 1)
+    per_page = request.GET.get('per_page', 20)
+    try:
+        per_page = int(per_page)
+        if per_page not in [10, 20, 50, 100]:
+            per_page = 20
+    except (ValueError, TypeError):
+        per_page = 20
+
+    paginator = Paginator(eligible_orders, per_page)
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    try:
+        elided_page_range = paginator.get_elided_page_range(number=page_obj.number, on_each_side=2, on_ends=1)
+    except Exception:
+        elided_page_range = paginator.page_range
+
+    context = {
+        'orders': page_obj,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'is_paginated': page_obj.has_other_pages(),
+        'elided_page_range': elided_page_range,
+        'total_eligible': total_eligible,
+        'min_days': min_days,
+        'q': q,
+        'per_page': per_page,
+        'total_reviews': Review.objects.count(),
+    }
+    return render(request, 'dashboard/feedback_reminders.html', context)
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
 def expense_manager(request):
     now = timezone.now()
     today = now.date()
@@ -3259,14 +3354,37 @@ def business_profitability(request):
     break-even volume, and interactive feasibility analysis based on real expenses & production data.
     """
     # 1. Production & Sales Volume
-    # Shipped / In Shipping or Delivered orders count as sold (not pending/confirmed/packing queue)
-    shipped_delivered_orders = Order.objects.filter(order_status__in=['OUT_FOR_DELIVERY', 'DELIVERED'])
-    delivered_paid_orders = Order.objects.filter(Q(order_status='DELIVERED') | Q(payment_status='PAID'))
-    unshipped_queue_orders = Order.objects.filter(order_status__in=['PENDING', 'CONFIRMED', 'PACKING'])
+    # Only strictly DELIVERED or PAID orders count as sold (64 jars)
+    delivered_paid_orders = Order.objects.filter(
+        is_deleted=False
+    ).filter(
+        Q(order_status='DELIVERED') | Q(payment_status='PAID')
+    ).exclude(
+        order_status='CANCELLED'
+    )
+    
+    # Shipping Out (In-Transit) orders (11 jars) - tracked separately
+    shipping_out_orders = Order.objects.filter(
+        is_deleted=False,
+        order_status='OUT_FOR_DELIVERY'
+    ).exclude(
+        payment_status='PAID'
+    )
+    
+    # Unshipped Queue orders (Pending / Confirmed / Packing)
+    unshipped_queue_orders = Order.objects.filter(
+        is_deleted=False,
+        order_status__in=['PENDING', 'CONFIRMED', 'PACKING']
+    ).exclude(
+        payment_status='PAID'
+    )
 
     jars_delivered = OrderItem.objects.filter(order__in=delivered_paid_orders).aggregate(Sum('quantity'))['quantity__sum'] or 0
-    jars_sold_total = OrderItem.objects.filter(order__in=shipped_delivered_orders).aggregate(Sum('quantity'))['quantity__sum'] or 0
+    shipping_jars = OrderItem.objects.filter(order__in=shipping_out_orders).aggregate(Sum('quantity'))['quantity__sum'] or 0
     pipeline_jars = OrderItem.objects.filter(order__in=unshipped_queue_orders).aggregate(Sum('quantity'))['quantity__sum'] or 0
+
+    # Total Sold Jars is strictly Delivered Jars (delivered howar por e dekhao)
+    jars_sold_total = jars_delivered
 
     # Current Catalog & Physical Stock
     all_products = list(Product.objects.all().order_by('name'))
@@ -3277,9 +3395,8 @@ def business_profitability(request):
     valid_prices = [float(p.price_bdt) for p in all_products if p.price_bdt and p.price_bdt > 0]
     avg_store_price = round(sum(valid_prices) / len(valid_prices), 2) if valid_prices else 400.0
 
-    # Total Accounted Production Batch Volume (Physical Stock + All Sold Jars)
-    # This accounts for the actual jars created/covered by raw materials & packaging
-    batch_volume = total_physical_stock + jars_sold_total
+    # Total Accounted Production Batch Volume (Physical Stock + Strictly Delivered Jars)
+    batch_volume = total_physical_stock + jars_delivered
     effective_volume = max(1, batch_volume)
 
     # 2. Expenses Breakdown
@@ -3397,6 +3514,7 @@ def business_profitability(request):
     context = {
         'total_jars_sold': jars_sold_total,
         'jars_delivered': jars_delivered,
+        'shipping_jars': shipping_jars,
         'pipeline_jars': pipeline_jars,
         'total_physical_stock': total_physical_stock,
         'batch_volume': batch_volume,

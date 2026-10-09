@@ -102,24 +102,39 @@ class CheckoutForm(forms.ModelForm):
 class ReviewForm(forms.ModelForm):
     class Meta:
         model = Review
-        fields = ['reviewer_name', 'reviewer_location', 'rating', 'comment']
+        fields = ['reviewer_name', 'reviewer_location', 'product', 'rating', 'comment']
         widgets = {
             'reviewer_name': forms.TextInput(attrs={
-                'class': 'form-input',
-                'placeholder': 'Your Name',
+                'class': 'w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-900 font-bold placeholder-gray-400 focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 focus:outline-hidden transition shadow-2xs',
+                'placeholder': 'Your Full Name (e.g. Tanvir Ahmed)',
                 'required': True
             }),
             'reviewer_location': forms.TextInput(attrs={
-                'class': 'form-input',
-                'placeholder': 'e.g. Gulshan, Dhaka'
+                'class': 'w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-900 font-semibold placeholder-gray-400 focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 focus:outline-hidden transition shadow-2xs',
+                'placeholder': 'City or Area (e.g. Gulshan, Dhaka)'
             }),
-            'rating': forms.Select(choices=[(5, '⭐⭐⭐⭐⭐ - Ultimate Crunch (5/5)'), (4, '⭐⭐⭐⭐ - Super Good (4/5)'), (3, '⭐⭐⭐ - Average (3/5)')], attrs={
-                'class': 'form-select'
+            'product': forms.Select(attrs={
+                'class': 'w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-900 font-semibold focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 focus:outline-hidden transition cursor-pointer shadow-2xs'
+            }),
+            'rating': forms.Select(choices=[
+                (5, '⭐⭐⭐⭐⭐ — 5.0 (Super Crunchy & Delicious)'),
+                (4, '⭐⭐⭐⭐ — 4.0 (Really Good)'),
+                (3, '⭐⭐⭐ — 3.0 (Average)'),
+                (2, '⭐⭐ — 2.0 (Needs Improvement)'),
+                (1, '⭐ — 1.0 (Did not like it)')
+            ], attrs={
+                'class': 'w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-900 font-bold focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 focus:outline-hidden transition cursor-pointer shadow-2xs'
             }),
             'comment': forms.Textarea(attrs={
-                'class': 'form-input',
+                'class': 'w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-900 font-medium placeholder-gray-400 focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 focus:outline-hidden transition shadow-2xs',
                 'rows': 3,
-                'placeholder': 'Tell us how you enjoyed the pickles (burgers, fried chicken, snacking)...',
+                'placeholder': 'Tell us how you enjoyed the pickles (taste, crunchiness, pairing with burgers/rice)...',
                 'required': True
             }),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'product' in self.fields:
+            self.fields['product'].required = False
+            self.fields['product'].empty_label = "🥒 Pickpickles (General Pickle Experience)"

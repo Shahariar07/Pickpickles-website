@@ -1,0 +1,309 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Feedback Reminders | Pickpickles Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+
+    <!-- Minimal Header Bar -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-gray-200">
+        <div class="flex items-center gap-3">
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="font-display font-black text-xl text-gray-900 tracking-tight">Feedback Reminders</h1>
+                    <span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                        {{ total_eligible }} pending
+                    </span>
+                </div>
+                <p class="text-xs text-gray-500 mt-0.5">Customers who ordered {{ min_days }}+ days ago without review</p>
+            </div>
+        </div>
+
+        <!-- Minimal Time Filter -->
+        <div class="flex items-center gap-1 bg-gray-100 p-1 rounded-xl shrink-0 self-start sm:self-auto text-xs">
+            <a href="?days=30{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
+               class="px-2.5 py-1 rounded-lg font-bold transition {% if min_days == 30 %}bg-white text-gray-900 shadow-2xs{% else %}text-gray-600 hover:text-gray-900{% endif %}">
+                30d
+            </a>
+            <a href="?days=45{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
+               class="px-2.5 py-1 rounded-lg font-bold transition {% if min_days == 45 %}bg-white text-gray-900 shadow-2xs{% else %}text-gray-600 hover:text-gray-900{% endif %}">
+                45d
+            </a>
+            <a href="?days=60{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
+               class="px-2.5 py-1 rounded-lg font-bold transition {% if min_days == 60 %}bg-white text-gray-900 shadow-2xs{% else %}text-gray-600 hover:text-gray-900{% endif %}">
+                60d
+            </a>
+            <a href="?days=90{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
+               class="px-2.5 py-1 rounded-lg font-bold transition {% if min_days == 90 %}bg-white text-gray-900 shadow-2xs{% else %}text-gray-600 hover:text-gray-900{% endif %}">
+                90d
+            </a>
+        </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="bg-white p-3 rounded-2xl border border-gray-200">
+        <form method="get" class="flex items-center gap-2">
+            <input type="hidden" name="days" value="{{ min_days }}">
+            <div class="relative flex-1">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                <input type="text" name="q" value="{{ q }}" placeholder="Search customer, phone, order #, city..." 
+                       class="w-full pl-8 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:ring-1 focus:ring-brand-600 focus:bg-white focus:outline-hidden transition">
+            </div>
+
+            <select name="per_page" onchange="this.form.submit()" class="bg-gray-50 border border-gray-200 text-gray-700 text-xs rounded-xl px-2.5 py-1.5 font-semibold focus:outline-hidden cursor-pointer shrink-0">
+                <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+                <option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+                <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+            </select>
+
+            <button type="submit" class="bg-gray-900 hover:bg-black text-white font-bold text-xs px-3.5 py-1.5 rounded-xl transition shrink-0 cursor-pointer">
+                Search
+            </button>
+
+            {% if q %}
+            <a href="?days={{ min_days }}" class="bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs px-2.5 py-1.5 rounded-xl transition" title="Clear">
+                <i class="fa-solid fa-xmark"></i>
+            </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Minimal Table -->
+    <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        
+        <!-- Desktop Table -->
+        <div class="hidden sm:block overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-gray-50/80 text-gray-500 font-bold uppercase text-[10px] border-b border-gray-200">
+                    <tr>
+                        <th class="py-3 px-4">Customer</th>
+                        <th class="py-3 px-4">Order</th>
+                        <th class="py-3 px-4">Items</th>
+                        <th class="py-3 px-4">Age</th>
+                        <th class="py-3 px-4">Amount</th>
+                        <th class="py-3 px-4 text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 font-medium text-gray-800">
+                    {% for order in orders %}
+                    <tr class="hover:bg-gray-50/60 transition">
+                        <!-- Customer -->
+                        <td class="py-3 px-4">
+                            <strong class="text-gray-900 block">{{ order.customer_name }}</strong>
+                            <div class="flex items-center gap-1.5 text-[11px] text-gray-500 mt-0.5">
+                                <a href="tel:{{ order.customer_phone }}" class="text-emerald-700 hover:underline font-semibold">{{ order.customer_phone }}</a>
+                                {% if order.delivery_city %}<span>• {{ order.delivery_city }}</span>{% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Order -->
+                        <td class="py-3 px-4 font-mono">
+                            <a href="{% url 'dashboard:order_detail' order.order_number %}" class="font-bold text-brand-700 hover:underline">
+                                #{{ order.order_number }}
+                            </a>
+                            <span class="text-gray-400 block text-[10px] font-sans">{{ order.created_at|date:"d M Y" }}</span>
+                        </td>
+
+                        <!-- Items -->
+                        <td class="py-3 px-4 max-w-xs">
+                            <div class="truncate text-gray-600">
+                                {% for item in order.items.all %}
+                                <span>{{ item.product_name }} ({{ item.quantity }}){% if not forloop.last %}, {% endif %}</span>
+                                {% empty %}
+                                <span class="text-gray-400">Jars</span>
+                                {% endfor %}
+                            </div>
+                        </td>
+
+                        <!-- Age -->
+                        <td class="py-3 px-4 whitespace-nowrap">
+                            <span class="font-semibold text-gray-700 bg-gray-100 px-2 py-0.5 rounded text-[11px]">
+                                {{ order.days_ago }}d ago
+                            </span>
+                        </td>
+
+                        <!-- Amount -->
+                        <td class="py-3 px-4 whitespace-nowrap">
+                            <strong class="text-gray-900 font-bold">৳{{ order.total_amount }}</strong>
+                        </td>
+
+                        <!-- Actions -->
+                        <td class="py-3 px-4 text-right whitespace-nowrap">
+                            <div class="flex items-center justify-end gap-1.5">
+                                <a href="{{ order.whatsapp_1month_review_request_url }}" target="_blank" 
+                                   class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-2.5 py-1.5 rounded-lg inline-flex items-center gap-1 transition" 
+                                   title="Send WhatsApp Message">
+                                    <i class="fa-brands fa-whatsapp text-xs"></i>
+                                    <span>WhatsApp</span>
+                                </a>
+
+                                <button type="button" 
+                                        onclick="openPreviewModal('{{ order.order_number }}', '{{ order.customer_name|escapejs }}', '{{ order.whatsapp_1month_review_request_url|escapejs }}', '{{ order.get_whatsapp_1month_review_request_message|escapejs }}')" 
+                                        class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1.5 rounded-lg text-xs transition cursor-pointer" 
+                                        title="Preview / Copy">
+                                    <i class="fa-solid fa-eye text-xs"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="py-10 text-center text-gray-400 text-xs">
+                            No pending feedback customers found.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile Card List -->
+        <div class="block sm:hidden divide-y divide-gray-100">
+            {% for order in orders %}
+            <div class="p-3.5 space-y-2 text-xs">
+                <div class="flex items-start justify-between gap-2">
+                    <div>
+                        <strong class="text-gray-900 text-sm block">{{ order.customer_name }}</strong>
+                        <div class="flex items-center gap-1.5 text-[11px] text-gray-500 mt-0.5">
+                            <a href="tel:{{ order.customer_phone }}" class="text-emerald-700 font-semibold">{{ order.customer_phone }}</a>
+                            <span>• {{ order.days_ago }}d ago</span>
+                        </div>
+                    </div>
+                    <strong class="text-gray-900 font-bold">৳{{ order.total_amount }}</strong>
+                </div>
+
+                <div class="text-gray-500 text-[11px] truncate">
+                    {% for item in order.items.all %}
+                    <span>{{ item.product_name }} ({{ item.quantity }}){% if not forloop.last %}, {% endif %}</span>
+                    {% endfor %}
+                </div>
+
+                <div class="flex items-center gap-1.5 pt-1">
+                    <a href="{{ order.whatsapp_1month_review_request_url }}" target="_blank" 
+                       class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-1.5 rounded-lg text-center flex items-center justify-center gap-1">
+                        <i class="fa-brands fa-whatsapp text-xs"></i>
+                        <span>Send WhatsApp</span>
+                    </a>
+                    <button type="button" 
+                            onclick="openPreviewModal('{{ order.order_number }}', '{{ order.customer_name|escapejs }}', '{{ order.whatsapp_1month_review_request_url|escapejs }}', '{{ order.get_whatsapp_1month_review_request_message|escapejs }}')" 
+                            class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-2.5 py-1.5 rounded-lg">
+                        <i class="fa-solid fa-eye text-xs"></i>
+                    </button>
+                </div>
+            </div>
+            {% empty %}
+            <div class="py-8 text-center text-gray-400 text-xs">
+                No pending feedback customers found.
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Minimal Pagination -->
+        {% if is_paginated %}
+        <div class="p-3 bg-gray-50/60 border-t border-gray-100 flex items-center justify-between text-xs text-gray-600">
+            <span>Page <strong>{{ orders.number }}</strong> of <strong>{{ paginator.num_pages }}</strong> ({{ total_eligible }} total)</span>
+
+            <div class="flex items-center gap-1">
+                {% if orders.has_previous %}
+                <a href="?page={{ orders.previous_page_number }}&days={{ min_days }}{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
+                   class="px-2.5 py-1 bg-white border border-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition">
+                    Prev
+                </a>
+                {% endif %}
+
+                {% for p in elided_page_range %}
+                    {% if p == paginator.ELLIPSIS %}
+                    <span class="px-1 text-gray-400">...</span>
+                    {% elif p == orders.number %}
+                    <span class="px-2.5 py-1 bg-gray-900 text-white font-bold rounded-lg">{{ p }}</span>
+                    {% else %}
+                    <a href="?page={{ p }}&days={{ min_days }}{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
+                       class="px-2.5 py-1 bg-white border border-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition">
+                        {{ p }}
+                    </a>
+                    {% endif %}
+                {% endfor %}
+
+                {% if orders.has_next %}
+                <a href="?page={{ orders.next_page_number }}&days={{ min_days }}{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
+                   class="px-2.5 py-1 bg-white border border-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition">
+                    Next
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- Minimal Message Modal -->
+<div id="waPreviewModal" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-2xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-xl border border-gray-200 space-y-3">
+        <div class="flex items-center justify-between pb-2 border-b border-gray-100">
+            <div>
+                <h3 class="font-bold text-gray-900 text-sm" id="modalCustTitle">Message Preview</h3>
+                <span class="text-[11px] text-gray-400" id="modalOrderSubtitle">Customer</span>
+            </div>
+            <button type="button" onclick="closePreviewModal()" class="text-gray-400 hover:text-gray-600 text-base p-1 cursor-pointer">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="bg-gray-50 p-3 rounded-xl border border-gray-200">
+            <pre class="whitespace-pre-wrap font-sans text-xs text-gray-800 leading-relaxed max-h-56 overflow-y-auto" id="modalMsgContent"></pre>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-1">
+            <button type="button" onclick="copyModalMessage()" id="copyMsgBtn" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs px-3 py-1.5 rounded-lg border border-gray-200 flex items-center gap-1 transition cursor-pointer">
+                <i class="fa-solid fa-copy text-gray-500"></i>
+                <span id="copyBtnTxt">Copy</span>
+            </button>
+            <a href="#" id="modalDirectWaLink" target="_blank" onclick="closePreviewModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg flex items-center gap-1 transition">
+                <i class="fa-brands fa-whatsapp text-xs"></i>
+                <span>Open WhatsApp</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentRawMessage = "";
+
+    function openPreviewModal(orderNumber, customerName, waUrl, msgContent) {
+        document.getElementById('modalCustTitle').textContent = customerName;
+        document.getElementById('modalOrderSubtitle').textContent = `Order #${orderNumber}`;
+        document.getElementById('modalMsgContent').textContent = msgContent;
+        document.getElementById('modalDirectWaLink').href = waUrl;
+        currentRawMessage = msgContent;
+
+        const copyBtnTxt = document.getElementById('copyBtnTxt');
+        if (copyBtnTxt) copyBtnTxt.textContent = "Copy";
+
+        document.getElementById('waPreviewModal').classList.remove('hidden');
+    }
+
+    function closePreviewModal() {
+        document.getElementById('waPreviewModal').classList.add('hidden');
+    }
+
+    function copyModalMessage() {
+        if (!currentRawMessage) return;
+        navigator.clipboard.writeText(currentRawMessage).then(() => {
+            const copyBtnTxt = document.getElementById('copyBtnTxt');
+            if (copyBtnTxt) copyBtnTxt.textContent = "Copied! ✓";
+            setTimeout(() => {
+                if (copyBtnTxt) copyBtnTxt.textContent = "Copy";
+            }, 2000);
+        }).catch(err => {
+            alert('Could not copy: ' + err);
+        });
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closePreviewModal();
+    });
+</script>
+{% endblock %}
