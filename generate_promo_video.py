@@ -379,32 +379,21 @@ def main():
         print("Error: Could not open VideoWriter.")
         return
 
-    INTRO_FRAMES = int(FPS * 2.8)
     PRODUCT_FRAMES = int(FPS * 2.2)
     OUTRO_FRAMES = int(FPS * 3.5)
     TRANSITION_FRAMES = int(FPS * 0.4)
 
-    total_scenes = 1 + len(PRODUCTS) + 1
+    total_scenes = len(PRODUCTS) + 1
     current_frame = 0
-    total_estimated_frames = INTRO_FRAMES + (len(PRODUCTS) * PRODUCT_FRAMES) + OUTRO_FRAMES
+    total_estimated_frames = (len(PRODUCTS) * PRODUCT_FRAMES) + OUTRO_FRAMES
 
     def pil_to_cv2(pil_img):
         return cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
 
     print(f"Total scenes: {total_scenes} (~{total_estimated_frames // FPS} seconds)")
 
-    # 1. INTRO
-    print("Rendering Intro with colored emojis...")
+    # 1. PRODUCTS (Starts directly from first frame)
     last_frame_bgr = None
-    for f in range(INTRO_FRAMES):
-        prog = f / max(1, INTRO_FRAMES - 1)
-        pil_frame = render_intro_frame(prog)
-        bgr = pil_to_cv2(pil_frame)
-        out.write(bgr)
-        last_frame_bgr = bgr
-        current_frame += 1
-
-    # 2. PRODUCTS
     for idx in range(len(PRODUCTS)):
         print(f"Rendering Product {idx + 1}/{len(PRODUCTS)}: {PRODUCTS[idx]['title']}...")
         for f in range(PRODUCT_FRAMES):

@@ -47,10 +47,12 @@ def is_emoji_char(ch):
     c = ord(ch)
     return (
         0x1F000 <= c <= 0x1FFFF or
-        0x2600 <= c <= 0x27BF or
-        0xFE00 <= c <= 0xFE0F or
         0x2300 <= c <= 0x23FF or
-        c in (0x200D, 0x20E3, 0x2728, 0x2714, 0x2705)
+        0x2B00 <= c <= 0x2BFF or  # ⭐ (0x2B50)
+        0x2700 <= c <= 0x27BF or  # ✅ (0x2705), ✨ (0x2728), ✔️ (0x2714)
+        0x2600 <= c <= 0x26FF or  # ⚡, ☕, etc.
+        0xFE00 <= c <= 0xFE0F or
+        c in (0x200D, 0x20E3)
     )
 
 def get_mixed_tokens(text):
@@ -278,36 +280,56 @@ def render_intro_frame(progress):
     frame = Image.alpha_composite(frame, overlay).convert("RGB")
     return frame
 
+PRODUCT_CANVAS_CACHE = {}
+
+def get_product_canvas(product_idx, width, height, target_h, center_x, center_y):
+    key = (product_idx, width, height, target_h, center_x, center_y)
+    if key not in PRODUCT_CANVAS_CACHE:
+        prod = PRODUCTS[product_idx]
+        img_path = prod["img"]
+        canvas = np.zeros((height, width, 4), dtype=np.uint8)
+        if os.path.exists(img_path):
+            p_img = Image.open(img_path).convert("RGBA")
+            orig_w, orig_h = p_img.size
+            base_w = int(orig_w * (target_h / orig_h))
+            base_resized = p_img.resize((base_w, target_h), Image.Resampling.LANCZOS)
+            base_np = np.array(base_resized)
+            
+            paste_x = int(center_x - base_w / 2)
+            paste_y = int(center_y - target_h / 2)
+            canvas[paste_y:paste_y+target_h, paste_x:paste_x+base_w] = base_np
+        PRODUCT_CANVAS_CACHE[key] = canvas
+    return PRODUCT_CANVAS_CACHE[key]
+
 def render_product_frame(product_idx, progress):
     prod = PRODUCTS[product_idx]
     frame = BASE_BG.copy().convert("RGBA")
     overlay = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
 
-    # Product image centered with Ken-Burns zoom
-    img_path = prod["img"]
-    if os.path.exists(img_path):
-        p_img = Image.open(img_path).convert("RGBA")
-        
-        zoom = 1.0 + 0.10 * progress
-        orig_w, orig_h = p_img.size
-        target_h = int(540 * zoom)
-        target_w = int(orig_w * (target_h / orig_h))
-        
-        p_img_resized = p_img.resize((target_w, target_h), Image.Resampling.LANCZOS)
-        
-        paste_x = (WIDTH - target_w) // 2
-        paste_y = 120 + int((540 - target_h) / 2)
+    # Subpixel smooth zoom (cv2.INTER_CUBIC with floating-point anchor eliminates all jitter)
+    target_h = 550
+    center_x = WIDTH / 2.0
+    center_y = 120 + target_h / 2.0
 
-        # Soft contact shadow
-        shadow = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
-        s_draw = ImageDraw.Draw(shadow)
-        s_draw.ellipse((WIDTH//2 - 200, 640, WIDTH//2 + 200, 710), fill=(0, 0, 0, 180))
-        shadow = shadow.filter(ImageFilter.GaussianBlur(16))
-        frame = Image.alpha_composite(frame, shadow)
+    base_canvas = get_product_canvas(product_idx, WIDTH, HEIGHT, target_h, center_x, center_y)
+    smooth_prog = 0.5 - 0.5 * math.cos(progress * math.pi)
+    zoom = 1.0 + 0.08 * smooth_prog
 
-        # Paste jar
-        frame.paste(p_img_resized, (paste_x, paste_y), p_img_resized)
+    M = cv2.getRotationMatrix2D((center_x, center_y), 0, zoom)
+    zoomed_rgba = cv2.warpAffine(base_canvas, M, (WIDTH, HEIGHT), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_CONSTANT, borderValue=(0,0,0,0))
+    zoomed_pil = Image.fromarray(zoomed_rgba)
+
+    # Soft contact shadow underneath jar
+    shadow = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
+    s_draw = ImageDraw.Draw(shadow)
+    shadow_w = int(200 * zoom)
+    s_draw.ellipse((int(center_x - shadow_w), 640, int(center_x + shadow_w), 710), fill=(0, 0, 0, 180))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(16))
+    frame = Image.alpha_composite(frame, shadow)
+
+    # Paste smoothly zoomed jar
+    frame = Image.alpha_composite(frame, zoomed_pil)
 
     # Top Category Badge
     badge_w = 380
@@ -329,11 +351,11 @@ def render_product_frame(product_idx, progress):
     pill_w = 260
     # Pill 1
     draw_rounded_rect(draw, (140, card_top + 155, 140 + pill_w, card_top + 215), 20, (38, 115, 45, 230))
-    draw_mixed_text(draw, 140 + pill_w//2, card_top + 185, f"✓ {prod['tag1']}", get_font("segoeuib.ttf", 22), 22, (255, 255, 255), anchor="mm")
+    draw_mixed_text(draw, 140 + pill_w//2, card_top + 185, f"✅ {prod['tag1']}", get_font("segoeuib.ttf", 22), 22, (255, 255, 255), anchor="mm")
 
     # Pill 2
     draw_rounded_rect(draw, (WIDTH - 140 - pill_w, card_top + 155, WIDTH - 140, card_top + 215), 20, (230, 150, 30, 230))
-    draw_mixed_text(draw, WIDTH - 140 - pill_w//2, card_top + 185, f"★ {prod['tag2']}", get_font("segoeuib.ttf", 22), 22, (20, 15, 10), anchor="mm")
+    draw_mixed_text(draw, WIDTH - 140 - pill_w//2, card_top + 185, f"✨ {prod['tag2']}", get_font("segoeuib.ttf", 22), 22, (20, 15, 10), anchor="mm")
 
     # Counter footer
     draw.text((WIDTH//2, card_top + 260), f"Item {product_idx + 1} of {len(PRODUCTS)}  •  www.pickpickles.xyz", font=get_font("segoeui.ttf", 20), fill=(165, 155, 145), anchor="mm")
@@ -352,7 +374,7 @@ def render_outro_frame(progress):
     draw_mixed_text(draw, WIDTH//2, 145, "🥒 PICKPICKLES", FONT_TITLE_XL, 48, ACCENT_GOLD, anchor="mm")
     draw.text((WIDTH//2, 220), "Artisanal Pickles • 100% Fresh & Crisp", font=get_font("segoeuib.ttf", 30), fill=TEXT_WHITE, anchor="mm")
     draw.text((WIDTH//2, 280), "Pure Handcrafted Crunchy Goodness", font=FONT_SUBTITLE, fill=TEXT_MUTED, anchor="mm")
-    draw_mixed_text(draw, WIDTH//2, 345, "★ ★ ★ ★ ★ 100% Authentic Bangladeshi Taste", get_font("segoeuib.ttf", 22), 22, (255, 215, 0), anchor="mm")
+    draw_mixed_text(draw, WIDTH//2, 345, "⭐ ⭐ ⭐ ⭐ ⭐ 100% Authentic Bangladeshi Taste", get_font("segoeuib.ttf", 22), 22, (255, 215, 0), anchor="mm")
 
     # Bottom CTA Box
     cta_y = 480
@@ -471,12 +493,11 @@ def main():
         print("Error: Could not open VideoWriter.")
         return
 
-    INTRO_FRAMES = int(FPS * 2.5)
     PRODUCT_FRAMES = int(FPS * 2.0)
     OUTRO_FRAMES = int(FPS * 3.0)
     TRANSITION_FRAMES = int(FPS * 0.4)
 
-    total_frames = INTRO_FRAMES + (len(PRODUCTS) * PRODUCT_FRAMES) + OUTRO_FRAMES
+    total_frames = (len(PRODUCTS) * PRODUCT_FRAMES) + OUTRO_FRAMES
     total_duration = total_frames / FPS
     print(f"Total duration: {total_duration:.1f} seconds ({total_frames} frames)")
 
@@ -486,17 +507,7 @@ def main():
     last_frame_bgr = None
     current_frame = 0
 
-    # 1. INTRO
-    print("Rendering 1:1 Intro Scene...")
-    for f in range(INTRO_FRAMES):
-        prog = f / max(1, INTRO_FRAMES - 1)
-        pil_frame = render_intro_frame(prog)
-        bgr = pil_to_cv2(pil_frame)
-        out.write(bgr)
-        last_frame_bgr = bgr
-        current_frame += 1
-
-    # 2. PRODUCTS
+    # 1. PRODUCTS (Starts directly from first frame)
     for idx in range(len(PRODUCTS)):
         print(f"Rendering Product {idx + 1}/{len(PRODUCTS)}: {PRODUCTS[idx]['title']}...")
         for f in range(PRODUCT_FRAMES):
