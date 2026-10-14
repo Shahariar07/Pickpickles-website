@@ -26,6 +26,9 @@ echo ">>> [3/5] Installing/Updating requirements..."
 echo ">>> [4/5] Running database migrations..."
 "$VENV_BIN/python" manage.py migrate
 
+echo ">>> [4.1/5] Setting up expense categories & allocations..."
+"$VENV_BIN/python" manage.py setup_expense_categories || true
+
 echo ">>> [5/5] Collecting static files..."
 "$VENV_BIN/python" manage.py collectstatic --noinput
 

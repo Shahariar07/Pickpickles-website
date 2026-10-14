@@ -265,13 +265,23 @@
                         <td class="py-2.5 px-3">
                             <span class="font-bold text-gray-900 block">{{ cat.name }}</span>
                             <span class="text-[10px] text-gray-400">{{ cat.count }} record(s)</span>
+                            {% if cat.sub_items %}
+                            <div class="mt-1.5 pl-2 border-l-2 border-rose-200 space-y-1">
+                                {% for sub in cat.sub_items %}
+                                <div class="flex items-center justify-between text-[11px] text-gray-600">
+                                    <span class="truncate pr-2">• {{ sub.sub_category }} <span class="text-[9px] text-gray-400">({{ sub.sub_count }})</span></span>
+                                    <span class="font-bold text-gray-800 shrink-0">৳{{ sub.sub_total|floatformat:0 }}</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
                         </td>
-                        <td class="py-2.5 px-3 text-center">
+                        <td class="py-2.5 px-3 text-center align-top">
                             <span class="text-[10px] font-extrabold bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">
                                 {{ cat.percentage }}%
                             </span>
                         </td>
-                        <td class="py-2.5 px-3 text-right font-display font-black text-rose-700">৳{{ cat.amount|floatformat:0 }}</td>
+                        <td class="py-2.5 px-3 text-right font-display font-black text-rose-700 align-top">৳{{ cat.amount|floatformat:0 }}</td>
                     </tr>
                     {% empty %}
                     <tr>

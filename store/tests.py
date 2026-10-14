@@ -341,27 +341,41 @@ class CartTests(TestCase):
 
         self.assertEqual(order.whatsapp_phone_international, '8801712345678')
         
+        # Test foreign customer phone handling
+        order.customer_phone = '+1 (415) 555-2671'
+        self.assertEqual(order.whatsapp_phone_international, '14155552671')
+        order.customer_phone = '01712345678'
+
         msg = order.get_whatsapp_shipping_instruction_message()
         self.assertIn('Mahmudul Hasan', msg)
         self.assertIn(order.order_number, msg)
         self.assertIn('Classic Garlic Spears x 2', msg)
-        self.assertIn('নরমাল ফ্রিজে', msg)
-        self.assertIn('শুকনো চামচ ব্যবহার করুন', msg)
+        self.assertIn('refrigerate', msg.lower())
+        self.assertIn('dry spoon', msg.lower())
         self.assertIn('Feedback', msg)
-        self.assertIn('কুরিয়ারের মাধ্যমে', msg)
+        self.assertIn('courier', msg.lower())
         self.assertIn('pickpickles.xyz', msg)
+        self.assertIn('https://pickpickles.xyz/reviews/', msg)
 
         wa_url = order.whatsapp_shipping_instruction_url
         self.assertTrue(wa_url.startswith('https://api.whatsapp.com/send?phone=8801712345678&text='))
 
         fb_msg = order.get_whatsapp_feedback_message()
         self.assertIn('Mahmudul Hasan', fb_msg)
-        self.assertIn('মতামত', fb_msg)
+        self.assertIn('experience', fb_msg.lower())
+        self.assertIn('https://pickpickles.xyz/reviews/', fb_msg)
         self.assertTrue(order.whatsapp_feedback_url.startswith('https://api.whatsapp.com/send?phone=8801712345678&text='))
 
         month_msg = order.get_whatsapp_1month_review_request_message()
         self.assertIn('Mahmudul Hasan', month_msg)
-        self.assertIn('ফেসবুক পেজে', month_msg)
-        self.assertIn('pickpickles.xyz', month_msg)
+        self.assertIn('Facebook', month_msg)
+        self.assertIn('https://pickpickles.xyz/reviews/', month_msg)
+
+        confirm_msg = order.get_whatsapp_order_confirmation_message()
+        self.assertIn('Mahmudul Hasan', confirm_msg)
+        self.assertIn(order.order_number, confirm_msg)
+        self.assertIn('Order Confirmation', confirm_msg)
+        self.assertIn('https://pickpickles.xyz/reviews/', confirm_msg)
+        self.assertTrue(order.whatsapp_order_confirmation_url.startswith('https://api.whatsapp.com/send?phone=8801712345678&text='))
 
 

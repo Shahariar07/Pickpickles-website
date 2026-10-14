@@ -735,58 +735,119 @@ class Order(models.Model):
     @property
     def whatsapp_phone_international(self):
         """
-        Formats customer phone into standard WhatsApp format (8801XXXXXXXXX).
+        Formats customer phone into standard WhatsApp international format.
+        Supports Bangladesh local numbers (e.g. 01712..., 018...) as well as
+        international numbers with country codes (e.g. +1..., +44..., +971...).
         """
-        digits = ''.join(c for c in (self.customer_phone or '') if c.isdigit())
+        raw = (self.customer_phone or '').strip()
+        digits = ''.join(c for c in raw if c.isdigit())
         if not digits:
             return ''
+        # If explicitly formatted with country code starting with + or 00
+        if raw.startswith('+') or raw.startswith('00'):
+            return digits
+        # Bangladesh number starting with 880
         if digits.startswith('880'):
             return digits
-        if digits.startswith('0'):
+        # Standard Bangladesh mobile: 11 digits starting with 01
+        if digits.startswith('01') and len(digits) == 11:
             return f"88{digits}"
+        # Bangladesh mobile without leading 0: 10 digits starting with 1
         if len(digits) == 10 and digits.startswith('1'):
             return f"880{digits}"
-        if len(digits) >= 10:
+        # Local Bangladesh number with leading 0
+        if digits.startswith('0'):
+            return f"88{digits}"
+        # If 10 or 11 digits without BD prefix, default to BD
+        if len(digits) in (10, 11):
             return f"880{digits[-10:]}"
-        return f"880{digits}"
+        # Otherwise, keep original digits for foreign numbers entered without +
+        return digits
 
-    def get_whatsapp_shipping_instruction_message(self):
+    def get_whatsapp_order_confirmation_message(self):
         """
-        Generates a concise, polite & professional WhatsApp message with order dispatch details,
-        key storage tips, and general review options.
+        Generates order confirmation WhatsApp message with items, delivery info, and direct review link in English.
         """
         items_list = []
         for itm in self.items.all():
             items_list.append(f"🥒 {itm.product_name} x {itm.quantity}")
         items_text = "\n".join(items_list) if items_list else "🥒 Pickpickles Homemade Jars"
 
-        payment_line = "✅ *পেমেন্ট:* পরিশোধিত (Paid)" if self.payment_status == 'PAID' else f"💵 *ক্যাশ অন ডেলিভারি (COD):* ৳{self.total_amount}"
+        payment_line = "✅ *Payment:* Paid" if self.payment_status == 'PAID' else f"💵 *Payment Method:* Cash on Delivery (COD) — ৳{self.total_amount}"
 
-        msg = f"""🥒 *Pickpickles — অর্ডার প্রেরণের আপডেট* 🚚✨
+        msg = f"""🥒 *Pickpickles — Order Confirmation* 🎉✨
 
-প্রিয় *{self.customer_name}*,
+Dear *{self.customer_name}*,
 
-আপনার Pickpickles অর্ডার *#{self.order_number}* যত্নসহকারে প্রস্তুত করে কুরিয়ারের মাধ্যমে আপনার ঠিকানায় পাঠিয়ে দেওয়া হয়েছে।
+Thank you for your order! Your Pickpickles order *#{self.order_number}* has been successfully received.
 
-📋 *অর্ডারের সারসংক্ষেপ:*
+📋 *Order Details:*
+{items_text}
+{payment_line}
+🚚 *Delivery Address:* {self.delivery_address}, {self.delivery_city}
+
+Each jar of our artisanal pickles is handcrafted and fresh-brined in small batches for exceptional taste and crunch (Estimated delivery: 5-6 business days).
+
+⭐ *Read Customer Reviews or Share Yours:*
+🌐 https://pickpickles.xyz/reviews/
+
+If you need any assistance or have special instructions, simply reply to this WhatsApp message. 💚
+
+Warm regards,
+*Team Pickpickles*
+🌐 pickpickles.xyz | 📞 +8801794271523"""
+        return msg.strip()
+
+    @property
+    def whatsapp_order_confirmation_url(self):
+        """
+        Direct WhatsApp link to send order confirmation message.
+        """
+        import urllib.parse
+        phone = self.whatsapp_phone_international
+        if not phone:
+            return ''
+        text = self.get_whatsapp_order_confirmation_message()
+        encoded_text = urllib.parse.quote(text)
+        return f"https://api.whatsapp.com/send?phone={phone}&text={encoded_text}"
+
+    def get_whatsapp_shipping_instruction_message(self):
+        """
+        Generates a concise, polite & professional WhatsApp message with order dispatch details,
+        key storage tips, and direct review link in English.
+        """
+        items_list = []
+        for itm in self.items.all():
+            items_list.append(f"🥒 {itm.product_name} x {itm.quantity}")
+        items_text = "\n".join(items_list) if items_list else "🥒 Pickpickles Homemade Jars"
+
+        payment_line = "✅ *Payment:* Paid" if self.payment_status == 'PAID' else f"💵 *Payment Method:* Cash on Delivery (COD) — ৳{self.total_amount}"
+
+        msg = f"""🥒 *Pickpickles — Order Dispatched Update* 🚚✨
+
+Dear *{self.customer_name}*,
+
+Great news! Your Pickpickles order *#{self.order_number}* has been freshly prepared and dispatched via courier to your address.
+
+📋 *Order Summary:*
 {items_text}
 {payment_line}
 
-🧊 *সংরক্ষণের বিশেষ অনুরোধ:*
-• পার্সেলটি হাতে পাওয়া মাত্রই নরমাল ফ্রিজে রেখে দিন (সর্বোচ্চ ফ্রেশনেস ও ক্রাঞ্চিনেসের জন্য)।
-• জার থেকে নেওয়ার সময় সবসময় পরিষ্কার ও শুকনো চামচ ব্যবহার করুন।
+🧊 *Care & Storage Guidelines:*
+• Please refrigerate the jar immediately upon arrival to preserve peak freshness and signature crisp crunch.
+• Always use a clean, completely dry spoon when serving.
 
-⭐ *আপনার মূল্যবান মতামত (Review & Feedback):*
-পিকল টেস্ট করার পর আপনার অভিজ্ঞতা ও রিভিউ আমাদের সাথে শেয়ার করতে পারেন:
-• 💬 এই মেসেজে সরাসরি রিপ্লাই দিয়ে রেটিং বা মতামত জানাতে পারেন
-• 🌐 ওয়েবসাইটে: https://pickpickles.xyz
-• 📘 ফেসবুক পেজে: https://facebook.com/pickpickles07
+⭐ *Your Review & Feedback:*
+Once you've tasted your pickles, we would love to hear your feedback:
+• 💬 Reply directly to this WhatsApp chat with your rating or thoughts
+• 🌐 Leave a review on our website: https://pickpickles.xyz/reviews/
+• 📘 Follow our Facebook page: https://facebook.com/pickpickles07
 
-আপনার সন্তুষ্টিই আমাদের প্রধান লক্ষ্য। 💚
+Your satisfaction means the world to us. Enjoy every crunchy bite! 💚
 
-আন্তরিক ধন্যবাদ,
-*টিম Pickpickles*
-🌐 pickpickles.xyz | 📞 01794271523"""
+Warm regards,
+*Team Pickpickles*
+🌐 pickpickles.xyz | 📞 +8801794271523"""
         return msg.strip()
 
     @property
@@ -804,24 +865,24 @@ class Order(models.Model):
 
     def get_whatsapp_feedback_message(self):
         """
-        Generates an elegant, respectful feedback request message with general review options.
+        Generates an elegant, respectful feedback request message with direct review link in English.
         """
-        msg = f"""🥒 *Pickpickles — আপনার অনুভূতি ও মতামত* ⭐✨
+        msg = f"""🥒 *Pickpickles — Your Thoughts & Experience* ⭐✨
 
-প্রিয় *{self.customer_name}*,
+Dear *{self.customer_name}*,
 
-আশা করি ভালো আছেন। Pickpickles থেকে নেওয়া আমাদের হোমমেড পিকল আশা করি সঠিকভাবে হাতে পেয়েছেন এবং উপভোগ করছেন।
+Warm greetings! We hope you have safely received your handcrafted pickles from Pickpickles and are enjoying them.
 
-আমাদের পিকলের স্বাদ ও সার্ভিস সম্পর্কে আপনার কেমন অভিজ্ঞতা হলো? যেকোনো একটি মাধ্যমে আপনার মূল্যবান রিভিউ জানাতে পারেন:
+How was your experience with the flavor, crunch, and our service? We would deeply appreciate your feedback:
 
-• 💬 এই মেসেজে সরাসরি রিপ্লাই দিয়ে
-• 🌐 আমাদের ওয়েবসাইটে: https://pickpickles.xyz
-• 📘 আমাদের ফেসবুক পেজে: https://facebook.com/pickpickles07
+• 💬 Simply reply to this WhatsApp message with your thoughts
+• 🌐 Submit your review on our website: https://pickpickles.xyz/reviews/
+• 📘 Visit our Facebook page: https://facebook.com/pickpickles07
 
-একটি ক্ষুদ্র উদ্যোগ হিসেবে আপনাদের প্রতিটি রিভিউ আমাদের অনুপ্রাণিত করে। 💚
+As an artisanal small-batch brand, every review helps us grow and serve you better! 💚
 
-আন্তরিক ধন্যবাদ,
-*টিম Pickpickles*
+With gratitude,
+*Team Pickpickles*
 🌐 pickpickles.xyz"""
         return msg.strip()
 
@@ -840,28 +901,28 @@ class Order(models.Model):
 
     def get_whatsapp_1month_review_request_message(self):
         """
-        Generates a polite, highly professional 1-month follow-up message requesting general review.
+        Generates a polite, highly professional 1-month follow-up message requesting review with direct link in English.
         """
-        msg = f"""🥒 *Pickpickles — আপনার মূল্যবান মতামত* ⭐✨
+        msg = f"""🥒 *Pickpickles — We'd Love Your Review!* ⭐✨
 
-প্রিয় *{self.customer_name}*,
+Dear *{self.customer_name}*,
 
-আশা করি ভালো আছেন। কিছুদিন আগে আপনি Pickpickles থেকে আমাদের হোমমেড পিকল গ্রহণ করেছিলেন। আশা করি পিকলের স্বাদ ও ক্রাঞ্চিনেস আপনি উপভোগ করেছেন! 💚
+Warm greetings from Pickpickles! A little while ago, you received our homemade artisanal pickles. We hope every jar brought delicious flavors and crisp crunch to your meals! 💚
 
-আমাদের পিকলের মান ও সার্ভিস সম্পর্কে আপনার সাধারণ অভিজ্ঞতা ও মূল্যবান রিভিউ আমাদের সেবাকে আরও নিখুঁত করতে সাহায্য করবে।
+Your honest review helps fellow food lovers discover us and helps us keep perfecting our recipes.
 
-মাত্র ১ মিনিট সময় দিয়ে যেকোনো মাধ্যমে আপনার রিভিউ জানাতে পারেন:
+It takes just 1 minute to share your thoughts:
 
-🌟 *রিভিউ দেওয়ার সহজ মাধ্যম:*
-• 💬 *সরাসরি মেসেজে:* এই মেসেজে রিপ্লাই দিয়ে আপনার অনুভূতি বা রেটিং (১ থেকে ৫ ⭐) লিখে জানাতে পারেন।
-• 🌐 *আমাদের ওয়েবসাইটে:* https://pickpickles.xyz
-• 📘 *আমাদের ফেসবুক পেজে:* https://facebook.com/pickpickles07
+🌟 *Easy Ways to Share Your Review:*
+• 💬 *Reply directly to this message:* Share your quick impressions or rating (1 to 5 ⭐).
+• 🌐 *On our Website:* https://pickpickles.xyz/reviews/
+• 📘 *On our Facebook Page:* https://facebook.com/pickpickles07
 
-Pickpickles-এর সাথে থাকার জন্য আন্তরিক ধন্যবাদ।
+Thank you for being a valued part of the Pickpickles community!
 
-শুভকামনায়,
-*টিম Pickpickles*
-🌐 pickpickles.xyz | 📞 01794271523"""
+Warm regards,
+*Team Pickpickles*
+🌐 pickpickles.xyz | 📞 +8801794271523"""
         return msg.strip()
 
     @property
@@ -876,6 +937,7 @@ Pickpickles-এর সাথে থাকার জন্য আন্তরি�
         text = self.get_whatsapp_1month_review_request_message()
         encoded_text = urllib.parse.quote(text)
         return f"https://api.whatsapp.com/send?phone={phone}&text={encoded_text}"
+
 
     def sync_pathao_status(self):
         """

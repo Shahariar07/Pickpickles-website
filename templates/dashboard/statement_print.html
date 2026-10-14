@@ -474,9 +474,18 @@
                     <tbody>
                         {% for cat in cat_expenses %}
                         <tr>
-                            <td><strong>{{ cat.name }}</strong></td>
-                            <td style="text-align: center; font-size: 10px; color: #64748b;">{{ cat.percentage }}%</td>
-                            <td class="amount-col outflow-text">৳{{ cat.amount|floatformat:0 }}</td>
+                            <td>
+                                <strong>{{ cat.name }}</strong>
+                                {% if cat.sub_items %}
+                                <div style="font-size: 9px; color: #64748b; margin-top: 3px; padding-left: 6px; border-left: 2px solid #cbd5e1;">
+                                    {% for sub in cat.sub_items %}
+                                    <div>• {{ sub.sub_category }}: ৳{{ sub.sub_total|floatformat:0 }}</div>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: center; font-size: 10px; color: #64748b; vertical-align: top;">{{ cat.percentage }}%</td>
+                            <td class="amount-col outflow-text" style="vertical-align: top;">৳{{ cat.amount|floatformat:0 }}</td>
                         </tr>
                         {% empty %}
                         <tr>

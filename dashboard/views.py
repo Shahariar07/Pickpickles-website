@@ -63,8 +63,9 @@ def dashboard_index(request):
     now = timezone.now()
     today = now.date()
     
-    # Ensure damage and returns expenses are synchronized (throttled)
+    # Ensure damage, returns and expense taxonomy allocations are synchronized (throttled)
     ensure_damage_and_returns_expenses_synced(user=request.user)
+    ensure_expense_taxonomy_and_allocation_synced()
     
     current_year = today.year
     current_month = today.month
@@ -407,12 +408,13 @@ def dashboard_index(request):
         chart_cat_data = [0, 0, 0, 0]
 
     # Sub-category / Specific Expense Head breakdown
-    subcat_totals = Expense.objects.exclude(sub_category='').values('sub_category').annotate(sub_sum=Sum('amount')).order_by('-sub_sum')
+    subcat_totals = Expense.objects.filter(sub_category__isnull=False).exclude(sub_category='').values('sub_category').annotate(sub_sum=Sum('amount')).order_by('-sub_sum')
     chart_subcat_labels = []
     chart_subcat_data = []
     for item in subcat_totals[:10]:
-        chart_subcat_labels.append(item['sub_category'])
-        chart_subcat_data.append(float(item['sub_sum']))
+        if item['sub_category']:
+            chart_subcat_labels.append(str(item['sub_category']))
+            chart_subcat_data.append(float(item['sub_sum'] or 0))
 
     # JSON Serialized for Chart.js
     chart_data = {
@@ -2373,6 +2375,26 @@ def ensure_damage_and_returns_expenses_synced(user=None, force=False):
             sync_order_return_state(ret, 'RECEIVED_DAMAGED', user=user)
 
 
+def ensure_expense_taxonomy_and_allocation_synced(force=False):
+    """
+    Self-healing expense taxonomy & allocation for production & local servers:
+    1. Guarantees all canonical parent categories and subcategories exist in ExpenseCategory.
+    2. Auto-backfills sub_category on any Expense that has empty or null sub_category.
+    3. Throttled with cache so it runs with zero performance overhead.
+    """
+    cache_key = 'expense_taxonomy_synced_flag'
+    if not force and cache.get(cache_key):
+        return
+
+    try:
+        from django.core.management import call_command
+        call_command('setup_expense_categories')
+        cache.set(cache_key, True, timeout=1800)  # Throttled to once every 30 minutes
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Auto setup_expense_categories notice: {e}")
+
+
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def damage_returns_manager(request):
     """Manager for recording broken/damaged pickle jars and courier returned parcels."""
@@ -2855,8 +2877,9 @@ def expense_manager(request):
     now = timezone.now()
     today = now.date()
 
-    # Ensure damage and returns expenses are synchronized
+    # Ensure damage, returns, and expense taxonomy allocations are synchronized
     ensure_damage_and_returns_expenses_synced(user=request.user)
+    ensure_expense_taxonomy_and_allocation_synced()
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -2990,24 +3013,26 @@ def expense_manager(request):
         chart_cat_data = [4500, 2200, 1850, 680]
 
     # Specific Expense Heads (Sub-category Breakdown)
-    subcat_totals = Expense.objects.exclude(sub_category='').values('sub_category').annotate(sub_sum=Sum('amount')).order_by('-sub_sum')
+    subcat_totals = Expense.objects.filter(sub_category__isnull=False).exclude(sub_category='').values('sub_category').annotate(sub_sum=Sum('amount')).order_by('-sub_sum')
     chart_subcat_labels = []
     chart_subcat_data = []
     top_expense_heads = []
     total_exp_float = float(total_expenses) if total_expenses else 1.0
 
     for item in subcat_totals:
-        chart_subcat_labels.append(item['sub_category'])
-        chart_subcat_data.append(float(item['sub_sum']))
+        if item['sub_category']:
+            chart_subcat_labels.append(str(item['sub_category']))
+            chart_subcat_data.append(float(item['sub_sum'] or 0))
 
     for item in subcat_totals[:7]:
-        amt = float(item['sub_sum'])
-        pct = round((amt / total_exp_float) * 100, 1)
-        top_expense_heads.append({
-            'name': item['sub_category'],
-            'amount': amt,
-            'percentage': pct
-        })
+        if item['sub_category']:
+            amt = float(item['sub_sum'] or 0)
+            pct = round((amt / total_exp_float) * 100, 1)
+            top_expense_heads.append({
+                'name': str(item['sub_category']),
+                'amount': amt,
+                'percentage': pct
+            })
 
     expense_chart_data = {
         'catLabels': chart_cat_labels,
@@ -3149,15 +3174,26 @@ def financial_statement(request):
         cat_map[ec.slug] = ec.name
         cat_map[ec.name] = ec.name
         
+    ensure_expense_taxonomy_and_allocation_synced()
+    
     cat_expenses = []
     for item in cat_summary:
         cat_name = cat_map.get(item['category'], item['category'])
+        sub_items = list(
+            expenses_qs.filter(category=item['category'])
+            .filter(sub_category__isnull=False)
+            .exclude(sub_category='')
+            .values('sub_category')
+            .annotate(sub_total=Sum('amount'), sub_count=Count('id'))
+            .order_by('-sub_total')
+        )
         cat_expenses.append({
             'name': cat_name,
             'category_code': item['category'],
             'amount': float(item['total']),
             'count': item['count'],
-            'percentage': round((float(item['total']) / total_expenses) * 100, 1) if total_expenses > 0 else 0
+            'percentage': round((float(item['total']) / total_expenses) * 100, 1) if total_expenses > 0 else 0,
+            'sub_items': sub_items,
         })
 
     # 3. Net Profit / Loss
@@ -3317,14 +3353,25 @@ def financial_statement_print(request):
         cat_map[ec.slug] = ec.name
         cat_map[ec.name] = ec.name
         
+    ensure_expense_taxonomy_and_allocation_synced()
+
     cat_expenses = []
     for item in cat_summary:
         cat_name = cat_map.get(item['category'], item['category'])
+        sub_items = list(
+            expenses_qs.filter(category=item['category'])
+            .filter(sub_category__isnull=False)
+            .exclude(sub_category='')
+            .values('sub_category')
+            .annotate(sub_total=Sum('amount'), sub_count=Count('id'))
+            .order_by('-sub_total')
+        )
         cat_expenses.append({
             'name': cat_name,
             'amount': float(item['total']),
             'count': item['count'],
-            'percentage': round((float(item['total']) / total_expenses) * 100, 1) if total_expenses > 0 else 0
+            'percentage': round((float(item['total']) / total_expenses) * 100, 1) if total_expenses > 0 else 0,
+            'sub_items': sub_items,
         })
 
     net_profit = gross_revenue - total_expenses
@@ -3434,7 +3481,15 @@ def business_profitability(request):
     effective_volume = max(1, batch_volume)
 
     # 2. Expenses Breakdown
+    ensure_expense_taxonomy_and_allocation_synced()
     total_expenses = float(Expense.objects.aggregate(Sum('amount'))['amount__sum'] or 0)
+
+    # Build parent category resolver map for robust COGS allocation
+    cat_root_map = {}
+    for ec in ExpenseCategory.objects.select_related('parent').all():
+        root = ec.parent if ec.parent else ec
+        cat_root_map[ec.slug.upper()] = root.slug.upper()
+        cat_root_map[ec.name.upper()] = root.slug.upper()
 
     # Categorize expenses
     cat_expenses = Expense.objects.values('category').annotate(total=Sum('amount'), count=Count('id'))
@@ -3448,11 +3503,12 @@ def business_profitability(request):
     other_expense = 0.0
 
     for row in cat_expenses:
-        cat = (row['category'] or '').upper()
+        raw_cat = (row['category'] or '').upper()
+        cat = cat_root_map.get(raw_cat, raw_cat)
         amt = float(row['total'] or 0)
         if any(k in cat for k in ['PACKAGING', 'JAR', 'BOTTLE', 'LABEL', 'LID']):
             packaging_expense += amt
-        elif any(k in cat for k in ['RAW_MATERIAL', 'CUCUMBER', 'VEGGIE', 'FRUIT', 'MANGO', 'EGG']):
+        elif any(k in cat for k in ['RAW_MATERIAL', 'CUCUMBER', 'VEGGIE', 'FRUIT', 'MANGO', 'EGG', 'BEETROOT', 'CARROT']):
             raw_material_expense += amt
         elif any(k in cat for k in ['SPICES_BRINE', 'HERB', 'SALT', 'SUGAR', 'WATER', 'VINEGAR', 'SPICE']):
             spices_brine_expense += amt
