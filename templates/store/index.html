@@ -163,8 +163,8 @@
 </section>
 
 <!-- Main Product Flavor Menu -->
-<section id="pickle-menu" class="py-14 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-    <div class="text-center max-w-2xl mx-auto mb-10">
+<section id="pickle-menu" class="py-14 px-3 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+    <div class="text-center max-w-2xl mx-auto mb-8 sm:mb-10">
         <span class="text-xs font-black uppercase tracking-widest text-emerald-800 bg-emerald-100 border border-emerald-300 px-3.5 py-1.5 rounded-full">
             Artisanal Pickle Lineup
         </span>
@@ -176,22 +176,34 @@
         </p>
     </div>
 
-    <!-- Category Filter Tabs -->
-    <div class="flex flex-wrap items-center justify-center gap-2 pb-2 mb-8 text-xs font-bold max-w-full px-2">
-        <a href="{% url 'store:index' %}#pickle-menu" class="px-4 py-2 sm:px-5 sm:py-2.5 rounded-full transition-all text-xs font-black shadow-xs {% if not selected_cat %}bg-slate-950 text-white shadow-md ring-2 ring-slate-950/20{% else %}bg-white text-slate-700 hover:bg-slate-100 border border-slate-200{% endif %}">
-            All Pickles ({{ total_products_count }})
-        </a>
-        {% for cat in categories %}
-        <a href="{% url 'store:index' %}?category={{ cat.slug }}#pickle-menu" class="px-4 py-2 sm:px-5 sm:py-2.5 rounded-full transition-all text-xs font-black shadow-xs {% if selected_cat == cat.slug %}bg-slate-950 text-white shadow-md ring-2 ring-slate-950/20{% else %}bg-white text-slate-700 hover:bg-slate-100 border border-slate-200{% endif %}">
-            {{ cat.name }} ({{ cat.product_count }})
-        </a>
-        {% endfor %}
+    <!-- Category Filter Tabs: Horizontal swipeable chips on mobile, centered row on desktop -->
+    <div class="relative mb-6 sm:mb-8 -mx-3 sm:mx-0">
+        <div id="categoryPillsContainer" class="flex items-center overflow-x-auto no-scrollbar gap-2 px-3 sm:px-0 sm:flex-wrap sm:justify-center text-xs font-bold scroll-smooth pb-1">
+            <a href="{% url 'store:index' %}#pickle-menu" 
+               {% if not selected_cat %}id="activeCategoryPill"{% endif %}
+               class="shrink-0 whitespace-nowrap px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-full transition-all text-xs font-black active:scale-95 flex items-center gap-1.5 {% if not selected_cat %}bg-slate-950 text-white shadow-md ring-2 ring-slate-950/20{% else %}bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 shadow-2xs{% endif %}">
+                <span>🥒 All Pickles</span>
+                <span class="px-1.5 py-0.5 rounded-full text-[10px] font-extrabold {% if not selected_cat %}bg-white/20 text-white{% else %}bg-slate-100 text-slate-600 border border-slate-200{% endif %}">
+                    {{ total_products_count }}
+                </span>
+            </a>
+            {% for cat in categories %}
+            <a href="{% url 'store:index' %}?category={{ cat.slug }}#pickle-menu" 
+               {% if selected_cat == cat.slug %}id="activeCategoryPill"{% endif %}
+               class="shrink-0 whitespace-nowrap px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-full transition-all text-xs font-black active:scale-95 flex items-center gap-1.5 {% if selected_cat == cat.slug %}bg-slate-950 text-white shadow-md ring-2 ring-slate-950/20{% else %}bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 shadow-2xs{% endif %}">
+                <span>{{ cat.name }}</span>
+                <span class="px-1.5 py-0.5 rounded-full text-[10px] font-extrabold {% if selected_cat == cat.slug %}bg-white/20 text-white{% else %}bg-slate-100 text-slate-600 border border-slate-200{% endif %}">
+                    {{ cat.product_count }}
+                </span>
+            </a>
+            {% endfor %}
+        </div>
     </div>
 
-    <!-- Products Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+    <!-- Products Grid (2 columns on mobile, 3 columns on desktop) -->
+    <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 lg:gap-8">
         {% for product in all_products %}
-        <div class="product-card rounded-3xl overflow-hidden flex flex-col justify-between group transition-all duration-300">
+        <div class="product-card rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col justify-between group transition-all duration-300">
             
             <!-- Card Image Box -->
             <div class="relative aspect-square overflow-hidden bg-slate-100 border-b border-slate-200">
@@ -200,81 +212,83 @@
                 </a>
                 
                 <!-- Best Seller / Stock Out / Spice Level Badge -->
-                {% if not product.is_in_stock %}
-                <div class="absolute top-3 left-3 bg-rose-600 text-white text-xs font-black px-3 py-1 rounded-full shadow-lg border border-rose-500 flex items-center gap-1.5 z-10">
+                {% if not product.is_in_stock or product.stock_count == 0 %}
+                <div class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-rose-600 text-white text-[10px] sm:text-xs font-black px-2 sm:px-3 py-0.5 sm:py-1 rounded-full shadow-lg border border-rose-500 flex items-center gap-1 sm:gap-1.5 z-10">
                     <i class="fa-solid fa-circle-xmark"></i>
                     <span>Stock Out</span>
                 </div>
                 {% elif best_seller and product.id == best_seller.id %}
-                <div class="absolute top-3 left-3 bg-amber-400 text-slate-950 text-xs font-black px-3 py-1 rounded-full shadow-lg border border-amber-300 flex items-center gap-1.5 ring-2 ring-amber-400/40 z-10">
+                <div class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-amber-400 text-slate-950 text-[10px] sm:text-xs font-black px-2 sm:px-3 py-0.5 sm:py-1 rounded-full shadow-lg border border-amber-300 flex items-center gap-1 sm:gap-1.5 ring-2 ring-amber-400/40 z-10">
                     <i class="fa-solid fa-fire text-rose-600"></i>
                     <span>Best Seller</span>
                 </div>
                 {% else %}
-                <div class="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full text-xs font-black text-slate-900 shadow-md border border-slate-300 flex items-center gap-1">
+                <div class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-white/95 backdrop-blur-md px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-black text-slate-900 shadow-md border border-slate-300 flex items-center gap-1 z-10">
                     {{ product.get_spice_level_display }}
                 </div>
                 {% endif %}
 
                 <!-- Weight badge -->
-                <div class="absolute top-3 right-3 bg-slate-900/90 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs font-black shadow-md border border-slate-700">
-                    {{ product.jar_weight_grams }} g Jar
+                <div class="absolute top-2 right-2 sm:top-3 sm:right-3 bg-slate-900/90 backdrop-blur-md text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-black shadow-md border border-slate-700 z-10">
+                    {{ product.jar_weight_grams }}g<span class="hidden sm:inline"> Jar</span>
                 </div>
 
                 <!-- Refrigerate Immediately Badge -->
-                <div class="absolute bottom-3 left-3 bg-slate-950/85 backdrop-blur-md text-cyan-200 text-[10px] font-black px-2.5 py-1 rounded-full border border-cyan-400/30 flex items-center gap-1 shadow-sm">
-                    <i class="fa-solid fa-snowflake text-cyan-400"></i>
-                    <span>REFRIGERATE IMMEDIATELY</span>
+                <div class="absolute bottom-2 left-2 sm:bottom-3 sm:left-3 bg-slate-950/85 backdrop-blur-md text-cyan-200 text-[8px] sm:text-[10px] font-black px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full border border-cyan-400/30 flex items-center gap-1 shadow-sm max-w-[88%] truncate z-10">
+                    <i class="fa-solid fa-snowflake text-cyan-400 text-[8px] sm:text-[10px] shrink-0"></i>
+                    <span class="truncate">REFRIGERATE<span class="hidden sm:inline"> IMMEDIATELY</span></span>
                 </div>
 
             </div>
 
             <!-- Card Body -->
-            <div class="p-6 flex-1 flex flex-col justify-between space-y-4">
+            <div class="p-3 sm:p-5 lg:p-6 flex-1 flex flex-col justify-between space-y-2.5 sm:space-y-4">
                 <div>
-                    <div class="flex items-center justify-between text-xs font-black mb-1.5">
-                        <span class="text-emerald-800 uppercase tracking-wide">{{ product.get_cut_style_display }}</span>
+                    <div class="flex items-center justify-between text-[10px] sm:text-xs font-black mb-1 sm:mb-1.5 gap-1">
+                        <span class="text-emerald-800 uppercase tracking-wide truncate">{{ product.get_cut_style_display }}</span>
                         {% if product.reviews_count > 0 %}
-                        <span class="text-amber-600">⭐ {{ product.average_rating }}/5 ({{ product.reviews_count }})</span>
+                        <span class="text-amber-600 shrink-0">⭐ {{ product.average_rating }}<span class="hidden sm:inline">/5 ({{ product.reviews_count }})</span></span>
                         {% else %}
-                        <span class="text-amber-600">⭐ {{ product.crunch_rating }}/5 Crunch</span>
+                        <span class="text-amber-600 shrink-0">⭐ {{ product.crunch_rating }}/5</span>
                         {% endif %}
                     </div>
 
-                    <h3 class="font-display font-black text-xl text-slate-950 group-hover:text-emerald-700 transition leading-tight">
+                    <h3 class="font-display font-black text-sm sm:text-lg lg:text-xl text-slate-950 group-hover:text-emerald-700 transition leading-tight line-clamp-2">
                         <a href="{% url 'store:product_detail' product.slug %}">{{ product.name }}</a>
                     </h3>
 
-                    <p class="text-xs sm:text-sm text-slate-700 font-medium mt-2 line-clamp-2 leading-relaxed">
+
+
+                    <p class="text-[11px] sm:text-xs lg:text-sm text-slate-700 font-medium mt-1 sm:mt-2 line-clamp-2 leading-snug sm:leading-relaxed">
                         {{ product.tagline }}
                     </p>
                     
                     <!-- Flavor tag notes -->
-                    <div class="mt-3 flex flex-wrap gap-1">
-                        <span class="text-[11px] bg-slate-100 text-slate-800 font-bold px-2.5 py-1 rounded-lg border border-slate-300">
+                    <div class="mt-1.5 sm:mt-3 flex flex-wrap gap-1">
+                        <span class="text-[9px] sm:text-[11px] bg-slate-100 text-slate-800 font-bold px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-md sm:rounded-lg border border-slate-300 truncate max-w-full">
                             🌿 {{ product.flavor_profile }}
                         </span>
                     </div>
                 </div>
 
                 <!-- Price and Add to Cart Row -->
-                <div class="pt-4 border-t border-slate-200 flex items-center justify-between gap-3">
+                <div class="pt-2 sm:pt-4 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
                     <div>
-                        <span class="text-[11px] text-slate-600 font-bold block uppercase">Price per Jar</span>
-                        <div class="flex items-baseline gap-2">
-                            <span class="font-display font-black text-2xl text-slate-950">৳{{ product.price_bdt }}</span>
+                        <span class="text-[9px] sm:text-[11px] text-slate-600 font-bold block uppercase">Price</span>
+                        <div class="flex items-baseline gap-1">
+                            <span class="font-display font-black text-base sm:text-2xl text-slate-950">৳{{ product.price_bdt }}</span>
                         </div>
                     </div>
 
                     <!-- Quick Add Button with AJAX or Stock Out button -->
-                    {% if product.is_in_stock %}
-                    <button onclick="ajaxAddToCart({{ product.id }}, 1, this)" class="bg-[#15803d] hover:bg-[#166534] active:scale-95 text-white font-extrabold text-xs sm:text-sm px-4 py-3 rounded-xl shadow-md flex items-center gap-1.5 transition-all">
-                        <i class="fa-solid fa-plus text-xs"></i>
+                    {% if product.is_in_stock and product.stock_count > 0 %}
+                    <button onclick="ajaxAddToCart({{ product.id }}, 1, this)" class="w-full sm:w-auto bg-[#15803d] hover:bg-[#166534] active:scale-95 text-white font-extrabold text-[11px] sm:text-sm px-2.5 sm:px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl shadow-md flex items-center justify-center gap-1 sm:gap-1.5 transition-all">
+                        <i class="fa-solid fa-plus text-[10px] sm:text-xs"></i>
                         <span>Add to Bag</span>
                     </button>
                     {% else %}
-                    <button disabled class="bg-slate-200 text-slate-500 font-bold text-xs sm:text-sm px-4 py-3 rounded-xl cursor-not-allowed flex items-center gap-1.5 opacity-90 shadow-inner" title="Currently Out of Stock">
-                        <i class="fa-solid fa-ban text-xs"></i>
+                    <button disabled class="w-full sm:w-auto bg-slate-200 text-slate-500 font-bold text-[11px] sm:text-sm px-2.5 sm:px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl cursor-not-allowed flex items-center justify-center gap-1 sm:gap-1.5 opacity-90 shadow-inner" title="Currently Out of Stock">
+                        <i class="fa-solid fa-ban text-[10px] sm:text-xs"></i>
                         <span>Stock Out</span>
                     </button>
                     {% endif %}
@@ -284,7 +298,7 @@
 
         </div>
         {% empty %}
-        <div class="col-span-3 text-center py-12">
+        <div class="col-span-2 lg:col-span-3 text-center py-12">
             <p class="text-slate-600 font-medium">No pickles in this category yet. Check back soon!</p>
         </div>
         {% endfor %}
@@ -292,69 +306,69 @@
 </section>
 
 <!-- American Pickles Benefits & Highlights -->
-<section class="py-14 bg-gradient-to-b from-slate-50 to-emerald-50/40 px-4 sm:px-6 lg:px-8 border-y border-slate-200">
+<section class="py-10 sm:py-14 bg-gradient-to-b from-slate-50 to-emerald-50/40 px-3 sm:px-6 lg:px-8 border-y border-slate-200">
     <div class="max-w-6xl mx-auto">
-        <div class="text-center max-w-2xl mx-auto mb-10">
-            <span class="text-xs font-black uppercase tracking-widest text-emerald-900 bg-emerald-100 border border-emerald-300 px-3.5 py-1.5 rounded-full">
+        <div class="text-center max-w-2xl mx-auto mb-6 sm:mb-10">
+            <span class="text-[11px] sm:text-xs font-black uppercase tracking-widest text-emerald-900 bg-emerald-100 border border-emerald-300 px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full inline-block">
                 Why You'll Love American Pickles 🥒
             </span>
-            <h2 class="font-display font-black text-2xl sm:text-4xl text-slate-950 mt-3">
+            <h2 class="font-display font-black text-xl sm:text-3xl lg:text-4xl text-slate-950 mt-2.5 sm:mt-3">
                 The Unique Benefits of Artisanal Vinegar Pickles
             </h2>
-            <p class="text-sm text-slate-600 font-medium mt-2">
+            <p class="text-xs sm:text-sm text-slate-600 font-medium mt-1.5 sm:mt-2">
                 Crafted in small batches with hand-selected crisp local veggies, pure vinegar brine, and aromatic whole spices — made for serious crunch and unbeatable flavor!
             </p>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
             <!-- Benefit 1: Ultra Crunch -->
-            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs hover:shadow-md hover:border-emerald-500 transition-all group">
-                <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+            <div class="bg-white p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs hover:shadow-md hover:border-emerald-500 transition-all group flex flex-col">
+                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-base sm:text-xl mb-2.5 sm:mb-4 group-hover:scale-110 transition-transform shrink-0">
                     <i class="fa-solid fa-bolt"></i>
                 </div>
-                <h3 class="font-display font-black text-lg text-slate-900 mb-2">
+                <h3 class="font-display font-black text-xs sm:text-base lg:text-lg text-slate-900 mb-1 sm:mb-2 leading-tight">
                     Signature Crisp Snap
                 </h3>
-                <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                <p class="text-[11px] sm:text-xs lg:text-sm text-slate-600 leading-snug sm:leading-relaxed">
                     Cold-brined crisp local cucumbers retain their fresh, loud audible crunch in every single bite without ever going soggy.
                 </p>
             </div>
 
             <!-- Benefit 2: 100% Oil-Free -->
-            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs hover:shadow-md hover:border-emerald-500 transition-all group">
-                <div class="w-12 h-12 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+            <div class="bg-white p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs hover:shadow-md hover:border-emerald-500 transition-all group flex flex-col">
+                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center text-base sm:text-xl mb-2.5 sm:mb-4 group-hover:scale-110 transition-transform shrink-0">
                     <i class="fa-solid fa-droplet-slash"></i>
                 </div>
-                <h3 class="font-display font-black text-lg text-slate-900 mb-2">
+                <h3 class="font-display font-black text-xs sm:text-base lg:text-lg text-slate-900 mb-1 sm:mb-2 leading-tight">
                     100% Oil-Free & Light
                 </h3>
-                <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                <p class="text-[11px] sm:text-xs lg:text-sm text-slate-600 leading-snug sm:leading-relaxed">
                     Zero heavy oils. Brined purely in filtered water, cane vinegar, Himalayan pink salt, garlic cloves, and whole mustard seeds.
                 </p>
             </div>
 
             <!-- Benefit 3: Perfect Food Pairing -->
-            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs hover:shadow-md hover:border-emerald-500 transition-all group">
-                <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+            <div class="bg-white p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs hover:shadow-md hover:border-emerald-500 transition-all group flex flex-col">
+                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center text-base sm:text-xl mb-2.5 sm:mb-4 group-hover:scale-110 transition-transform shrink-0">
                     <i class="fa-solid fa-burger"></i>
                 </div>
-                <h3 class="font-display font-black text-lg text-slate-900 mb-2">
+                <h3 class="font-display font-black text-xs sm:text-base lg:text-lg text-slate-900 mb-1 sm:mb-2 leading-tight">
                     Palate Cleanser & Booster
                 </h3>
-                <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                    Pairs deliciously with Smash Burgers, Fried Chicken, Shawarmas & snacks, as well as Beef Tehari, Biryani, Bhuna Khichuri, Kebabs & Steamed Rice!
+                <p class="text-[11px] sm:text-xs lg:text-sm text-slate-600 leading-snug sm:leading-relaxed">
+                    Pairs deliciously with Smash Burgers, Fried Chicken, Shawarmas, Tehari, Biryani, Bhuna Khichuri, Kebabs & Rice!
                 </p>
             </div>
 
             <!-- Benefit 4: Low Calorie & Guilt-Free -->
-            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs hover:shadow-md hover:border-emerald-500 transition-all group">
-                <div class="w-12 h-12 rounded-2xl bg-lime-100 text-lime-800 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+            <div class="bg-white p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs hover:shadow-md hover:border-emerald-500 transition-all group flex flex-col">
+                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-lime-100 text-lime-800 flex items-center justify-center text-base sm:text-xl mb-2.5 sm:mb-4 group-hover:scale-110 transition-transform shrink-0">
                     <i class="fa-solid fa-heart-pulse"></i>
                 </div>
-                <h3 class="font-display font-black text-lg text-slate-900 mb-2">
+                <h3 class="font-display font-black text-xs sm:text-base lg:text-lg text-slate-900 mb-1 sm:mb-2 leading-tight">
                     Fresh & Guilt-Free Snacking
                 </h3>
-                <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                <p class="text-[11px] sm:text-xs lg:text-sm text-slate-600 leading-snug sm:leading-relaxed">
                     Naturally low calorie, refreshing, and packed with aromatic spices that aid digestion and elevate your meals.
                 </p>
             </div>
@@ -363,49 +377,143 @@
 </section>
 
 <!-- Customer Reviews Section -->
-<section class="py-14 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-    <div class="text-center max-w-2xl mx-auto mb-10">
-        <span class="text-xs font-black uppercase tracking-widest text-amber-900 bg-amber-100 border border-amber-300 px-3.5 py-1.5 rounded-full">
+<section class="py-10 sm:py-14 px-3 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+    <div class="text-center max-w-2xl mx-auto mb-6 sm:mb-10">
+        <span class="text-[11px] sm:text-xs font-black uppercase tracking-widest text-amber-900 bg-amber-100 border border-amber-300 px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full inline-block">
             Real Pickle Lovers Nationwide 🇧🇩
         </span>
-        <h2 class="font-display font-black text-2xl sm:text-4xl text-slate-950 mt-3">
+        <h2 class="font-display font-black text-xl sm:text-3xl lg:text-4xl text-slate-950 mt-2.5 sm:mt-3">
             What Foodies Across Bangladesh Are Saying
         </h2>
-        <p class="text-sm text-slate-600 font-medium mt-2">
+        <p class="text-xs sm:text-sm text-slate-600 font-medium mt-1.5 sm:mt-2">
             Loved by burger enthusiasts, home chefs, and foodies from all across Bangladesh!
         </p>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {% for review in recent_reviews %}
-        <div class="bg-white p-6 rounded-3xl border-2 border-slate-200 shadow-xs flex flex-col justify-between space-y-4">
-            <div>
-                <div class="flex items-center gap-1 text-amber-500 text-sm mb-3">
-                    {% for i in "12345" %}
-                        <i class="fa-solid fa-star"></i>
-                    {% endfor %}
-                </div>
-                <p class="text-xs sm:text-sm text-slate-800 font-medium italic leading-relaxed">
-                    "{{ review.comment }}"
-                </p>
-            </div>
-            <div class="pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
+    <!-- Reviews Container: Swipeable Carousel on mobile, Grid on desktop -->
+    <div class="relative">
+        <div id="reviewsCarousel" class="flex sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 overflow-x-auto sm:overflow-visible no-scrollbar pb-3 pt-1 px-[7vw] sm:px-0 snap-x snap-mandatory scroll-smooth -mx-3 sm:mx-0">
+            {% for review in recent_reviews %}
+            <div class="w-[86vw] max-w-sm sm:w-auto shrink-0 snap-center sm:shrink bg-white p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs flex flex-col justify-between space-y-3.5 sm:space-y-4 hover:shadow-md transition-all text-left">
                 <div>
-                    <span class="font-black text-slate-950 block">{{ review.reviewer_name }}</span>
-                    <span class="text-slate-600 font-semibold text-[11px]">{{ review.reviewer_location }}</span>
+                    <div class="flex items-center justify-between mb-2.5 sm:mb-3">
+                        <div class="flex items-center gap-1 text-amber-500 text-sm">
+                            {% for i in "12345" %}
+                                <i class="fa-solid fa-star"></i>
+                            {% endfor %}
+                        </div>
+                        <span class="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <i class="fa-solid fa-circle-check text-[9px] text-emerald-600"></i> Verified Customer
+                        </span>
+                    </div>
+                    <p class="text-xs sm:text-sm text-slate-800 font-medium italic leading-relaxed">
+                        "{{ review.comment }}"
+                    </p>
                 </div>
-                <span class="bg-emerald-100 text-emerald-900 font-extrabold px-2.5 py-1 rounded-md text-[11px] border border-emerald-300">
-                    {{ review.product.name }}
-                </span>
+                <div class="pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
+                    <div class="min-w-0 pr-2">
+                        <span class="font-black text-slate-950 block text-xs sm:text-sm truncate">{{ review.reviewer_name }}</span>
+                        <span class="text-slate-500 font-semibold text-[11px] truncate block">📍 {{ review.reviewer_location|default:"Dhaka, Bangladesh" }}</span>
+                    </div>
+                    <span class="bg-emerald-100 text-emerald-900 font-extrabold px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] border border-emerald-300 truncate max-w-[140px] shrink-0">
+                        🥒 {{ review.product.name }}
+                    </span>
+                </div>
             </div>
+            {% empty %}
+            <div class="w-full col-span-2 lg:col-span-3 text-center py-6 text-slate-600 font-medium text-sm">
+                Be the first to try and review our freshly brined homemade pickles!
+            </div>
+            {% endfor %}
         </div>
-        {% empty %}
-        <div class="col-span-3 text-center py-6 text-slate-600 font-medium text-sm">
-            Be the first to try and review our freshly brined homemade pickles!
+
+        <!-- Mobile Carousel Navigation Controls (Arrows + Dots) -->
+        <div class="flex sm:hidden items-center justify-center gap-3 mt-3 mb-1">
+            <button type="button" onclick="scrollReviewsCarousel(-1)" class="w-8 h-8 rounded-full bg-white border border-slate-300 shadow-xs flex items-center justify-center text-slate-700 active:scale-90 transition hover:bg-slate-50" aria-label="Previous review">
+                <i class="fa-solid fa-chevron-left text-[11px]"></i>
+            </button>
+            <div id="reviewsCarouselDots" class="flex items-center gap-1.5">
+                {% for review in recent_reviews %}
+                <button type="button" onclick="scrollToReview({{ forloop.counter0 }})" class="review-dot h-2 rounded-full transition-all duration-300 {% if forloop.first %}bg-emerald-700 w-5{% else %}bg-slate-300 w-2{% endif %}" aria-label="Go to review {{ forloop.counter }}"></button>
+                {% endfor %}
+            </div>
+            <button type="button" onclick="scrollReviewsCarousel(1)" class="w-8 h-8 rounded-full bg-white border border-slate-300 shadow-xs flex items-center justify-center text-slate-700 active:scale-90 transition hover:bg-slate-50" aria-label="Next review">
+                <i class="fa-solid fa-chevron-right text-[11px]"></i>
+            </button>
         </div>
-        {% endfor %}
+    </div>
+
+    <!-- View All Customer Reviews CTA Button -->
+    <div class="mt-6 sm:mt-8 text-center px-2">
+        <a href="{% url 'store:reviews' %}" class="inline-flex items-center justify-center gap-2 bg-[#092d18] hover:bg-[#0f4826] text-amber-300 font-display font-black text-xs sm:text-sm px-4 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl border-2 border-emerald-500/50 shadow-xl shadow-emerald-950/20 hover:scale-[1.02] active:scale-95 transition-all max-w-full text-center">
+            <i class="fa-solid fa-star text-amber-400 shrink-0 text-xs sm:text-sm"></i>
+            <span>View All Reviews & Write Your Experience</span>
+            <i class="fa-solid fa-arrow-right text-[10px] sm:text-xs shrink-0"></i>
+        </a>
     </div>
 </section>
+
+<script>
+function scrollReviewsCarousel(direction) {
+    const container = document.getElementById('reviewsCarousel');
+    if (!container) return;
+    const card = container.querySelector('.snap-center');
+    const scrollAmount = card ? (card.offsetWidth + 16) : 300;
+    container.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
+}
+
+function scrollToReview(index) {
+    const container = document.getElementById('reviewsCarousel');
+    if (!container) return;
+    const cards = container.querySelectorAll('.snap-center');
+    if (cards[index]) {
+        cards[index].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('reviewsCarousel');
+    const dots = document.querySelectorAll('.review-dot');
+    if (!container || !dots.length) return;
+
+    let scrollTimeout;
+    container.addEventListener('scroll', function() {
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(function() {
+            const cards = container.querySelectorAll('.snap-center');
+            const containerCenter = container.scrollLeft + (container.offsetWidth / 2);
+            let closestIndex = 0;
+            let minDiff = Infinity;
+
+            cards.forEach(function(card, idx) {
+                const cardCenter = card.offsetLeft + (card.offsetWidth / 2);
+                const diff = Math.abs(containerCenter - cardCenter);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closestIndex = idx;
+                }
+            });
+
+            dots.forEach(function(dot, idx) {
+                if (idx === closestIndex) {
+                    dot.className = 'review-dot h-2 rounded-full bg-emerald-700 w-5 transition-all duration-300';
+                } else {
+                    dot.className = 'review-dot h-2 rounded-full bg-slate-300 w-2 transition-all duration-300';
+                }
+            });
+        }, 30);
+    }, { passive: true });
+
+    // Auto-scroll selected category pill into view on mobile
+    const activePill = document.getElementById('activeCategoryPill');
+    const pillContainer = document.getElementById('categoryPillsContainer');
+    if (activePill && pillContainer && window.innerWidth < 640) {
+        setTimeout(function() {
+            activePill.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }, 150);
+    }
+});
+</script>
 
 <!-- FAQ Accordion Section -->
 <section class="py-12 bg-slate-100 border-t border-slate-300 px-4 sm:px-6 lg:px-8">

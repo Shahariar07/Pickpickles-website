@@ -149,7 +149,14 @@
                 </nav>
 
                 <!-- Action Controls: Cart & Dashboard link -->
-                <div class="flex items-center gap-3 sm:gap-4">
+                <div class="flex items-center gap-2 sm:gap-4">
+                    <!-- Reviews Quick Link (Mobile & Tablet) -->
+                    <a href="{% url 'store:reviews' %}"
+                        class="inline-flex md:hidden items-center gap-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-1.5 rounded-xl text-xs font-extrabold shadow-xs transition-all active:scale-95">
+                        <i class="fa-solid fa-star text-amber-500 text-xs"></i>
+                        <span>Reviews</span>
+                    </a>
+
                     <!-- Track Order Pill (Mobile friendly) -->
                     <a href="{% url 'store:order_track' %}"
                         class="hidden sm:inline-flex items-center gap-1.5 bg-gray-50 hover:bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 transition-all">
@@ -330,19 +337,29 @@
 
     <!-- Mobile Sticky Bottom Navigation Bar -->
     <div
-        class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-gray-200 px-3 py-2 flex items-center justify-around shadow-2xl safe-area-bottom">
+        class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-gray-200 px-2 py-1.5 flex items-center justify-around shadow-2xl safe-area-bottom">
         <a href="{% url 'store:index' %}"
-            class="flex flex-col items-center gap-0.5 text-gray-600 hover:text-brand-600 p-1.5 focus:text-brand-700">
+            class="flex flex-col items-center gap-0.5 {% if request.resolver_match.url_name == 'index' and not request.GET.category %}text-brand-700 font-extrabold{% else %}text-gray-600 hover:text-brand-600{% endif %} p-1 min-w-[54px] text-center transition active:scale-95">
             <i class="fa-solid fa-house text-lg"></i>
             <span class="text-[10px] font-semibold">Home</span>
         </a>
         <a href="{% url 'store:index' %}#pickle-menu"
-            class="flex flex-col items-center gap-0.5 text-gray-600 hover:text-brand-600 p-1.5">
+            class="flex flex-col items-center gap-0.5 text-gray-600 hover:text-brand-600 p-1 min-w-[54px] text-center transition active:scale-95">
             <i class="fa-solid fa-jar text-lg"></i>
             <span class="text-[10px] font-semibold">Flavors</span>
         </a>
+        <a href="{% url 'store:reviews' %}"
+            class="flex flex-col items-center gap-0.5 {% if request.resolver_match.url_name == 'reviews' %}text-amber-600 font-extrabold{% else %}text-gray-700 hover:text-amber-600{% endif %} p-1 min-w-[54px] text-center transition active:scale-95">
+            <i class="fa-solid fa-star text-amber-500 text-lg"></i>
+            <span class="text-[10px] font-bold">Reviews</span>
+        </a>
+        <a href="{% url 'store:order_track' %}"
+            class="flex flex-col items-center gap-0.5 {% if request.resolver_match.url_name == 'order_track' %}text-brand-700 font-extrabold{% else %}text-gray-600 hover:text-brand-600{% endif %} p-1 min-w-[54px] text-center transition active:scale-95">
+            <i class="fa-solid fa-truck-fast text-lg"></i>
+            <span class="text-[10px] font-semibold">Track</span>
+        </a>
         <button onclick="toggleCartDrawer(true)"
-            class="relative flex flex-col items-center gap-0.5 text-brand-600 font-bold p-1.5">
+            class="relative flex flex-col items-center gap-0.5 text-brand-600 font-bold p-1 min-w-[54px] text-center active:scale-95">
             <div class="relative">
                 <i class="fa-solid fa-basket-shopping text-xl"></i>
                 <span id="mobileCartBadge"
@@ -352,16 +369,6 @@
             </div>
             <span class="text-[10px]">Cart (৳<span id="mobileCartSubtotal">{{ cart_subtotal }}</span>)</span>
         </button>
-        <a href="{% url 'store:order_track' %}"
-            class="flex flex-col items-center gap-0.5 text-gray-600 hover:text-brand-600 p-1.5">
-            <i class="fa-solid fa-truck-fast text-lg"></i>
-            <span class="text-[10px] font-semibold">Track</span>
-        </a>
-        <a href="{% url 'store:about_story' %}"
-            class="flex flex-col items-center gap-0.5 text-gray-600 hover:text-brand-600 p-1.5">
-            <i class="fa-solid fa-circle-question text-lg"></i>
-            <span class="text-[10px] font-semibold">FAQ</span>
-        </a>
     </div>
 
     <!-- Slide-Out Quick Cart Drawer (Mobile & Desktop) -->

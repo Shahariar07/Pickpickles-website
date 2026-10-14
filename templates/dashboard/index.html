@@ -508,7 +508,7 @@
                 </div>
             </div>
 
-            <!-- Chart 3: Cost Categories Breakdown (Doughnut) -->
+            <!-- Chart 3: Expense Head Breakdown (Interactive Doughnut / Bar) -->
             <div class="bg-white p-5 sm:p-6 rounded-3xl border border-gray-200/90 shadow-sm space-y-3.5">
                 <div class="flex items-center justify-between pb-3 border-b border-gray-100 flex-wrap gap-2">
                     <div class="flex items-center gap-3">
@@ -517,17 +517,40 @@
                         </span>
                         <div>
                             <h3 class="font-display font-black text-base text-gray-900">
-                                Cost Breakdown by Category
+                                Expense Breakdown by Head (খরচের খাত)
                             </h3>
-                            <p class="text-xs text-gray-400">Where capital is allocated across supplies</p>
+                            <p class="text-xs text-gray-400">Capital distribution across supply & operating heads</p>
                         </div>
                     </div>
-                    <span class="text-xs font-black text-gray-700 bg-gray-100 px-3 py-1 rounded-xl border border-gray-200">
-                        ৳{{ total_expenses|floatformat:0 }} Total
-                    </span>
+                    
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <!-- Head Level Toggle: Main Category vs Specific Sub-Head -->
+                        <div class="bg-gray-100 p-0.5 rounded-xl flex items-center text-[11px] font-bold">
+                            <button type="button" id="toggleExpCatBtn" onclick="setExpenseChartMode('cat')" class="px-2.5 py-1 rounded-lg bg-white text-gray-900 shadow-2xs transition">
+                                মূল খাত
+                            </button>
+                            <button type="button" id="toggleExpSubcatBtn" onclick="setExpenseChartMode('subcat')" class="px-2.5 py-1 rounded-lg text-gray-500 hover:text-gray-900 transition">
+                                নির্দিষ্ট খাত
+                            </button>
+                        </div>
+
+                        <!-- Chart Type Toggle: Doughnut vs Bar -->
+                        <div class="bg-gray-100 p-0.5 rounded-xl flex items-center text-xs">
+                            <button type="button" id="btnExpChartDoughnut" onclick="setExpenseChartType('doughnut')" class="w-7 h-7 rounded-lg bg-white text-gray-900 shadow-2xs flex items-center justify-center transition" title="Doughnut / Pie Chart">
+                                <i class="fa-solid fa-chart-pie text-[11px]"></i>
+                            </button>
+                            <button type="button" id="btnExpChartBar" onclick="setExpenseChartType('bar')" class="w-7 h-7 rounded-lg text-gray-500 hover:text-gray-900 flex items-center justify-center transition" title="Bar Chart">
+                                <i class="fa-solid fa-chart-simple text-[11px]"></i>
+                            </button>
+                        </div>
+
+                        <span class="text-xs font-black text-rose-700 bg-rose-50 px-2.5 py-1 rounded-xl border border-rose-200 ml-0.5">
+                            ৳{{ total_expenses|floatformat:0 }}
+                        </span>
+                    </div>
                 </div>
 
-                <div class="relative h-60 sm:h-72 w-full flex items-center justify-center">
+                <div class="relative h-64 sm:h-72 w-full flex items-center justify-center">
                     <canvas id="expenseCategoryChart"></canvas>
                 </div>
             </div>
@@ -855,50 +878,151 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // 3. Expense Category Breakdown Doughnut Chart
+    // 3. Expense Head Breakdown Chart (Interactive Doughnut / Bar & Cat / Subcat)
     const expenseCatEl = document.getElementById('expenseCategoryChart');
-    if (expenseCatEl) {
-        const expenseCatCtx = expenseCatEl.getContext('2d');
-        const totalCatExpense = (data.catData || []).reduce((a, b) => a + b, 0);
-        new Chart(expenseCatCtx, {
-            type: 'doughnut',
+    let expenseChartInstance = null;
+    let currentExpenseMode = 'cat'; // 'cat' or 'subcat'
+    let currentExpenseType = 'doughnut'; // 'doughnut' or 'bar'
+
+    const expensePalette = [
+        '#d97706', // Packaging / Amber-600
+        '#059669', // Veggies / Emerald-600
+        '#0284c7', // Spices / Sky-600
+        '#4f46e5', // Logistics / Indigo-600
+        '#db2777', // Marketing / Pink-600
+        '#e11d48', // Damage / Rose-600
+        '#d97706', // Utilities / Amber-700
+        '#7c3aed', // Violet-600
+        '#0d9488', // Teal-600
+        '#ea580c', // Orange-600
+        '#475569', // Slate-600
+        '#65a30d'  // Lime-600
+    ];
+
+    function getExpenseData(mode) {
+        if (mode === 'subcat' && data.subcatLabels && data.subcatLabels.length > 0) {
+            return {
+                labels: data.subcatLabels,
+                values: data.subcatData
+            };
+        }
+        return {
+            labels: data.catLabels || [],
+            values: data.catData || []
+        };
+    }
+
+    function renderExpenseChart() {
+        if (!expenseCatEl) return;
+        const activeData = getExpenseData(currentExpenseMode);
+        const total = (activeData.values || []).reduce((a, b) => a + b, 0);
+        const hasData = total > 0;
+
+        if (expenseChartInstance) {
+            expenseChartInstance.destroy();
+        }
+
+        const ctx = expenseCatEl.getContext('2d');
+        const isBar = currentExpenseType === 'bar';
+
+        expenseChartInstance = new Chart(ctx, {
+            type: currentExpenseType,
             data: {
-                labels: totalCatExpense > 0 ? data.catLabels : ['No Expenses Recorded'],
+                labels: hasData ? activeData.labels : ['No Expenses Recorded'],
                 datasets: [{
-                    data: totalCatExpense > 0 ? data.catData : [1],
-                    backgroundColor: totalCatExpense > 0 ? [
-                        '#e0a96d', // Packaging (Gold/Amber)
-                        '#2d6a4f', // Cucumbers (Forest Green)
-                        '#10b981', // Spices & Vinegar (Emerald)
-                        '#6366f1', // Courier & Logistics (Indigo)
-                        '#ec4899', // Marketing (Pink)
-                        '#f59e0b', // Utilities (Amber)
-                        '#64748b'  // Other (Slate)
-                    ] : ['#e2e8f0'],
-                    borderWidth: 2,
-                    borderColor: '#ffffff'
+                    label: 'Expense Cost (৳)',
+                    data: hasData ? activeData.values : [1],
+                    backgroundColor: hasData ? activeData.labels.map((_, i) => expensePalette[i % expensePalette.length]) : ['#e2e8f0'],
+                    borderWidth: isBar ? 0 : 2,
+                    borderColor: '#ffffff',
+                    borderRadius: isBar ? 6 : 0
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '65%',
+                indexAxis: isBar ? 'y' : 'x',
+                cutout: isBar ? 0 : '62%',
                 plugins: {
                     legend: {
+                        display: !isBar,
                         position: 'bottom',
-                        labels: { boxWidth: 10, font: { size: 10, weight: 'bold' }, padding: 8 }
+                        labels: {
+                            boxWidth: 10,
+                            font: { size: 10, weight: 'bold' },
+                            padding: 6
+                        }
                     },
                     tooltip: {
                         backgroundColor: '#0f172a',
                         padding: 10,
                         cornerRadius: 10,
                         callbacks: {
-                            label: ctx => ` ${ctx.label}: ৳${ctx.parsed.toLocaleString()}`
+                            label: function(ctx) {
+                                const val = ctx.parsed.y !== undefined && ctx.parsed.y !== null && !isBar ? ctx.parsed.y : (ctx.parsed.x !== undefined && isBar ? ctx.parsed.x : ctx.raw);
+                                const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0';
+                                return ` ৳${Number(val).toLocaleString()} (${pct}%)`;
+                            }
                         }
                     }
-                }
+                },
+                scales: isBar ? {
+                    x: {
+                        grid: { color: '#f1f5f9' },
+                        ticks: {
+                            font: { size: 10 },
+                            callback: val => '৳' + Number(val).toLocaleString()
+                        }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: {
+                            font: { size: 10, weight: 'bold' },
+                            callback: function(val, index) {
+                                const label = this.getLabelForValue(index) || '';
+                                return label.length > 16 ? label.substring(0, 16) + '...' : label;
+                            }
+                        }
+                    }
+                } : {}
             }
         });
+    }
+
+    window.setExpenseChartMode = function(mode) {
+        currentExpenseMode = mode;
+        const catBtn = document.getElementById('toggleExpCatBtn');
+        const subcatBtn = document.getElementById('toggleExpSubcatBtn');
+        if (catBtn && subcatBtn) {
+            if (mode === 'cat') {
+                catBtn.className = 'px-2.5 py-1 rounded-lg bg-white text-gray-900 shadow-2xs transition';
+                subcatBtn.className = 'px-2.5 py-1 rounded-lg text-gray-500 hover:text-gray-900 transition';
+            } else {
+                subcatBtn.className = 'px-2.5 py-1 rounded-lg bg-white text-gray-900 shadow-2xs transition';
+                catBtn.className = 'px-2.5 py-1 rounded-lg text-gray-500 hover:text-gray-900 transition';
+            }
+        }
+        renderExpenseChart();
+    };
+
+    window.setExpenseChartType = function(type) {
+        currentExpenseType = type;
+        const doughnutBtn = document.getElementById('btnExpChartDoughnut');
+        const barBtn = document.getElementById('btnExpChartBar');
+        if (doughnutBtn && barBtn) {
+            if (type === 'doughnut') {
+                doughnutBtn.className = 'w-7 h-7 rounded-lg bg-white text-gray-900 shadow-2xs flex items-center justify-center transition';
+                barBtn.className = 'w-7 h-7 rounded-lg text-gray-500 hover:text-gray-900 flex items-center justify-center transition';
+            } else {
+                barBtn.className = 'w-7 h-7 rounded-lg bg-white text-gray-900 shadow-2xs flex items-center justify-center transition';
+                doughnutBtn.className = 'w-7 h-7 rounded-lg text-gray-500 hover:text-gray-900 flex items-center justify-center transition';
+            }
+        }
+        renderExpenseChart();
+    };
+
+    if (expenseCatEl) {
+        renderExpenseChart();
     }
 
     // 4. Top Selling Products Bar Chart

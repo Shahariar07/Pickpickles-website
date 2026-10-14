@@ -406,6 +406,14 @@ def dashboard_index(request):
         chart_cat_labels = ['Packaging & Jars', 'Cucumbers & Veggies', 'Vinegar & Spices', 'Courier & Logistics']
         chart_cat_data = [0, 0, 0, 0]
 
+    # Sub-category / Specific Expense Head breakdown
+    subcat_totals = Expense.objects.exclude(sub_category='').values('sub_category').annotate(sub_sum=Sum('amount')).order_by('-sub_sum')
+    chart_subcat_labels = []
+    chart_subcat_data = []
+    for item in subcat_totals[:10]:
+        chart_subcat_labels.append(item['sub_category'])
+        chart_subcat_data.append(float(item['sub_sum']))
+
     # JSON Serialized for Chart.js
     chart_data = {
         'trendLabels': date_labels,
@@ -421,6 +429,8 @@ def dashboard_index(request):
         'zoneData': [inside_dhaka_count, outside_dhaka_count],
         'catLabels': chart_cat_labels,
         'catData': chart_cat_data,
+        'subcatLabels': chart_subcat_labels,
+        'subcatData': chart_subcat_data,
         'comparisonLabels': ['Gross Revenue (৳)', 'Total Costs (৳)', 'Net Profit / Balance (৳)'],
         'comparisonData': [float(total_revenue), float(total_expenses), float(net_profit)],
     }
@@ -2979,11 +2989,34 @@ def expense_manager(request):
         chart_cat_labels = ['Glass Jars & Lids', 'Cucumbers', 'Vinegar & Spices', 'Courier & Logistics']
         chart_cat_data = [4500, 2200, 1850, 680]
 
+    # Specific Expense Heads (Sub-category Breakdown)
+    subcat_totals = Expense.objects.exclude(sub_category='').values('sub_category').annotate(sub_sum=Sum('amount')).order_by('-sub_sum')
+    chart_subcat_labels = []
+    chart_subcat_data = []
+    top_expense_heads = []
+    total_exp_float = float(total_expenses) if total_expenses else 1.0
+
+    for item in subcat_totals:
+        chart_subcat_labels.append(item['sub_category'])
+        chart_subcat_data.append(float(item['sub_sum']))
+
+    for item in subcat_totals[:7]:
+        amt = float(item['sub_sum'])
+        pct = round((amt / total_exp_float) * 100, 1)
+        top_expense_heads.append({
+            'name': item['sub_category'],
+            'amount': amt,
+            'percentage': pct
+        })
+
     expense_chart_data = {
         'catLabels': chart_cat_labels,
         'catData': chart_cat_data,
+        'subcatLabels': chart_subcat_labels[:12],
+        'subcatData': chart_subcat_data[:12],
         'comparisonLabels': ['Gross Revenue (৳)', 'Total Costs (৳)', 'Net Profit (৳)'],
-        'comparisonData': [float(total_revenue), float(total_expenses), max(0, net_profit)]
+        'comparisonData': [float(total_revenue), float(total_expenses), max(0, net_profit)],
+        'topExpenseHeads': top_expense_heads,
     }
 
     # Order expenses consistently
@@ -3041,6 +3074,7 @@ def expense_manager(request):
         'profit_margin': profit_margin,
         'this_month_expenses': this_month_expenses,
         'expense_count': paginator.count,
+        'top_expense_heads': top_expense_heads,
         'expense_chart_json': json.dumps(expense_chart_data),
     }
     return render(request, 'dashboard/expenses.html', context)

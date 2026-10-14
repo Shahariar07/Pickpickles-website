@@ -24,35 +24,35 @@
         </div>
 
         <!-- KPI Stat Badges + Top Action Buttons -->
-        <div class="flex items-center gap-2.5 flex-wrap">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-2.5 w-full md:w-auto">
             
-            <!-- Quick Mini KPI Chips -->
-            <div class="hidden sm:flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-2xl border border-gray-200/80 text-xs font-bold">
-                <div class="text-center pr-2 border-r border-gray-200">
-                    <span class="text-[9px] text-gray-400 uppercase block font-extrabold">মজুত বয়াম</span>
-                    <span class="font-black text-gray-900 text-sm">{{ total_current_inventory }} pcs</span>
+            <!-- Quick Mini KPI Chips (Visible on Mobile and Desktop) -->
+            <div class="grid grid-cols-3 gap-1.5 w-full sm:w-auto sm:flex sm:items-center bg-gray-50 px-2.5 py-1.5 rounded-2xl border border-gray-200/80 text-xs font-bold">
+                <div class="text-center sm:pr-2.5 sm:border-r border-gray-200">
+                    <span class="text-[9px] text-gray-400 uppercase block font-extrabold leading-tight">মজুত বয়াম</span>
+                    <span class="font-black text-gray-900 text-sm leading-tight">{{ total_current_inventory }} <span class="text-[9px] font-bold text-gray-400">pcs</span></span>
                 </div>
-                <div class="text-center px-2 border-r border-gray-200">
-                    <span class="text-[9px] text-emerald-700 uppercase block font-extrabold">পর্যাপ্ত স্টক</span>
-                    <span class="font-black text-emerald-700 text-sm">{{ in_stock_count }}</span>
+                <div class="text-center px-1 sm:px-2.5 sm:border-r border-gray-200 bg-emerald-50/60 sm:bg-transparent rounded-xl py-0.5 sm:py-0">
+                    <span class="text-[9px] text-emerald-700 uppercase block font-extrabold leading-tight">পর্যাপ্ত স্টক</span>
+                    <span class="font-black text-emerald-700 text-sm leading-tight">{{ in_stock_count }}</span>
                 </div>
-                <div class="text-center pl-1">
-                    <span class="text-[9px] text-rose-600 uppercase block font-extrabold">মোট লাগবে</span>
-                    <span class="font-black text-rose-700 text-sm">{% if total_needed_jars > 0 %}+{{ total_needed_jars }} pcs{% else %}0{% endif %}</span>
+                <div class="text-center sm:pl-2 bg-rose-50/60 sm:bg-transparent rounded-xl py-0.5 sm:py-0">
+                    <span class="text-[9px] text-rose-600 uppercase block font-extrabold leading-tight">মোট লাগবে</span>
+                    <span class="font-black text-rose-700 text-sm leading-tight">{% if total_needed_jars > 0 %}+{{ total_needed_jars }} pcs{% else %}0{% endif %}</span>
                 </div>
             </div>
 
             <!-- Action Buttons -->
-            <div class="flex items-center gap-2 flex-wrap">
-                <a href="{% url 'dashboard:stock_ledger' %}" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-bold text-xs px-3 py-2 rounded-xl border border-indigo-200 flex items-center gap-1.5 transition active:scale-95" title="Audit Log">
+            <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                <a href="{% url 'dashboard:stock_ledger' %}" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-bold text-xs px-2.5 sm:px-3 py-2 rounded-xl border border-indigo-200 flex items-center gap-1.5 transition active:scale-95" title="Audit Log">
                     <i class="fa-solid fa-clock-rotate-left text-indigo-600"></i>
-                    <span class="hidden md:inline">Ledger</span>
+                    <span>Ledger</span>
                 </a>
-                <button type="button" onclick="openRestockModal()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow-2xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
+                <button type="button" onclick="openRestockModal()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-3 sm:px-3.5 py-2 rounded-xl shadow-2xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
                     <i class="fa-solid fa-plus-circle text-emerald-200"></i>
                     <span>Add Batch</span>
                 </button>
-                <button type="button" onclick="openAddModal()" class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow-sm flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
+                <button type="button" onclick="openAddModal()" class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-3 sm:px-3.5 py-2 rounded-xl shadow-sm flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
                     <i class="fa-solid fa-circle-plus text-brand-accent"></i>
                     <span>+ New Pickle</span>
                 </button>
@@ -118,8 +118,188 @@
 
     </div>
 
-    <!-- Unified Minimal Product Rows Table -->
-    <div class="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
+    <!-- ========================================== -->
+    <!-- MOBILE VIEW: Dedicated Touch-Friendly Cards (block md:hidden) -->
+    <!-- ========================================== -->
+    <div class="block md:hidden space-y-3">
+        {% for product in products %}
+        <div class="bg-white rounded-2xl border {% if product.stock_count == 0 %}border-rose-200 bg-rose-50/10{% elif product.needed_stock > 0 %}border-amber-200 bg-amber-50/10{% else %}border-gray-200/90{% endif %} shadow-2xs p-3.5 space-y-3">
+            
+            <!-- Header: Image + Product Info + Price -->
+            <div class="flex items-start justify-between gap-3">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <img src="{{ product.primary_image_url }}" alt="{{ product.name }}" onerror="this.onerror=null;this.src='/static/images/pickle_default.png'" class="w-12 h-12 rounded-xl object-cover border border-gray-200 shrink-0 shadow-2xs">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <h4 class="font-bold text-gray-900 text-sm leading-snug break-words">{{ product.name }}</h4>
+                            {% if product.is_featured %}
+                            <span class="text-[9px] font-black bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded">★ Featured</span>
+                            {% endif %}
+                            {% if not product.is_in_stock %}
+                            <span class="text-[9px] font-black bg-gray-100 text-gray-500 px-1.5 py-0.2 rounded border border-gray-200">Hidden</span>
+                            {% endif %}
+                        </div>
+                        <div class="flex items-center gap-1.5 text-[11px] text-gray-500 font-medium mt-0.5">
+                            <span class="text-brand-800 font-bold">{{ product.category.name|default:"Artisan Pickles" }}</span>
+                            <span>•</span>
+                            <span class="font-bold text-gray-700">{{ product.jar_weight_grams }}g</span>
+                            <span>•</span>
+                            <span class="text-amber-700 font-bold">{{ product.get_spice_level_display }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Price -->
+                <div class="text-right shrink-0">
+                    <span class="font-display font-black text-base text-gray-900 block leading-tight">৳{{ product.price_bdt }}</span>
+                    {% if product.original_price_bdt and product.original_price_bdt > product.price_bdt %}
+                    <span class="text-[10px] text-gray-400 line-through block">৳{{ product.original_price_bdt }}</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Prominent Stock & Deficit Status Banner -->
+            <div class="bg-gray-50/90 rounded-xl p-2.5 border border-gray-200/70 flex items-center justify-between gap-2">
+                <!-- Left: Mojut Jar (মজুত বয়াম) with Stepper -->
+                <div class="flex items-center gap-2">
+                    <div class="text-left">
+                        <span class="text-[9px] font-black uppercase tracking-wider block text-gray-400">মজুত বয়াম</span>
+                        <span class="font-display font-black text-base {% if product.stock_count == 0 %}text-rose-600{% elif product.needed_stock > 0 %}text-amber-700{% else %}text-emerald-700{% endif %}">
+                            {{ product.stock_count }} <span class="text-[10px] font-bold text-gray-400">pcs</span>
+                        </span>
+                    </div>
+
+                    <!-- Touch Stepper -->
+                    <div class="inline-flex items-center bg-white rounded-xl p-0.5 border border-gray-200 shadow-2xs ml-1">
+                        <form method="POST" action="{% url 'dashboard:stock_manager' %}" class="inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="quick_step_stock">
+                            <input type="hidden" name="product_id" value="{{ product.id }}">
+                            <input type="hidden" name="delta" value="-1">
+                            <button type="submit" class="w-7 h-7 rounded-lg hover:bg-gray-100 text-gray-700 font-black text-xs flex items-center justify-center transition active:scale-90 cursor-pointer" title="Deduct 1 jar">
+                                <i class="fa-solid fa-minus text-[10px]"></i>
+                            </button>
+                        </form>
+                        <span class="w-1"></span>
+                        <form method="POST" action="{% url 'dashboard:stock_manager' %}" class="inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="quick_step_stock">
+                            <input type="hidden" name="product_id" value="{{ product.id }}">
+                            <input type="hidden" name="delta" value="1">
+                            <button type="submit" class="w-7 h-7 rounded-lg hover:bg-emerald-50 text-emerald-800 font-black text-xs flex items-center justify-center transition active:scale-90 cursor-pointer" title="Add 1 jar">
+                                <i class="fa-solid fa-plus text-[10px]"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Right: Demand & Deficit (লাগবে) Badge -->
+                <div class="text-right">
+                    <span class="text-[9px] font-black uppercase tracking-wider block text-gray-400">অর্ডার ডিমান্ড: {{ product.ordered_demand_count }}</span>
+                    <div>
+                        {% if product.needed_stock > 0 %}
+                        <span class="inline-flex items-center gap-1 font-black text-[11px] text-rose-700 bg-rose-100 px-2 py-0.5 rounded-md border border-rose-200">
+                            <i class="fa-solid fa-arrow-up text-[9px]"></i> +{{ product.needed_stock }} pcs লাগবে
+                        </span>
+                        {% elif product.stock_count == 0 %}
+                        <span class="inline-flex items-center gap-1 font-extrabold text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">
+                            0 Stock
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1 font-bold text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                            <i class="fa-solid fa-check text-[9px]"></i> স্টক পর্যাপ্ত
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mobile Quick Adjust & Action Toolbar -->
+            <div class="flex items-center justify-between gap-2 pt-1 border-t border-gray-100">
+                <!-- Quick Price & Stock Edit Form -->
+                <form method="POST" class="flex items-center gap-1.5 flex-1 min-w-0">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_pricing">
+                    <input type="hidden" name="product_id" value="{{ product.id }}">
+                    <div class="relative flex-1">
+                        <span class="absolute left-1.5 top-1.5 text-[10px] text-gray-400 font-bold">৳</span>
+                        <input type="number" step="0.01" name="price_bdt" value="{{ product.price_bdt }}" title="Selling Price" class="w-full bg-gray-50 pl-4 pr-1 py-1.5 rounded-lg border border-gray-200 text-xs font-bold text-gray-900 focus:bg-white focus:outline-none" placeholder="Price">
+                    </div>
+                    <div class="relative flex-1">
+                        <input type="number" name="stock_count" value="{{ product.stock_count }}" title="Stock Count" class="w-full bg-gray-50 px-1.5 py-1.5 rounded-lg border border-gray-200 text-xs font-bold text-gray-900 focus:bg-white focus:outline-none text-center" placeholder="Stock">
+                    </div>
+                    <button type="submit" class="bg-gray-100 hover:bg-brand-700 hover:text-white text-gray-700 font-bold px-2.5 py-1.5 rounded-lg text-xs transition cursor-pointer shrink-0" title="Save Price & Stock">
+                        <i class="fa-solid fa-check"></i>
+                    </button>
+                </form>
+
+                <!-- Actions: Restock, Ledger, Edit, Visibility -->
+                <div class="flex items-center gap-1 shrink-0">
+                    <button type="button" 
+                        onclick="openRestockModal('{{ product.id }}', '{{ product.name|escapejs }}', '{{ product.needed_stock }}', '{{ product.stock_count }}', '{{ product.target_stock_level }}')" 
+                        class="py-1 px-2.5 rounded-lg {% if product.needed_stock > 0 %}bg-emerald-700 text-white shadow-2xs{% else %}bg-emerald-50 text-emerald-800 border border-emerald-200{% endif %} text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                        title="Add Production Batch">
+                        <i class="fa-solid fa-plus-circle text-[11px]"></i>
+                        <span>Restock</span>
+                    </button>
+
+                    <a href="{% url 'dashboard:product_stock_ledger' product.id %}" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:text-indigo-700 transition" title="View Stock Ledger History">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                    </a>
+
+                    <button type="button" 
+                        onclick="openEditModal({
+                            id: '{{ product.id }}',
+                            name: '{{ product.name|escapejs }}',
+                            tagline: '{{ product.tagline|escapejs }}',
+                            description: '{{ product.description|escapejs }}',
+                            categoryId: '{{ product.category.id|default:'' }}',
+                            cutStyle: '{{ product.cut_style }}',
+                            spiceLevel: '{{ product.spice_level }}',
+                            crunchRating: '{{ product.crunch_rating|default:5 }}',
+                            jarWeight: '{{ product.jar_weight_grams }}',
+                            grossWeight: '{{ product.gross_weight_grams|default:850 }}',
+                            price: '{{ product.price_bdt }}',
+                            origPrice: '{{ product.original_price_bdt|default:'' }}',
+                            stockCount: '{{ product.stock_count }}',
+                            minStockThreshold: '{{ product.min_stock_threshold|default:15 }}',
+                            targetStockLevel: '{{ product.target_stock_level|default:50 }}',
+                            neededStock: '{{ product.needed_stock }}',
+                            isInStock: {{ product.is_in_stock|yesno:'true,false' }},
+                            isFeatured: {{ product.is_featured|yesno:'true,false' }},
+                            imageUrl: '{{ product.image_url|escapejs }}',
+                            primaryImageUrl: '{{ product.primary_image_url|escapejs }}',
+                            ingredients: '{{ product.ingredients|escapejs }}',
+                            flavorProfile: '{{ product.flavor_profile|escapejs }}',
+                            pairingSuggestions: '{{ product.pairing_suggestions|escapejs }}',
+                            shelfLife: '{{ product.shelf_life|escapejs }}'
+                        })"
+                        class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:text-brand-800 transition cursor-pointer" title="Edit Product Details">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </button>
+
+                    <form method="POST" class="inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="toggle_stock">
+                        <input type="hidden" name="product_id" value="{{ product.id }}">
+                        <button type="submit" title="{% if product.is_in_stock %}Visible on store - Click to hide{% else %}Hidden from store - Click to show{% endif %}" class="p-1.5 rounded-lg transition cursor-pointer {% if product.is_in_stock %}bg-gray-100 text-gray-500 hover:bg-amber-50 hover:text-amber-700{% else %}bg-emerald-100 text-emerald-800{% endif %}">
+                            <i class="fa-solid {% if product.is_in_stock %}fa-eye{% else %}fa-eye-slash{% endif %}"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+        {% empty %}
+        <div class="py-12 px-4 text-center text-gray-400 text-xs bg-white rounded-2xl border border-gray-200">
+            <span class="text-3xl block mb-2">🥒</span>
+            <span>কোনো আচার পাওয়া যায়নি।</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Desktop View: Unified Minimal Product Rows Table (hidden md:block) -->
+    <div class="hidden md:block bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-left text-xs border-collapse">
                 
@@ -127,7 +307,7 @@
                     <tr>
                         <th class="py-3 px-4 sm:px-5">Pickle Product</th>
                         <th class="py-3 px-4">Price</th>
-                        <th class="py-3 px-4 text-center">Physical Stock (আসে)</th>
+                        <th class="py-3 px-4 text-center">Physical Stock (মজুত বয়াম)</th>
                         <th class="py-3 px-4">Orders & Deficit (লাগবে)</th>
                         <th class="py-3 px-4">Quick Adjust</th>
                         <th class="py-3 px-4 sm:pr-5 text-right">Actions</th>

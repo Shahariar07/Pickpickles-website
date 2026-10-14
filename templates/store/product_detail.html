@@ -108,21 +108,17 @@
                     </div>
                 </div>
 
+                {% if not product.is_in_stock or product.stock_count == 0 %}
                 <div class="text-right">
-                    {% if product.is_in_stock %}
-                    <span class="inline-flex items-center gap-1.5 text-emerald-900 bg-emerald-200 border border-emerald-400 px-3.5 py-1 rounded-full text-xs font-black">
-                        <span class="w-2 h-2 rounded-full bg-emerald-700 animate-pulse"></span> In Stock (Fresh Batch)
+                    <span class="inline-flex items-center gap-1.5 text-rose-900 bg-rose-200 border border-rose-300 px-3.5 py-1 rounded-full text-xs font-black">
+                        <i class="fa-solid fa-circle-xmark"></i> Out of Stock
                     </span>
-                    {% else %}
-                    <span class="inline-flex items-center gap-1.5 text-rose-900 bg-rose-200 border border-rose-300 px-3 py-1 rounded-full text-xs font-black">
-                        Out of Stock
-                    </span>
-                    {% endif %}
                 </div>
+                {% endif %}
             </div>
 
             <!-- Add to Cart Form -->
-            {% if product.is_in_stock %}
+            {% if product.is_in_stock and product.stock_count > 0 %}
             <form action="{% url 'store:cart_add' product.id %}" method="POST" class="space-y-4">
                 {% csrf_token %}
                 <div class="flex items-center gap-4">
@@ -138,6 +134,10 @@
                     </button>
                 </div>
             </form>
+            {% else %}
+            <div class="p-4 bg-rose-50 border-2 border-rose-200 rounded-2xl text-center text-rose-800 font-bold text-sm">
+                <i class="fa-solid fa-bell mr-1"></i> This pickle is currently sold out. New handcrafted batch coming soon!
+            </div>
             {% endif %}
 
             <!-- Description & Flavor Specs -->
@@ -207,19 +207,19 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5">
             {% for r in reviews %}
-            <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs hover:shadow-md transition">
+            <div class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-xs hover:shadow-md transition">
                 <div class="flex items-center justify-between mb-2.5">
-                    <div>
-                        <span class="font-bold text-sm text-gray-900 block">{{ r.reviewer_name }}</span>
-                        <span class="text-[11px] text-gray-400">📍 {{ r.reviewer_location|default:"Verified Customer" }}</span>
+                    <div class="min-w-0 pr-2">
+                        <span class="font-bold text-xs sm:text-sm text-gray-900 block truncate">{{ r.reviewer_name }}</span>
+                        <span class="text-[10px] sm:text-[11px] text-gray-400 truncate block">📍 {{ r.reviewer_location|default:"Verified Customer" }}</span>
                     </div>
-                    <div class="text-amber-400 text-xs font-bold">
+                    <div class="text-amber-400 text-xs font-bold shrink-0">
                         {% for i in "12345"|slice:r.rating %}⭐{% endfor %}
                     </div>
                 </div>
-                <p class="text-xs sm:text-sm text-gray-700 leading-relaxed italic">"{{ r.comment }}"</p>
+                <p class="text-xs sm:text-sm text-gray-700 leading-snug sm:leading-relaxed italic">"{{ r.comment }}"</p>
                 <div class="mt-3 pt-2.5 border-t border-gray-100 flex items-center justify-between text-[10px] text-gray-400">
                     <span>{{ r.created_at|date:"M d, Y" }}</span>
                     <span class="text-emerald-700 font-bold">Verified Crunch</span>
