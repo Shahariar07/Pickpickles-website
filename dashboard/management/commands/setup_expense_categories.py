@@ -108,15 +108,30 @@ class Command(BaseCommand):
             # 1. Parent Categories
             parent_map = {}
             for p_slug, p_data in TAXONOMY.items():
-                p_obj, _ = ExpenseCategory.objects.update_or_create(
-                    slug=p_slug,
-                    defaults={
-                        'name': p_data['name'],
-                        'icon': p_data['icon'],
-                        'description': p_data['desc'],
-                        'parent': None
-                    }
-                )
+                p_obj = ExpenseCategory.objects.filter(slug=p_slug).first()
+                if not p_obj:
+                    p_obj = ExpenseCategory.objects.filter(name=p_data['name']).first()
+
+                if p_obj:
+                    # Remove any conflicting duplicate row with same slug or name
+                    ExpenseCategory.objects.filter(slug=p_slug).exclude(id=p_obj.id).delete()
+                    ExpenseCategory.objects.filter(name=p_data['name']).exclude(id=p_obj.id).delete()
+                    p_obj.slug = p_slug
+                    p_obj.name = p_data['name']
+                    p_obj.icon = p_data['icon']
+                    p_obj.description = p_data['desc']
+                    p_obj.parent = None
+                    p_obj.save()
+                else:
+                    ExpenseCategory.objects.filter(slug=p_slug).delete()
+                    ExpenseCategory.objects.filter(name=p_data['name']).delete()
+                    p_obj = ExpenseCategory.objects.create(
+                        slug=p_slug,
+                        name=p_data['name'],
+                        icon=p_data['icon'],
+                        description=p_data['desc'],
+                        parent=None
+                    )
                 parent_map[p_slug] = p_obj
 
             # 2. Subcategories
@@ -129,6 +144,8 @@ class Command(BaseCommand):
                         sub_obj = ExpenseCategory.objects.filter(name=sub_name).first()
 
                     if sub_obj:
+                        ExpenseCategory.objects.filter(slug=sub_slug).exclude(id=sub_obj.id).delete()
+                        ExpenseCategory.objects.filter(name=sub_name).exclude(id=sub_obj.id).delete()
                         sub_obj.name = sub_name
                         sub_obj.slug = sub_slug
                         sub_obj.parent = p_obj
@@ -136,6 +153,8 @@ class Command(BaseCommand):
                         sub_obj.description = sub_desc
                         sub_obj.save()
                     else:
+                        ExpenseCategory.objects.filter(slug=sub_slug).delete()
+                        ExpenseCategory.objects.filter(name=sub_name).delete()
                         sub_obj = ExpenseCategory.objects.create(
                             name=sub_name,
                             slug=sub_slug,
