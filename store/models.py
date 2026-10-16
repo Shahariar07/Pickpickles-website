@@ -301,6 +301,10 @@ class Order(models.Model):
     confirmed_at = models.DateTimeField(null=True, blank=True, db_index=True, help_text="Timestamp when order was confirmed")
     delivered_at = models.DateTimeField(null=True, blank=True, db_index=True, help_text="Timestamp when parcel was delivered to customer")
 
+    # Feedback Review Reminder Tracking
+    feedback_request_sent_at = models.DateTimeField(null=True, blank=True, db_index=True, help_text="Timestamp when WhatsApp review request was sent")
+    feedback_request_count = models.PositiveIntegerField(default=0, help_text="Total review request reminders sent")
+
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -2782,8 +2782,8 @@ def reviews_manager(request):
 def feedback_reminders_manager(request):
     """
     Lists customers whose orders are >= 30 days old and have not yet provided feedback/review.
-    Supports pagination, search by customer/phone/order, and 1-click WhatsApp review requests
-    guiding customers to review on Facebook, Website, or WhatsApp.
+    - Status 'pending': Never sent, OR sent 30+ minutes ago (due for reminder).
+    - Status 'done': Sent within the last 30 minutes (grace period).
     """
     now = timezone.now()
 
@@ -2796,9 +2796,13 @@ def feedback_reminders_manager(request):
     except (ValueError, TypeError):
         min_days = 30
 
+    status_filter = request.GET.get('status', 'pending').strip().lower()
+    if status_filter not in ['pending', 'done', 'all']:
+        status_filter = 'pending'
+
     cutoff_date = now - timedelta(days=min_days)
 
-    # Base query: non-deleted orders placed at least `min_days` ago, excluding cancelled & returned
+    # Base query: non-deleted orders placed at least `min_days` ago, excluding cancelled
     orders_qs = Order.objects.filter(
         created_at__lte=cutoff_date,
         is_deleted=False
@@ -2823,16 +2827,38 @@ def feedback_reminders_manager(request):
             Q(delivery_city__icontains=q)
         )
 
-    # Filter out customers who already reviewed and calculate days
-    eligible_orders = []
+    # Filter out customers who already reviewed:
+    # - Pending: Feedback reminder NOT sent yet (sent only once)
+    # - Done: Feedback reminder has already been sent
+    pending_list = []
+    done_list = []
+
     for order in orders_qs:
         cust_name_clean = (order.customer_name or '').strip().lower()
         if cust_name_clean not in reviewed_names:
             days_ago = (now.date() - order.created_at.date()).days
             order.days_ago = days_ago
-            eligible_orders.append(order)
 
-    total_eligible = len(eligible_orders)
+            if order.feedback_request_sent_at:
+                order.is_feedback_done = True
+                order.days_since_sent = (now.date() - order.feedback_request_sent_at.date()).days
+                done_list.append(order)
+            else:
+                order.is_feedback_done = False
+                order.days_since_sent = None
+                pending_list.append(order)
+
+    pending_count = len(pending_list)
+    done_count = len(done_list)
+
+    if status_filter == 'done':
+        selected_orders = done_list
+    elif status_filter == 'all':
+        selected_orders = pending_list + done_list
+    else:
+        selected_orders = pending_list
+
+    total_eligible = len(selected_orders)
 
     # Pagination (Default: 20 per page)
     page_number = request.GET.get('page', 1)
@@ -2844,7 +2870,7 @@ def feedback_reminders_manager(request):
     except (ValueError, TypeError):
         per_page = 20
 
-    paginator = Paginator(eligible_orders, per_page)
+    paginator = Paginator(selected_orders, per_page)
     try:
         page_obj = paginator.page(page_number)
     except PageNotAnInteger:
@@ -2864,12 +2890,39 @@ def feedback_reminders_manager(request):
         'is_paginated': page_obj.has_other_pages(),
         'elided_page_range': elided_page_range,
         'total_eligible': total_eligible,
+        'pending_count': pending_count,
+        'done_count': done_count,
+        'status_filter': status_filter,
         'min_days': min_days,
         'q': q,
         'per_page': per_page,
         'total_reviews': Review.objects.count(),
     }
     return render(request, 'dashboard/feedback_reminders.html', context)
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def mark_feedback_reminder_sent(request, order_number):
+    """Marks an order's review request message as sent now."""
+    if request.method in ['POST', 'GET']:
+        order = get_object_or_404(Order, order_number=order_number)
+        order.feedback_request_sent_at = timezone.now()
+        order.feedback_request_count = (order.feedback_request_count or 0) + 1
+        order.save(update_fields=['feedback_request_sent_at', 'feedback_request_count'])
+
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('format') == 'json':
+            return JsonResponse({
+                'success': True,
+                'order_number': order.order_number,
+                'sent_at': order.feedback_request_sent_at.isoformat(),
+                'count': order.feedback_request_count,
+                'message': f'Review request marked as sent for #{order.order_number}.'
+            })
+
+        messages.success(request, f'Review message marked as sent for #{order.order_number}.')
+        return redirect('dashboard:feedback_reminders')
+
+    return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=405)
 
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')

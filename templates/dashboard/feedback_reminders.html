@@ -12,39 +12,66 @@
             <div>
                 <div class="flex items-center gap-2">
                     <h1 class="font-display font-black text-xl text-gray-900 tracking-tight">Feedback Reminders</h1>
-                    <span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                        {{ total_eligible }} pending
+                    <span class="px-2 py-0.5 rounded-md text-[11px] font-bold {% if status_filter == 'done' %}bg-emerald-50 text-emerald-800 border border-emerald-200{% else %}bg-amber-50 text-amber-800 border border-amber-200{% endif %}">
+                        {% if status_filter == 'done' %}{{ done_count }} Sent{% else %}{{ pending_count }} Pending{% endif %}
                     </span>
                 </div>
-                <p class="text-xs text-gray-500 mt-0.5">Customers who ordered {{ min_days }}+ days ago without review</p>
+                <p class="text-xs text-gray-500 mt-0.5">Customers who ordered {{ min_days }}+ days ago without review (মেসেজ একবার পাঠালে Done ট্যাবে থাকবে)</p>
             </div>
         </div>
 
         <!-- Minimal Time Filter -->
         <div class="flex items-center gap-1 bg-gray-100 p-1 rounded-xl shrink-0 self-start sm:self-auto text-xs">
-            <a href="?days=30{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
+            <a href="?days=30&status={{ status_filter }}{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
                class="px-2.5 py-1 rounded-lg font-bold transition {% if min_days == 30 %}bg-white text-gray-900 shadow-2xs{% else %}text-gray-600 hover:text-gray-900{% endif %}">
                 30d
             </a>
-            <a href="?days=45{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
+            <a href="?days=45&status={{ status_filter }}{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
                class="px-2.5 py-1 rounded-lg font-bold transition {% if min_days == 45 %}bg-white text-gray-900 shadow-2xs{% else %}text-gray-600 hover:text-gray-900{% endif %}">
                 45d
             </a>
-            <a href="?days=60{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
+            <a href="?days=60&status={{ status_filter }}{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
                class="px-2.5 py-1 rounded-lg font-bold transition {% if min_days == 60 %}bg-white text-gray-900 shadow-2xs{% else %}text-gray-600 hover:text-gray-900{% endif %}">
                 60d
             </a>
-            <a href="?days=90{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
+            <a href="?days=90&status={{ status_filter }}{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
                class="px-2.5 py-1 rounded-lg font-bold transition {% if min_days == 90 %}bg-white text-gray-900 shadow-2xs{% else %}text-gray-600 hover:text-gray-900{% endif %}">
                 90d
             </a>
         </div>
     </div>
 
+    <!-- Status Tabs: Pending Reminders vs Sent/Done -->
+    <div class="flex items-center gap-2 border-b border-gray-200/80 pb-1 text-xs font-bold">
+        <a href="?status=pending&days={{ min_days }}{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}"
+           class="px-4 py-2 rounded-xl flex items-center gap-2 transition {% if status_filter == 'pending' %}bg-brand-700 text-white shadow-xs{% else %}bg-white text-gray-600 hover:bg-gray-100 border border-gray-200{% endif %}">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <span>Pending Reminders</span>
+            <span class="px-1.5 py-0.2 rounded-full text-[10px] {% if status_filter == 'pending' %}bg-white/20 text-white{% else %}bg-amber-100 text-amber-800{% endif %}">
+                {{ pending_count }}
+            </span>
+        </a>
+
+        <a href="?status=done&days={{ min_days }}{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}"
+           class="px-4 py-2 rounded-xl flex items-center gap-2 transition {% if status_filter == 'done' %}bg-emerald-600 text-white shadow-xs{% else %}bg-white text-gray-600 hover:bg-gray-100 border border-gray-200{% endif %}">
+            <i class="fa-solid fa-circle-check"></i>
+            <span>Done / Sent</span>
+            <span class="px-1.5 py-0.2 rounded-full text-[10px] {% if status_filter == 'done' %}bg-white/20 text-white{% else %}bg-emerald-100 text-emerald-800{% endif %}">
+                {{ done_count }}
+            </span>
+        </a>
+
+        <a href="?status=all&days={{ min_days }}{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}"
+           class="px-3 py-2 rounded-xl flex items-center gap-1.5 transition ml-auto {% if status_filter == 'all' %}bg-gray-900 text-white{% else %}text-gray-500 hover:text-gray-900{% endif %}">
+            <span>All Eligible</span>
+        </a>
+    </div>
+
     <!-- Search Bar -->
     <div class="bg-white p-3 rounded-2xl border border-gray-200">
         <form method="get" class="flex items-center gap-2">
             <input type="hidden" name="days" value="{{ min_days }}">
+            <input type="hidden" name="status" value="{{ status_filter }}">
             <div class="relative flex-1">
                 <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
                 <input type="text" name="q" value="{{ q }}" placeholder="Search customer, phone, order #, city..." 
@@ -63,7 +90,7 @@
             </button>
 
             {% if q %}
-            <a href="?days={{ min_days }}" class="bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs px-2.5 py-1.5 rounded-xl transition" title="Clear">
+            <a href="?days={{ min_days }}&status={{ status_filter }}" class="bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs px-2.5 py-1.5 rounded-xl transition" title="Clear">
                 <i class="fa-solid fa-xmark"></i>
             </a>
             {% endif %}
@@ -131,12 +158,20 @@
 
                         <!-- Actions -->
                         <td class="py-3 px-4 text-right whitespace-nowrap">
-                            <div class="flex items-center justify-end gap-1.5">
+                            <div class="flex items-center justify-end gap-1.5" id="actions-{{ order.order_number }}">
+                                {% if order.is_feedback_done %}
+                                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200" title="Sent {{ order.days_since_sent }}d ago">
+                                    <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                                    <span>Sent ({% if order.days_since_sent == 0 %}today{% else %}{{ order.days_since_sent }}d ago{% endif %})</span>
+                                </span>
+                                {% endif %}
+
                                 <a href="{{ order.whatsapp_1month_review_request_url }}" target="_blank" 
-                                   class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-2.5 py-1.5 rounded-lg inline-flex items-center gap-1 transition" 
-                                   title="Send WhatsApp Message">
-                                    <i class="fa-brands fa-whatsapp text-xs"></i>
-                                    <span>WhatsApp</span>
+                                   onclick="markReminderSent('{{ order.order_number }}')"
+                                   class="{% if order.is_feedback_done %}bg-gray-100 hover:bg-gray-200 text-gray-700{% else %}bg-emerald-600 hover:bg-emerald-700 text-white{% endif %} font-bold text-xs px-2.5 py-1.5 rounded-lg inline-flex items-center gap-1 transition shadow-2xs" 
+                                   title="{% if order.is_feedback_done %}Already sent. Click to resend WhatsApp message{% else %}Send WhatsApp Review Request (Moves to Done){% endif %}">
+                                    <i class="fa-brands fa-whatsapp text-xs {% if order.is_feedback_done %}text-emerald-600{% endif %}"></i>
+                                    <span>{% if order.is_feedback_done %}Resend{% else %}WhatsApp{% endif %}</span>
                                 </a>
 
                                 <button type="button" 
@@ -180,11 +215,19 @@
                     {% endfor %}
                 </div>
 
-                <div class="flex items-center gap-1.5 pt-1">
+                <div class="flex items-center gap-1.5 pt-1" id="mobile-actions-{{ order.order_number }}">
+                    {% if order.is_feedback_done %}
+                    <span class="px-2 py-1.5 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1 shrink-0">
+                        <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                        <span>Sent ({% if order.days_since_sent == 0 %}today{% else %}{{ order.days_since_sent }}d ago{% endif %})</span>
+                    </span>
+                    {% endif %}
+
                     <a href="{{ order.whatsapp_1month_review_request_url }}" target="_blank" 
-                       class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-1.5 rounded-lg text-center flex items-center justify-center gap-1">
-                        <i class="fa-brands fa-whatsapp text-xs"></i>
-                        <span>Send WhatsApp</span>
+                       onclick="markReminderSent('{{ order.order_number }}')"
+                       class="flex-1 {% if order.is_feedback_done %}bg-gray-100 hover:bg-gray-200 text-gray-700{% else %}bg-emerald-600 hover:bg-emerald-700 text-white{% endif %} font-bold text-xs py-1.5 rounded-lg text-center flex items-center justify-center gap-1">
+                        <i class="fa-brands fa-whatsapp text-xs {% if order.is_feedback_done %}text-emerald-600{% endif %}"></i>
+                        <span>{% if order.is_feedback_done %}Resend WhatsApp{% else %}Send WhatsApp{% endif %}</span>
                     </a>
                     <button type="button" 
                             onclick="openPreviewModal('{{ order.order_number }}', '{{ order.customer_name|escapejs }}', '{{ order.whatsapp_1month_review_request_url|escapejs }}', '{{ order.get_whatsapp_1month_review_request_message|escapejs }}')" 
@@ -271,12 +314,21 @@
 
 <script>
     let currentRawMessage = "";
+    let activeOrderNumber = "";
 
     function openPreviewModal(orderNumber, customerName, waUrl, msgContent) {
+        activeOrderNumber = orderNumber;
         document.getElementById('modalCustTitle').textContent = customerName;
         document.getElementById('modalOrderSubtitle').textContent = `Order #${orderNumber}`;
         document.getElementById('modalMsgContent').textContent = msgContent;
-        document.getElementById('modalDirectWaLink').href = waUrl;
+        
+        const waLink = document.getElementById('modalDirectWaLink');
+        waLink.href = waUrl;
+        waLink.onclick = function() {
+            markReminderSent(orderNumber);
+            closePreviewModal();
+        };
+
         currentRawMessage = msgContent;
 
         const copyBtnTxt = document.getElementById('copyBtnTxt');
@@ -299,6 +351,62 @@
             }, 2000);
         }).catch(err => {
             alert('Could not copy: ' + err);
+        });
+    }
+
+    function markReminderSent(orderNumber) {
+        if (!orderNumber) return;
+
+        // AJAX update to mark as sent immediately
+        fetch(`/dashboard/feedback-reminders/mark-sent/${orderNumber}/?format=json`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                // Update desktop actions badge
+                const actionWrap = document.getElementById(`actions-${orderNumber}`);
+                if (actionWrap) {
+                    actionWrap.innerHTML = `
+                        <span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200" title="Just sent">
+                            <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                            <span>Sent (today)</span>
+                        </span>
+                        <a href="https://wa.me/" target="_blank" onclick="markReminderSent('${orderNumber}')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs px-2.5 py-1.5 rounded-lg inline-flex items-center gap-1 transition" title="Resend">
+                            <i class="fa-brands fa-whatsapp text-xs text-emerald-600"></i>
+                            <span>Sent ✓</span>
+                        </a>
+                    `;
+                }
+
+                // Update mobile actions badge
+                const mActionWrap = document.getElementById(`mobile-actions-${orderNumber}`);
+                if (mActionWrap) {
+                    mActionWrap.innerHTML = `
+                        <span class="px-2 py-1.5 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1 shrink-0">
+                            <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                            <span>Sent (today)</span>
+                        </span>
+                        <span class="flex-1 bg-gray-100 text-gray-600 font-bold text-xs py-1.5 rounded-lg text-center">
+                            Sent to Done ✓
+                        </span>
+                    `;
+                }
+
+                // If currently on "Pending & Due" tab, reload smoothly after 1.2s to move row to Done tab
+                const urlParams = new URLSearchParams(window.location.search);
+                const curStatus = urlParams.get('status') || 'pending';
+                if (curStatus === 'pending') {
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1200);
+                }
+            }
+        })
+        .catch(err => {
+            console.error('Error marking feedback reminder sent:', err);
         });
     }
 

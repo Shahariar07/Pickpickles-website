@@ -71,25 +71,26 @@
             </div>
 
             <!-- Mobile Notification & Sound Icons -->
-            <div class="flex items-center gap-1.5 shrink-0">
+            <div class="flex items-center gap-1 shrink-0">
                 <!-- Sound Toggle Mobile -->
                 <button type="button" onclick="toggleNotificationSound()" id="mobileSoundToggleBtn"
                     title="Toggle Sound Alert"
-                    class="p-2 rounded-xl text-brand-accent hover:bg-brand-800 text-sm transition">
+                    class="w-10 h-10 rounded-xl text-brand-accent hover:bg-brand-800 flex items-center justify-center text-sm transition active:scale-95">
                     <i id="mobileSoundIcon" class="fa-solid fa-volume-high"></i>
                 </button>
 
                 <!-- Notifications Bell Mobile -->
                 <div class="relative">
                     <button type="button" onclick="toggleNotificationDropdown('mobileNotificationDropdown')"
-                        class="p-2 rounded-xl text-gray-300 hover:text-white hover:bg-brand-800 transition relative">
+                        class="w-10 h-10 rounded-xl text-gray-300 hover:text-white hover:bg-brand-800 flex items-center justify-center transition relative active:scale-95"
+                        aria-label="View notifications">
                         <i class="fa-solid fa-bell text-base"></i>
                         <span id="mobileNotificationBadge"
-                            class="hidden absolute top-1 right-1 min-w-[16px] h-4 px-1 bg-rose-500 text-[9px] font-black text-white rounded-full flex items-center justify-center animate-pulse">0</span>
+                            class="hidden absolute top-1 right-1 min-w-[16px] h-4 px-1 bg-rose-500 text-[9px] font-black text-white rounded-full flex items-center justify-center animate-pulse shadow-xs">0</span>
                     </button>
                     <!-- Mobile Notification Dropdown Panel -->
                     <div id="mobileNotificationDropdown"
-                        class="hidden absolute right-0 mt-2 w-72 bg-white text-gray-800 rounded-2xl shadow-2xl border border-gray-200 py-3 z-50">
+                        class="hidden absolute right-0 mt-2 w-[calc(100vw-24px)] max-w-xs bg-white text-gray-800 rounded-2xl shadow-2xl border border-gray-200 py-3 z-50">
                         <div class="px-4 pb-2 border-b border-gray-100 flex items-center justify-between">
                             <span class="font-bold text-xs text-gray-900">Pending Orders</span>
                             <span id="mobilePendingCountText"
@@ -485,9 +486,9 @@
     <!-- Audio Notification Element -->
     <audio id="orderNotificationAudio" src="{% static 'audio/order_alert.wav' %}" preload="auto"></audio>
 
-    <!-- Floating Real-Time Order Alert Banner Container -->
+    <!-- Floating Real-Time Order Alert Banner Container (Mobile & Desktop Optimized) -->
     <div id="liveOrderToastContainer"
-        class="fixed top-16 right-4 sm:right-6 z-50 flex flex-col gap-3 pointer-events-none max-w-sm w-full sm:w-96">
+        class="fixed top-2 sm:top-16 inset-x-2.5 sm:inset-x-auto sm:right-6 sm:w-96 max-w-md mx-auto sm:mx-0 z-50 flex flex-col gap-2.5 pointer-events-none">
     </div>
 
     <!-- Toggle Script for Mobile Sidebar -->
@@ -525,9 +526,17 @@
             }
         }, { once: true });
 
-        // Play chime sound
+        // Play chime sound and mobile vibration
         function playChimeSound(force = false) {
             if (!force && !isSoundEnabled()) return;
+
+            // Mobile vibration feedback (150ms buzz, 60ms pause, 150ms buzz)
+            if (navigator.vibrate) {
+                try {
+                    navigator.vibrate([150, 60, 150]);
+                } catch (e) { }
+            }
+
             if (orderAudio) {
                 orderAudio.muted = false;
                 orderAudio.volume = 1.0;
@@ -611,61 +620,128 @@
             }
         });
 
-        // Show floating toast banner
+        // Dismiss toast helper with directional animation
+        function dismissOrderToast(el) {
+            if (!el) return;
+            el.style.transition = 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)';
+            el.style.opacity = '0';
+            el.style.transform = window.innerWidth < 640 ? 'translateY(-100%)' : 'translateX(100%)';
+            setTimeout(() => {
+                if (el.parentElement) el.remove();
+            }, 260);
+        }
+
+        // Show floating real-time toast banner (Mobile & Desktop Friendly)
         function showOrderToast(order) {
             const container = document.getElementById('liveOrderToastContainer');
             if (!container) return;
 
+            // Prevent duplicate toast for the same order
+            const toastId = `order-toast-${order.id || order.order_number}`;
+            if (document.getElementById(toastId)) return;
+
             const toast = document.createElement('div');
-            toast.className = 'pointer-events-auto bg-gray-900/95 backdrop-blur-md text-white p-4 rounded-2xl shadow-2xl border-2 border-emerald-500/80 transform transition-all duration-500 translate-y-2 opacity-0 flex flex-col gap-2';
+            toast.id = toastId;
+            toast.className = 'pointer-events-auto bg-slate-900/95 backdrop-blur-md text-white p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl shadow-2xl border-2 border-emerald-500 transform transition-all duration-300 translate-y-[-16px] sm:translate-y-2 opacity-0 flex flex-col gap-2 shadow-emerald-950/50 select-none';
             toast.innerHTML = `
-                <div class="flex items-center justify-between">
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-500 text-white shadow-xs">
-                        <i class="fa-solid fa-bell animate-bounce"></i>
+                <div class="flex items-center justify-between gap-2">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-black bg-emerald-500 text-white shadow-xs tracking-wide">
+                        <i class="fa-solid fa-bell animate-bounce text-amber-200"></i>
                         NEW ORDER RECEIVED!
                     </span>
-                    <span class="text-xs text-brand-accent font-bold">${order.created_at_time}</span>
+                    <span class="text-[10px] sm:text-xs text-brand-accent font-bold">${order.created_at_time}</span>
                 </div>
-                <div class="mt-1">
-                    <div class="flex items-center justify-between">
-                        <span class="font-display font-black text-base text-white">#${order.order_number}</span>
-                        <span class="text-sm font-black text-emerald-400">৳${order.total_amount}</span>
+                <div class="mt-0.5 space-y-1">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="font-display font-black text-sm sm:text-base text-white truncate">#${order.order_number}</span>
+                        <span class="text-sm sm:text-base font-black text-emerald-400 shrink-0">৳${order.total_amount}</span>
                     </div>
-                    <p class="text-xs text-gray-300 font-semibold mt-0.5">${order.customer_name} • ${order.customer_phone}</p>
-                    <p class="text-[11px] text-gray-400 font-medium">${order.delivery_city} • ${order.payment_method}</p>
+                    <div class="flex items-center justify-between text-xs text-gray-300 font-semibold gap-2">
+                        <span class="truncate">${order.customer_name}</span>
+                        <span class="text-gray-400 font-mono text-[11px] shrink-0">${order.customer_phone}</span>
+                    </div>
+                    <div class="flex items-center justify-between text-[11px] text-gray-400 font-medium gap-2">
+                        <span class="truncate">${order.delivery_city}</span>
+                        <span class="text-amber-300 text-[10px] font-bold bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/20 shrink-0">${order.payment_method}</span>
+                    </div>
                 </div>
-                <div class="flex items-center gap-2 mt-2 pt-2 border-t border-gray-800">
-                    <a href="${order.detail_url}" class="flex-1 text-center bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold py-2 rounded-xl transition shadow-sm">
-                        View Order Details →
+                <div class="flex items-center gap-2 mt-1 pt-2 border-t border-gray-800">
+                    <a href="${order.detail_url}" class="flex-1 text-center bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs sm:text-sm font-black py-2.5 sm:py-2 rounded-xl transition shadow-md flex items-center justify-center gap-1.5 active:scale-95">
+                        <span>View Order Details</span>
+                        <i class="fa-solid fa-arrow-right text-[11px]"></i>
                     </a>
-                    <button type="button" onclick="this.closest('.pointer-events-auto').remove()" class="px-3 py-2 text-xs font-bold text-gray-400 hover:text-white rounded-xl bg-gray-800 transition">
+                    <button type="button" onclick="dismissOrderToast(this.closest('.pointer-events-auto'))" class="w-10 h-10 sm:w-9 sm:h-9 flex items-center justify-center text-sm font-bold text-gray-400 hover:text-white active:bg-gray-700 rounded-xl bg-gray-800 transition active:scale-95 shrink-0" aria-label="Close notification">
                         ✕
                     </button>
                 </div>
             `;
 
+            // Mobile swipe-to-dismiss touch interaction
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let touchDeltaX = 0;
+            let touchDeltaY = 0;
+
+            toast.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    touchStartX = e.touches[0].clientX;
+                    touchStartY = e.touches[0].clientY;
+                    toast.style.transition = 'none';
+                }
+            }, { passive: true });
+
+            toast.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 1) {
+                    touchDeltaX = e.touches[0].clientX - touchStartX;
+                    touchDeltaY = e.touches[0].clientY - touchStartY;
+                    // Provide visual feedback if swiped up or horizontally
+                    if (touchDeltaY < 0 || Math.abs(touchDeltaX) > 10) {
+                        toast.style.transform = `translate(${touchDeltaX}px, ${touchDeltaY}px)`;
+                        toast.style.opacity = `${Math.max(0.2, 1 - Math.hypot(touchDeltaX, touchDeltaY) / 220)}`;
+                    }
+                }
+            }, { passive: true });
+
+            toast.addEventListener('touchend', () => {
+                // Dismiss if swiped up > 35px or horizontally > 55px
+                if (touchDeltaY < -35 || Math.abs(touchDeltaX) > 55) {
+                    dismissOrderToast(toast);
+                } else {
+                    toast.style.transition = 'all 0.2s ease';
+                    toast.style.transform = '';
+                    toast.style.opacity = '1';
+                }
+                touchDeltaX = 0;
+                touchDeltaY = 0;
+            }, { passive: true });
+
             container.appendChild(toast);
 
             // Animate in
             requestAnimationFrame(() => {
-                toast.classList.remove('translate-y-2', 'opacity-0');
+                toast.classList.remove('translate-y-[-16px]', 'translate-y-2', 'opacity-0');
             });
 
-            // Native browser OS notification
+            // Native browser OS notification:
+            // On mobile view (<768px), if the tab is visible/active, the in-app banner is already shown.
+            // Spawning a system notification at the same time causes 2 duplicate notifications on mobile!
             if ('Notification' in window && Notification.permission === 'granted') {
-                try {
-                    new Notification(`Pickpickles Order #${order.order_number}`, {
-                        body: `${order.customer_name} - ৳${order.total_amount} (${order.delivery_city})`,
-                        icon: '{% static "images/logo.png" %}'
-                    });
-                } catch (e) { }
+                const isMobile = window.innerWidth < 768;
+                if (!isMobile || document.hidden) {
+                    try {
+                        new Notification(`Pickpickles Order #${order.order_number}`, {
+                            body: `${order.customer_name} - ৳${order.total_amount} (${order.delivery_city})`,
+                            icon: '{% static "images/logo.png" %}',
+                            tag: `pickpickles-order-${order.id || order.order_number}`
+                        });
+                    } catch (e) { }
+                }
             }
 
             // Auto-dismiss after 15 seconds
             setTimeout(() => {
                 if (toast.parentElement) {
-                    toast.classList.add('opacity-0', 'translate-x-full');
-                    setTimeout(() => toast.remove(), 400);
+                    dismissOrderToast(toast);
                 }
             }, 15000);
         }
@@ -810,10 +886,16 @@
         // 3. Poller state
         let lastKnownOrderId = 0;
         let isFirstPoll = true;
+        let isPolling = false;
+        const notifiedOrderIds = new Set(
+            JSON.parse(sessionStorage.getItem('pickpickles_notified_orders') || '[]')
+        );
 
         async function pollOrderNotifications() {
             // Skip polling if the browser tab is hidden/minimized to save server resources
             if (document.hidden) return;
+            if (isPolling) return;
+            isPolling = true;
 
             try {
                 const url = `{% url 'dashboard:api_order_notifications' %}?last_id=${lastKnownOrderId}`;
@@ -835,15 +917,29 @@
 
                 // If new order(s) arrived
                 if (data.has_new && data.new_orders && data.new_orders.length > 0) {
-                    playChimeSound();
-                    localStorage.setItem('pickpickles_last_reminder_time', Date.now().toString());
+                    // Update last ID immediately to prevent duplicate requests from catching the same orders
+                    lastKnownOrderId = Math.max(lastKnownOrderId, data.latest_id);
 
+                    let hasNewUnseenOrder = false;
                     data.new_orders.forEach(order => {
-                        showOrderToast(order);
+                        const orderKey = order.id || order.order_number;
+                        if (!notifiedOrderIds.has(orderKey)) {
+                            notifiedOrderIds.add(orderKey);
+                            showOrderToast(order);
+                            hasNewUnseenOrder = true;
+                        }
                     });
 
-                    // Update last ID
-                    lastKnownOrderId = data.latest_id;
+                    // Persist seen order keys in sessionStorage
+                    try {
+                        const idsArray = Array.from(notifiedOrderIds).slice(-50);
+                        sessionStorage.setItem('pickpickles_notified_orders', JSON.stringify(idsArray));
+                    } catch (e) { }
+
+                    if (hasNewUnseenOrder) {
+                        playChimeSound();
+                        localStorage.setItem('pickpickles_last_reminder_time', Date.now().toString());
+                    }
                 }
 
                 // Always update badges, dropdown list, and recurring reminder
@@ -853,6 +949,8 @@
 
             } catch (err) {
                 console.warn('Order polling error:', err);
+            } finally {
+                isPolling = false;
             }
         }
 
@@ -864,10 +962,14 @@
             // Poll every 30 seconds while tab is active
             setInterval(pollOrderNotifications, 30000);
 
-            // Immediately poll when user switches back to this tab
+            // Debounced poll when user switches back to this tab
+            let visibilityDebounceTimer = null;
             document.addEventListener('visibilitychange', function () {
                 if (!document.hidden) {
-                    pollOrderNotifications();
+                    clearTimeout(visibilityDebounceTimer);
+                    visibilityDebounceTimer = setTimeout(() => {
+                        pollOrderNotifications();
+                    }, 400);
                 }
             });
         });

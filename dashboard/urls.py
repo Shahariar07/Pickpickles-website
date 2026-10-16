@@ -24,6 +24,7 @@ urlpatterns = [
     path('admin-users/', views.admin_users_manager, name='admin_users'),
     path('reviews/', views.reviews_manager, name='reviews'),
     path('feedback-reminders/', views.feedback_reminders_manager, name='feedback_reminders'),
+    path('feedback-reminders/mark-sent/<str:order_number>/', views.mark_feedback_reminder_sent, name='mark_feedback_reminder_sent'),
     path('login/', views.dashboard_login, name='login'),
     path('logout/', views.dashboard_logout, name='logout'),
     path('order/<str:order_number>/', views.order_detail, name='order_detail'),
