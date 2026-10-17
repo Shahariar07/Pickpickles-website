@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from django.db import transaction
+from django.db import transaction, models
 from dashboard.models import ExpenseCategory, Expense
 
 
@@ -20,10 +20,20 @@ class Command(BaseCommand):
                     ('Green Chilli & Capsicum (কাঁচামরিচ ও ক্যাপসিকাম)', 'green-chilli', 'fa-pepper-hot', 'Green chillies, bell peppers & jalapeños'),
                     ('Garlic & Ginger (রসুন ও আদা)', 'garlic-ginger', 'fa-seedling', 'Garlic cloves, ginger roots'),
                     ('Onions (পেঁয়াজ)', 'onions', 'fa-egg', 'Pickling baby shallots & onions'),
-                    ('Raw Mango (কাঁচা আম)', 'raw-mango', 'fa-leaf', 'Fresh green mangoes'),
-                    ('Pineapple & Fruits (আনারস ও ফল)', 'pineapple-fruits', 'fa-apple-whole', 'Fresh pineapples, grapes & fruits'),
                     ('Quail Eggs (কোয়েল পাখির ডিম)', 'quail-eggs', 'fa-egg', 'Farm fresh quail eggs'),
                     ('Beetroot (বিটমূল)', 'beetroot', 'fa-seedling', 'Fresh organic beetroots'),
+                ]
+            },
+            'FRUITS': {
+                'name': 'Fresh Fruits (ফলমূল) 🍎',
+                'icon': 'fa-apple-whole',
+                'desc': 'Fresh pineapples, raw mangoes, grapes, olives, and fruits for artisan pickling.',
+                'subcategories': [
+                    ('Pineapple & Fruits (আনারস ও ফল)', 'pineapple-fruits', 'fa-apple-whole', 'Fresh pineapples, grapes & fruits'),
+                    ('Raw Mango (কাঁচা আম)', 'raw-mango', 'fa-leaf', 'Fresh green sour mangoes'),
+                    ('Pineapple (আনারস)', 'pineapple', 'fa-apple-whole', 'Fresh pineapples for sweet & sour relish'),
+                    ('Grapes & Berries (আঙ্গুর ও বেরি)', 'grapes-berries', 'fa-apple-whole', 'Seedless green grapes & berries'),
+                    ('Olive / Jalpai (জলপাই ও অন্যান্য ফল)', 'jalpai-olive', 'fa-seedling', 'Green olives, jujube (boroi) & seasonal sour fruits'),
                 ]
             },
             'PACKAGING': {
@@ -111,6 +121,13 @@ class Command(BaseCommand):
                 p_obj = ExpenseCategory.objects.filter(slug=p_slug).first()
                 if not p_obj:
                     p_obj = ExpenseCategory.objects.filter(name=p_data['name']).first()
+                if not p_obj and p_slug == 'FRUITS':
+                    # Support user-created Fruits main category
+                    p_obj = (
+                        ExpenseCategory.objects.filter(parent__isnull=True, name__icontains='fruit').first()
+                        or ExpenseCategory.objects.filter(parent__isnull=True, name__icontains='ফল').first()
+                        or ExpenseCategory.objects.filter(parent__isnull=True, slug__icontains='fruit').first()
+                    )
 
                 if p_obj:
                     # Remove any conflicting duplicate row with same slug or name
@@ -164,11 +181,13 @@ class Command(BaseCommand):
                         )
                     valid_sub_ids.append(sub_obj.id)
 
-            # 3. Clean up obsolete legacy categories
-            all_valid_ids = [p.id for p in parent_map.values()] + valid_sub_ids
-            deleted_count, _ = ExpenseCategory.objects.exclude(id__in=all_valid_ids).delete()
-            if deleted_count:
-                self.stdout.write(self.style.SUCCESS(f'Removed {deleted_count} obsolete duplicate category records.'))
+            # 3. Clean up & preserve custom categories created by staff/admin.
+            # We intentionally DO NOT delete user-created categories to prevent
+            # custom categories from disappearing automatically.
+            all_canonical_ids = [p.id for p in parent_map.values()] + valid_sub_ids
+            custom_count = ExpenseCategory.objects.exclude(id__in=all_canonical_ids).count()
+            if custom_count:
+                self.stdout.write(self.style.NOTICE(f'Preserved {custom_count} custom user-created category records.'))
 
             # 4. Map legacy categories on Expenses
             legacy_mappings = [
@@ -178,6 +197,24 @@ class Command(BaseCommand):
                 ({'category__iexact': 'sugar'}, 'SPICES_BRINE', 'Sugar (চিনি)'),
                 # herb -> SPICES_BRINE + Dill & Dry Herbs
                 ({'category__iexact': 'herb'}, 'SPICES_BRINE', 'Dill & Dry Herbs (ডিল ও ভেষজ)'),
+                # vinegar -> SPICES_BRINE + Vinegar
+                ({'category__iexact': 'vinegar'}, 'SPICES_BRINE', 'Vinegar (ভিনেগার)'),
+                # mustard -> SPICES_BRINE + Mustard Oil & Seeds
+                ({'category__iexact': 'mustard'}, 'SPICES_BRINE', 'Mustard Oil & Seeds (সরিষার তেল ও সরিষা)'),
+                # spice -> SPICES_BRINE + Whole Spices & Peppercorn
+                ({'category__iexact': 'spice'}, 'SPICES_BRINE', 'Whole Spices & Peppercorn (গোলমরিচ ও গোটা মসলা)'),
+                # jar -> PACKAGING + Glass Jars
+                ({'category__iexact': 'jar'}, 'PACKAGING', 'Glass Jars (কাচের বৈয়াম)'),
+                # box -> PACKAGING + Cardboard Boxes
+                ({'category__iexact': 'box'}, 'PACKAGING', 'Cardboard Boxes (কার্টন ও বক্স)'),
+                # label -> PACKAGING + Labels & Stickers
+                ({'category__iexact': 'label'}, 'PACKAGING', 'Labels & Stickers (স্টিকার ও লেবেল)'),
+                # gas -> UTILITIES + Gas Cylinder
+                ({'category__iexact': 'gas'}, 'UTILITIES', 'Gas Cylinder (গ্যাস সিলিন্ডার)'),
+                # ad / marketing -> MARKETING + Facebook / Meta Ads
+                ({'category__iexact': 'marketing'}, 'MARKETING', 'Facebook / Meta Ads (ফেসবুক বুস্টিং)'),
+                # logistics -> LOGISTICS + Courier Delivery Fee
+                ({'category__iexact': 'logistics'}, 'LOGISTICS', 'Courier Delivery Fee (ডেলিভারি চার্জ)'),
                 # water -> SPICES_BRINE + Purified Water
                 ({'category__iexact': 'water'}, 'SPICES_BRINE', 'Purified Water (ফিল্টার পানি)'),
                 # communication -> LOGISTICS or MARKETING
@@ -188,16 +225,33 @@ class Command(BaseCommand):
             for filter_kwargs, cat_slug, sub_name in legacy_mappings:
                 updated = Expense.objects.filter(**filter_kwargs).update(category=cat_slug, sub_category=sub_name)
                 if updated:
-                    self.stdout.write(f'Updated {updated} legacy expenses to {cat_slug} ➔ {sub_name}')
+                    self.stdout.write(f'Updated {updated} legacy expenses to {cat_slug}')
 
             # Auto-assign subcategories for common raw material / packaging items without subcategories
             Expense.objects.filter(category='RAW_MATERIAL', sub_category='', title__icontains='cucumber').update(sub_category='Cucumber (শসা)')
             Expense.objects.filter(category='RAW_MATERIAL', sub_category='', title__icontains='shosa').update(sub_category='Cucumber (শসা)')
             Expense.objects.filter(category='RAW_MATERIAL', sub_category='', title__icontains='quail').update(sub_category='Quail Eggs (কোয়েল পাখির ডিম)')
-            Expense.objects.filter(category='RAW_MATERIAL', sub_category='', title__icontains='mango').update(sub_category='Raw Mango (কাঁচা আম)')
-            Expense.objects.filter(category='RAW_MATERIAL', sub_category='', title__icontains='pineapple').update(sub_category='Pineapple & Fruits (আনারস ও ফল)')
-            Expense.objects.filter(category='RAW_MATERIAL', sub_category='', title__icontains='grapes').update(sub_category='Pineapple & Fruits (আনারস ও ফল)')
             Expense.objects.filter(category='RAW_MATERIAL', sub_category='', title__icontains='morich').update(sub_category='Green Chilli & Capsicum (কাঁচামরিচ ও ক্যাপসিকাম)')
+            Expense.objects.filter(category='RAW_MATERIAL', sub_category='', title__icontains='capsicum').update(sub_category='Green Chilli & Capsicum (কাঁচামরিচ ও ক্যাপসিকাম)')
+            Expense.objects.filter(category='RAW_MATERIAL', sub_category='', title__icontains='garlic').update(sub_category='Garlic & Ginger (রসুন ও আদা)')
+            Expense.objects.filter(category='RAW_MATERIAL', sub_category='', title__icontains='ginger').update(sub_category='Garlic & Ginger (রসুন ও আদা)')
+            Expense.objects.filter(category='RAW_MATERIAL', sub_category='', title__icontains='onion').update(sub_category='Onions (পেঁয়াজ)')
+            Expense.objects.filter(category='RAW_MATERIAL', sub_category='', title__icontains='carrot').update(sub_category='Carrot (গাজর)')
+            Expense.objects.filter(category='RAW_MATERIAL', sub_category='', title__icontains='gajor').update(sub_category='Carrot (গাজর)')
+            Expense.objects.filter(category='RAW_MATERIAL', sub_category='', title__icontains='beet').update(sub_category='Beetroot (বিটমূল)')
+
+            # Fruit expenses -> harmonize under FRUITS category
+            Expense.objects.filter(models.Q(category='RAW_MATERIAL') | models.Q(category='FRUITS'), title__icontains='pineapple').update(category='FRUITS', sub_category='Pineapple & Fruits (আনারস ও ফল)')
+            Expense.objects.filter(models.Q(category='RAW_MATERIAL') | models.Q(category='FRUITS'), title__icontains='grapes').update(category='FRUITS', sub_category='Pineapple & Fruits (আনারস ও ফল)')
+            Expense.objects.filter(models.Q(category='RAW_MATERIAL') | models.Q(category='FRUITS'), title__icontains='anarosh').update(category='FRUITS', sub_category='Pineapple & Fruits (আনারস ও ফল)')
+            Expense.objects.filter(models.Q(category='RAW_MATERIAL') | models.Q(category='FRUITS'), title__icontains='angur').update(category='FRUITS', sub_category='Pineapple & Fruits (আনারস ও ফল)')
+            Expense.objects.filter(models.Q(category='RAW_MATERIAL') | models.Q(category='FRUITS'), title__icontains='mango').update(category='FRUITS', sub_category='Raw Mango (কাঁচা আম)')
+            Expense.objects.filter(models.Q(category='RAW_MATERIAL') | models.Q(category='FRUITS'), title__icontains='aam').update(category='FRUITS', sub_category='Raw Mango (কাঁচা আম)')
+            Expense.objects.filter(models.Q(category='RAW_MATERIAL') | models.Q(category='FRUITS'), title__icontains='jalpai').update(category='FRUITS', sub_category='Olive / Jalpai (জলপাই ও অন্যান্য ফল)')
+            Expense.objects.filter(models.Q(category='RAW_MATERIAL') | models.Q(category='FRUITS'), title__icontains='olive').update(category='FRUITS', sub_category='Olive / Jalpai (জলপাই ও অন্যান্য ফল)')
+            Expense.objects.filter(category='FRUITS', sub_category='', title__icontains='mango').update(sub_category='Raw Mango (কাঁচা আম)')
+            Expense.objects.filter(category='FRUITS', sub_category='', title__icontains='pineapple').update(sub_category='Pineapple & Fruits (আনারস ও ফল)')
+            Expense.objects.filter(category='FRUITS', sub_category='', title__icontains='grapes').update(sub_category='Pineapple & Fruits (আনারস ও ফল)')
 
             Expense.objects.filter(category='SPICES_BRINE', sub_category='', title__icontains='vinegar').update(sub_category='Vinegar (ভিনেগার)')
             Expense.objects.filter(category='PACKAGING', sub_category='', title__icontains='jar').update(sub_category='Glass Jars (কাচের বৈয়াম)')

@@ -22,20 +22,28 @@
 
         <!-- Minimal Time Filter -->
         <div class="flex items-center gap-1 bg-gray-100 p-1 rounded-xl shrink-0 self-start sm:self-auto text-xs">
+            <a href="?days=7&status={{ status_filter }}{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
+               class="px-2 py-1 rounded-lg font-bold transition {% if min_days == 7 %}bg-white text-gray-900 shadow-2xs{% else %}text-gray-600 hover:text-gray-900{% endif %}">
+                7d
+            </a>
+            <a href="?days=14&status={{ status_filter }}{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
+               class="px-2 py-1 rounded-lg font-bold transition {% if min_days == 14 %}bg-white text-gray-900 shadow-2xs{% else %}text-gray-600 hover:text-gray-900{% endif %}">
+                14d
+            </a>
             <a href="?days=30&status={{ status_filter }}{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
-               class="px-2.5 py-1 rounded-lg font-bold transition {% if min_days == 30 %}bg-white text-gray-900 shadow-2xs{% else %}text-gray-600 hover:text-gray-900{% endif %}">
+               class="px-2 py-1 rounded-lg font-bold transition {% if min_days == 30 %}bg-white text-gray-900 shadow-2xs{% else %}text-gray-600 hover:text-gray-900{% endif %}">
                 30d
             </a>
             <a href="?days=45&status={{ status_filter }}{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
-               class="px-2.5 py-1 rounded-lg font-bold transition {% if min_days == 45 %}bg-white text-gray-900 shadow-2xs{% else %}text-gray-600 hover:text-gray-900{% endif %}">
+               class="px-2 py-1 rounded-lg font-bold transition {% if min_days == 45 %}bg-white text-gray-900 shadow-2xs{% else %}text-gray-600 hover:text-gray-900{% endif %}">
                 45d
             </a>
             <a href="?days=60&status={{ status_filter }}{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
-               class="px-2.5 py-1 rounded-lg font-bold transition {% if min_days == 60 %}bg-white text-gray-900 shadow-2xs{% else %}text-gray-600 hover:text-gray-900{% endif %}">
+               class="px-2 py-1 rounded-lg font-bold transition {% if min_days == 60 %}bg-white text-gray-900 shadow-2xs{% else %}text-gray-600 hover:text-gray-900{% endif %}">
                 60d
             </a>
             <a href="?days=90&status={{ status_filter }}{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
-               class="px-2.5 py-1 rounded-lg font-bold transition {% if min_days == 90 %}bg-white text-gray-900 shadow-2xs{% else %}text-gray-600 hover:text-gray-900{% endif %}">
+               class="px-2 py-1 rounded-lg font-bold transition {% if min_days == 90 %}bg-white text-gray-900 shadow-2xs{% else %}text-gray-600 hover:text-gray-900{% endif %}">
                 90d
             </a>
         </div>
@@ -47,7 +55,7 @@
            class="px-4 py-2 rounded-xl flex items-center gap-2 transition {% if status_filter == 'pending' %}bg-brand-700 text-white shadow-xs{% else %}bg-white text-gray-600 hover:bg-gray-100 border border-gray-200{% endif %}">
             <i class="fa-solid fa-clock-rotate-left"></i>
             <span>Pending Reminders</span>
-            <span class="px-1.5 py-0.2 rounded-full text-[10px] {% if status_filter == 'pending' %}bg-white/20 text-white{% else %}bg-amber-100 text-amber-800{% endif %}">
+            <span id="pendingCountBadge" class="px-1.5 py-0.2 rounded-full text-[10px] {% if status_filter == 'pending' %}bg-white/20 text-white{% else %}bg-amber-100 text-amber-800{% endif %}">
                 {{ pending_count }}
             </span>
         </a>
@@ -56,7 +64,7 @@
            class="px-4 py-2 rounded-xl flex items-center gap-2 transition {% if status_filter == 'done' %}bg-emerald-600 text-white shadow-xs{% else %}bg-white text-gray-600 hover:bg-gray-100 border border-gray-200{% endif %}">
             <i class="fa-solid fa-circle-check"></i>
             <span>Done / Sent</span>
-            <span class="px-1.5 py-0.2 rounded-full text-[10px] {% if status_filter == 'done' %}bg-white/20 text-white{% else %}bg-emerald-100 text-emerald-800{% endif %}">
+            <span id="doneCountBadge" class="px-1.5 py-0.2 rounded-full text-[10px] {% if status_filter == 'done' %}bg-white/20 text-white{% else %}bg-emerald-100 text-emerald-800{% endif %}">
                 {{ done_count }}
             </span>
         </a>
@@ -115,7 +123,7 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100 font-medium text-gray-800">
                     {% for order in orders %}
-                    <tr class="hover:bg-gray-50/60 transition">
+                    <tr id="row-{{ order.order_number }}" class="hover:bg-gray-50/60 transition">
                         <!-- Customer -->
                         <td class="py-3 px-4">
                             <strong class="text-gray-900 block">{{ order.customer_name }}</strong>
@@ -164,6 +172,14 @@
                                     <i class="fa-solid fa-circle-check text-emerald-600"></i>
                                     <span>Sent ({% if order.days_since_sent == 0 %}today{% else %}{{ order.days_since_sent }}d ago{% endif %})</span>
                                 </span>
+                                <button type="button" onclick="undoReminderSent('{{ order.order_number }}')" class="text-gray-400 hover:text-rose-600 hover:bg-rose-50 px-2 py-1 rounded text-[11px] font-semibold transition cursor-pointer" title="Move back to Pending">
+                                    Undo
+                                </button>
+                                {% else %}
+                                <button type="button" onclick="markReminderSent('{{ order.order_number }}')" class="bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs px-2.5 py-1.5 rounded-lg inline-flex items-center gap-1 transition shadow-2xs cursor-pointer" title="Move to Done without opening WhatsApp">
+                                    <i class="fa-solid fa-check text-xs text-amber-700"></i>
+                                    <span>Done</span>
+                                </button>
                                 {% endif %}
 
                                 <a href="{{ order.whatsapp_1month_review_request_url }}" target="_blank" 
@@ -186,7 +202,7 @@
                     {% empty %}
                     <tr>
                         <td colspan="6" class="py-10 text-center text-gray-400 text-xs">
-                            No pending feedback customers found.
+                            No feedback reminder customers found in this filter.
                         </td>
                     </tr>
                     {% endfor %}
@@ -197,7 +213,7 @@
         <!-- Mobile Card List -->
         <div class="block sm:hidden divide-y divide-gray-100">
             {% for order in orders %}
-            <div class="p-3.5 space-y-2 text-xs">
+            <div id="card-{{ order.order_number }}" class="p-3.5 space-y-2 text-xs">
                 <div class="flex items-start justify-between gap-2">
                     <div>
                         <strong class="text-gray-900 text-sm block">{{ order.customer_name }}</strong>
@@ -215,12 +231,20 @@
                     {% endfor %}
                 </div>
 
-                <div class="flex items-center gap-1.5 pt-1" id="mobile-actions-{{ order.order_number }}">
+                <div class="flex items-center gap-1.5 pt-1 flex-wrap" id="mobile-actions-{{ order.order_number }}">
                     {% if order.is_feedback_done %}
                     <span class="px-2 py-1.5 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1 shrink-0">
                         <i class="fa-solid fa-circle-check text-emerald-600"></i>
                         <span>Sent ({% if order.days_since_sent == 0 %}today{% else %}{{ order.days_since_sent }}d ago{% endif %})</span>
                     </span>
+                    <button type="button" onclick="undoReminderSent('{{ order.order_number }}')" class="text-xs text-rose-600 font-semibold px-2 py-1 hover:bg-rose-50 rounded">
+                        Undo
+                    </button>
+                    {% else %}
+                    <button type="button" onclick="markReminderSent('{{ order.order_number }}')" class="bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs px-2.5 py-1.5 rounded-lg flex items-center gap-1">
+                        <i class="fa-solid fa-check text-amber-700"></i>
+                        <span>Done</span>
+                    </button>
                     {% endif %}
 
                     <a href="{{ order.whatsapp_1month_review_request_url }}" target="_blank" 
@@ -238,7 +262,7 @@
             </div>
             {% empty %}
             <div class="py-8 text-center text-gray-400 text-xs">
-                No pending feedback customers found.
+                No feedback reminder customers found in this filter.
             </div>
             {% endfor %}
         </div>
@@ -299,14 +323,18 @@
             <pre class="whitespace-pre-wrap font-sans text-xs text-gray-800 leading-relaxed max-h-56 overflow-y-auto" id="modalMsgContent"></pre>
         </div>
 
-        <div class="flex items-center justify-end gap-2 pt-1">
-            <button type="button" onclick="copyModalMessage()" id="copyMsgBtn" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs px-3 py-1.5 rounded-lg border border-gray-200 flex items-center gap-1 transition cursor-pointer">
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100 flex-wrap">
+            <button type="button" onclick="copyModalMessage()" id="copyMsgBtn" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs px-3 py-2 rounded-xl border border-gray-200 flex items-center gap-1 transition cursor-pointer">
                 <i class="fa-solid fa-copy text-gray-500"></i>
-                <span id="copyBtnTxt">Copy</span>
+                <span id="copyBtnTxt">Copy Message</span>
             </button>
-            <a href="#" id="modalDirectWaLink" target="_blank" onclick="closePreviewModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg flex items-center gap-1 transition">
-                <i class="fa-brands fa-whatsapp text-xs"></i>
-                <span>Open WhatsApp</span>
+            <button type="button" onclick="modalMarkAsDoneOnly()" class="bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs px-3 py-2 rounded-xl border border-amber-300 flex items-center gap-1 transition cursor-pointer">
+                <i class="fa-solid fa-check text-amber-700"></i>
+                <span>Move to Done (Done-এ পাঠান)</span>
+            </button>
+            <a href="#" id="modalDirectWaLink" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition shadow-sm">
+                <i class="fa-brands fa-whatsapp text-sm"></i>
+                <span>Open WhatsApp & Move to Done</span>
             </a>
         </div>
     </div>
@@ -332,7 +360,7 @@
         currentRawMessage = msgContent;
 
         const copyBtnTxt = document.getElementById('copyBtnTxt');
-        if (copyBtnTxt) copyBtnTxt.textContent = "Copy";
+        if (copyBtnTxt) copyBtnTxt.textContent = "Copy Message";
 
         document.getElementById('waPreviewModal').classList.remove('hidden');
     }
@@ -341,13 +369,19 @@
         document.getElementById('waPreviewModal').classList.add('hidden');
     }
 
+    function modalMarkAsDoneOnly() {
+        if (!activeOrderNumber) return;
+        markReminderSent(activeOrderNumber);
+        closePreviewModal();
+    }
+
     function copyModalMessage() {
         if (!currentRawMessage) return;
         navigator.clipboard.writeText(currentRawMessage).then(() => {
             const copyBtnTxt = document.getElementById('copyBtnTxt');
             if (copyBtnTxt) copyBtnTxt.textContent = "Copied! ✓";
             setTimeout(() => {
-                if (copyBtnTxt) copyBtnTxt.textContent = "Copy";
+                if (copyBtnTxt) copyBtnTxt.textContent = "Copy Message";
             }, 2000);
         }).catch(err => {
             alert('Could not copy: ' + err);
@@ -357,8 +391,18 @@
     function markReminderSent(orderNumber) {
         if (!orderNumber) return;
 
-        // AJAX update to mark as sent immediately
-        fetch(`/dashboard/feedback-reminders/mark-sent/${orderNumber}/?format=json`, {
+        const url = `/dashboard/feedback-reminders/mark-sent/${orderNumber}/?format=json`;
+
+        // 1. Send Beacon for background durability when switching apps/tabs
+        if (navigator.sendBeacon) {
+            navigator.sendBeacon(url);
+        }
+
+        // 2. Fetch with keepalive and same-origin credentials
+        fetch(url, {
+            method: 'GET',
+            keepalive: true,
+            credentials: 'same-origin',
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
             }
@@ -366,48 +410,109 @@
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                // Update desktop actions badge
-                const actionWrap = document.getElementById(`actions-${orderNumber}`);
-                if (actionWrap) {
-                    actionWrap.innerHTML = `
-                        <span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200" title="Just sent">
-                            <i class="fa-solid fa-circle-check text-emerald-600"></i>
-                            <span>Sent (today)</span>
-                        </span>
-                        <a href="https://wa.me/" target="_blank" onclick="markReminderSent('${orderNumber}')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs px-2.5 py-1.5 rounded-lg inline-flex items-center gap-1 transition" title="Resend">
-                            <i class="fa-brands fa-whatsapp text-xs text-emerald-600"></i>
-                            <span>Sent ✓</span>
-                        </a>
-                    `;
-                }
-
-                // Update mobile actions badge
-                const mActionWrap = document.getElementById(`mobile-actions-${orderNumber}`);
-                if (mActionWrap) {
-                    mActionWrap.innerHTML = `
-                        <span class="px-2 py-1.5 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1 shrink-0">
-                            <i class="fa-solid fa-circle-check text-emerald-600"></i>
-                            <span>Sent (today)</span>
-                        </span>
-                        <span class="flex-1 bg-gray-100 text-gray-600 font-bold text-xs py-1.5 rounded-lg text-center">
-                            Sent to Done ✓
-                        </span>
-                    `;
-                }
-
-                // If currently on "Pending & Due" tab, reload smoothly after 1.2s to move row to Done tab
-                const urlParams = new URLSearchParams(window.location.search);
-                const curStatus = urlParams.get('status') || 'pending';
-                if (curStatus === 'pending') {
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1200);
-                }
+                applySentUIState(orderNumber, true);
             }
         })
         .catch(err => {
-            console.error('Error marking feedback reminder sent:', err);
+            console.warn('Feedback reminder marked:', err);
         });
+
+        // Instant UI response without waiting for async fetch
+        applySentUIState(orderNumber, true);
+    }
+
+    function undoReminderSent(orderNumber) {
+        if (!orderNumber) return;
+        if (!confirm(`Move #${orderNumber} back to Pending?`)) return;
+
+        const url = `/dashboard/feedback-reminders/mark-sent/${orderNumber}/?action=undo&format=json`;
+
+        fetch(url, {
+            method: 'GET',
+            keepalive: true,
+            credentials: 'same-origin',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                applySentUIState(orderNumber, false);
+            }
+        })
+        .catch(err => {
+            console.warn('Feedback reminder undone:', err);
+        });
+
+        applySentUIState(orderNumber, false);
+    }
+
+    function applySentUIState(orderNumber, isDone) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const curStatus = urlParams.get('status') || 'pending';
+
+        const row = document.getElementById(`row-${orderNumber}`);
+        const card = document.getElementById(`card-${orderNumber}`);
+
+        if (isDone) {
+            // If on 'pending' tab, smoothly remove row from table
+            if (curStatus === 'pending') {
+                [row, card].forEach(el => {
+                    if (el) {
+                        el.style.transition = 'all 0.35s ease';
+                        el.style.opacity = '0';
+                        el.style.transform = 'scale(0.96)';
+                        setTimeout(() => el.remove(), 350);
+                    }
+                });
+
+                // Update tab counters in real time
+                const pBadge = document.getElementById('pendingCountBadge');
+                const dBadge = document.getElementById('doneCountBadge');
+                if (pBadge) {
+                    pBadge.textContent = Math.max(0, parseInt(pBadge.textContent.trim() || '0', 10) - 1);
+                }
+                if (dBadge) {
+                    dBadge.textContent = parseInt(dBadge.textContent.trim() || '0', 10) + 1;
+                }
+            } else {
+                // If on 'all' or 'done', update action wrap
+                const actionWrap = document.getElementById(`actions-${orderNumber}`);
+                if (actionWrap) {
+                    actionWrap.innerHTML = `
+                        <span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                            <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                            <span>Sent (today)</span>
+                        </span>
+                        <button type="button" onclick="undoReminderSent('${orderNumber}')" class="text-gray-400 hover:text-rose-600 hover:bg-rose-50 px-2 py-1 rounded text-[11px] font-semibold transition cursor-pointer">
+                            Undo
+                        </button>
+                    `;
+                }
+            }
+        } else {
+            // Undo: if on 'done' tab, remove from done
+            if (curStatus === 'done') {
+                [row, card].forEach(el => {
+                    if (el) {
+                        el.style.transition = 'all 0.35s ease';
+                        el.style.opacity = '0';
+                        el.style.transform = 'scale(0.96)';
+                        setTimeout(() => el.remove(), 350);
+                    }
+                });
+
+                const pBadge = document.getElementById('pendingCountBadge');
+                const dBadge = document.getElementById('doneCountBadge');
+                if (pBadge) {
+                    pBadge.textContent = parseInt(pBadge.textContent.trim() || '0', 10) + 1;
+                }
+                if (dBadge) {
+                    dBadge.textContent = Math.max(0, parseInt(dBadge.textContent.trim() || '0', 10) - 1);
+                }
+            }
+        }
     }
 
     document.addEventListener('keydown', (e) => {

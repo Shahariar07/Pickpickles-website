@@ -53,12 +53,15 @@ def cart_context(request):
     cloudflare_turnstile_site_key = getattr(settings, 'CLOUDFLARE_TURNSTILE_SITE_KEY', '')
     
     trash_orders_count = 0
+    pending_reviews_count = 0
     try:
         if hasattr(request, 'user') and request.user.is_authenticated and request.user.is_staff:
-            from .models import Order
+            from .models import Order, Review
             trash_orders_count = Order.trash_objects.count()
+            pending_reviews_count = Review.objects.filter(is_approved=False).count()
     except Exception:
         trash_orders_count = 0
+        pending_reviews_count = 0
         
     auto_whatsapp_url = None
     auto_whatsapp_order_number = None
@@ -80,6 +83,7 @@ def cart_context(request):
                 'GOOGLE_ANALYTICS_ID': google_analytics_id,
                 'CLOUDFLARE_TURNSTILE_SITE_KEY': cloudflare_turnstile_site_key,
                 'global_trash_count': trash_orders_count,
+                'pending_reviews_count': pending_reviews_count,
                 'auto_whatsapp_url': auto_whatsapp_url,
                 'auto_whatsapp_order_number': auto_whatsapp_order_number,
             }
@@ -96,6 +100,7 @@ def cart_context(request):
             'GOOGLE_ANALYTICS_ID': google_analytics_id,
             'CLOUDFLARE_TURNSTILE_SITE_KEY': cloudflare_turnstile_site_key,
             'global_trash_count': trash_orders_count,
+            'pending_reviews_count': pending_reviews_count,
             'auto_whatsapp_url': auto_whatsapp_url,
             'auto_whatsapp_order_number': auto_whatsapp_order_number,
         }
@@ -112,6 +117,7 @@ def cart_context(request):
             'GOOGLE_ANALYTICS_ID': google_analytics_id,
             'CLOUDFLARE_TURNSTILE_SITE_KEY': cloudflare_turnstile_site_key,
             'global_trash_count': trash_orders_count,
+            'pending_reviews_count': pending_reviews_count,
             'auto_whatsapp_url': auto_whatsapp_url,
             'auto_whatsapp_order_number': auto_whatsapp_order_number,
         }

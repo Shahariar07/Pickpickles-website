@@ -41,6 +41,7 @@ class ExpenseCategory(models.Model):
 class Expense(models.Model):
     CATEGORY_CHOICES = [
         ('RAW_MATERIAL', 'Fresh Cucumbers & Veggies 🥒'),
+        ('FRUITS', 'Fresh Fruits (ফলমূল) 🍎'),
         ('PACKAGING', 'Glass Jars, Lids & Labels 🫙'),
         ('SPICES_BRINE', 'Vinegar, Garlic & Whole Spices 🌿'),
         ('LOGISTICS', 'Courier & Rider Delivery Cost 🚚'),

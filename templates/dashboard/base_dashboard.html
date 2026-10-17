@@ -274,6 +274,10 @@
                                 class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'reviews' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
                                 <i class="fa-solid fa-star text-brand-accent text-sm w-4 text-center"></i>
                                 <span>Customer Reviews</span>
+                                <span id="sidebarReviewsBadge"
+                                    class="{% if not pending_reviews_count %}hidden {% endif %}ml-auto px-2 py-0.5 text-[10px] font-black bg-amber-500 text-slate-950 rounded-full shadow-xs">
+                                    {{ pending_reviews_count|default:"0" }}
+                                </span>
                             </a>
 
                             <!-- Feedback Reminders (1+ Month Old) -->
@@ -776,12 +780,13 @@
         }
 
         // Update counts and badges
-        function updateBadges(pendingCount) {
+        function updateBadges(pendingCount, pendingReviewsCount) {
             const dBadge = document.getElementById('desktopNotificationBadge');
             const mBadge = document.getElementById('mobileNotificationBadge');
             const sBadge = document.getElementById('sidebarOrdersPendingBadge');
             const dPendingText = document.getElementById('desktopPendingCountText');
             const mPendingText = document.getElementById('mobilePendingCountText');
+            const rBadge = document.getElementById('sidebarReviewsBadge');
 
             const text = pendingCount > 99 ? '99+' : pendingCount.toString();
 
@@ -797,6 +802,16 @@
                     b.classList.add('hidden');
                 }
             });
+
+            if (rBadge && typeof pendingReviewsCount !== 'undefined') {
+                const rText = pendingReviewsCount > 99 ? '99+' : pendingReviewsCount.toString();
+                if (pendingReviewsCount > 0) {
+                    rBadge.textContent = rText;
+                    rBadge.classList.remove('hidden');
+                } else {
+                    rBadge.classList.add('hidden');
+                }
+            }
         }
 
         // Reminder interval preference (Default: 10 minutes)
@@ -909,7 +924,7 @@
                 if (isFirstPoll) {
                     lastKnownOrderId = data.latest_id;
                     isFirstPoll = false;
-                    updateBadges(data.pending_count);
+                    updateBadges(data.pending_count, data.pending_reviews_count);
                     renderPendingList(data.recent_pending);
                     handlePendingSoundReminder(data.pending_count);
                     return;
@@ -943,7 +958,7 @@
                 }
 
                 // Always update badges, dropdown list, and recurring reminder
-                updateBadges(data.pending_count);
+                updateBadges(data.pending_count, data.pending_reviews_count);
                 renderPendingList(data.recent_pending);
                 handlePendingSoundReminder(data.pending_count);
 

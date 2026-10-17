@@ -2691,8 +2691,19 @@ def mark_order_returned(request, order_number):
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def reviews_manager(request):
-    reviews = Review.objects.all().select_related('product').order_by('-created_at')
+    all_reviews = Review.objects.all().select_related('product').order_by('-created_at')
     products = Product.objects.all().order_by('name')
+
+    total_reviews = all_reviews.count()
+    approved_count = all_reviews.filter(is_approved=True).count()
+    pending_reviews_count = all_reviews.filter(is_approved=False).count()
+
+    status_filter = request.GET.get('status', '').strip().lower()
+    reviews = all_reviews
+    if status_filter == 'pending':
+        reviews = reviews.filter(is_approved=False)
+    elif status_filter == 'approved':
+        reviews = reviews.filter(is_approved=True)
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -2705,7 +2716,10 @@ def reviews_manager(request):
             review.save()
             status_txt = 'approved & visible' if review.is_approved else 'hidden'
             messages.success(request, f'Review by {review.reviewer_name} is now {status_txt}.')
-            return redirect('dashboard:reviews')
+            redirect_url = reverse('dashboard:reviews')
+            if status_filter:
+                redirect_url += f'?status={status_filter}'
+            return redirect(redirect_url)
 
         # 2. Delete Review
         elif action == 'delete_review':
@@ -2716,7 +2730,10 @@ def reviews_manager(request):
             r_name = review.reviewer_name
             review.delete()
             messages.success(request, f'Review from {r_name} deleted successfully.')
-            return redirect('dashboard:reviews')
+            redirect_url = reverse('dashboard:reviews')
+            if status_filter:
+                redirect_url += f'?status={status_filter}'
+            return redirect(redirect_url)
 
         # 3. Add Manual Review
         elif action == 'create_review':
@@ -2738,9 +2755,6 @@ def reviews_manager(request):
             )
             messages.success(request, f'Review for {product.name} added successfully!')
             return redirect('dashboard:reviews')
-
-    total_reviews = reviews.count()
-    approved_count = reviews.filter(is_approved=True).count()
 
     # Pagination (Default: 10 per page)
     page_number = request.GET.get('page', 1)
@@ -2774,6 +2788,8 @@ def reviews_manager(request):
         'products': products,
         'total_reviews': total_reviews,
         'approved_count': approved_count,
+        'pending_reviews_count': pending_reviews_count,
+        'status_filter': status_filter,
     }
     return render(request, 'dashboard/reviews.html', context)
 
@@ -2802,9 +2818,9 @@ def feedback_reminders_manager(request):
 
     cutoff_date = now - timedelta(days=min_days)
 
-    # Base query: non-deleted orders placed at least `min_days` ago, excluding cancelled
+    # Base query: non-deleted orders placed at least `min_days` ago OR already marked as sent
     orders_qs = Order.objects.filter(
-        created_at__lte=cutoff_date,
+        Q(created_at__lte=cutoff_date) | Q(feedback_request_sent_at__isnull=False),
         is_deleted=False
     ).exclude(
         order_status__in=['CANCELLED']
@@ -2828,7 +2844,7 @@ def feedback_reminders_manager(request):
         )
 
     # Filter out customers who already reviewed:
-    # - Pending: Feedback reminder NOT sent yet (sent only once)
+    # - Pending: Feedback reminder NOT sent yet and created_at <= cutoff_date
     # - Done: Feedback reminder has already been sent
     pending_list = []
     done_list = []
@@ -2843,7 +2859,7 @@ def feedback_reminders_manager(request):
                 order.is_feedback_done = True
                 order.days_since_sent = (now.date() - order.feedback_request_sent_at.date()).days
                 done_list.append(order)
-            else:
+            elif order.created_at <= cutoff_date:
                 order.is_feedback_done = False
                 order.days_since_sent = None
                 pending_list.append(order)
@@ -2903,23 +2919,34 @@ def feedback_reminders_manager(request):
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def mark_feedback_reminder_sent(request, order_number):
-    """Marks an order's review request message as sent now."""
+    """Marks an order's review request message as sent now, or unmarks it if action=undo."""
     if request.method in ['POST', 'GET']:
         order = get_object_or_404(Order, order_number=order_number)
-        order.feedback_request_sent_at = timezone.now()
-        order.feedback_request_count = (order.feedback_request_count or 0) + 1
-        order.save(update_fields=['feedback_request_sent_at', 'feedback_request_count'])
+        action = request.GET.get('action') or request.POST.get('action')
+
+        if action == 'undo':
+            order.feedback_request_sent_at = None
+            order.save(update_fields=['feedback_request_sent_at'])
+            msg = f'Review reminder undone for #{order.order_number}. Moved back to Pending.'
+            is_done = False
+        else:
+            order.feedback_request_sent_at = timezone.now()
+            order.feedback_request_count = (order.feedback_request_count or 0) + 1
+            order.save(update_fields=['feedback_request_sent_at', 'feedback_request_count'])
+            msg = f'Review request marked as sent for #{order.order_number}. Moved to Done.'
+            is_done = True
 
         if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('format') == 'json':
             return JsonResponse({
                 'success': True,
                 'order_number': order.order_number,
-                'sent_at': order.feedback_request_sent_at.isoformat(),
+                'sent_at': order.feedback_request_sent_at.isoformat() if order.feedback_request_sent_at else None,
+                'is_done': is_done,
                 'count': order.feedback_request_count,
-                'message': f'Review request marked as sent for #{order.order_number}.'
+                'message': msg
             })
 
-        messages.success(request, f'Review message marked as sent for #{order.order_number}.')
+        messages.success(request, msg)
         return redirect('dashboard:feedback_reminders')
 
     return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=405)
@@ -3034,6 +3061,7 @@ def expense_manager(request):
     if ExpenseCategory.objects.count() == 0:
         default_seed = [
             ('Fresh Cucumbers & Veggies 🥒', 'RAW_MATERIAL', 'fa-carrot', 'Fresh cucumbers, garlic cloves, peppers, and raw produce.'),
+            ('Fresh Fruits (ফলমূল) 🍎', 'FRUITS', 'fa-apple-whole', 'Fresh pineapples, raw mangoes, grapes, olives, and fruits for pickling.'),
             ('Glass Jars, Lids & Labels 🫙', 'PACKAGING', 'fa-jar', 'Food-grade glass jars, airtight gold metal lids, and stickers.'),
             ('Vinegar, Garlic & Whole Spices 🌿', 'SPICES_BRINE', 'fa-leaf', 'Pure cane vinegar, pickling salt, bay leaf, mustard seeds, and brine spices.'),
             ('Courier & Rider Delivery Cost 🚚', 'LOGISTICS', 'fa-truck-fast', 'Courier parcel shipping fees and direct delivery rider charges.'),
@@ -3829,11 +3857,13 @@ def expense_categories_manager(request):
     if ExpenseCategory.objects.count() == 0:
         default_seed = [
             ('Fresh Cucumbers & Veggies 🥒', 'RAW_MATERIAL', 'fa-carrot', 'Fresh cucumbers, garlic cloves, peppers, and raw produce.'),
+            ('Fresh Fruits (ফলমূল) 🍎', 'FRUITS', 'fa-apple-whole', 'Fresh pineapples, raw mangoes, grapes, olives, and fruits for pickling.'),
             ('Glass Jars, Lids & Labels 🫙', 'PACKAGING', 'fa-jar', 'Food-grade glass jars, airtight gold metal lids, and stickers.'),
             ('Vinegar, Garlic & Whole Spices 🌿', 'SPICES_BRINE', 'fa-leaf', 'Pure cane vinegar, pickling salt, bay leaf, mustard seeds, and brine spices.'),
             ('Courier & Rider Delivery Cost 🚚', 'LOGISTICS', 'fa-truck-fast', 'Courier parcel shipping fees and direct delivery rider charges.'),
             ('Digital Ads & Marketing 📢', 'MARKETING', 'fa-bullhorn', 'Facebook page sponsored ads, boost campaigns, and promotion.'),
             ('Gas, Electricity & Kitchen Rent ⚡', 'UTILITIES', 'fa-bolt', 'Kitchen utilities, gas cylinders, and production space rent.'),
+            ('Damaged & Broken Products Loss 💥', 'DAMAGE_LOSS', 'fa-burst', 'Financial loss from courier breakage, kitchen spills, and unsellable damaged jars.'),
             ('Operational & Miscellaneous 📋', 'OTHER', 'fa-receipt', 'Sanitizing supplies, kitchen tools, and operational expenses.'),
         ]
         for name, slug, icon, desc in default_seed:
@@ -3969,6 +3999,7 @@ def order_notifications_api(request):
     latest_id = latest_order.id if latest_order else 0
 
     pending_count = Order.objects.filter(order_status='PENDING').count()
+    pending_reviews_count = Review.objects.filter(is_approved=False).count()
 
     # New orders that came strictly after last_id
     new_orders_data = []
@@ -4006,6 +4037,7 @@ def order_notifications_api(request):
         'has_new': len(new_orders_data) > 0,
         'new_orders': new_orders_data,
         'pending_count': pending_count,
+        'pending_reviews_count': pending_reviews_count,
         'recent_pending': recent_pending_data,
     })
 

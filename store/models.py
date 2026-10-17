@@ -842,10 +842,10 @@ Great news! Your Pickpickles order *#{self.order_number}* has been freshly prepa
 • Always use a clean, completely dry spoon when serving.
 
 ⭐ *Your Review & Feedback:*
-Once you've tasted your pickles, we would love to hear your feedback:
-• 💬 Reply directly to this WhatsApp chat with your rating or thoughts
+Once you've tasted your pickles, we would love to hear your thoughts!
+🌟 *Easy Ways to Review:*
 • 🌐 Leave a review on our website: https://pickpickles.xyz/reviews/
-• 📘 Follow our Facebook page: https://facebook.com/pickpickles07
+• 📘 Review us on our Facebook page: https://facebook.com/pickpickles07
 
 Your satisfaction means the world to us. Enjoy every crunchy bite! 💚
 
@@ -877,11 +877,11 @@ Dear *{self.customer_name}*,
 
 Warm greetings! We hope you have safely received your handcrafted pickles from Pickpickles and are enjoying them.
 
-How was your experience with the flavor, crunch, and our service? We would deeply appreciate your feedback:
+How was your experience with the flavor, crunch, and our service? We would deeply appreciate your review!
 
-• 💬 Simply reply to this WhatsApp message with your thoughts
-• 🌐 Submit your review on our website: https://pickpickles.xyz/reviews/
-• 📘 Visit our Facebook page: https://facebook.com/pickpickles07
+🌟 *Easy Ways to Review:*
+• 🌐 Leave a review on our website: https://pickpickles.xyz/reviews/
+• 📘 Review us on our Facebook page: https://facebook.com/pickpickles07
 
 As an artisanal small-batch brand, every review helps us grow and serve you better! 💚
 
@@ -917,10 +917,9 @@ Your honest review helps fellow food lovers discover us and helps us keep perfec
 
 It takes just 1 minute to share your thoughts:
 
-🌟 *Easy Ways to Share Your Review:*
-• 💬 *Reply directly to this message:* Share your quick impressions or rating (1 to 5 ⭐).
-• 🌐 *On our Website:* https://pickpickles.xyz/reviews/
-• 📘 *On our Facebook Page:* https://facebook.com/pickpickles07
+🌟 *Easy Ways to Review:*
+• 🌐 Leave a review on our website: https://pickpickles.xyz/reviews/
+• 📘 Review us on our Facebook page: https://facebook.com/pickpickles07
 
 Thank you for being a valued part of the Pickpickles community!
 
