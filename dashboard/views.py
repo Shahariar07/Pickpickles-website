@@ -3942,38 +3942,81 @@ def expense_categories_manager(request):
             parent_id = request.POST.get('parent_id')
             parent = ExpenseCategory.objects.filter(id=parent_id).first() if parent_id else None
             icon = request.POST.get('icon', 'fa-receipt').strip()
+            color = request.POST.get('theme_color', '').strip().lower()
             description = request.POST.get('description', '').strip()
+            
+            clean_icon = icon.split('|')[0] if '|' in icon else (icon or 'fa-receipt')
+            stored_icon = f"{clean_icon}|{color}" if color else clean_icon
+
             if name:
-                ExpenseCategory.objects.create(name=name, parent=parent, icon=icon, description=description)
+                ExpenseCategory.objects.create(name=name, parent=parent, icon=stored_icon, description=description)
                 messages.success(request, f'Expense Category "{name}" created successfully!')
             else:
                 messages.error(request, 'Category name is required.')
             return redirect('dashboard:expense_categories')
 
-        # 2. Edit Category
+        # 2. Edit Category (Head or Sub-category)
         elif action == 'edit_category':
             cat = get_object_or_404(ExpenseCategory, id=cat_id)
-            cat.name = request.POST.get('name', cat.name).strip()
+            old_name = cat.name
+            old_slug = cat.slug
+            new_name = request.POST.get('name', '').strip()
+            new_slug = request.POST.get('slug', '').strip()
+            new_icon = request.POST.get('icon', cat.icon).strip()
+            new_color = request.POST.get('theme_color', '').strip().lower()
+            new_desc = request.POST.get('description', cat.description).strip()
             parent_id = request.POST.get('parent_id')
+
+            if not new_name:
+                messages.error(request, 'Category name is required.')
+                return redirect('dashboard:expense_categories')
+
+            # Uniqueness check for name (excluding self)
+            if ExpenseCategory.objects.filter(name__iexact=new_name).exclude(id=cat.id).exists():
+                messages.error(request, f'A category with the name "{new_name}" already exists.')
+                return redirect('dashboard:expense_categories')
+
+            cat.name = new_name
+            if new_slug:
+                import re
+                clean_slug = re.sub(r'[^a-zA-Z0-9_\-]', '', new_slug.strip().replace(' ', '_'))
+                if clean_slug and not ExpenseCategory.objects.filter(slug__iexact=clean_slug).exclude(id=cat.id).exists():
+                    cat.slug = clean_slug
+            elif not cat.slug:
+                from django.utils.text import slugify
+                cat.slug = (slugify(new_name) or f"cat-{cat.id}").upper()
+
+            clean_icon = new_icon.split('|')[0] if '|' in new_icon else (new_icon or 'fa-receipt')
+            cat.icon = f"{clean_icon}|{new_color}" if new_color else clean_icon
+            cat.description = new_desc
+
+            # Only assign parent if valid and not self
             if parent_id and str(parent_id) != str(cat.id):
                 cat.parent = ExpenseCategory.objects.filter(id=parent_id).first()
             elif not parent_id:
                 cat.parent = None
-            cat.icon = request.POST.get('icon', cat.icon).strip()
-            cat.description = request.POST.get('description', cat.description).strip()
+
             cat.save()
-            messages.success(request, f'Expense Category "{cat.name}" updated.')
+
+            # Keep historical Expense records in sync if name or slug changed
+            if old_name != cat.name or (old_slug and old_slug != cat.slug):
+                if old_slug:
+                    Expense.objects.filter(category=old_slug).update(category=cat.slug)
+                Expense.objects.filter(category=old_name).update(category=cat.slug or cat.name)
+                Expense.objects.filter(sub_category=old_name).update(sub_category=cat.name)
+
+            messages.success(request, f'Expense Category "{cat.name}" updated successfully!')
             return redirect('dashboard:expense_categories')
 
-        # 3. Delete Category
+        # 3. Delete Category (Head or Sub-category)
         elif action == 'delete_category':
-            if not request.user.is_superuser:
-                messages.error(request, 'Permission Denied: Staff accounts are restricted from deleting categories. Only Administrator can delete.')
+            if not request.user.is_staff and not request.user.is_superuser:
+                messages.error(request, 'Permission Denied: Staff authorization required to delete categories.')
                 return redirect('dashboard:expense_categories')
             cat = get_object_or_404(ExpenseCategory, id=cat_id)
             c_name = cat.name
             cat.delete()
-            messages.success(request, f'Expense Category "{c_name}" deleted.')
+            messages.success(request, f'Expense Category "{c_name}" deleted successfully.')
             return redirect('dashboard:expense_categories')
 
     # Load categories with stats
@@ -4049,25 +4092,143 @@ def expense_categories_manager(request):
         total_head_spent = max(direct_spent, subs_spent_sum)
         total_head_count = max(direct_count, subs_count_sum)
 
-        THEME_MAP = {
-            'RAW_MATERIAL': {'badge': 'bg-emerald-50 text-emerald-800 border-emerald-200', 'icon_bg': 'bg-emerald-50 text-emerald-700 border-emerald-200', 'gradient': 'from-emerald-950 via-brand-900 to-emerald-900', 'accent': 'text-emerald-400'},
-            'FRUITS': {'badge': 'bg-rose-50 text-rose-800 border-rose-200', 'icon_bg': 'bg-rose-50 text-rose-700 border-rose-200', 'gradient': 'from-rose-950 via-brand-900 to-rose-900', 'accent': 'text-rose-400'},
-            'PACKAGING': {'badge': 'bg-indigo-50 text-indigo-800 border-indigo-200', 'icon_bg': 'bg-indigo-50 text-indigo-700 border-indigo-200', 'gradient': 'from-indigo-950 via-brand-900 to-indigo-900', 'accent': 'text-indigo-400'},
-            'SPICES_BRINE': {'badge': 'bg-amber-50 text-amber-800 border-amber-200', 'icon_bg': 'bg-amber-50 text-amber-700 border-amber-200', 'gradient': 'from-amber-950 via-brand-900 to-amber-900', 'accent': 'text-amber-400'},
-            'LOGISTICS': {'badge': 'bg-sky-50 text-sky-800 border-sky-200', 'icon_bg': 'bg-sky-50 text-sky-700 border-sky-200', 'gradient': 'from-sky-950 via-brand-900 to-sky-900', 'accent': 'text-sky-400'},
-            'MARKETING': {'badge': 'bg-purple-50 text-purple-800 border-purple-200', 'icon_bg': 'bg-purple-50 text-purple-700 border-purple-200', 'gradient': 'from-purple-950 via-brand-900 to-purple-900', 'accent': 'text-purple-400'},
-            'UTILITIES': {'badge': 'bg-orange-50 text-orange-800 border-orange-200', 'icon_bg': 'bg-orange-50 text-orange-700 border-orange-200', 'gradient': 'from-orange-950 via-brand-900 to-orange-900', 'accent': 'text-orange-400'},
-            'DAMAGE_LOSS': {'badge': 'bg-red-50 text-red-800 border-red-200', 'icon_bg': 'bg-red-50 text-red-700 border-red-200', 'gradient': 'from-red-950 via-brand-900 to-red-900', 'accent': 'text-red-400'},
-            'OTHER': {'badge': 'bg-slate-50 text-slate-800 border-slate-200', 'icon_bg': 'bg-slate-50 text-slate-700 border-slate-200', 'gradient': 'from-slate-950 via-brand-900 to-slate-900', 'accent': 'text-slate-400'},
+        COLOR_THEMES = {
+            'emerald': {
+                'key': 'emerald',
+                'name': 'Emerald Green',
+                'badge': 'bg-emerald-50 text-emerald-800 border-emerald-200',
+                'icon_bg': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                'gradient': 'from-emerald-950 via-brand-900 to-emerald-900',
+                'accent': 'text-emerald-400',
+                'bg_chip': 'bg-emerald-600',
+            },
+            'rose': {
+                'key': 'rose',
+                'name': 'Ruby Rose',
+                'badge': 'bg-rose-50 text-rose-800 border-rose-200',
+                'icon_bg': 'bg-rose-50 text-rose-700 border-rose-200',
+                'gradient': 'from-rose-950 via-brand-900 to-rose-900',
+                'accent': 'text-rose-400',
+                'bg_chip': 'bg-rose-600',
+            },
+            'indigo': {
+                'key': 'indigo',
+                'name': 'Indigo Blue',
+                'badge': 'bg-indigo-50 text-indigo-800 border-indigo-200',
+                'icon_bg': 'bg-indigo-50 text-indigo-700 border-indigo-200',
+                'gradient': 'from-indigo-950 via-brand-900 to-indigo-900',
+                'accent': 'text-indigo-400',
+                'bg_chip': 'bg-indigo-600',
+            },
+            'amber': {
+                'key': 'amber',
+                'name': 'Amber Gold',
+                'badge': 'bg-amber-50 text-amber-800 border-amber-200',
+                'icon_bg': 'bg-amber-50 text-amber-700 border-amber-200',
+                'gradient': 'from-amber-950 via-brand-900 to-amber-900',
+                'accent': 'text-amber-400',
+                'bg_chip': 'bg-amber-500',
+            },
+            'sky': {
+                'key': 'sky',
+                'name': 'Sky Cyan',
+                'badge': 'bg-sky-50 text-sky-800 border-sky-200',
+                'icon_bg': 'bg-sky-50 text-sky-700 border-sky-200',
+                'gradient': 'from-sky-950 via-brand-900 to-sky-900',
+                'accent': 'text-sky-400',
+                'bg_chip': 'bg-sky-500',
+            },
+            'purple': {
+                'key': 'purple',
+                'name': 'Royal Purple',
+                'badge': 'bg-purple-50 text-purple-800 border-purple-200',
+                'icon_bg': 'bg-purple-50 text-purple-700 border-purple-200',
+                'gradient': 'from-purple-950 via-brand-900 to-purple-900',
+                'accent': 'text-purple-400',
+                'bg_chip': 'bg-purple-600',
+            },
+            'orange': {
+                'key': 'orange',
+                'name': 'Tangerine Orange',
+                'badge': 'bg-orange-50 text-orange-800 border-orange-200',
+                'icon_bg': 'bg-orange-50 text-orange-700 border-orange-200',
+                'gradient': 'from-orange-950 via-brand-900 to-orange-900',
+                'accent': 'text-orange-400',
+                'bg_chip': 'bg-orange-500',
+            },
+            'teal': {
+                'key': 'teal',
+                'name': 'Deep Teal',
+                'badge': 'bg-teal-50 text-teal-800 border-teal-200',
+                'icon_bg': 'bg-teal-50 text-teal-700 border-teal-200',
+                'gradient': 'from-teal-950 via-brand-900 to-teal-900',
+                'accent': 'text-teal-400',
+                'bg_chip': 'bg-teal-600',
+            },
+            'red': {
+                'key': 'red',
+                'name': 'Crimson Red',
+                'badge': 'bg-red-50 text-red-800 border-red-200',
+                'icon_bg': 'bg-red-50 text-red-700 border-red-200',
+                'gradient': 'from-red-950 via-brand-900 to-red-900',
+                'accent': 'text-red-400',
+                'bg_chip': 'bg-red-600',
+            },
+            'fuchsia': {
+                'key': 'fuchsia',
+                'name': 'Electric Pink',
+                'badge': 'bg-fuchsia-50 text-fuchsia-800 border-fuchsia-200',
+                'icon_bg': 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200',
+                'gradient': 'from-fuchsia-950 via-brand-900 to-fuchsia-900',
+                'accent': 'text-fuchsia-400',
+                'bg_chip': 'bg-fuchsia-600',
+            },
+            'slate': {
+                'key': 'slate',
+                'name': 'Charcoal Slate',
+                'badge': 'bg-slate-50 text-slate-800 border-slate-200',
+                'icon_bg': 'bg-slate-50 text-slate-700 border-slate-200',
+                'gradient': 'from-slate-950 via-brand-900 to-slate-900',
+                'accent': 'text-slate-400',
+                'bg_chip': 'bg-slate-600',
+            },
         }
-        theme = THEME_MAP.get(head.slug, {'badge': 'bg-brand-50 text-brand-800 border-brand-200', 'icon_bg': 'bg-brand-50 text-brand-700 border-brand-200', 'gradient': 'from-brand-950 via-brand-900 to-brand-800', 'accent': 'text-brand-accent'})
+
+        DEFAULT_SLUG_COLORS = {
+            'RAW_MATERIAL': 'emerald',
+            'FRUITS': 'rose',
+            'PACKAGING': 'indigo',
+            'SPICES_BRINE': 'amber',
+            'LOGISTICS': 'sky',
+            'MARKETING': 'purple',
+            'UTILITIES': 'orange',
+            'DAMAGE_LOSS': 'red',
+            'OTHER': 'slate',
+        }
+        AUTO_COLOR_CYCLE = ['teal', 'purple', 'rose', 'sky', 'amber', 'indigo', 'orange', 'fuchsia', 'emerald', 'red', 'slate']
+
+        raw_icon = head.icon or 'fa-receipt'
+        if '|' in raw_icon:
+            clean_icon, custom_color = raw_icon.split('|', 1)
+        else:
+            clean_icon, custom_color = raw_icon, ''
+
+        if custom_color and custom_color in COLOR_THEMES:
+            color_key = custom_color
+        elif head.slug in DEFAULT_SLUG_COLORS:
+            color_key = DEFAULT_SLUG_COLORS[head.slug]
+        else:
+            color_key = AUTO_COLOR_CYCLE[head.id % len(AUTO_COLOR_CYCLE)]
+
+        theme = COLOR_THEMES.get(color_key, COLOR_THEMES['emerald'])
 
         grouped_categories.append({
             'head': {
                 'id': head.id,
                 'name': head.name,
                 'slug': head.slug,
-                'icon': head.icon or 'fa-receipt',
+                'icon': clean_icon or 'fa-receipt',
+                'color_key': color_key,
                 'description': head.description,
                 'direct_spent': direct_spent,
                 'direct_count': direct_count,
@@ -4082,6 +4243,7 @@ def expense_categories_manager(request):
     context = {
         'grouped_categories': grouped_categories,
         'parent_categories': parent_categories,
+        'color_themes': COLOR_THEMES,
         'total_heads_count': total_heads_count,
         'total_subs_count': total_subs_count,
         'total_categories': total_heads_count + total_subs_count,

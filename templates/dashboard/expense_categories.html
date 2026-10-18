@@ -132,11 +132,16 @@
                         </div>
                     </div>
 
-                    <div class="text-right shrink-0">
-                        <span class="head-card-spent font-display font-black text-xs sm:text-sm block transition-colors {% if forloop.first %}text-brand-accent{% else %}text-rose-600{% endif %}">
-                            ৳{{ item.head.total_spent|floatformat:0 }}
-                        </span>
-                        <i class="fa-solid fa-chevron-right text-[10px] head-card-arrow transition-transform {% if forloop.first %}text-white translate-x-0.5{% else %}text-gray-300{% endif %} mt-0.5 block"></i>
+                    <div class="text-right shrink-0 flex items-center gap-2">
+                        <div>
+                            <span class="head-card-spent font-display font-black text-xs sm:text-sm block transition-colors {% if forloop.first %}text-brand-accent{% else %}text-rose-600{% endif %}">
+                                ৳{{ item.head.total_spent|floatformat:0 }}
+                            </span>
+                            <span class="text-[9px] font-semibold opacity-70 block">
+                                {{ item.head.total_count }} logs
+                            </span>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-[10px] head-card-arrow transition-transform {% if forloop.first %}text-white translate-x-0.5{% else %}text-gray-300{% endif %}"></i>
                     </div>
 
                 </div>
@@ -190,32 +195,32 @@
                             </div>
 
                             <!-- Head Action Buttons -->
-                            <div class="flex items-center gap-2 shrink-0">
+                            <div class="flex items-center gap-2 shrink-0 flex-wrap">
                                 <!-- Add Sub-category Button -->
                                 <button type="button" 
                                         onclick="openAddExpCatModal('{{ item.head.id }}')"
-                                        class="bg-brand-accent hover:bg-amber-300 text-brand-950 font-black text-xs px-4 py-2.5 rounded-xl shadow-lg shadow-brand-accent/20 flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
+                                        class="bg-brand-accent hover:bg-amber-300 text-brand-950 font-black text-xs px-3.5 py-2.5 rounded-xl shadow-lg shadow-brand-accent/20 flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
                                     <i class="fa-solid fa-plus text-xs"></i>
                                     <span>Add Sub-category</span>
                                 </button>
 
-                                <!-- Edit Head Button -->
+                                <!-- Edit Head Button (Just Icon) -->
                                 <button type="button" 
-                                        onclick="openEditExpCatModal('{{ item.head.id }}', '{{ item.head.name|escapejs }}', '{{ item.head.description|escapejs }}', '{{ item.head.icon|escapejs }}', '')"
-                                        class="bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold p-2.5 rounded-xl transition cursor-pointer"
-                                        title="Edit this Cost Head">
-                                    <i class="fa-solid fa-pen-to-square"></i>
+                                        onclick="openEditExpCatModal('{{ item.head.id }}', '{{ item.head.name|escapejs }}', '{{ item.head.description|escapejs }}', '{{ item.head.icon|escapejs }}', '', '{{ item.head.slug|escapejs }}', '{{ item.head.color_key|escapejs }}')"
+                                        class="w-9 h-9 rounded-xl bg-white/20 hover:bg-white/30 text-white border border-white/25 flex items-center justify-center shadow-sm transition active:scale-95 cursor-pointer"
+                                        title="Edit Head">
+                                    <i class="fa-solid fa-pen-to-square text-sm"></i>
+                                    <span class="sr-only">Edit Head</span>
                                 </button>
 
-                                {% if request.user.is_superuser %}
-                                <!-- Delete Head Button -->
+                                <!-- Delete Head Button (Just Icon) -->
                                 <button type="button" 
-                                        onclick="openDeleteExpCatModal('{{ item.head.id }}', '{{ item.head.name|escapejs }}')"
-                                        class="bg-rose-500/20 hover:bg-rose-500/30 border border-rose-300/30 text-rose-200 text-xs font-bold p-2.5 rounded-xl transition cursor-pointer"
-                                        title="Delete this Cost Head">
-                                    <i class="fa-solid fa-trash-can"></i>
+                                        onclick="openDeleteExpCatModal('{{ item.head.id }}', '{{ item.head.name|escapejs }}', true)"
+                                        class="w-9 h-9 rounded-xl bg-rose-500/20 hover:bg-rose-600/40 border border-rose-300/30 text-rose-100 flex items-center justify-center shadow-xs transition active:scale-95 cursor-pointer"
+                                        title="Delete Head">
+                                    <i class="fa-solid fa-trash-can text-sm"></i>
+                                    <span class="sr-only">Delete Head</span>
                                 </button>
-                                {% endif %}
                             </div>
                         </div>
 
@@ -294,18 +299,16 @@
                             <div class="flex items-center gap-1 shrink-0">
                                 <button type="button" 
                                         onclick="openEditExpCatModal('{{ sub.id }}', '{{ sub.name|escapejs }}', '{{ sub.description|escapejs }}', '{{ sub.icon|escapejs }}', '{{ item.head.id }}')"
-                                        class="p-1.5 rounded-lg text-gray-400 hover:text-brand-700 hover:bg-brand-50 transition cursor-pointer"
+                                        class="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-brand-700 hover:bg-brand-50 transition cursor-pointer"
                                         title="Edit Sub-category">
                                     <i class="fa-solid fa-pen-to-square text-xs"></i>
                                 </button>
-                                {% if request.user.is_superuser %}
                                 <button type="button" 
-                                        onclick="openDeleteExpCatModal('{{ sub.id }}', '{{ sub.name|escapejs }}')"
-                                        class="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                                        onclick="openDeleteExpCatModal('{{ sub.id }}', '{{ sub.name|escapejs }}', false)"
+                                        class="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
                                         title="Delete Sub-category">
                                     <i class="fa-solid fa-trash-can text-xs"></i>
                                 </button>
-                                {% endif %}
                             </div>
                         </div>
 
@@ -410,6 +413,23 @@
                 <input type="text" name="icon" value="fa-receipt" placeholder="fa-receipt, fa-carrot, fa-truck, fa-bolt, fa-jar" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
             </div>
 
+            <!-- Color Theme Selector for Main Head -->
+            <div id="add_color_picker_wrap">
+                <label class="font-bold text-gray-700 block mb-1.5">Color Theme (থিম কালার)</label>
+                <div class="flex items-center gap-2 flex-wrap" id="addColorPicker">
+                    {% for c_key, c_val in color_themes.items %}
+                    <button type="button" 
+                            onclick="selectAddThemeColor('{{ c_key }}')"
+                            data-color="{{ c_key }}"
+                            title="{{ c_val.name }}"
+                            class="add-color-chip w-7 h-7 rounded-full {{ c_val.bg_chip }} transition-all flex items-center justify-center text-white cursor-pointer {% if forloop.first %}ring-2 ring-offset-2 ring-gray-900 scale-110 active-chip{% endif %}">
+                        <i class="fa-solid fa-check text-[10px] {% if not forloop.first %}hidden{% endif %}"></i>
+                    </button>
+                    {% endfor %}
+                </div>
+                <input type="hidden" name="theme_color" id="add_theme_color" value="emerald">
+            </div>
+
             <div>
                 <label class="font-bold text-gray-700 block mb-1">Description (বিবরণ - ঐচ্ছিক)</label>
                 <textarea name="description" rows="2" placeholder="Brief summary of expenses included under this category..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white"></textarea>
@@ -430,32 +450,69 @@
     <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative">
         <div class="flex items-center justify-between border-b border-gray-100 pb-3">
             <div>
-                <h3 class="font-display font-black text-lg text-gray-900">Edit Category / Sub-category</h3>
-                <p class="text-[11px] text-gray-400 font-semibold">ক্যাটাগরির নাম, আইকন ও প্যারেন্ট পরিবর্তন করুন</p>
+                <h3 id="editExpCatModalTitle" class="font-display font-black text-lg text-gray-900">Edit Category</h3>
+                <p id="editExpCatModalSubtitle" class="text-[11px] text-gray-400 font-semibold">ক্যাটাগরির তথ্য পরিবর্তন করুন</p>
             </div>
             <button type="button" onclick="closeEditExpCatModal()" class="text-gray-400 hover:text-gray-700 text-lg p-1 cursor-pointer">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
 
-        <form method="POST" class="space-y-3.5 text-xs">
+        <form method="POST" action="{% url 'dashboard:expense_categories' %}" class="space-y-3.5 text-xs">
             {% csrf_token %}
             <input type="hidden" name="action" value="edit_category">
             <input type="hidden" id="edit_exp_cat_id" name="category_id" value="">
 
-            <div>
-                <label class="font-bold text-gray-700 block mb-1">Parent Category (মূল ক্যাটাগরি / Head)</label>
+            <!-- Head Category Indicator (shown when editing a Main Head) -->
+            <div id="edit_head_badge" class="bg-brand-50 border border-brand-200 text-brand-900 rounded-2xl p-3 flex items-center gap-2.5 font-bold text-xs">
+                <div class="w-8 h-8 rounded-xl bg-brand-700 text-white flex items-center justify-center text-sm shrink-0">
+                    <i class="fa-solid fa-folder-tree"></i>
+                </div>
+                <div>
+                    <span class="block text-brand-950 font-extrabold text-xs">Main Cost Head (মূল খরচ খাত)</span>
+                    <span class="block text-[10px] text-brand-700 font-medium">This is a top-level accounting head</span>
+                </div>
+            </div>
+
+            <!-- Color Theme Selector for Head -->
+            <div id="edit_color_picker_wrap">
+                <label class="font-bold text-gray-700 block mb-1.5">Color Theme (থিম কালার)</label>
+                <div class="flex items-center gap-2 flex-wrap" id="editColorPicker">
+                    {% for c_key, c_val in color_themes.items %}
+                    <button type="button" 
+                            onclick="selectEditThemeColor('{{ c_key }}')"
+                            data-color="{{ c_key }}"
+                            title="{{ c_val.name }}"
+                            class="edit-color-chip w-7 h-7 rounded-full {{ c_val.bg_chip }} transition-all flex items-center justify-center text-white cursor-pointer">
+                        <i class="fa-solid fa-check text-[10px] hidden"></i>
+                    </button>
+                    {% endfor %}
+                </div>
+                <input type="hidden" name="theme_color" id="edit_theme_color" value="emerald">
+            </div>
+
+            <!-- Parent Category Selector (shown only when editing a sub-category) -->
+            <div id="edit_parent_wrap">
+                <label class="font-bold text-gray-700 block mb-1">Parent Category (মূল ক্যাটাগরি / Head) *</label>
                 <select id="edit_exp_cat_parent" name="parent_id" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500">
                     <option value="">-- None (This is a Main Category / মূল Head) --</option>
                     {% for p_cat in parent_categories %}
                     <option value="{{ p_cat.id }}">{{ p_cat.name }}</option>
                     {% endfor %}
                 </select>
+                <p class="text-[10px] text-gray-400 mt-1">সাব-ক্যাটাগরিকে অন্য কোনো মূল হেডে স্থানান্তর করতে চাইলে পরিবর্তন করুন।</p>
             </div>
 
             <div>
-                <label class="font-bold text-gray-700 block mb-1">Category Name *</label>
+                <label id="edit_name_label" class="font-bold text-gray-700 block mb-1">Category Name *</label>
                 <input type="text" id="edit_exp_cat_name" name="name" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500">
+            </div>
+
+            <!-- Slug / System Code field -->
+            <div id="edit_slug_wrap">
+                <label class="font-bold text-gray-700 block mb-1">System Code / Slug (ঐচ্ছিক)</label>
+                <input type="text" id="edit_exp_cat_slug" name="slug" placeholder="e.g. RAW_MATERIAL, LOGISTICS" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-mono text-xs focus:bg-white focus:ring-2 focus:ring-brand-500">
+                <p class="text-[10px] text-gray-400 mt-0.5">অ্যাকাউন্টিং কোড (ফাঁকা রাখলে স্বয়ংক্রিয় নাম থেকে তৈরি হবে)।</p>
             </div>
 
             <div>
@@ -464,7 +521,7 @@
             </div>
 
             <div>
-                <label class="font-bold text-gray-700 block mb-1">Description</label>
+                <label class="font-bold text-gray-700 block mb-1">Description (বিবরণ)</label>
                 <textarea id="edit_exp_cat_desc" name="description" rows="2" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white"></textarea>
             </div>
 
@@ -476,7 +533,6 @@
     </div>
 </div>
 
-{% if request.user.is_superuser %}
 <!-- ========================================================================= -->
 <!-- 3. DELETE EXPENSE CATEGORY MODAL -->
 <!-- ========================================================================= -->
@@ -488,13 +544,13 @@
         </div>
 
         <div>
-            <h3 class="font-display font-black text-lg text-gray-900">Delete Expense Category?</h3>
-            <p class="text-xs text-gray-500 mt-1">
+            <h3 id="del_modal_title" class="font-display font-black text-lg text-gray-900">Delete Category?</h3>
+            <p id="del_modal_desc" class="text-xs text-gray-500 mt-1">
                 Are you sure you want to permanently delete <strong id="del_exp_cat_name" class="text-gray-900">Category</strong>? This action cannot be undone.
             </p>
         </div>
 
-        <form method="POST" class="pt-2 flex items-center justify-center gap-3">
+        <form method="POST" action="{% url 'dashboard:expense_categories' %}" class="pt-2 flex items-center justify-center gap-3">
             {% csrf_token %}
             <input type="hidden" name="action" value="delete_category">
             <input type="hidden" id="del_exp_cat_id" name="category_id" value="">
@@ -508,7 +564,6 @@
 
     </div>
 </div>
-{% endif %}
 
 <script>
 // Switch active head in Master-Detail studio view
@@ -627,10 +682,45 @@ function filterHeadList() {
     });
 }
 
+function selectAddThemeColor(colorKey) {
+    const input = document.getElementById('add_theme_color');
+    if (input) input.value = colorKey;
+
+    document.querySelectorAll('.add-color-chip').forEach(btn => {
+        const isMatch = btn.getAttribute('data-color') === colorKey;
+        const icon = btn.querySelector('i');
+        if (isMatch) {
+            btn.classList.add('ring-2', 'ring-offset-2', 'ring-gray-900', 'scale-110');
+            if (icon) icon.classList.remove('hidden');
+        } else {
+            btn.classList.remove('ring-2', 'ring-offset-2', 'ring-gray-900', 'scale-110');
+            if (icon) icon.classList.add('hidden');
+        }
+    });
+}
+
+function selectEditThemeColor(colorKey) {
+    const input = document.getElementById('edit_theme_color');
+    if (input) input.value = colorKey;
+
+    document.querySelectorAll('.edit-color-chip').forEach(btn => {
+        const isMatch = btn.getAttribute('data-color') === colorKey;
+        const icon = btn.querySelector('i');
+        if (isMatch) {
+            btn.classList.add('ring-2', 'ring-offset-2', 'ring-gray-900', 'scale-110');
+            if (icon) icon.classList.remove('hidden');
+        } else {
+            btn.classList.remove('ring-2', 'ring-offset-2', 'ring-gray-900', 'scale-110');
+            if (icon) icon.classList.add('hidden');
+        }
+    });
+}
+
 function openAddExpCatModal(parentId) {
     const parentSelect = document.getElementById('add_exp_cat_parent');
     const titleEl = document.getElementById('addExpCatModalTitle');
     const subtitleEl = document.getElementById('addExpCatModalSubtitle');
+    const colorWrapEl = document.getElementById('add_color_picker_wrap');
 
     if (parentSelect) {
         parentSelect.value = parentId || '';
@@ -639,9 +729,12 @@ function openAddExpCatModal(parentId) {
     if (parentId) {
         if (titleEl) titleEl.textContent = 'Add Sub-category';
         if (subtitleEl) subtitleEl.textContent = 'এই মূল হেডের অধীনে নতুন সাব-ক্যাটাগরি তৈরি করুন';
+        if (colorWrapEl) colorWrapEl.classList.add('hidden');
     } else {
         if (titleEl) titleEl.textContent = 'Add Expense Category / Head';
-        if (subtitleEl) subtitleEl.textContent = 'নতুন খরচ হেড বা সাব-ক্যাটাগরি তৈরি করুন';
+        if (subtitleEl) subtitleEl.textContent = 'নতুন খরচ হেড তৈরি করুন এবং থিম কালার নির্বাচন করুন';
+        if (colorWrapEl) colorWrapEl.classList.remove('hidden');
+        selectAddThemeColor('emerald');
     }
 
     document.getElementById('addExpCatModal').classList.remove('hidden');
@@ -650,11 +743,14 @@ function openAddExpCatModal(parentId) {
 function onParentSelectChanged() {
     const parentSelect = document.getElementById('add_exp_cat_parent');
     const titleEl = document.getElementById('addExpCatModalTitle');
+    const colorWrapEl = document.getElementById('add_color_picker_wrap');
     if (parentSelect && titleEl) {
         if (parentSelect.value) {
             titleEl.textContent = 'Add Sub-category';
+            if (colorWrapEl) colorWrapEl.classList.add('hidden');
         } else {
             titleEl.textContent = 'Add Main Head Category';
+            if (colorWrapEl) colorWrapEl.classList.remove('hidden');
         }
     }
 }
@@ -663,15 +759,53 @@ function closeAddExpCatModal() {
     document.getElementById('addExpCatModal').classList.add('hidden');
 }
 
-function openEditExpCatModal(id, name, desc, icon, parentId) {
-    document.getElementById('edit_exp_cat_id').value = id;
-    document.getElementById('edit_exp_cat_name').value = name;
-    document.getElementById('edit_exp_cat_desc').value = desc;
-    document.getElementById('edit_exp_cat_icon').value = icon;
+function openEditExpCatModal(id, name, desc, icon, parentId, slug, colorKey) {
+    document.getElementById('edit_exp_cat_id').value = id || '';
+    document.getElementById('edit_exp_cat_name').value = name || '';
+    document.getElementById('edit_exp_cat_desc').value = desc || '';
+    
+    // Parse clean icon if combined with color
+    const cleanIcon = (icon || 'fa-receipt').split('|')[0];
+    document.getElementById('edit_exp_cat_icon').value = cleanIcon;
+
+    const slugInput = document.getElementById('edit_exp_cat_slug');
+    if (slugInput) {
+        slugInput.value = slug || '';
+    }
+
     const parentSelect = document.getElementById('edit_exp_cat_parent');
     if (parentSelect) {
         parentSelect.value = parentId || '';
     }
+
+    const titleEl = document.getElementById('editExpCatModalTitle');
+    const subtitleEl = document.getElementById('editExpCatModalSubtitle');
+    const headBadgeEl = document.getElementById('edit_head_badge');
+    const colorWrapEl = document.getElementById('edit_color_picker_wrap');
+    const parentWrapEl = document.getElementById('edit_parent_wrap');
+    const slugWrapEl = document.getElementById('edit_slug_wrap');
+    const nameLabelEl = document.getElementById('edit_name_label');
+
+    // If parentId is empty, it's a Main Cost Head
+    if (!parentId) {
+        if (titleEl) titleEl.textContent = 'Edit Cost Head (মূল খরচ খাত)';
+        if (subtitleEl) subtitleEl.textContent = 'মূল খরচ খাতের নাম, কালার থিম ও বর্ণনা আপডেট করুন';
+        if (nameLabelEl) nameLabelEl.textContent = 'Cost Head Name *';
+        if (headBadgeEl) headBadgeEl.classList.remove('hidden');
+        if (colorWrapEl) colorWrapEl.classList.remove('hidden');
+        if (parentWrapEl) parentWrapEl.classList.add('hidden');
+        if (slugWrapEl) slugWrapEl.classList.remove('hidden');
+        selectEditThemeColor(colorKey || 'emerald');
+    } else {
+        if (titleEl) titleEl.textContent = 'Edit Sub-category (সাব-ক্যাটাগরি)';
+        if (subtitleEl) subtitleEl.textContent = 'সাব-ক্যাটাগরির নাম, হেড ও বিবরণ আপডেট করুন';
+        if (nameLabelEl) nameLabelEl.textContent = 'Sub-category Name *';
+        if (headBadgeEl) headBadgeEl.classList.add('hidden');
+        if (colorWrapEl) colorWrapEl.classList.add('hidden');
+        if (parentWrapEl) parentWrapEl.classList.remove('hidden');
+        if (slugWrapEl) slugWrapEl.classList.add('hidden');
+    }
+
     document.getElementById('editExpCatModal').classList.remove('hidden');
 }
 
@@ -679,9 +813,20 @@ function closeEditExpCatModal() {
     document.getElementById('editExpCatModal').classList.add('hidden');
 }
 
-function openDeleteExpCatModal(id, name) {
-    document.getElementById('del_exp_cat_id').value = id;
-    document.getElementById('del_exp_cat_name').textContent = name;
+function openDeleteExpCatModal(id, name, isHead) {
+    document.getElementById('del_exp_cat_id').value = id || '';
+    
+    const titleEl = document.getElementById('del_modal_title');
+    const descEl = document.getElementById('del_modal_desc');
+    
+    if (isHead) {
+        if (titleEl) titleEl.textContent = 'Delete Cost Head?';
+        if (descEl) descEl.innerHTML = `Are you sure you want to permanently delete the cost head <strong class="text-gray-900 font-extrabold">"${name}"</strong>? This will also remove its sub-categories. Past expense logs will remain safely archived.`;
+    } else {
+        if (titleEl) titleEl.textContent = 'Delete Sub-category?';
+        if (descEl) descEl.innerHTML = `Are you sure you want to delete <strong class="text-gray-900 font-extrabold">"${name}"</strong>?`;
+    }
+    
     document.getElementById('deleteExpCatModal').classList.remove('hidden');
 }
 
