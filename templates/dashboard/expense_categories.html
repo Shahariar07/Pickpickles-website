@@ -1,245 +1,386 @@
 {% extends 'dashboard/base_dashboard.html' %}
 {% load static %}
 
-{% block title %}Expense Categories & Costing | Pickpickles Admin{% endblock %}
+{% block title %}Expense Categories Studio & Cost Taxonomy | Pickpickles Admin{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
 
-    <!-- Top Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-gray-200 shadow-xs">
-        <div class="min-w-0">
-            <div class="flex items-center gap-2 flex-wrap">
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-rose-100 text-rose-900 shrink-0">
-                    <i class="fa-solid fa-receipt text-rose-600"></i>
-                    Cost Accounting Taxonomy
-                </span>
-                <span class="text-xs text-gray-400 font-semibold">• {{ total_categories }} categories configured</span>
+    <!-- Top Executive Header & Overview -->
+    <div class="bg-white p-5 sm:p-7 rounded-3xl border border-gray-200/90 shadow-xs relative overflow-hidden">
+        <!-- Subtle Background Glow -->
+        <div class="absolute -right-20 -top-20 w-80 h-80 bg-brand-500/5 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+            <div class="min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-brand-900 text-brand-accent shrink-0 shadow-2xs">
+                        <i class="fa-solid fa-shapes"></i>
+                        Cost Accounting Studio
+                    </span>
+                    <span class="text-xs text-gray-400 font-semibold">• {{ total_heads_count }} Cost Heads & {{ total_subs_count }} Sub-categories</span>
+                </div>
+                <h1 class="font-display font-black text-2xl sm:text-3xl lg:text-4xl text-gray-900 mt-2 leading-tight tracking-tight">
+                    Expense Categories & Cost Heads
+                </h1>
+                <p class="text-xs sm:text-sm text-gray-500 mt-1 max-w-2xl">
+                    আচার উৎপাদনের কাঁচামাল, প্যাকেজিং, মশলা, ডেলিভারি ও পরিচালন খরচের খাতসমূহ সুবিন্যস্তভাবে পরিচালনা করুন।
+                </p>
             </div>
-            <h1 class="font-display font-black text-xl sm:text-2xl lg:text-3xl text-gray-900 mt-1.5 break-words leading-tight">
-                Expense Categories List
-            </h1>
-            <p class="text-xs sm:text-sm text-gray-500 mt-1 break-words">
-                Manage operational cost heads, customize expense classifications, and track total expenditure.
-            </p>
+            
+            <div class="flex items-center gap-2.5 flex-wrap">
+                <!-- Add Category / Head Button -->
+                <button type="button" onclick="openAddExpCatModal('')" class="bg-brand-700 hover:bg-brand-800 text-white font-extrabold text-xs px-4 py-2.5 rounded-2xl shadow-md hover:shadow-brand-700/20 flex items-center gap-2 transition active:scale-95 cursor-pointer">
+                    <i class="fa-solid fa-folder-plus text-brand-accent"></i>
+                    <span>Add New Cost Head</span>
+                </button>
+                <a href="{% url 'dashboard:expenses' %}" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs px-4 py-2.5 rounded-2xl border border-gray-300 flex items-center gap-2 transition">
+                    <i class="fa-solid fa-receipt text-brand-600"></i>
+                    <span>Expenses Ledger</span>
+                </a>
+            </div>
         </div>
-        
-        <div class="flex items-center gap-2">
-            <button type="button" onclick="openAddExpCatModal()" class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md flex items-center gap-2 transition active:scale-95">
-                <i class="fa-solid fa-plus text-brand-accent"></i>
-                <span>Add Expense Category</span>
-            </button>
-            <a href="{% url 'dashboard:expenses' %}" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs px-4 py-2.5 rounded-xl border border-gray-300 flex items-center gap-2 transition">
-                <i class="fa-solid fa-receipt text-brand-600"></i>
-                <span>Expenses Ledger</span>
-            </a>
+
+        <!-- 3 KPI Cards Row -->
+        <div class="pt-5 mt-5 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            <!-- Card 1 -->
+            <div class="bg-gray-50/70 p-4 rounded-2xl border border-gray-200/80 flex items-center justify-between transition hover:border-brand-200">
+                <div>
+                    <span class="text-[11px] font-extrabold text-gray-400 uppercase tracking-wider block">Main Cost Heads</span>
+                    <span class="font-display font-black text-2xl text-gray-900 mt-0.5 block">{{ total_heads_count }} Heads</span>
+                </div>
+                <div class="w-11 h-11 rounded-2xl bg-brand-50 text-brand-700 flex items-center justify-center text-lg font-bold border border-brand-200/60 shadow-2xs">
+                    <i class="fa-solid fa-folder-tree"></i>
+                </div>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="bg-gray-50/70 p-4 rounded-2xl border border-gray-200/80 flex items-center justify-between transition hover:border-brand-200">
+                <div>
+                    <span class="text-[11px] font-extrabold text-gray-400 uppercase tracking-wider block">Active Sub-Categories</span>
+                    <span class="font-display font-black text-2xl text-gray-900 mt-0.5 block">{{ total_subs_count }} Items</span>
+                </div>
+                <div class="w-11 h-11 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center text-lg font-bold border border-blue-200/60 shadow-2xs">
+                    <i class="fa-solid fa-tags"></i>
+                </div>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="bg-rose-50/40 p-4 rounded-2xl border border-rose-200/80 flex items-center justify-between transition hover:border-rose-300">
+                <div>
+                    <span class="text-[11px] font-extrabold text-rose-700 uppercase tracking-wider block">Total Expenditure Logged</span>
+                    <span class="font-display font-black text-2xl text-rose-700 mt-0.5 block">৳{{ total_expenses_all|floatformat:0 }}</span>
+                </div>
+                <div class="w-11 h-11 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center text-lg font-bold border border-rose-200 shadow-2xs">
+                    <i class="fa-solid fa-vault"></i>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Expense Categories Table / List View -->
-    <div class="bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs">
-                <thead class="bg-gray-50 text-gray-500 font-bold uppercase text-[10px] border-b border-gray-200">
-                    <tr>
-                        <th class="p-4">Category Name</th>
-                        <th class="p-4">Code Identifier</th>
-                        <th class="p-4">Description</th>
-                        <th class="p-4 text-center">Entries</th>
-                        <th class="p-4 text-right">Total Spent</th>
-                        <th class="p-4 text-right">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100 font-medium">
-                    {% for cat in category_stats %}
-                    <tr class="hover:bg-gray-50/60 transition">
-                        <!-- Name & Icon with Hierarchy -->
-                        <td class="p-4">
-                            <div class="flex items-center gap-3">
-                                <div class="w-9 h-9 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center text-sm border border-rose-200 flex-shrink-0">
-                                    <i class="fa-solid {{ cat.icon|default:'fa-receipt' }}"></i>
+    <!-- MAIN TWO-COLUMN STUDIO LAYOUT -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        <!-- ===================================================================== -->
+        <!-- LEFT COLUMN (4 Cols): Directory of Cost Heads -->
+        <!-- ===================================================================== -->
+        <div class="lg:col-span-4 space-y-3.5">
+            
+            <div class="bg-white p-4 sm:p-5 rounded-3xl border border-gray-200/90 shadow-xs space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-display font-black text-sm text-gray-900 flex items-center gap-2">
+                        <i class="fa-solid fa-layer-group text-brand-600"></i>
+                        <span>Cost Heads Directory</span>
+                    </h3>
+                    <span class="text-[11px] font-bold text-gray-400 bg-gray-100 px-2.5 py-0.5 rounded-full">
+                        {{ total_heads_count }}
+                    </span>
+                </div>
+
+                <!-- Instant Search Input -->
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-400 text-xs"></i>
+                    <input type="text" id="leftHeadSearch" onkeyup="filterHeadList()" placeholder="Quick filter heads..." class="w-full bg-gray-50 focus:bg-white border border-gray-200 rounded-xl pl-8 pr-3 py-2 text-xs font-bold text-gray-800 focus:ring-2 focus:ring-brand-500 focus:outline-none transition">
+                </div>
+            </div>
+
+            <!-- Vertical List of Head Cards -->
+            <div id="headsListContainer" class="space-y-2.5">
+                {% for item in grouped_categories %}
+                <div id="head-card-item-{{ forloop.counter }}" 
+                     onclick="activateHead('{{ forloop.counter }}')"
+                     data-name="{{ item.head.name|lower }}"
+                     data-slug="{{ item.head.slug|lower }}"
+                     class="head-select-card p-3.5 sm:p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 {% if forloop.first %}bg-gradient-to-r from-brand-900 to-brand-800 text-white shadow-md border-transparent active-head-card{% else %}bg-white hover:bg-gray-50 text-gray-800 border-gray-200/90 shadow-2xs hover:border-brand-200{% endif %}">
+                    
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="head-card-icon-box w-10 h-10 rounded-xl flex items-center justify-center text-base shrink-0 font-bold transition-colors {% if forloop.first %}bg-white/10 text-brand-accent border border-white/20{% else %}{{ item.head.theme.icon_bg }} border{% endif %}">
+                            <i class="fa-solid {{ item.head.icon|default:'fa-receipt' }}"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <span class="head-card-title font-extrabold text-xs sm:text-sm block truncate transition-colors {% if forloop.first %}text-white{% else %}text-gray-900{% endif %}">
+                                {{ item.head.name }}
+                            </span>
+                            <div class="flex items-center gap-1.5 mt-0.5">
+                                <span class="head-card-slug text-[10px] font-mono px-1.5 py-0.2 rounded transition-colors {% if forloop.first %}bg-white/10 text-gray-300{% else %}bg-gray-100 text-gray-500{% endif %}">
+                                    {{ item.head.slug }}
+                                </span>
+                                <span class="text-[10px] head-card-subcount {% if forloop.first %}text-gray-300{% else %}text-gray-400{% endif %} font-semibold">
+                                    • {{ item.head.sub_count }} subs
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-right shrink-0">
+                        <span class="head-card-spent font-display font-black text-xs sm:text-sm block transition-colors {% if forloop.first %}text-brand-accent{% else %}text-rose-600{% endif %}">
+                            ৳{{ item.head.total_spent|floatformat:0 }}
+                        </span>
+                        <i class="fa-solid fa-chevron-right text-[10px] head-card-arrow transition-transform {% if forloop.first %}text-white translate-x-0.5{% else %}text-gray-300{% endif %} mt-0.5 block"></i>
+                    </div>
+
+                </div>
+                {% empty %}
+                <div class="p-6 bg-white rounded-2xl border border-gray-200 text-center text-gray-400">
+                    <p class="text-xs font-bold">কোনো মূল খরচ খাত পাওয়া যায়নি।</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Add New Head Bottom Action -->
+            <button type="button" onclick="openAddExpCatModal('')" class="w-full bg-white hover:bg-gray-50 border-2 border-dashed border-gray-300 hover:border-brand-500 text-gray-600 hover:text-brand-700 p-3 rounded-2xl text-xs font-black flex items-center justify-center gap-2 transition cursor-pointer">
+                <i class="fa-solid fa-plus text-xs"></i>
+                <span>Create Another Head Category</span>
+            </button>
+
+        </div>
+
+        <!-- ===================================================================== -->
+        <!-- RIGHT COLUMN (8 Cols): Detailed Studio & Sub-Categories Explorer -->
+        <!-- ===================================================================== -->
+        <div class="lg:col-span-8">
+            {% for item in grouped_categories %}
+            <div id="head-detail-view-{{ forloop.counter }}" class="head-detail-view space-y-5 {% if not forloop.first %}hidden{% endif %}">
+                
+                <!-- 1. HERO BANNER CARD FOR SELECTED HEAD -->
+                <div class="bg-gradient-to-br {{ item.head.theme.gradient }} text-white rounded-3xl p-6 sm:p-7 shadow-xl relative overflow-hidden">
+                    <!-- Decorative subtle blur circles -->
+                    <div class="absolute -right-12 -bottom-12 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+
+                    <div class="relative z-10 space-y-4">
+                        <!-- Top Head Title & Icon Row -->
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div class="flex items-center gap-3.5 min-w-0">
+                                <div class="w-13 h-13 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white flex items-center justify-center text-xl shrink-0 shadow-lg">
+                                    <i class="fa-solid {{ item.head.icon|default:'fa-receipt' }}"></i>
                                 </div>
-                                <div>
-                                    {% if cat.parent_name %}
-                                    <div class="flex items-center gap-1.5 text-[10px] text-gray-500 font-bold mb-0.5">
-                                        <span class="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded font-bold">{{ cat.parent_name }}</span>
-                                        <i class="fa-solid fa-arrow-right text-[8px] text-gray-400"></i>
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap mb-1">
+                                        <span class="bg-white/20 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider backdrop-blur-xs">
+                                            Main Cost Head
+                                        </span>
+                                        <code class="text-[11px] font-mono font-bold bg-black/20 text-brand-accent px-2 py-0.5 rounded border border-white/10">
+                                            {{ item.head.slug }}
+                                        </code>
                                     </div>
-                                    <span class="font-bold text-gray-900 text-sm">{{ cat.name }}</span>
-                                    {% else %}
-                                    <div class="flex items-center gap-2">
-                                        <span class="font-black text-gray-900 text-sm">{{ cat.name }}</span>
-                                        <span class="bg-brand-50 text-brand-700 border border-brand-200 text-[10px] px-2 py-0.5 rounded-full font-extrabold">Main Head</span>
-                                    </div>
-                                    {% endif %}
+                                    <h2 class="font-display font-black text-2xl sm:text-3xl text-white break-words leading-tight tracking-tight">
+                                        {{ item.head.name }}
+                                    </h2>
                                 </div>
                             </div>
-                        </td>
 
-                        <!-- Code -->
-                        <td class="p-4">
-                            <code class="text-[11px] bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-mono font-bold">{{ cat.slug }}</code>
-                        </td>
-
-                        <!-- Description -->
-                        <td class="p-4 max-w-xs">
-                            <p class="text-xs text-gray-600 truncate">{{ cat.description|default:"—" }}</p>
-                        </td>
-
-                        <!-- Entries Count -->
-                        <td class="p-4 text-center">
-                            {% if cat.parent_name %}
-                            <a href="{% url 'dashboard:expenses' %}?sub_category={{ cat.name|urlencode }}" 
-                               class="inline-flex items-center gap-1.5 {% if cat.count > 0 %}bg-emerald-50 text-emerald-800 border border-emerald-200/80 hover:bg-emerald-100{% else %}bg-gray-100 text-gray-500 hover:bg-gray-200{% endif %} font-bold text-xs px-2.5 py-1 rounded-full transition group"
-                               title="Click to view {{ cat.name }} expense logs">
-                                <span class="group-hover:underline">{{ cat.count }} logs</span>
-                                <i class="fa-solid fa-arrow-up-right-from-square text-[9px] {% if cat.count > 0 %}text-emerald-600{% else %}text-gray-400{% endif %}"></i>
-                            </a>
-                            {% else %}
-                            <a href="{% url 'dashboard:expenses' %}?category={{ cat.slug|urlencode }}" 
-                               class="inline-flex items-center gap-1.5 {% if cat.count > 0 %}bg-brand-50 text-brand-900 border border-brand-200 hover:bg-brand-100{% else %}bg-gray-100 text-gray-500 hover:bg-gray-200{% endif %} font-bold text-xs px-2.5 py-1 rounded-full transition group"
-                               title="Click to view {{ cat.name }} main head logs">
-                                <span class="group-hover:underline">{{ cat.count }} logs</span>
-                                <i class="fa-solid fa-arrow-up-right-from-square text-[9px] {% if cat.count > 0 %}text-brand-600{% else %}text-gray-400{% endif %}"></i>
-                            </a>
-                            {% endif %}
-                        </td>
-
-                        <!-- Total Spent -->
-                        <td class="p-4 text-right">
-                            <span class="font-display font-black text-sm {% if cat.spent > 0 %}text-rose-700{% else %}text-gray-400{% endif %}">
-                                ৳{{ cat.spent|floatformat:0 }}
-                            </span>
-                        </td>
-
-                        <!-- Actions -->
-                        <td class="p-4 text-right">
-                            <div class="flex items-center justify-end gap-2">
-                                <button type="button" onclick="openEditExpCatModal('{{ cat.id }}', '{{ cat.name|escapejs }}', '{{ cat.description|escapejs }}', '{{ cat.icon|escapejs }}', '{{ cat.parent_id|default:'' }}')" class="bg-gray-100 hover:bg-brand-50 hover:text-brand-800 text-gray-700 px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 transition">
-                                    <i class="fa-solid fa-pen-to-square text-brand-600"></i>
-                                    <span>Edit</span>
+                            <!-- Head Action Buttons -->
+                            <div class="flex items-center gap-2 shrink-0">
+                                <!-- Add Sub-category Button -->
+                                <button type="button" 
+                                        onclick="openAddExpCatModal('{{ item.head.id }}')"
+                                        class="bg-brand-accent hover:bg-amber-300 text-brand-950 font-black text-xs px-4 py-2.5 rounded-xl shadow-lg shadow-brand-accent/20 flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
+                                    <i class="fa-solid fa-plus text-xs"></i>
+                                    <span>Add Sub-category</span>
                                 </button>
+
+                                <!-- Edit Head Button -->
+                                <button type="button" 
+                                        onclick="openEditExpCatModal('{{ item.head.id }}', '{{ item.head.name|escapejs }}', '{{ item.head.description|escapejs }}', '{{ item.head.icon|escapejs }}', '')"
+                                        class="bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold p-2.5 rounded-xl transition cursor-pointer"
+                                        title="Edit this Cost Head">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+
                                 {% if request.user.is_superuser %}
-                                <button type="button" onclick="openDeleteExpCatModal('{{ cat.id }}', '{{ cat.name|escapejs }}')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 transition cursor-pointer">
+                                <!-- Delete Head Button -->
+                                <button type="button" 
+                                        onclick="openDeleteExpCatModal('{{ item.head.id }}', '{{ item.head.name|escapejs }}')"
+                                        class="bg-rose-500/20 hover:bg-rose-500/30 border border-rose-300/30 text-rose-200 text-xs font-bold p-2.5 rounded-xl transition cursor-pointer"
+                                        title="Delete this Cost Head">
                                     <i class="fa-solid fa-trash-can"></i>
-                                    <span>Delete</span>
                                 </button>
                                 {% endif %}
                             </div>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="p-12 text-center text-gray-400">
-                            <i class="fa-solid fa-receipt text-4xl text-gray-300 mb-2 block"></i>
-                            <p class="font-bold">No expense categories found.</p>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+                        </div>
 
-        <!-- Pagination Footer -->
-        <div class="px-5 py-4 bg-gray-50/70 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
-            <!-- Left: Showing entries info + Per Page select -->
-            <div class="flex items-center gap-4 text-gray-500">
-                <span>
-                    Showing <strong class="text-gray-900 font-bold">{{ page_obj.start_index|default:0 }}</strong> to 
-                    <strong class="text-gray-900 font-bold">{{ page_obj.end_index|default:0 }}</strong> of 
-                    <strong class="text-gray-900 font-bold">{{ total_categories }}</strong> categories
-                </span>
+                        {% if item.head.description %}
+                        <p class="text-xs text-white/80 max-w-2xl">
+                            {{ item.head.description }}
+                        </p>
+                        {% endif %}
 
-                <form method="GET" action="" class="flex items-center gap-1.5">
-                    <label for="per_page_select" class="text-[11px] text-gray-400 font-semibold uppercase tracking-wider">Per page:</label>
-                    <select id="per_page_select" name="per_page" onchange="this.form.submit()" class="bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-2 py-1 text-xs font-bold text-gray-700 cursor-pointer focus:ring-2 focus:ring-brand-500 focus:outline-none">
-                        <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
-                        <option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
-                        <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
-                        <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
-                    </select>
-                </form>
-            </div>
+                        <!-- 3 Micro Stats in Hero Card -->
+                        <div class="pt-3 border-t border-white/15 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div class="bg-black/20 backdrop-blur-xs p-3 rounded-xl border border-white/10">
+                                <span class="text-[10px] font-extrabold text-white/60 uppercase tracking-wider block">Head Total Cost</span>
+                                <span class="font-display font-black text-lg text-brand-accent mt-0.5 block">৳{{ item.head.total_spent|floatformat:0 }}</span>
+                            </div>
+                            <div class="bg-black/20 backdrop-blur-xs p-3 rounded-xl border border-white/10">
+                                <span class="text-[10px] font-extrabold text-white/60 uppercase tracking-wider block">Sub-categories</span>
+                                <span class="font-display font-black text-lg text-white mt-0.5 block">{{ item.head.sub_count }} Items</span>
+                            </div>
+                            <div class="bg-black/20 backdrop-blur-xs p-3 rounded-xl border border-white/10 flex items-center justify-between">
+                                <div>
+                                    <span class="text-[10px] font-extrabold text-white/60 uppercase tracking-wider block">Recorded Logs</span>
+                                    <span class="font-display font-black text-lg text-white mt-0.5 block">{{ item.head.total_count }} Logs</span>
+                                </div>
+                                <a href="{% url 'dashboard:expenses' %}?category={{ item.head.slug|urlencode }}" 
+                                   class="text-[11px] font-black bg-white/20 hover:bg-white/30 text-white px-2.5 py-1.5 rounded-lg transition"
+                                   title="View all expense logs for this head">
+                                    View <i class="fa-solid fa-arrow-right text-[9px] ml-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-            <!-- Right: Pagination Buttons & Page Indicator -->
-            <div class="flex flex-wrap items-center gap-2">
-                <span class="text-xs text-gray-600 font-bold bg-white px-2.5 py-1 rounded-xl border border-gray-200 shadow-2xs">
-                    Page <strong class="text-gray-900 font-black">{{ page_obj.number }}</strong> of <strong class="text-gray-900 font-black">{{ paginator.num_pages }}</strong>
-                </span>
-
-                {% if paginator.num_pages > 1 %}
-                <nav class="flex items-center gap-1 text-xs font-bold" aria-label="Expense Categories Pagination">
-                    <!-- First & Prev Page -->
-                    {% if page_obj.has_previous %}
-                    <a href="?page=1&per_page={{ per_page }}" class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 hover:bg-white hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="First Page">
-                        <i class="fa-solid fa-angles-left text-[10px]"></i>
-                    </a>
-                    <a href="?page={{ page_obj.previous_page_number }}&per_page={{ per_page }}" class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-600 hover:bg-white hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="Previous Page">
-                        <i class="fa-solid fa-chevron-left text-[10px]"></i>
-                        <span class="hidden sm:inline text-[11px]">Prev</span>
-                    </a>
-                    {% else %}
-                    <span class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-300 border border-gray-100 cursor-not-allowed">
-                        <i class="fa-solid fa-angles-left text-[10px]"></i>
-                    </span>
-                    <span class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-300 border border-gray-100 cursor-not-allowed">
-                        <i class="fa-solid fa-chevron-left text-[10px]"></i>
-                        <span class="hidden sm:inline text-[11px]">Prev</span>
-                    </span>
-                    {% endif %}
-
-                    <!-- Page Number Pills -->
-                    <div class="flex items-center gap-1 mx-1">
-                        {% for p in elided_page_range %}
-                            {% if p == page_obj.paginator.ELLIPSIS or p == '…' or p == '...' %}
-                            <span class="w-8 h-8 flex items-center justify-center text-gray-400 font-bold text-xs">…</span>
-                            {% elif p == page_obj.number %}
-                            <span class="w-8 h-8 rounded-xl flex items-center justify-center bg-brand-700 text-white font-extrabold text-xs shadow-xs ring-2 ring-brand-500/20">
-                                {{ p }}
-                            </span>
-                            {% else %}
-                            <a href="?page={{ p }}&per_page={{ per_page }}" class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-700 hover:bg-brand-50 hover:text-brand-900 hover:border-brand-300 transition border border-gray-200 text-xs shadow-2xs">
-                                {{ p }}
-                            </a>
-                            {% endif %}
-                        {% endfor %}
+                <!-- 2. SUBCATEGORIES SECTION HEADER & SEARCH -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:px-6 rounded-2xl border border-gray-200/90 shadow-xs">
+                    <div>
+                        <h3 class="font-display font-black text-base text-gray-900 flex items-center gap-2">
+                            <i class="fa-solid fa-diagram-project text-brand-600"></i>
+                            <span>Sub-Categories (সাব-ক্যাটাগরি তালিকা)</span>
+                        </h3>
+                        <p class="text-[11px] text-gray-400 font-semibold">{{ item.head.sub_count }} items under "{{ item.head.name }}"</p>
                     </div>
 
-                    <!-- Next & Last Page -->
-                    {% if page_obj.has_next %}
-                    <a href="?page={{ page_obj.next_page_number }}&per_page={{ per_page }}" class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-600 hover:bg-white hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="Next Page">
-                        <span class="hidden sm:inline text-[11px]">Next</span>
-                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                    </a>
-                    <a href="?page={{ paginator.num_pages }}&per_page={{ per_page }}" class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 hover:bg-white hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="Last Page">
-                        <i class="fa-solid fa-angles-right text-[10px]"></i>
-                    </a>
-                    {% else %}
-                    <span class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-300 border border-gray-100 cursor-not-allowed">
-                        <span class="hidden sm:inline text-[11px]">Next</span>
-                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                    </span>
-                    <span class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-300 border border-gray-100 cursor-not-allowed">
-                        <i class="fa-solid fa-angles-right text-[10px]"></i>
-                    </span>
-                    {% endif %}
-                </nav>
+                    <button type="button" 
+                            onclick="openAddExpCatModal('{{ item.head.id }}')"
+                            class="bg-brand-50 hover:bg-brand-100 text-brand-800 font-extrabold text-xs px-3.5 py-2 rounded-xl border border-brand-200 transition flex items-center gap-1.5 self-start sm:self-auto cursor-pointer">
+                        <i class="fa-solid fa-circle-plus text-brand-600"></i>
+                        <span>Add Sub-category</span>
+                    </button>
+                </div>
+
+                <!-- 3. SUBCATEGORIES GRID (Beautiful Mini-Cards) -->
+                {% if item.subcategories %}
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    {% for sub in item.subcategories %}
+                    <div class="bg-white p-4 sm:p-4.5 rounded-2xl border border-gray-200/90 hover:border-brand-300 hover:shadow-md transition-all space-y-3 group">
+                        
+                        <!-- Top: Icon, Name & Code -->
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex items-center gap-2.5 min-w-0">
+                                <div class="w-9 h-9 rounded-xl bg-gray-50 group-hover:bg-brand-50 text-gray-600 group-hover:text-brand-700 flex items-center justify-center text-sm border border-gray-200 shrink-0 transition">
+                                    <i class="fa-solid {{ sub.icon|default:'fa-tag' }}"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <h4 class="font-extrabold text-gray-900 text-sm group-hover:text-brand-800 transition block truncate">
+                                        {{ sub.name }}
+                                    </h4>
+                                    <code class="text-[10px] font-mono font-bold bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
+                                        {{ sub.slug }}
+                                    </code>
+                                </div>
+                            </div>
+
+                            <!-- Actions Menu -->
+                            <div class="flex items-center gap-1 shrink-0">
+                                <button type="button" 
+                                        onclick="openEditExpCatModal('{{ sub.id }}', '{{ sub.name|escapejs }}', '{{ sub.description|escapejs }}', '{{ sub.icon|escapejs }}', '{{ item.head.id }}')"
+                                        class="p-1.5 rounded-lg text-gray-400 hover:text-brand-700 hover:bg-brand-50 transition cursor-pointer"
+                                        title="Edit Sub-category">
+                                    <i class="fa-solid fa-pen-to-square text-xs"></i>
+                                </button>
+                                {% if request.user.is_superuser %}
+                                <button type="button" 
+                                        onclick="openDeleteExpCatModal('{{ sub.id }}', '{{ sub.name|escapejs }}')"
+                                        class="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                                        title="Delete Sub-category">
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Description if present -->
+                        {% if sub.description %}
+                        <p class="text-xs text-gray-500 line-clamp-2">
+                            {{ sub.description }}
+                        </p>
+                        {% endif %}
+
+                        <!-- Footer: Spent & Logs Link -->
+                        <div class="pt-2.5 border-t border-gray-100 flex items-center justify-between text-xs">
+                            <div>
+                                <span class="text-[10px] font-extrabold text-gray-400 block uppercase tracking-wider">Spent</span>
+                                <span class="font-display font-black text-sm {% if sub.spent > 0 %}text-rose-700{% else %}text-gray-400{% endif %}">
+                                    ৳{{ sub.spent|floatformat:0 }}
+                                </span>
+                            </div>
+
+                            <a href="{% url 'dashboard:expenses' %}?sub_category={{ sub.name|urlencode }}" 
+                               class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl {% if sub.count > 0 %}bg-emerald-50 text-emerald-800 border border-emerald-200/80 hover:bg-emerald-100{% else %}bg-gray-100 text-gray-500 hover:bg-gray-200{% endif %} font-bold text-[11px] transition"
+                               title="View {{ sub.name }} logs">
+                                <span>{{ sub.count }} logs</span>
+                                <i class="fa-solid fa-arrow-up-right-from-square text-[9px] {% if sub.count > 0 %}text-emerald-600{% else %}text-gray-400{% endif %}"></i>
+                            </a>
+                        </div>
+
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <!-- Empty Subcategories State -->
+                <div class="bg-white rounded-3xl border border-gray-200 p-8 sm:p-10 text-center space-y-3">
+                    <div class="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto text-xl border border-amber-200 shadow-2xs">
+                        <i class="fa-solid fa-tags"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-display font-black text-base text-gray-900">No Sub-categories Yet</h4>
+                        <p class="text-xs text-gray-500 max-w-md mx-auto mt-1">
+                            "{{ item.head.name }}" খাতের অধীনে এখনও কোনো নির্দিষ্ট সাব-ক্যাটাগরি তৈরি করা হয়নি। সাব-ক্যাটাগরি যুক্ত করলে ইউনিট অনুযায়ী সঠিক খরচের রিপোর্ট পাওয়া যাবে।
+                        </p>
+                    </div>
+                    <button type="button" 
+                            onclick="openAddExpCatModal('{{ item.head.id }}')"
+                            class="bg-brand-700 hover:bg-brand-800 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-md inline-flex items-center gap-2 transition active:scale-95 cursor-pointer">
+                        <i class="fa-solid fa-plus text-brand-accent"></i>
+                        <span>Add First Sub-category to {{ item.head.name }}</span>
+                    </button>
+                </div>
                 {% endif %}
+
             </div>
+            {% empty %}
+            <div class="bg-white rounded-3xl border border-gray-200 p-12 text-center text-gray-400">
+                <i class="fa-solid fa-receipt text-3xl mb-2 block"></i>
+                <p class="font-bold">No Expense Categories Configured</p>
+            </div>
+            {% endfor %}
         </div>
+
     </div>
 
 </div>
 
-<!-- ADD EXPENSE CATEGORY MODAL -->
+<!-- ========================================================================= -->
+<!-- 1. ADD EXPENSE CATEGORY / SUBCATEGORY MODAL -->
+<!-- ========================================================================= -->
 <div id="addExpCatModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative">
         <div class="flex items-center justify-between border-b border-gray-100 pb-3">
             <div>
-                <h3 class="font-display font-black text-lg text-gray-900">Add Expense Category</h3>
-                <p class="text-[11px] text-gray-400 font-semibold">নতুন খরচ হেড বা সাব-ক্যাটাগরি তৈরি করুন</p>
+                <h3 id="addExpCatModalTitle" class="font-display font-black text-lg text-gray-900">Add Expense Category</h3>
+                <p id="addExpCatModalSubtitle" class="text-[11px] text-gray-400 font-semibold">নতুন খরচ হেড বা সাব-ক্যাটাগরি তৈরি করুন</p>
             </div>
-            <button type="button" onclick="closeAddExpCatModal()" class="text-gray-400 hover:text-gray-700 text-lg p-1">
+            <button type="button" onclick="closeAddExpCatModal()" class="text-gray-400 hover:text-gray-700 text-lg p-1 cursor-pointer">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
@@ -249,48 +390,50 @@
             <input type="hidden" name="action" value="create_category">
 
             <div>
-                <label class="font-bold text-gray-700 block mb-1">Parent Category (মূল ক্যাটাগরি - ঐচ্ছিক)</label>
-                <select name="parent_id" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500">
-                    <option value="">-- None (This is a Main Category / মূল ক্যাটাগরি) --</option>
+                <label class="font-bold text-gray-700 block mb-1">Parent Category (মূল ক্যাটাগরি / Head)</label>
+                <select id="add_exp_cat_parent" name="parent_id" onchange="onParentSelectChanged()" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500">
+                    <option value="">-- None (This is a Main Category / মূল Head) --</option>
                     {% for p_cat in parent_categories %}
                     <option value="{{ p_cat.id }}">{{ p_cat.name }}</option>
                     {% endfor %}
                 </select>
-                <p class="text-[10px] text-gray-400 mt-1">সাব-ক্যাটাগরি তৈরি করতে মূল ক্যাটাগরি সিলেক্ট করুন</p>
+                <p class="text-[10px] text-gray-400 mt-1">সাব-ক্যাটাগরি তৈরি করতে মূল ক্যাটাগরি সিলেক্ট করুন। মূল ক্যাটাগরি হলে ফাঁকা রাখুন।</p>
             </div>
 
             <div>
-                <label class="font-bold text-gray-700 block mb-1">Category Name *</label>
+                <label class="font-bold text-gray-700 block mb-1">Category / Sub-category Name *</label>
                 <input type="text" name="name" required placeholder="e.g. Cucumber (শসা) or Employee Wages" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500">
             </div>
 
             <div>
                 <label class="font-bold text-gray-700 block mb-1">Icon (FontAwesome Class)</label>
-                <input type="text" name="icon" value="fa-receipt" placeholder="fa-receipt, fa-carrot, fa-truck, fa-bolt" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
+                <input type="text" name="icon" value="fa-receipt" placeholder="fa-receipt, fa-carrot, fa-truck, fa-bolt, fa-jar" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
             </div>
 
             <div>
-                <label class="font-bold text-gray-700 block mb-1">Description</label>
+                <label class="font-bold text-gray-700 block mb-1">Description (বিবরণ - ঐচ্ছিক)</label>
                 <textarea name="description" rows="2" placeholder="Brief summary of expenses included under this category..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white"></textarea>
             </div>
 
             <div class="pt-2 flex items-center justify-end gap-2">
-                <button type="button" onclick="closeAddExpCatModal()" class="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold transition">Cancel</button>
-                <button type="submit" class="px-5 py-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold transition shadow-md">Create Category</button>
+                <button type="button" onclick="closeAddExpCatModal()" class="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold transition cursor-pointer">Cancel</button>
+                <button type="submit" class="px-5 py-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold transition shadow-md cursor-pointer">Create Category</button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- EDIT EXPENSE CATEGORY MODAL -->
+<!-- ========================================================================= -->
+<!-- 2. EDIT EXPENSE CATEGORY MODAL -->
+<!-- ========================================================================= -->
 <div id="editExpCatModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative">
         <div class="flex items-center justify-between border-b border-gray-100 pb-3">
             <div>
-                <h3 class="font-display font-black text-lg text-gray-900">Edit Expense Category</h3>
-                <p class="text-[11px] text-gray-400 font-semibold">ক্যাটাগরির নাম ও প্যারেন্ট পরিবর্তন করুন</p>
+                <h3 class="font-display font-black text-lg text-gray-900">Edit Category / Sub-category</h3>
+                <p class="text-[11px] text-gray-400 font-semibold">ক্যাটাগরির নাম, আইকন ও প্যারেন্ট পরিবর্তন করুন</p>
             </div>
-            <button type="button" onclick="closeEditExpCatModal()" class="text-gray-400 hover:text-gray-700 text-lg p-1">
+            <button type="button" onclick="closeEditExpCatModal()" class="text-gray-400 hover:text-gray-700 text-lg p-1 cursor-pointer">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
@@ -301,9 +444,9 @@
             <input type="hidden" id="edit_exp_cat_id" name="category_id" value="">
 
             <div>
-                <label class="font-bold text-gray-700 block mb-1">Parent Category (মূল ক্যাটাগরি - ঐচ্ছিক)</label>
+                <label class="font-bold text-gray-700 block mb-1">Parent Category (মূল ক্যাটাগরি / Head)</label>
                 <select id="edit_exp_cat_parent" name="parent_id" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500">
-                    <option value="">-- None (This is a Main Category / মূল ক্যাটাগরি) --</option>
+                    <option value="">-- None (This is a Main Category / মূল Head) --</option>
                     {% for p_cat in parent_categories %}
                     <option value="{{ p_cat.id }}">{{ p_cat.name }}</option>
                     {% endfor %}
@@ -326,15 +469,17 @@
             </div>
 
             <div class="pt-2 flex items-center justify-end gap-2">
-                <button type="button" onclick="closeEditExpCatModal()" class="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold transition">Cancel</button>
-                <button type="submit" class="px-5 py-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold transition shadow-md">Save Changes</button>
+                <button type="button" onclick="closeEditExpCatModal()" class="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold transition cursor-pointer">Cancel</button>
+                <button type="submit" class="px-5 py-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold transition shadow-md cursor-pointer">Save Changes</button>
             </div>
         </form>
     </div>
 </div>
 
 {% if request.user.is_superuser %}
-<!-- DELETE EXPENSE CATEGORY CONFIRMATION MODAL -->
+<!-- ========================================================================= -->
+<!-- 3. DELETE EXPENSE CATEGORY MODAL -->
+<!-- ========================================================================= -->
 <div id="deleteExpCatModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative text-center">
         
@@ -345,7 +490,7 @@
         <div>
             <h3 class="font-display font-black text-lg text-gray-900">Delete Expense Category?</h3>
             <p class="text-xs text-gray-500 mt-1">
-                Are you sure you want to permanently delete expense category <strong id="del_exp_cat_name" class="text-gray-900">Category</strong>? This action cannot be undone.
+                Are you sure you want to permanently delete <strong id="del_exp_cat_name" class="text-gray-900">Category</strong>? This action cannot be undone.
             </p>
         </div>
 
@@ -366,12 +511,158 @@
 {% endif %}
 
 <script>
-function openAddExpCatModal() {
+// Switch active head in Master-Detail studio view
+function activateHead(index) {
+    // 1. Reset all head select cards
+    const allCards = document.querySelectorAll('.head-select-card');
+    allCards.forEach(card => {
+        card.classList.remove('bg-gradient-to-r', 'from-brand-900', 'to-brand-800', 'text-white', 'shadow-md', 'border-transparent', 'active-head-card');
+        card.classList.add('bg-white', 'hover:bg-gray-50', 'text-gray-800', 'border-gray-200/90', 'shadow-2xs');
+
+        const title = card.querySelector('.head-card-title');
+        if (title) {
+            title.classList.remove('text-white');
+            title.classList.add('text-gray-900');
+        }
+
+        const slug = card.querySelector('.head-card-slug');
+        if (slug) {
+            slug.classList.remove('bg-white/10', 'text-gray-300');
+            slug.classList.add('bg-gray-100', 'text-gray-500');
+        }
+
+        const subcount = card.querySelector('.head-card-subcount');
+        if (subcount) {
+            subcount.classList.remove('text-gray-300');
+            subcount.classList.add('text-gray-400');
+        }
+
+        const spent = card.querySelector('.head-card-spent');
+        if (spent) {
+            spent.classList.remove('text-brand-accent');
+            spent.classList.add('text-rose-600');
+        }
+
+        const arrow = card.querySelector('.head-card-arrow');
+        if (arrow) {
+            arrow.classList.remove('text-white', 'translate-x-0.5');
+            arrow.classList.add('text-gray-300');
+        }
+
+        const iconBox = card.querySelector('.head-card-icon-box');
+        if (iconBox) {
+            iconBox.classList.remove('bg-white/10', 'text-brand-accent', 'border-white/20');
+        }
+    });
+
+    // 2. Activate target card
+    const targetCard = document.getElementById('head-card-item-' + index);
+    if (targetCard) {
+        targetCard.classList.remove('bg-white', 'hover:bg-gray-50', 'text-gray-800', 'border-gray-200/90', 'shadow-2xs');
+        targetCard.classList.add('bg-gradient-to-r', 'from-brand-900', 'to-brand-800', 'text-white', 'shadow-md', 'border-transparent', 'active-head-card');
+
+        const title = targetCard.querySelector('.head-card-title');
+        if (title) {
+            title.classList.remove('text-gray-900');
+            title.classList.add('text-white');
+        }
+
+        const slug = targetCard.querySelector('.head-card-slug');
+        if (slug) {
+            slug.classList.remove('bg-gray-100', 'text-gray-500');
+            slug.classList.add('bg-white/10', 'text-gray-300');
+        }
+
+        const subcount = targetCard.querySelector('.head-card-subcount');
+        if (subcount) {
+            subcount.classList.remove('text-gray-400');
+            subcount.classList.add('text-gray-300');
+        }
+
+        const spent = targetCard.querySelector('.head-card-spent');
+        if (spent) {
+            spent.classList.remove('text-rose-600');
+            spent.classList.add('text-brand-accent');
+        }
+
+        const arrow = targetCard.querySelector('.head-card-arrow');
+        if (arrow) {
+            arrow.classList.remove('text-gray-300');
+            arrow.classList.add('text-white', 'translate-x-0.5');
+        }
+
+        const iconBox = targetCard.querySelector('.head-card-icon-box');
+        if (iconBox) {
+            iconBox.classList.add('bg-white/10', 'text-brand-accent', 'border-white/20');
+        }
+    }
+
+    // 3. Hide all detail views and display target
+    const allDetailViews = document.querySelectorAll('.head-detail-view');
+    allDetailViews.forEach(v => v.classList.add('hidden'));
+
+    const targetView = document.getElementById('head-detail-view-' + index);
+    if (targetView) {
+        targetView.classList.remove('hidden');
+        // On mobile, scroll smoothly into view
+        if (window.innerWidth < 1024) {
+            targetView.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+}
+
+// Search & filter left-side heads directory
+function filterHeadList() {
+    const q = document.getElementById('leftHeadSearch').value.toLowerCase().trim();
+    const cards = document.querySelectorAll('.head-select-card');
+
+    cards.forEach(card => {
+        const name = card.getAttribute('data-name') || '';
+        const slug = card.getAttribute('data-slug') || '';
+        if (!q || name.includes(q) || slug.includes(q)) {
+            card.classList.remove('hidden');
+        } else {
+            card.classList.add('hidden');
+        }
+    });
+}
+
+function openAddExpCatModal(parentId) {
+    const parentSelect = document.getElementById('add_exp_cat_parent');
+    const titleEl = document.getElementById('addExpCatModalTitle');
+    const subtitleEl = document.getElementById('addExpCatModalSubtitle');
+
+    if (parentSelect) {
+        parentSelect.value = parentId || '';
+    }
+
+    if (parentId) {
+        if (titleEl) titleEl.textContent = 'Add Sub-category';
+        if (subtitleEl) subtitleEl.textContent = 'এই মূল হেডের অধীনে নতুন সাব-ক্যাটাগরি তৈরি করুন';
+    } else {
+        if (titleEl) titleEl.textContent = 'Add Expense Category / Head';
+        if (subtitleEl) subtitleEl.textContent = 'নতুন খরচ হেড বা সাব-ক্যাটাগরি তৈরি করুন';
+    }
+
     document.getElementById('addExpCatModal').classList.remove('hidden');
 }
+
+function onParentSelectChanged() {
+    const parentSelect = document.getElementById('add_exp_cat_parent');
+    const titleEl = document.getElementById('addExpCatModalTitle');
+    if (parentSelect && titleEl) {
+        if (parentSelect.value) {
+            titleEl.textContent = 'Add Sub-category';
+        } else {
+            titleEl.textContent = 'Add Main Head Category';
+        }
+    }
+}
+
 function closeAddExpCatModal() {
     document.getElementById('addExpCatModal').classList.add('hidden');
 }
+
 function openEditExpCatModal(id, name, desc, icon, parentId) {
     document.getElementById('edit_exp_cat_id').value = id;
     document.getElementById('edit_exp_cat_name').value = name;
@@ -383,14 +674,17 @@ function openEditExpCatModal(id, name, desc, icon, parentId) {
     }
     document.getElementById('editExpCatModal').classList.remove('hidden');
 }
+
 function closeEditExpCatModal() {
     document.getElementById('editExpCatModal').classList.add('hidden');
 }
+
 function openDeleteExpCatModal(id, name) {
     document.getElementById('del_exp_cat_id').value = id;
     document.getElementById('del_exp_cat_name').textContent = name;
     document.getElementById('deleteExpCatModal').classList.remove('hidden');
 }
+
 function closeDeleteExpCatModal() {
     document.getElementById('deleteExpCatModal').classList.add('hidden');
 }

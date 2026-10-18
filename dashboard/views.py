@@ -2434,22 +2434,10 @@ def ensure_damage_and_returns_expenses_synced(user=None, force=False):
 
 def ensure_expense_taxonomy_and_allocation_synced(force=False):
     """
-    Self-healing expense taxonomy & allocation for production & local servers:
-    1. Guarantees all canonical parent categories and subcategories exist in ExpenseCategory.
-    2. Auto-backfills sub_category on any Expense that has empty or null sub_category.
-    3. Throttled with cache so it runs with zero performance overhead.
+    Disabled: User database additions and edits must be strictly preserved.
+    No background taxonomy overwriting or auto-execution is permitted.
     """
-    cache_key = 'expense_taxonomy_synced_flag'
-    if not force and cache.get(cache_key):
-        return
-
-    try:
-        from django.core.management import call_command
-        call_command('setup_expense_categories')
-        cache.set(cache_key, True, timeout=1800)  # Throttled to once every 30 minutes
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).warning(f"Auto setup_expense_categories notice: {e}")
+    return
 
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
@@ -4000,90 +3988,103 @@ def expense_categories_manager(request):
     sub_map = {row['sub_category']: (row['spent'] or 0, row['count'] or 0) for row in sub_summary}
     sub_map_lower = {k.strip().lower(): v for k, v in sub_map.items()}
 
-    category_stats = []
-    for cat in categories:
-        if cat.parent is None:
-            # Main Category / Head
-            spent_slug, count_slug = exp_map.get(cat.slug, (0, 0))
-            spent_name, count_name = exp_map.get(cat.name, (0, 0))
-            if cat.slug != cat.name:
-                spent = spent_slug + spent_name
-                count = count_slug + count_name
+    def get_sub_stats(sub_cat):
+        spent, count = sub_map.get(sub_cat.name, (0, 0))
+        if count == 0 and sub_cat.slug:
+            spent, count = sub_map.get(sub_cat.slug, (0, 0))
+        if count == 0:
+            c_name_lower = sub_cat.name.strip().lower()
+            c_slug_lower = sub_cat.slug.strip().lower()
+            if c_name_lower in sub_map_lower:
+                spent, count = sub_map_lower[c_name_lower]
+            elif c_slug_lower in sub_map_lower:
+                spent, count = sub_map_lower[c_slug_lower]
             else:
-                spent = spent_slug
-                count = count_slug
-
-            # Fallback case-insensitive match
-            if count == 0:
-                for k, (s, c) in exp_map.items():
-                    if k.strip().lower() == cat.slug.lower() or k.strip().lower() == cat.name.lower():
+                for k, (s, c) in sub_map.items():
+                    k_lower = k.lower()
+                    if c_slug_lower in k_lower or k_lower in c_name_lower or c_name_lower in k_lower:
                         spent += s
                         count += c
-        else:
-            # Sub-Category: calculate logs & spent from Expense.sub_category
-            spent, count = sub_map.get(cat.name, (0, 0))
-            if count == 0 and cat.slug:
-                spent, count = sub_map.get(cat.slug, (0, 0))
-            if count == 0:
-                c_name_lower = cat.name.strip().lower()
-                c_slug_lower = cat.slug.strip().lower()
-                if c_name_lower in sub_map_lower:
-                    spent, count = sub_map_lower[c_name_lower]
-                elif c_slug_lower in sub_map_lower:
-                    spent, count = sub_map_lower[c_slug_lower]
-                else:
-                    for k, (s, c) in sub_map.items():
-                        k_lower = k.lower()
-                        if c_slug_lower in k_lower or k_lower in c_name_lower or c_name_lower in k_lower:
-                            spent += s
-                            count += c
+        return spent, count
 
-        category_stats.append({
-            'id': cat.id,
-            'slug': cat.slug,
-            'name': cat.name,
-            'parent_id': cat.parent.id if cat.parent else None,
-            'parent_name': cat.parent.name if cat.parent else None,
-            'icon': cat.icon or 'fa-receipt',
-            'description': cat.description,
-            'spent': spent,
-            'count': count
+    parent_categories = ExpenseCategory.objects.filter(parent__isnull=True).prefetch_related('subcategories').order_by('name')
+    
+    grouped_categories = []
+    total_heads_count = parent_categories.count()
+    total_subs_count = 0
+
+    for head in parent_categories:
+        spent_slug, count_slug = exp_map.get(head.slug, (0, 0))
+        spent_name, count_name = exp_map.get(head.name, (0, 0))
+        direct_spent = (spent_slug + spent_name) if head.slug != head.name else spent_slug
+        direct_count = (count_slug + count_name) if head.slug != head.name else count_slug
+
+        # Fallback case-insensitive match
+        if direct_count == 0:
+            for k, (s, c) in exp_map.items():
+                if k.strip().lower() == head.slug.lower() or k.strip().lower() == head.name.lower():
+                    direct_spent += s
+                    direct_count += c
+
+        subs_data = []
+        subs_spent_sum = 0
+        subs_count_sum = 0
+        for sub in head.subcategories.all().order_by('name'):
+            total_subs_count += 1
+            s_spent, s_count = get_sub_stats(sub)
+            subs_spent_sum += s_spent
+            subs_count_sum += s_count
+            subs_data.append({
+                'id': sub.id,
+                'name': sub.name,
+                'slug': sub.slug,
+                'icon': sub.icon or 'fa-tag',
+                'description': sub.description,
+                'parent_id': head.id,
+                'parent_name': head.name,
+                'spent': s_spent,
+                'count': s_count
+            })
+
+        total_head_spent = max(direct_spent, subs_spent_sum)
+        total_head_count = max(direct_count, subs_count_sum)
+
+        THEME_MAP = {
+            'RAW_MATERIAL': {'badge': 'bg-emerald-50 text-emerald-800 border-emerald-200', 'icon_bg': 'bg-emerald-50 text-emerald-700 border-emerald-200', 'gradient': 'from-emerald-950 via-brand-900 to-emerald-900', 'accent': 'text-emerald-400'},
+            'FRUITS': {'badge': 'bg-rose-50 text-rose-800 border-rose-200', 'icon_bg': 'bg-rose-50 text-rose-700 border-rose-200', 'gradient': 'from-rose-950 via-brand-900 to-rose-900', 'accent': 'text-rose-400'},
+            'PACKAGING': {'badge': 'bg-indigo-50 text-indigo-800 border-indigo-200', 'icon_bg': 'bg-indigo-50 text-indigo-700 border-indigo-200', 'gradient': 'from-indigo-950 via-brand-900 to-indigo-900', 'accent': 'text-indigo-400'},
+            'SPICES_BRINE': {'badge': 'bg-amber-50 text-amber-800 border-amber-200', 'icon_bg': 'bg-amber-50 text-amber-700 border-amber-200', 'gradient': 'from-amber-950 via-brand-900 to-amber-900', 'accent': 'text-amber-400'},
+            'LOGISTICS': {'badge': 'bg-sky-50 text-sky-800 border-sky-200', 'icon_bg': 'bg-sky-50 text-sky-700 border-sky-200', 'gradient': 'from-sky-950 via-brand-900 to-sky-900', 'accent': 'text-sky-400'},
+            'MARKETING': {'badge': 'bg-purple-50 text-purple-800 border-purple-200', 'icon_bg': 'bg-purple-50 text-purple-700 border-purple-200', 'gradient': 'from-purple-950 via-brand-900 to-purple-900', 'accent': 'text-purple-400'},
+            'UTILITIES': {'badge': 'bg-orange-50 text-orange-800 border-orange-200', 'icon_bg': 'bg-orange-50 text-orange-700 border-orange-200', 'gradient': 'from-orange-950 via-brand-900 to-orange-900', 'accent': 'text-orange-400'},
+            'DAMAGE_LOSS': {'badge': 'bg-red-50 text-red-800 border-red-200', 'icon_bg': 'bg-red-50 text-red-700 border-red-200', 'gradient': 'from-red-950 via-brand-900 to-red-900', 'accent': 'text-red-400'},
+            'OTHER': {'badge': 'bg-slate-50 text-slate-800 border-slate-200', 'icon_bg': 'bg-slate-50 text-slate-700 border-slate-200', 'gradient': 'from-slate-950 via-brand-900 to-slate-900', 'accent': 'text-slate-400'},
+        }
+        theme = THEME_MAP.get(head.slug, {'badge': 'bg-brand-50 text-brand-800 border-brand-200', 'icon_bg': 'bg-brand-50 text-brand-700 border-brand-200', 'gradient': 'from-brand-950 via-brand-900 to-brand-800', 'accent': 'text-brand-accent'})
+
+        grouped_categories.append({
+            'head': {
+                'id': head.id,
+                'name': head.name,
+                'slug': head.slug,
+                'icon': head.icon or 'fa-receipt',
+                'description': head.description,
+                'direct_spent': direct_spent,
+                'direct_count': direct_count,
+                'total_spent': total_head_spent,
+                'total_count': total_head_count,
+                'sub_count': len(subs_data),
+                'theme': theme,
+            },
+            'subcategories': subs_data,
         })
 
-    # Main/Parent Categories for selector dropdown
-    parent_categories = ExpenseCategory.objects.filter(parent__isnull=True).order_by('name')
-
-    # Pagination (Default: 10 per page)
-    page_number = request.GET.get('page', 1)
-    per_page = request.GET.get('per_page', 20)
-    try:
-        per_page = int(per_page)
-        if per_page not in [10, 20, 50, 100]:
-            per_page = 20
-    except (ValueError, TypeError):
-        per_page = 20
-
-    paginator = Paginator(category_stats, per_page)
-    try:
-        page_obj = paginator.page(page_number)
-    except PageNotAnInteger:
-        page_obj = paginator.page(1)
-    except EmptyPage:
-        page_obj = paginator.page(paginator.num_pages)
-
-    try:
-        elided_page_range = paginator.get_elided_page_range(number=page_obj.number, on_each_side=2, on_ends=1)
-    except Exception:
-        elided_page_range = paginator.page_range
-
     context = {
-        'category_stats': page_obj,
-        'page_obj': page_obj,
-        'paginator': paginator,
-        'elided_page_range': elided_page_range,
-        'per_page': per_page,
-        'total_categories': paginator.count,
+        'grouped_categories': grouped_categories,
         'parent_categories': parent_categories,
+        'total_heads_count': total_heads_count,
+        'total_subs_count': total_subs_count,
+        'total_categories': total_heads_count + total_subs_count,
         'total_expenses_all': Expense.objects.aggregate(Sum('amount'))['amount__sum'] or 0,
     }
     return render(request, 'dashboard/expense_categories.html', context)
