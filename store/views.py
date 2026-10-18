@@ -38,6 +38,11 @@ def index(request):
         fallback_products = list(Product.objects.exclude(id__in=existing_ids).order_by('-is_featured', 'id')[:needed])
         top_best_sellers.extend(fallback_products)
 
+    top_3_ids = []
+    for idx, p in enumerate(top_best_sellers, start=1):
+        p.best_seller_rank = idx
+        top_3_ids.append(p.id)
+
     best_seller = top_best_sellers[0] if top_best_sellers else None
 
     featured_products = Product.objects.filter(is_featured=True).order_by('id')
@@ -65,6 +70,7 @@ def index(request):
     context = {
         'best_seller': best_seller,
         'top_best_sellers': top_best_sellers,
+        'top_3_ids': top_3_ids,
         'featured_products': featured_products,
         'all_products': all_products,
         'total_products_count': total_products_count,
