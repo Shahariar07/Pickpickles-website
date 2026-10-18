@@ -397,6 +397,7 @@
         <form method="POST" class="space-y-3.5 text-xs">
             {% csrf_token %}
             <input type="hidden" name="action" value="create_expense">
+            <input type="hidden" name="return_url" value="{{ request.get_full_path }}">
 
             <!-- Title -->
             <div>
@@ -564,6 +565,7 @@
             {% csrf_token %}
             <input type="hidden" name="action" value="edit_expense">
             <input type="hidden" id="edit_exp_id" name="expense_id" value="">
+            <input type="hidden" name="return_url" value="{{ request.get_full_path }}">
 
             <div>
                 <label class="font-bold text-gray-700 block mb-1">Expense Title / Description *</label>
@@ -730,6 +732,7 @@
             {% csrf_token %}
             <input type="hidden" name="action" value="delete_expense">
             <input type="hidden" id="del_exp_id" name="expense_id" value="">
+            <input type="hidden" name="return_url" value="{{ request.get_full_path }}">
 
             <button type="button" onclick="closeDeleteExpenseModal()"
                 class="w-1/2 px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs transition cursor-pointer">

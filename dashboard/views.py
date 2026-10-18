@@ -3010,6 +3010,18 @@ def expense_manager(request):
         action = request.POST.get('action')
         expense_id = request.POST.get('expense_id')
 
+        def get_safe_redirect():
+            return_url = request.POST.get('return_url') or request.META.get('HTTP_REFERER')
+            if return_url:
+                from urllib.parse import urlparse
+                parsed = urlparse(return_url)
+                if parsed.path.rstrip('/').endswith('/expenses'):
+                    safe_url = parsed.path
+                    if parsed.query:
+                        safe_url += f"?{parsed.query}"
+                    return redirect(safe_url)
+            return redirect('dashboard:expenses')
+
         # 1. CREATE EXPENSE
         if action == 'create_expense' or 'create_expense' in request.POST:
             try:
@@ -3040,7 +3052,7 @@ def expense_manager(request):
                 messages.success(request, f'Expense "৳{amount} - {title}" successfully recorded.')
             except Exception as e:
                 messages.error(request, f'Failed to record expense: {str(e)}')
-            return redirect('dashboard:expenses')
+            return get_safe_redirect()
 
         # 2. EDIT EXPENSE
         elif action == 'edit_expense' or 'edit_expense' in request.POST:
@@ -3062,19 +3074,19 @@ def expense_manager(request):
                 messages.success(request, f'Expense record "#{expense.id} - {expense.title}" updated.')
             except Exception as e:
                 messages.error(request, f'Failed to update expense: {str(e)}')
-            return redirect('dashboard:expenses')
+            return get_safe_redirect()
 
         # 3. DELETE EXPENSE
         elif action == 'delete_expense' or 'delete_expense' in request.POST:
             if not request.user.is_superuser:
                 messages.error(request, 'Permission Denied: Staff accounts are restricted from deleting expense records. Only Administrator can delete.')
-                return redirect('dashboard:expenses')
+                return get_safe_redirect()
             expense = get_object_or_404(Expense, id=expense_id)
             title = expense.title
             amount = expense.amount
             expense.delete()
             messages.success(request, f'Expense record "৳{amount} - {title}" has been deleted.')
-            return redirect('dashboard:expenses')
+            return get_safe_redirect()
 
     # Query & Filters
     expenses = Expense.objects.all()
@@ -3949,15 +3961,20 @@ def expense_categories_manager(request):
             stored_icon = f"{clean_icon}|{color}" if color else clean_icon
 
             if name:
-                ExpenseCategory.objects.create(name=name, parent=parent, icon=stored_icon, description=description)
+                new_cat = ExpenseCategory.objects.create(name=name, parent=parent, icon=stored_icon, description=description)
                 messages.success(request, f'Expense Category "{name}" created successfully!')
+                target_head = parent.id if parent else new_cat.id
+                return redirect(f"{reverse('dashboard:expense_categories')}?head={target_head}")
             else:
                 messages.error(request, 'Category name is required.')
-            return redirect('dashboard:expense_categories')
+                if parent:
+                    return redirect(f"{reverse('dashboard:expense_categories')}?head={parent.id}")
+                return redirect('dashboard:expense_categories')
 
         # 2. Edit Category (Head or Sub-category)
         elif action == 'edit_category':
             cat = get_object_or_404(ExpenseCategory, id=cat_id)
+            target_head = cat.parent_id if cat.parent_id else cat.id
             old_name = cat.name
             old_slug = cat.slug
             new_name = request.POST.get('name', '').strip()
@@ -3969,12 +3986,12 @@ def expense_categories_manager(request):
 
             if not new_name:
                 messages.error(request, 'Category name is required.')
-                return redirect('dashboard:expense_categories')
+                return redirect(f"{reverse('dashboard:expense_categories')}?head={target_head}")
 
             # Uniqueness check for name (excluding self)
             if ExpenseCategory.objects.filter(name__iexact=new_name).exclude(id=cat.id).exists():
                 messages.error(request, f'A category with the name "{new_name}" already exists.')
-                return redirect('dashboard:expense_categories')
+                return redirect(f"{reverse('dashboard:expense_categories')}?head={target_head}")
 
             cat.name = new_name
             if new_slug:
@@ -4006,7 +4023,8 @@ def expense_categories_manager(request):
                 Expense.objects.filter(sub_category=old_name).update(sub_category=cat.name)
 
             messages.success(request, f'Expense Category "{cat.name}" updated successfully!')
-            return redirect('dashboard:expense_categories')
+            target_head = cat.parent_id if cat.parent_id else cat.id
+            return redirect(f"{reverse('dashboard:expense_categories')}?head={target_head}")
 
         # 3. Delete Category (Head or Sub-category)
         elif action == 'delete_category':
@@ -4015,8 +4033,11 @@ def expense_categories_manager(request):
                 return redirect('dashboard:expense_categories')
             cat = get_object_or_404(ExpenseCategory, id=cat_id)
             c_name = cat.name
+            target_head = cat.parent_id
             cat.delete()
             messages.success(request, f'Expense Category "{c_name}" deleted successfully.')
+            if target_head:
+                return redirect(f"{reverse('dashboard:expense_categories')}?head={target_head}")
             return redirect('dashboard:expense_categories')
 
     # Load categories with stats
@@ -4238,11 +4259,24 @@ def expense_categories_manager(request):
                 'theme': theme,
             },
             'subcategories': subs_data,
+            'is_active': False,
         })
+
+    requested_head = request.GET.get('head', '').strip()
+    active_found = False
+    if requested_head:
+        for item in grouped_categories:
+            if str(item['head']['id']) == str(requested_head) or item['head']['slug'].lower() == str(requested_head).lower():
+                item['is_active'] = True
+                active_found = True
+                break
+    if not active_found and grouped_categories:
+        grouped_categories[0]['is_active'] = True
 
     context = {
         'grouped_categories': grouped_categories,
         'parent_categories': parent_categories,
+        'requested_head': requested_head,
         'color_themes': COLOR_THEMES,
         'total_heads_count': total_heads_count,
         'total_subs_count': total_subs_count,

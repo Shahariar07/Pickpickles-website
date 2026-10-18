@@ -108,24 +108,25 @@
             <div id="headsListContainer" class="space-y-2.5">
                 {% for item in grouped_categories %}
                 <div id="head-card-item-{{ forloop.counter }}" 
-                     onclick="activateHead('{{ forloop.counter }}')"
+                     onclick="activateHead('{{ forloop.counter }}', '{{ item.head.id }}')"
+                     data-head-id="{{ item.head.id }}"
                      data-name="{{ item.head.name|lower }}"
                      data-slug="{{ item.head.slug|lower }}"
-                     class="head-select-card p-3.5 sm:p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 {% if forloop.first %}bg-gradient-to-r from-brand-900 to-brand-800 text-white shadow-md border-transparent active-head-card{% else %}bg-white hover:bg-gray-50 text-gray-800 border-gray-200/90 shadow-2xs hover:border-brand-200{% endif %}">
+                     class="head-select-card p-3.5 sm:p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 {% if item.is_active %}bg-gradient-to-r from-brand-900 to-brand-800 text-white shadow-md border-transparent active-head-card{% else %}bg-white hover:bg-gray-50 text-gray-800 border-gray-200/90 shadow-2xs hover:border-brand-200{% endif %}">
                     
                     <div class="flex items-center gap-3 min-w-0">
-                        <div class="head-card-icon-box w-10 h-10 rounded-xl flex items-center justify-center text-base shrink-0 font-bold transition-colors {% if forloop.first %}bg-white/10 text-brand-accent border border-white/20{% else %}{{ item.head.theme.icon_bg }} border{% endif %}">
+                        <div class="head-card-icon-box w-10 h-10 rounded-xl flex items-center justify-center text-base shrink-0 font-bold transition-colors {% if item.is_active %}bg-white/10 text-brand-accent border border-white/20{% else %}{{ item.head.theme.icon_bg }} border{% endif %}">
                             <i class="fa-solid {{ item.head.icon|default:'fa-receipt' }}"></i>
                         </div>
                         <div class="min-w-0">
-                            <span class="head-card-title font-extrabold text-xs sm:text-sm block truncate transition-colors {% if forloop.first %}text-white{% else %}text-gray-900{% endif %}">
+                            <span class="head-card-title font-extrabold text-xs sm:text-sm block truncate transition-colors {% if item.is_active %}text-white{% else %}text-gray-900{% endif %}">
                                 {{ item.head.name }}
                             </span>
                             <div class="flex items-center gap-1.5 mt-0.5">
-                                <span class="head-card-slug text-[10px] font-mono px-1.5 py-0.2 rounded transition-colors {% if forloop.first %}bg-white/10 text-gray-300{% else %}bg-gray-100 text-gray-500{% endif %}">
+                                <span class="head-card-slug text-[10px] font-mono px-1.5 py-0.2 rounded transition-colors {% if item.is_active %}bg-white/10 text-gray-300{% else %}bg-gray-100 text-gray-500{% endif %}">
                                     {{ item.head.slug }}
                                 </span>
-                                <span class="text-[10px] head-card-subcount {% if forloop.first %}text-gray-300{% else %}text-gray-400{% endif %} font-semibold">
+                                <span class="text-[10px] head-card-subcount {% if item.is_active %}text-gray-300{% else %}text-gray-400{% endif %} font-semibold">
                                     • {{ item.head.sub_count }} subs
                                 </span>
                             </div>
@@ -134,14 +135,14 @@
 
                     <div class="text-right shrink-0 flex items-center gap-2">
                         <div>
-                            <span class="head-card-spent font-display font-black text-xs sm:text-sm block transition-colors {% if forloop.first %}text-brand-accent{% else %}text-rose-600{% endif %}">
+                            <span class="head-card-spent font-display font-black text-xs sm:text-sm block transition-colors {% if item.is_active %}text-brand-accent{% else %}text-rose-600{% endif %}">
                                 ৳{{ item.head.total_spent|floatformat:0 }}
                             </span>
                             <span class="text-[9px] font-semibold opacity-70 block">
                                 {{ item.head.total_count }} logs
                             </span>
                         </div>
-                        <i class="fa-solid fa-chevron-right text-[10px] head-card-arrow transition-transform {% if forloop.first %}text-white translate-x-0.5{% else %}text-gray-300{% endif %}"></i>
+                        <i class="fa-solid fa-chevron-right text-[10px] head-card-arrow transition-transform {% if item.is_active %}text-white translate-x-0.5{% else %}text-gray-300{% endif %}"></i>
                     </div>
 
                 </div>
@@ -165,7 +166,7 @@
         <!-- ===================================================================== -->
         <div class="lg:col-span-8">
             {% for item in grouped_categories %}
-            <div id="head-detail-view-{{ forloop.counter }}" class="head-detail-view space-y-5 {% if not forloop.first %}hidden{% endif %}">
+            <div id="head-detail-view-{{ forloop.counter }}" class="head-detail-view space-y-5 {% if not item.is_active %}hidden{% endif %}">
                 
                 <!-- 1. HERO BANNER CARD FOR SELECTED HEAD -->
                 <div class="bg-gradient-to-br {{ item.head.theme.gradient }} text-white rounded-3xl p-6 sm:p-7 shadow-xl relative overflow-hidden">
@@ -567,7 +568,7 @@
 
 <script>
 // Switch active head in Master-Detail studio view
-function activateHead(index) {
+function activateHead(index, headId) {
     // 1. Reset all head select cards
     const allCards = document.querySelectorAll('.head-select-card');
     allCards.forEach(card => {
@@ -649,6 +650,14 @@ function activateHead(index) {
         const iconBox = targetCard.querySelector('.head-card-icon-box');
         if (iconBox) {
             iconBox.classList.add('bg-white/10', 'text-brand-accent', 'border-white/20');
+        }
+
+        // Update URL query parameter without reloading so page refresh or bookmark stays on active head
+        const activeHeadId = headId || targetCard.getAttribute('data-head-id');
+        if (activeHeadId && window.history && window.history.replaceState) {
+            const url = new URL(window.location);
+            url.searchParams.set('head', activeHeadId);
+            window.history.replaceState({}, '', url);
         }
     }
 
