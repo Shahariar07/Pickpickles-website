@@ -844,6 +844,7 @@ Great news! Your Pickpickles order *#{self.order_number}* has been freshly prepa
 ⭐ *Your Review & Feedback:*
 Once you've tasted your pickles, we would love to hear your thoughts!
 🌟 *Easy Ways to Review:*
+• 💬 Simply reply right here in this chat with your rating (1-5 ⭐) & feedback!
 • 🌐 Leave a review on our website: https://pickpickles.xyz/reviews/
 • 📘 Review us on our Facebook page: https://facebook.com/pickpickles07
 
@@ -880,6 +881,7 @@ Warm greetings! We hope you have safely received your handcrafted pickles from P
 How was your experience with the flavor, crunch, and our service? We would deeply appreciate your review!
 
 🌟 *Easy Ways to Review:*
+• 💬 Simply reply right here in this chat with your rating (1-5 ⭐) & feedback!
 • 🌐 Leave a review on our website: https://pickpickles.xyz/reviews/
 • 📘 Review us on our Facebook page: https://facebook.com/pickpickles07
 
@@ -918,6 +920,7 @@ Your honest review helps fellow food lovers discover us and helps us keep perfec
 It takes just 1 minute to share your thoughts:
 
 🌟 *Easy Ways to Review:*
+• 💬 Simply reply right here in this chat with your rating (1-5 ⭐) & feedback!
 • 🌐 Leave a review on our website: https://pickpickles.xyz/reviews/
 • 📘 Review us on our Facebook page: https://facebook.com/pickpickles07
 

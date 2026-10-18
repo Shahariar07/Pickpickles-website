@@ -578,7 +578,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </section>
 
 <!-- Floating Toast Message Container for AJAX Cart Feedback -->
-<div id="toastNotification" class="fixed bottom-24 right-4 z-50 transform translate-y-20 opacity-0 pointer-events-none transition-all duration-300 max-w-sm bg-slate-950 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 border-2 border-emerald-500">
+<div id="toastNotification" class="fixed bottom-24 left-4 right-4 sm:left-auto sm:right-4 z-50 transform translate-y-20 opacity-0 pointer-events-none transition-all duration-300 max-w-sm bg-slate-950 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 border-2 border-emerald-500">
     <img src="{% static 'images/logo.png' %}" alt="Logo" class="w-7 h-7 rounded-full object-cover">
     <div class="flex-1 text-xs font-bold" id="toastMessage">Added to jar bag!</div>
 </div>

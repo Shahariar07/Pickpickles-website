@@ -60,8 +60,12 @@ def dashboard_logout(request):
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def dashboard_index(request):
-    now = timezone.now()
+    now = timezone.localtime(timezone.now())
     today = now.date()
+    
+    # Precise 12:00 AM (Midnight) Asia/Dhaka boundary for daily order & revenue calculations
+    today_start = timezone.make_aware(datetime.datetime.combine(today, datetime.time.min))
+    today_end = today_start + timedelta(days=1)
     
     # Ensure damage, returns and expense taxonomy allocations are synchronized (throttled)
     ensure_damage_and_returns_expenses_synced(user=request.user)
@@ -97,16 +101,16 @@ def dashboard_index(request):
     order_metrics = Order.objects.aggregate(
         total_orders_count=Count('id'),
         
-        # Today's Incoming Orders (Confirmed & Active)
-        today_orders_count=Count('id', filter=Q(created_at__date=today) & Q(order_status__in=['CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'])),
-        today_all_orders_count=Count('id', filter=Q(created_at__date=today) & ~Q(order_status='CANCELLED')),
-        today_pending_count=Count('id', filter=Q(created_at__date=today, order_status='PENDING')),
-        today_confirmed_sum=Sum('total_amount', filter=Q(created_at__date=today) & Q(order_status__in=['CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'])),
+        # Today's Incoming Orders (Confirmed & Active) - Resets at 12:00 AM Midnight
+        today_orders_count=Count('id', filter=Q(created_at__gte=today_start, created_at__lt=today_end) & Q(order_status__in=['CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'])),
+        today_all_orders_count=Count('id', filter=Q(created_at__gte=today_start, created_at__lt=today_end) & ~Q(order_status='CANCELLED')),
+        today_pending_count=Count('id', filter=Q(created_at__gte=today_start, created_at__lt=today_end, order_status='PENDING')),
+        today_confirmed_sum=Sum('total_amount', filter=Q(created_at__gte=today_start, created_at__lt=today_end) & Q(order_status__in=['CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'])),
         
-        # Today's Delivered Cash / Sales (On the exact day parcel is delivered)
-        today_delivered_count=Count('id', filter=Q(order_status='DELIVERED') & (Q(delivered_at__date=today) | Q(delivered_at__isnull=True, updated_at__date=today))),
-        today_delivered_sum=Sum('total_amount', filter=Q(order_status='DELIVERED') & (Q(delivered_at__date=today) | Q(delivered_at__isnull=True, updated_at__date=today))),
-        today_revenue=Sum('total_amount', filter=Q(order_status='DELIVERED') & (Q(delivered_at__date=today) | Q(delivered_at__isnull=True, updated_at__date=today))),
+        # Today's Delivered Cash / Sales (On the exact day parcel is delivered) - Resets at 12:00 AM Midnight
+        today_delivered_count=Count('id', filter=Q(order_status='DELIVERED') & (Q(delivered_at__gte=today_start, delivered_at__lt=today_end) | Q(delivered_at__isnull=True, updated_at__gte=today_start, updated_at__lt=today_end))),
+        today_delivered_sum=Sum('total_amount', filter=Q(order_status='DELIVERED') & (Q(delivered_at__gte=today_start, delivered_at__lt=today_end) | Q(delivered_at__isnull=True, updated_at__gte=today_start, updated_at__lt=today_end))),
+        today_revenue=Sum('total_amount', filter=Q(order_status='DELIVERED') & (Q(delivered_at__gte=today_start, delivered_at__lt=today_end) | Q(delivered_at__isnull=True, updated_at__gte=today_start, updated_at__lt=today_end))),
         
         # This Month
         this_month_orders_count=Count('id', filter=Q(created_at__year=current_year, created_at__month=current_month) & Q(order_status__in=['CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'])),
@@ -243,33 +247,37 @@ def dashboard_index(request):
     # - Orders Series: Confirmed orders that arrived on each date
     # - Revenue Series: Realized revenue of parcels delivered on each date
     days_to_plot = 10
-    start_plot_date = today - datetime.timedelta(days=days_to_plot)
+    start_plot_dt = today_start - datetime.timedelta(days=days_to_plot)
 
-    # Fetch incoming confirmed orders grouped by created_at date
+    # Fetch incoming confirmed orders grouped by created_at date (in local time)
     incoming_confirmed_orders = list(Order.objects.filter(
-        created_at__date__gte=start_plot_date,
+        created_at__gte=start_plot_dt,
         order_status__in=['CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED']
-    ).values('created_at__date', 'total_amount'))
+    ).values('created_at', 'total_amount'))
 
-    # Fetch delivered orders grouped by delivered_at date (or updated_at / created_at fallback)
+    # Fetch delivered orders
     delivered_orders = list(Order.objects.filter(
         order_status='DELIVERED'
     ).filter(
-        Q(delivered_at__date__gte=start_plot_date) |
-        Q(delivered_at__isnull=True, updated_at__date__gte=start_plot_date)
-    ).values('delivered_at__date', 'updated_at__date', 'created_at__date', 'total_amount'))
+        Q(delivered_at__gte=start_plot_dt) |
+        Q(delivered_at__isnull=True, updated_at__gte=start_plot_dt)
+    ).values('delivered_at', 'updated_at', 'created_at', 'total_amount'))
 
     daily_orders_map = {}
     daily_revenue_map = {}
 
     for ord_info in incoming_confirmed_orders:
-        d = ord_info['created_at__date']
-        daily_orders_map[d] = daily_orders_map.get(d, 0) + 1
+        c_dt = ord_info.get('created_at')
+        if c_dt:
+            d = timezone.localtime(c_dt).date()
+            daily_orders_map[d] = daily_orders_map.get(d, 0) + 1
 
     for ord_info in delivered_orders:
-        d = ord_info['delivered_at__date'] or ord_info['updated_at__date'] or ord_info['created_at__date']
-        if d and d >= start_plot_date:
-            daily_revenue_map[d] = daily_revenue_map.get(d, 0.0) + float(ord_info['total_amount'] or 0)
+        deliv_dt = ord_info.get('delivered_at') or ord_info.get('updated_at') or ord_info.get('created_at')
+        if deliv_dt:
+            d = timezone.localtime(deliv_dt).date()
+            if d and d >= (today - datetime.timedelta(days=days_to_plot)):
+                daily_revenue_map[d] = daily_revenue_map.get(d, 0.0) + float(ord_info['total_amount'] or 0)
 
     date_labels = []
     revenue_series = []
@@ -525,8 +533,10 @@ def orders_list(request):
     zone_filter = request.GET.get('zone', 'ALL')
     payment_filter = request.GET.get('payment', 'ALL')
 
-    now = timezone.now()
+    now = timezone.localtime(timezone.now())
     today = now.date()
+    today_start = timezone.make_aware(datetime.datetime.combine(today, datetime.time.min))
+    today_end = today_start + timedelta(days=1)
     current_year = today.year
     current_month = today.month
     if current_month == 1:
@@ -538,7 +548,7 @@ def orders_list(request):
     prev_year = current_year - 1
 
     if period_filter == 'today':
-        orders = orders.filter(created_at__date=today)
+        orders = orders.filter(created_at__gte=today_start, created_at__lt=today_end)
     elif period_filter == 'this_month':
         orders = orders.filter(created_at__year=current_year, created_at__month=current_month)
     elif period_filter == 'last_month':
@@ -693,9 +703,50 @@ def adjust_inventory_for_order_status_change(order, old_status, new_status, user
                 )
 
 
+def sync_parcel_status_with_cache(order, force=False, user=None):
+    """
+    Auto-updates parcel status from Steadfast or Pathao Courier API with smart caching.
+    - Caches for 5 minutes during active transit to avoid API rate limits.
+    - Caches for 24 hours if already DELIVERED or CANCELLED.
+    - Updates order_status and courier_order_status in DB automatically.
+    """
+    if not (order.steadfast_consignment_id or order.pathao_consignment_id or order.steadfast_tracking_code):
+        return None
+
+    cache_key = f"courier_auto_sync_{order.order_number}"
+    if not force:
+        cached_status = cache.get(cache_key)
+        if cached_status:
+            return cached_status
+
+    updated_status = None
+    old_status = order.order_status
+    try:
+        # Sync with appropriate courier
+        if order.steadfast_consignment_id or (order.courier_provider == 'STEADFAST' and order.steadfast_tracking_code):
+            updated_status = order.sync_steadfast_status()
+        elif order.pathao_consignment_id or order.courier_provider == 'PATHAO':
+            updated_status = order.sync_pathao_status()
+
+        if updated_status and old_status != order.order_status:
+            adjust_inventory_for_order_status_change(order, old_status, order.order_status, user=user)
+
+        # 24 hours for finalized orders, 5 minutes for active transit
+        ttl = 86400 if order.order_status in ['DELIVERED', 'CANCELLED'] else 300
+        cache.set(cache_key, updated_status or 'SYNCED', timeout=ttl)
+    except Exception:
+        cache.set(cache_key, 'ERROR_COOLDOWN', timeout=60)
+
+    return updated_status
+
+
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def order_detail(request, order_number):
     order = get_object_or_404(Order.objects.prefetch_related('items__product'), order_number=order_number)
+    
+    # Auto-update live parcel tracking status with caching
+    if order.steadfast_consignment_id or order.pathao_consignment_id or order.steadfast_tracking_code:
+        sync_parcel_status_with_cache(order, force=False, user=request.user)
     
     if request.method == 'POST':
         new_status = request.POST.get('order_status')
@@ -994,12 +1045,14 @@ def sync_single_pathao_order(request, order_number):
     if not order.pathao_consignment_id:
         messages.warning(request, f"Order #{order.order_number} has not been dispatched to Pathao yet.")
     else:
+        cache.delete(f"courier_auto_sync_{order.order_number}")
         old_status = order.order_status
         status = order.sync_pathao_status()
         if status:
             if old_status != order.order_status:
                 adjust_inventory_for_order_status_change(order, old_status, order.order_status, user=request.user)
             messages.success(request, f"Pathao status updated: {order.pathao_order_status} (Order status: {order.get_order_status_display()})")
+            cache.set(f"courier_auto_sync_{order.order_number}", status, timeout=300)
         else:
             messages.info(request, "Could not fetch updated status from Pathao Courier API or no new status update.")
             
@@ -1018,12 +1071,14 @@ def sync_single_steadfast_order(request, order_number):
     if not order.steadfast_consignment_id and not order.steadfast_tracking_code:
         messages.warning(request, f"Order #{order.order_number} has not been dispatched to Steadfast yet.")
     else:
+        cache.delete(f"courier_auto_sync_{order.order_number}")
         old_status = order.order_status
         status = order.sync_steadfast_status()
         if status:
             if old_status != order.order_status:
                 adjust_inventory_for_order_status_change(order, old_status, order.order_status, user=request.user)
             messages.success(request, f"Steadfast status updated: {order.steadfast_order_status} (Order status: {order.get_order_status_display()})")
+            cache.set(f"courier_auto_sync_{order.order_number}", status, timeout=300)
         else:
             messages.info(request, "Could not fetch updated status from Steadfast Courier API or no new status update.")
 
@@ -2044,11 +2099,13 @@ def stock_ledger(request):
         )
 
     # 4. Date Range Filter
-    now = timezone.now()
+    now = timezone.localtime(timezone.now())
     today = now.date()
+    today_start = timezone.make_aware(datetime.datetime.combine(today, datetime.time.min))
+    today_end = today_start + timedelta(days=1)
 
     if date_filter == 'today':
-        logs_qs = logs_qs.filter(created_at__date=today)
+        logs_qs = logs_qs.filter(created_at__gte=today_start, created_at__lt=today_end)
     elif date_filter == '7days':
         start_date = today - datetime.timedelta(days=7)
         logs_qs = logs_qs.filter(created_at__date__gte=start_date)
@@ -2954,7 +3011,7 @@ def mark_feedback_reminder_sent(request, order_number):
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def expense_manager(request):
-    now = timezone.now()
+    now = timezone.localtime(timezone.now())
     today = now.date()
 
     # Ensure damage, returns, and expense taxonomy allocations are synchronized
@@ -3034,16 +3091,29 @@ def expense_manager(request):
     # Query & Filters
     expenses = Expense.objects.all()
     category_filter = request.GET.get('category', 'ALL')
+    sub_category_filter = request.GET.get('sub_category', '').strip()
     search_query = request.GET.get('q', '').strip()
 
     if category_filter and category_filter != 'ALL':
-        expenses = expenses.filter(category=category_filter)
+        expenses = expenses.filter(
+            Q(category=category_filter) |
+            Q(category__iexact=category_filter) |
+            Q(sub_category=category_filter) |
+            Q(sub_category__icontains=category_filter)
+        )
+
+    if sub_category_filter:
+        expenses = expenses.filter(
+            Q(sub_category=sub_category_filter) |
+            Q(sub_category__icontains=sub_category_filter)
+        )
 
     if search_query:
         expenses = expenses.filter(
             Q(title__icontains=search_query) |
             Q(receipt_reference__icontains=search_query) |
-            Q(notes__icontains=search_query)
+            Q(notes__icontains=search_query) |
+            Q(sub_category__icontains=search_query)
         )
 
     # Financial Profit & Loss Calculations (Realized/Collected from Delivered/Paid orders)
@@ -3172,7 +3242,9 @@ def expense_manager(request):
         'category_choices': Expense.CATEGORY_CHOICES,
         'payment_choices': Expense.PAYMENT_CHOICES,
         'category_filter': category_filter,
+        'sub_category_filter': sub_category_filter,
         'search_query': search_query,
+        'dynamic_subcategories': ExpenseCategory.objects.filter(parent__isnull=False).select_related('parent').order_by('parent__name', 'name'),
         'total_expenses': total_expenses,
         'total_revenue': total_revenue,
         'pipeline_revenue': pipeline_revenue,
@@ -3188,7 +3260,7 @@ def expense_manager(request):
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def financial_statement(request):
-    now = timezone.now()
+    now = timezone.localtime(timezone.now())
     today = now.date()
     
     date_range = request.GET.get('range', 'ALL')
@@ -3373,7 +3445,7 @@ def financial_statement(request):
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def financial_statement_print(request):
     """Standalone, clean printable view for saving as PDF or printing on paper."""
-    now = timezone.now()
+    now = timezone.localtime(timezone.now())
     today = now.date()
     
     date_range = request.GET.get('range', 'ALL')
@@ -3918,19 +3990,53 @@ def expense_categories_manager(request):
 
     # Load categories with stats
     categories = ExpenseCategory.objects.all().select_related('parent').order_by('parent__name', 'name')
+    
+    # 1. Main Category aggregations (grouped by Expense.category)
     exp_summary = Expense.objects.values('category').annotate(spent=Sum('amount'), count=Count('id'))
     exp_map = {row['category']: (row['spent'] or 0, row['count'] or 0) for row in exp_summary}
 
+    # 2. Sub-Category aggregations (grouped by Expense.sub_category)
+    sub_summary = Expense.objects.filter(sub_category__isnull=False).exclude(sub_category='').values('sub_category').annotate(spent=Sum('amount'), count=Count('id'))
+    sub_map = {row['sub_category']: (row['spent'] or 0, row['count'] or 0) for row in sub_summary}
+    sub_map_lower = {k.strip().lower(): v for k, v in sub_map.items()}
+
     category_stats = []
     for cat in categories:
-        spent_slug, count_slug = exp_map.get(cat.slug, (0, 0))
-        spent_name, count_name = exp_map.get(cat.name, (0, 0))
-        if cat.slug != cat.name:
-            spent = spent_slug + spent_name
-            count = count_slug + count_name
+        if cat.parent is None:
+            # Main Category / Head
+            spent_slug, count_slug = exp_map.get(cat.slug, (0, 0))
+            spent_name, count_name = exp_map.get(cat.name, (0, 0))
+            if cat.slug != cat.name:
+                spent = spent_slug + spent_name
+                count = count_slug + count_name
+            else:
+                spent = spent_slug
+                count = count_slug
+
+            # Fallback case-insensitive match
+            if count == 0:
+                for k, (s, c) in exp_map.items():
+                    if k.strip().lower() == cat.slug.lower() or k.strip().lower() == cat.name.lower():
+                        spent += s
+                        count += c
         else:
-            spent = spent_slug
-            count = count_slug
+            # Sub-Category: calculate logs & spent from Expense.sub_category
+            spent, count = sub_map.get(cat.name, (0, 0))
+            if count == 0 and cat.slug:
+                spent, count = sub_map.get(cat.slug, (0, 0))
+            if count == 0:
+                c_name_lower = cat.name.strip().lower()
+                c_slug_lower = cat.slug.strip().lower()
+                if c_name_lower in sub_map_lower:
+                    spent, count = sub_map_lower[c_name_lower]
+                elif c_slug_lower in sub_map_lower:
+                    spent, count = sub_map_lower[c_slug_lower]
+                else:
+                    for k, (s, c) in sub_map.items():
+                        k_lower = k.lower()
+                        if c_slug_lower in k_lower or k_lower in c_name_lower or c_name_lower in k_lower:
+                            spent += s
+                            count += c
 
         category_stats.append({
             'id': cat.id,
@@ -4014,7 +4120,7 @@ def order_notifications_api(request):
                 'total_amount': f"{o.total_amount:,.2f}",
                 'delivery_city': o.delivery_city or ('Inside Dhaka' if o.delivery_zone == 'INSIDE_DHAKA' else 'Outside Dhaka'),
                 'payment_method': o.get_payment_method_display(),
-                'created_at_time': o.created_at.strftime('%I:%M %p'),
+                'created_at_time': timezone.localtime(o.created_at).strftime('%I:%M %p'),
                 'detail_url': reverse('dashboard:order_detail', kwargs={'order_number': o.order_number}),
             })
 
@@ -4027,7 +4133,7 @@ def order_notifications_api(request):
             'order_number': o.order_number,
             'customer_name': o.customer_name,
             'total_amount': f"{o.total_amount:,.2f}",
-            'created_at_time': o.created_at.strftime('%d %b, %I:%M %p'),
+            'created_at_time': timezone.localtime(o.created_at).strftime('%d %b, %I:%M %p'),
             'detail_url': reverse('dashboard:order_detail', kwargs={'order_number': o.order_number}),
         })
 

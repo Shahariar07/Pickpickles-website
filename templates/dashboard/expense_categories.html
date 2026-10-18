@@ -88,14 +88,26 @@
 
                         <!-- Entries Count -->
                         <td class="p-4 text-center">
-                            <span class="inline-flex items-center gap-1 bg-gray-100 text-gray-700 font-bold text-xs px-2.5 py-1 rounded-full">
-                                {{ cat.count }} logs
-                            </span>
+                            {% if cat.parent_name %}
+                            <a href="{% url 'dashboard:expenses' %}?sub_category={{ cat.name|urlencode }}" 
+                               class="inline-flex items-center gap-1.5 {% if cat.count > 0 %}bg-emerald-50 text-emerald-800 border border-emerald-200/80 hover:bg-emerald-100{% else %}bg-gray-100 text-gray-500 hover:bg-gray-200{% endif %} font-bold text-xs px-2.5 py-1 rounded-full transition group"
+                               title="Click to view {{ cat.name }} expense logs">
+                                <span class="group-hover:underline">{{ cat.count }} logs</span>
+                                <i class="fa-solid fa-arrow-up-right-from-square text-[9px] {% if cat.count > 0 %}text-emerald-600{% else %}text-gray-400{% endif %}"></i>
+                            </a>
+                            {% else %}
+                            <a href="{% url 'dashboard:expenses' %}?category={{ cat.slug|urlencode }}" 
+                               class="inline-flex items-center gap-1.5 {% if cat.count > 0 %}bg-brand-50 text-brand-900 border border-brand-200 hover:bg-brand-100{% else %}bg-gray-100 text-gray-500 hover:bg-gray-200{% endif %} font-bold text-xs px-2.5 py-1 rounded-full transition group"
+                               title="Click to view {{ cat.name }} main head logs">
+                                <span class="group-hover:underline">{{ cat.count }} logs</span>
+                                <i class="fa-solid fa-arrow-up-right-from-square text-[9px] {% if cat.count > 0 %}text-brand-600{% else %}text-gray-400{% endif %}"></i>
+                            </a>
+                            {% endif %}
                         </td>
 
                         <!-- Total Spent -->
                         <td class="p-4 text-right">
-                            <span class="font-display font-black text-sm text-rose-700">
+                            <span class="font-display font-black text-sm {% if cat.spent > 0 %}text-rose-700{% else %}text-gray-400{% endif %}">
                                 ৳{{ cat.spent|floatformat:0 }}
                             </span>
                         </td>

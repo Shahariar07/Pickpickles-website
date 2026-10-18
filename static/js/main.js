@@ -54,7 +54,7 @@ function showToast(message) {
     if (!toast) {
         toast = document.createElement('div');
         toast.id = 'toastNotification';
-        toast.className = 'fixed bottom-24 right-4 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-emerald-500/40 transform transition-all duration-300 translate-y-20 opacity-0';
+        toast.className = 'fixed bottom-24 left-4 right-4 sm:left-auto sm:right-4 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-emerald-500/40 transform transition-all duration-300 translate-y-20 opacity-0 max-w-sm mx-auto sm:mx-0';
         toast.innerHTML = '<span class="text-xl">🥒</span><span id="toastMessage" class="text-xs sm:text-sm font-bold"></span>';
         document.body.appendChild(toast);
         msgEl = document.getElementById('toastMessage');

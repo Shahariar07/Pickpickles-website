@@ -6,119 +6,155 @@
 {% block content %}
 <div class="max-w-6xl mx-auto space-y-4">
 
-    <!-- Top Action Bar (Compact Single-Line Header) -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white px-5 py-3.5 rounded-2xl border border-gray-200 shadow-2xs">
-        <!-- Left: Back + Order # + Badges + Date -->
-        <div class="flex items-center gap-2.5 flex-wrap min-w-0">
-            <a href="{% url 'dashboard:orders' %}" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition shrink-0" title="Back to Orders">
-                <i class="fa-solid fa-arrow-left text-[11px]"></i>
-                <span>Orders</span>
-            </a>
+    <!-- Top Action Bar (Clean, Unified & Modern) -->
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-2xs overflow-hidden">
+        <!-- Main Top Row: Order Navigation, Number, Badges & Unified Action Toolbar -->
+        <div class="px-5 py-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <!-- Left: Back + Order # + Status Badges + Date -->
+            <div class="flex items-center gap-2.5 flex-wrap min-w-0">
+                <a href="{% url 'dashboard:orders' %}" class="h-9 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold px-3 rounded-xl inline-flex items-center gap-1.5 transition shrink-0 active:scale-95" title="Back to Orders">
+                    <i class="fa-solid fa-arrow-left text-[11px]"></i>
+                    <span>Orders</span>
+                </a>
 
-            <h1 class="font-display font-black text-xl text-gray-900 shrink-0">
-                #{{ order.order_number }}
-            </h1>
+                <h1 class="font-display font-black text-xl text-gray-900 shrink-0 tracking-tight">
+                    #{{ order.order_number }}
+                </h1>
 
-            <!-- Order Status Badge with Icon -->
-            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black border {{ order.badge_color }} shrink-0 shadow-2xs">
-                <i class="{{ order.status_icon }} text-xs"></i>
-                <span>{{ order.get_order_status_display }}</span>
-            </span>
+                <!-- Order Status Badge -->
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black border {{ order.badge_color }} shrink-0 shadow-2xs">
+                    <i class="{{ order.status_icon }} text-xs"></i>
+                    <span>{{ order.get_order_status_display }}</span>
+                </span>
 
-            <!-- Payment Status Badge -->
-            {% if order.payment_status == 'PAID' %}
-            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300 shrink-0">
-                <i class="fa-solid fa-circle-check text-emerald-600"></i>
-                <span>Paid</span>
-            </span>
-            {% elif order.payment_status == 'UNPAID' %}
-            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-black bg-amber-100 text-amber-900 border border-amber-300 shrink-0">
-                <i class="fa-solid fa-hand-holding-dollar text-amber-700"></i>
-                <span>COD ৳{{ order.total_amount }}</span>
-            </span>
-            {% else %}
-            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-gray-100 text-gray-800 border border-gray-300 shrink-0">
-                {{ order.get_payment_status_display }}
-            </span>
-            {% endif %}
+                <!-- Payment Status Badge -->
+                {% if order.payment_status == 'PAID' %}
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-50 text-emerald-800 border border-emerald-300 shrink-0">
+                    <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                    <span>Paid</span>
+                </span>
+                {% elif order.payment_status == 'UNPAID' %}
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-50 text-amber-900 border border-amber-300 shrink-0">
+                    <i class="fa-solid fa-hand-holding-dollar text-amber-700"></i>
+                    <span>COD ৳{{ order.total_amount }}</span>
+                </span>
+                {% else %}
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-800 border border-gray-300 shrink-0">
+                    {{ order.get_payment_status_display }}
+                </span>
+                {% endif %}
 
-            <span class="text-xs text-gray-400 font-medium hidden md:inline shrink-0">
-                • {{ order.created_at|date:"M d, Y • h:i A" }} ({{ order.created_at|timesince }} ago)
-            </span>
+                <span class="text-xs text-gray-400 font-medium hidden xl:inline shrink-0">
+                    • {{ order.created_at|date:"M d, Y • h:i A" }} ({{ order.created_at|timesince }} ago)
+                </span>
+            </div>
+
+            <!-- Right: Unified Action Toolbar (Single Clean Row) -->
+            <div class="flex items-center gap-2 shrink-0 flex-wrap">
+                <!-- 1. Print Slip -->
+                <a href="{% url 'dashboard:order_invoice' order.order_number %}" target="_blank"
+                    class="h-9 bg-gray-900 hover:bg-black text-white text-xs font-bold px-3.5 rounded-xl shadow-xs inline-flex items-center gap-1.5 transition active:scale-95">
+                    <i class="fa-solid fa-print text-gray-300 text-xs"></i>
+                    <span>Print Slip</span>
+                </a>
+
+                <!-- 2. Courier Actions (If Dispatched) -->
+                {% if order.active_courier %}
+                    <a href="{{ order.active_tracking_url }}" target="_blank"
+                        class="h-9 {% if order.active_courier == 'STEADFAST' %}bg-cyan-700 hover:bg-cyan-800 text-white{% else %}bg-rose-600 hover:bg-rose-700 text-white{% endif %} text-xs font-bold px-3.5 rounded-xl shadow-xs inline-flex items-center gap-1.5 transition active:scale-95" title="Track parcel on {{ order.active_courier_name }} portal">
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[11px]"></i>
+                        <span>Track Parcel</span>
+                    </a>
+
+                    {% if order.active_courier == 'STEADFAST' %}
+                    <a href="{% url 'dashboard:sync_single_steadfast_order' order.order_number %}"
+                        class="h-9 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold px-3 rounded-xl border border-gray-200 shadow-2xs inline-flex items-center gap-1.5 transition active:scale-95" title="Force refresh status from Steadfast Courier API">
+                        <i class="fa-solid fa-rotate text-cyan-600 text-[11px]"></i>
+                        <span>Sync</span>
+                    </a>
+                    {% elif order.active_courier == 'PATHAO' %}
+                    <a href="{% url 'dashboard:sync_single_pathao_order' order.order_number %}"
+                        class="h-9 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold px-3 rounded-xl border border-gray-200 shadow-2xs inline-flex items-center gap-1.5 transition active:scale-95" title="Force refresh status from Pathao Courier API">
+                        <i class="fa-solid fa-rotate text-red-600 text-[11px]"></i>
+                        <span>Sync</span>
+                    </a>
+                    {% endif %}
+                {% elif order.order_status not in 'DELIVERED,CANCELLED' %}
+                    <!-- Dispatch Buttons if Not Dispatched -->
+                    <button type="button" onclick="openSteadfastModal()"
+                        class="h-9 bg-[#0284c7] hover:bg-[#0369a1] text-white font-bold text-xs px-3.5 rounded-xl shadow-xs inline-flex items-center gap-1.5 transition cursor-pointer active:scale-95">
+                        <i class="fa-solid fa-truck-fast"></i>
+                        <span>Send to Steadfast</span>
+                    </button>
+                    <button type="button" onclick="openPathaoModal()"
+                        class="h-9 bg-[#ea1d24] hover:bg-[#c9141a] text-white font-bold text-xs px-3.5 rounded-xl shadow-xs inline-flex items-center gap-1.5 transition cursor-pointer active:scale-95">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span>Send to Pathao</span>
+                    </button>
+                {% endif %}
+
+                <!-- 3. Return Order -->
+                <button type="button" onclick="openMarkReturnModal()"
+                    class="h-9 bg-white hover:bg-amber-50 text-amber-800 text-xs font-bold px-3 rounded-xl border border-amber-300 shadow-2xs inline-flex items-center gap-1.5 transition cursor-pointer active:scale-95" title="Log Return">
+                    <i class="fa-solid fa-rotate-left text-amber-600"></i>
+                    <span>Return</span>
+                </button>
+
+                <!-- 4. Trash Order (Superuser only) -->
+                {% if request.user.is_superuser %}
+                <button type="button" onclick="openDeleteOrderModal()"
+                    class="h-9 w-9 bg-white hover:bg-rose-50 text-rose-600 hover:text-rose-700 text-xs font-bold rounded-xl border border-rose-200 shadow-2xs inline-flex items-center justify-center transition cursor-pointer active:scale-95" title="Move to Trash">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+                {% endif %}
+            </div>
         </div>
 
-        <!-- Right: Primary Actions (Steadfast & Pathao Courier Buttons) -->
-        <div class="flex items-center gap-2 flex-wrap shrink-0">
-            <!-- Steadfast Dispatch / Track / Sync Button -->
-            {% if order.steadfast_consignment_id %}
-            <a href="{% url 'dashboard:sync_single_steadfast_order' order.order_number %}" class="bg-cyan-700 hover:bg-cyan-800 text-white text-xs font-black px-3.5 py-2 rounded-xl shadow-2xs flex items-center gap-1.5 transition" title="Fetch live tracking & delivery status from Steadfast Courier API">
-                <i class="fa-solid fa-rotate text-white"></i>
-                <span>Sync Steadfast</span>
-            </a>
-            <a href="https://steadfast.com.bd/tracking/{{ order.steadfast_tracking_code|default:order.steadfast_consignment_id }}" target="_blank" class="bg-cyan-50 hover:bg-cyan-100 text-cyan-800 text-xs font-black px-3.5 py-2 rounded-xl border border-cyan-200 flex items-center gap-1.5 transition shadow-2xs" title="Track on Steadfast Courier Portal">
-                <i class="fa-solid fa-truck-fast text-cyan-600"></i>
-                <span>Steadfast Track</span>
-            </a>
-            {% elif order.order_status not in 'DELIVERED,CANCELLED' %}
-            <button type="button" onclick="openSteadfastModal()" class="bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-black px-3.5 py-2 rounded-xl shadow-xs flex items-center gap-1.5 transition cursor-pointer active:scale-95" title="Dispatch order with Steadfast Courier">
-                <i class="fa-solid fa-truck-fast"></i>
-                <span>Send to Steadfast</span>
-            </button>
-            {% endif %}
+        <!-- Structured Courier Logistics Status Strip (Pure Status, No Duplicate Buttons) -->
+        {% if order.active_courier %}
+        <div class="px-5 py-2.5 bg-slate-50/70 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+            <div class="flex items-center gap-2.5 flex-wrap">
+                <div class="w-7 h-7 rounded-lg {% if order.active_courier == 'STEADFAST' %}bg-cyan-100 text-cyan-800 border border-cyan-200{% else %}bg-rose-100 text-rose-800 border border-rose-200{% endif %} flex items-center justify-center text-xs shrink-0 font-bold">
+                    {% if order.active_courier == 'STEADFAST' %}<i class="fa-solid fa-truck-fast"></i>{% else %}<i class="fa-solid fa-paper-plane"></i>{% endif %}
+                </div>
+                <div class="flex items-center gap-2 flex-wrap text-xs">
+                    <strong class="text-gray-900 font-extrabold">{{ order.active_courier_name }}</strong>
+                    <span class="text-gray-300">•</span>
+                    <span class="text-[11px] font-mono font-bold text-gray-600 bg-white px-2 py-0.5 rounded-md border border-gray-200">
+                        Consignment ID: {{ order.active_consignment_id }}
+                    </span>
+                    {% if order.active_tracking_code and order.active_tracking_code != order.active_consignment_id %}
+                    <span class="text-[11px] font-mono font-bold text-gray-600 bg-white px-2 py-0.5 rounded-md border border-gray-200">
+                        Tracking: {{ order.active_tracking_code }}
+                    </span>
+                    {% endif %}
+                    <!-- Live Status Pill -->
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide
+                        {% if 'delivered' in order.active_courier_status|lower %}bg-emerald-100 text-emerald-800 border border-emerald-300
+                        {% elif 'transit' in order.active_courier_status|lower or 'delivery' in order.active_courier_status|lower %}bg-blue-100 text-blue-800 border border-blue-300
+                        {% elif 'cancel' in order.active_courier_status|lower or 'return' in order.active_courier_status|lower %}bg-rose-100 text-rose-800 border border-rose-300
+                        {% else %}bg-amber-100 text-amber-800 border border-amber-300{% endif %}">
+                        <span class="w-1.5 h-1.5 rounded-full {% if 'delivered' in order.active_courier_status|lower %}bg-emerald-500 animate-pulse{% else %}bg-amber-500{% endif %}"></span>
+                        {{ order.active_courier_status|default:"In Review" }}
+                    </span>
+                </div>
+            </div>
 
-            <!-- Pathao Dispatch / Track / Sync Button -->
-            {% if order.pathao_consignment_id %}
-            <a href="{% url 'dashboard:sync_single_pathao_order' order.order_number %}" class="bg-red-600 hover:bg-red-700 text-white text-xs font-black px-3.5 py-2 rounded-xl shadow-2xs flex items-center gap-1.5 transition" title="Fetch live tracking & delivery status from Pathao Courier API">
-                <i class="fa-solid fa-rotate text-white"></i>
-                <span>Sync Pathao</span>
-            </a>
-            <a href="https://merchant.pathao.com/tracking?consignment_id={{ order.pathao_consignment_id }}" target="_blank" class="bg-red-50 hover:bg-red-100 text-red-700 text-xs font-black px-3.5 py-2 rounded-xl border border-red-200 flex items-center gap-1.5 transition shadow-2xs" title="Track on Pathao Merchant Portal">
-                <i class="fa-solid fa-paper-plane text-red-600"></i>
-                <span>Pathao Track</span>
-            </a>
-            {% elif order.order_status not in 'DELIVERED,CANCELLED' %}
-            <button type="button" onclick="openPathaoModal()" class="bg-[#ea1d24] hover:bg-[#c9141a] text-white text-xs font-black px-3.5 py-2 rounded-xl shadow-xs flex items-center gap-1.5 transition cursor-pointer active:scale-95" title="Dispatch order with Pathao Courier">
-                <i class="fa-solid fa-paper-plane"></i>
-                <span>Send to Pathao</span>
-            </button>
-            {% endif %}
-
-            {% if order.customer_phone %}
-            <a href="{{ order.whatsapp_order_confirmation_url }}" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-black px-3.5 py-2 rounded-xl shadow-2xs flex items-center gap-1.5 transition" title="Send WhatsApp Order Confirmation (Includes Reviews Page Link)">
-                <i class="fa-brands fa-whatsapp text-sm"></i>
-                <span>Order Confirmation</span>
-            </a>
-            <a href="{{ order.whatsapp_shipping_instruction_url }}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black px-3.5 py-2 rounded-xl shadow-2xs flex items-center gap-1.5 transition" title="Send WhatsApp Delivery & Pickle Storage Instructions to Customer">
-                <i class="fa-brands fa-whatsapp text-sm"></i>
-                <span>Storage Tips</span>
-            </a>
-            {% endif %}
-
-            <a href="{% url 'dashboard:order_invoice' order.order_number %}" target="_blank" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-800 text-xs font-bold px-3.5 py-2 rounded-xl shadow-2xs flex items-center gap-1.5 transition">
-                <i class="fa-solid fa-print text-gray-500"></i>
-                <span>Print Slip</span>
-            </a>
-
-            <button type="button" onclick="openMarkReturnModal()" class="bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold px-3 py-2 rounded-xl border border-amber-300 flex items-center gap-1.5 transition cursor-pointer" title="Log Return">
-                <i class="fa-solid fa-rotate-left text-amber-600"></i>
-                <span class="hidden sm:inline">Return</span>
-            </button>
-
-            {% if request.user.is_superuser %}
-            <button type="button" onclick="openDeleteOrderModal()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold px-3 py-2 rounded-xl border border-rose-200 flex items-center gap-1.5 transition cursor-pointer" title="Move to Trash">
-                <i class="fa-solid fa-trash-can"></i>
-            </button>
-            {% endif %}
+            <div class="text-[11px] text-gray-500 flex items-center gap-1.5 shrink-0">
+                <i class="fa-solid fa-bolt text-emerald-500"></i>
+                <span>Auto-Synced with Courier API (5m cache)</span>
+            </div>
         </div>
+        {% endif %}
     </div>
 
-    <!-- ⭐ COMPACT NEXT-STEP GUIDANCE STRIP ("কী করতে হবে") -->
+    <!-- ⭐ COMPACT NEXT-STEP GUIDANCE STRIP (Active Actionable Orders Only) -->
+    {% if order.order_status in 'PENDING,CONFIRMED,PACKING,OUT_FOR_DELIVERY' %}
     <div class="rounded-2xl px-4 py-2.5 border shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5
         {% if order.order_status == 'PENDING' %}bg-amber-50/90 border-amber-200 text-amber-950
         {% elif order.order_status == 'CONFIRMED' %}bg-blue-50/90 border-blue-200 text-blue-950
         {% elif order.order_status == 'PACKING' %}bg-purple-50/90 border-purple-200 text-purple-950
         {% elif order.order_status == 'OUT_FOR_DELIVERY' %}bg-indigo-50/90 border-indigo-200 text-indigo-950
-        {% elif order.order_status == 'DELIVERED' %}bg-emerald-50/90 border-emerald-200 text-emerald-950
         {% else %}bg-gray-50 border-gray-200 text-gray-800{% endif %}">
         
         <div class="flex items-center gap-2 text-xs min-w-0">
@@ -127,20 +163,18 @@
                 {% elif order.order_status == 'CONFIRMED' %}<i class="fa-solid fa-box-open text-blue-600"></i> Step 2: Pack {{ order.total_items_count }} Jars ({{ order.total_weight_kg }}kg)
                 {% elif order.order_status == 'PACKING' %}<i class="fa-solid fa-tape text-purple-600"></i> Step 3: Hand Parcel to Rider
                 {% elif order.order_status == 'OUT_FOR_DELIVERY' %}<i class="fa-solid fa-truck-fast text-indigo-600"></i> Step 4: Parcel in Transit with Rider
-                {% elif order.order_status == 'DELIVERED' %}<i class="fa-solid fa-circle-check text-emerald-600"></i> Completed & Delivered 🎉
-                {% else %}<i class="fa-solid fa-ban text-rose-600"></i> Order Cancelled{% endif %}
+                {% endif %}
             </span>
             <span class="text-gray-600 text-xs truncate hidden md:inline">
                 • {% if order.order_status == 'PENDING' %}Call {{ order.customer_name }} ({{ order.customer_phone }}) to confirm delivery in {{ order.delivery_city }}.
-                {% elif order.order_status == 'CONFIRMED' %}Bubble wrap {{ order.total_items_count }} jars. Then click 'Send to Pathao' above.
+                {% elif order.order_status == 'CONFIRMED' %}Bubble wrap {{ order.total_items_count }} jars. Then click dispatch above.
                 {% elif order.order_status == 'PACKING' %}Parcel packed with address label. Hand over to delivery rider.
                 {% elif order.order_status == 'OUT_FOR_DELIVERY' %}Rider delivering to {{ order.delivery_city }}.
-                {% elif order.order_status == 'DELIVERED' %}Delivered. ৳{{ order.total_amount }} verified.
-                {% else %}Stock returned to inventory.{% endif %}
+                {% endif %}
             </span>
         </div>
 
-        <!-- Inline Step Actions (No duplicate Pathao button) -->
+        <!-- Inline Step Actions -->
         <div class="flex items-center gap-2 shrink-0">
             {% if order.order_status == 'PENDING' %}
             <form action="{% url 'dashboard:update_order_status_quick' order.order_number %}" method="POST" class="inline-block">
@@ -194,6 +228,8 @@
             {% endif %}
         </div>
     </div>
+    {% endif %}
+
 
     <!-- ⭐ FIRST-VIEW 2-COLUMN COMMAND CENTER GRID -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
@@ -250,16 +286,11 @@
                     <input type="text" name="customer_notes" value="{{ order.delivery_instruction }}" placeholder="Delivery & customer instruction..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs text-gray-900 focus:bg-white focus:ring-1 focus:ring-brand-500">
                 </div>
 
-                <div class="flex items-center justify-between gap-2 pt-1">
-                    <button type="submit" class="flex-1 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs py-2 rounded-xl shadow-xs transition cursor-pointer">
-                        Update Status & Payment
+                <div class="pt-1">
+                    <button type="submit" class="w-full bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs py-2.5 rounded-xl shadow-xs transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99]">
+                        <i class="fa-solid fa-floppy-disk text-xs"></i>
+                        <span>Update Status & Payment</span>
                     </button>
-                    {% if order.customer_phone %}
-                    <a href="{{ order.whatsapp_shipping_instruction_url }}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-xl text-xs font-bold shadow-xs inline-flex items-center gap-1.5 transition" title="Send WhatsApp Pickle Storage Guidelines">
-                        <i class="fa-brands fa-whatsapp text-sm"></i>
-                        <span>সংরক্ষণ নির্দেশিকা</span>
-                    </a>
-                    {% endif %}
                 </div>
             </form>
 
@@ -274,39 +305,65 @@
                     </button>
                 </div>
 
-                <!-- Recipient Info -->
-                <div class="space-y-2 text-xs">
-                    <div class="flex items-center justify-between gap-2 flex-wrap">
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <strong class="text-gray-900 font-black text-base">{{ order.customer_name }}</strong>
-                        </div>
-                        <span class="text-[11px] font-bold px-2 py-0.5 rounded-md border {{ order.customer_score.badge_class }}">
+                <!-- Recipient Info & Structured Contact Actions -->
+                <div class="space-y-3 text-xs">
+                    <div class="flex items-center justify-between gap-2">
+                        <strong class="text-gray-900 font-black text-base">{{ order.customer_name }}</strong>
+                        <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full border {{ order.customer_score.badge_class }}">
                             {{ order.customer_score.short_label|default:order.customer_score.label }}
                         </span>
                     </div>
-                    
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <a href="tel:{{ order.customer_phone }}" class="text-emerald-700 font-bold hover:underline bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 inline-flex items-center gap-1.5">
-                            <i class="fa-solid fa-phone text-[10px]"></i> <span>{{ order.customer_phone }}</span>
-                        </a>
-                        <a href="https://wa.me/{{ order.whatsapp_phone_international }}?text=Hello%20{{ order.customer_name|urlencode }},%20from%20Pickpickles%20regarding%20order%20#{{ order.order_number }}" target="_blank" class="text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-200 font-bold inline-flex items-center gap-1.5" title="Direct WhatsApp Chat">
-                            <i class="fa-brands fa-whatsapp text-sm text-emerald-600"></i> <span>Chat</span>
-                        </a>
+
+                    <!-- Phone Line + Fraud Block Toggle -->
+                    <div class="flex items-center justify-between gap-2 flex-wrap bg-slate-50 p-2.5 rounded-xl border border-slate-200/80">
+                        <div class="flex items-center gap-2">
+                            <a href="tel:{{ order.customer_phone }}" class="text-gray-900 font-mono font-bold text-xs hover:text-brand-600 inline-flex items-center gap-1.5" title="Call Customer">
+                                <i class="fa-solid fa-phone text-emerald-600 text-xs"></i>
+                                <span>{{ order.customer_phone }}</span>
+                            </a>
+                            <button type="button" onclick="navigator.clipboard.writeText('{{ order.customer_phone }}'); showToast('Phone copied!');" class="text-gray-400 hover:text-gray-700 text-xs p-1" title="Copy Phone Number">
+                                <i class="fa-regular fa-copy"></i>
+                            </button>
+                        </div>
                         {% if order.customer_phone %}
-                        <a href="{{ order.whatsapp_order_confirmation_url }}" target="_blank" class="text-blue-700 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg border border-blue-200 font-bold inline-flex items-center gap-1.5" title="Send WhatsApp Order Confirmation (Includes Reviews Page Link)">
-                            <i class="fa-brands fa-whatsapp text-sm text-blue-600"></i> <span>Confirmation</span>
-                        </a>
-                        <a href="{{ order.whatsapp_shipping_instruction_url }}" target="_blank" class="text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-2.5 py-1 rounded-lg border border-emerald-300 font-bold inline-flex items-center gap-1.5" title="Send WhatsApp Storage Guidelines & Update">
-                            <i class="fa-brands fa-whatsapp text-sm text-emerald-700"></i> <span>Storage Tips</span>
-                        </a>
-                        <a href="{{ order.whatsapp_feedback_url }}" target="_blank" class="text-amber-900 bg-amber-100 hover:bg-amber-200 px-2.5 py-1 rounded-lg border border-amber-300 font-bold inline-flex items-center gap-1.5" title="Ask Customer For Feedback / Review on WhatsApp">
-                            <i class="fa-solid fa-star text-amber-600 text-xs"></i> <span>Feedback</span>
-                        </a>
-                        <button type="button" onclick="toggleBlacklistOrderDetail('{{ order.customer_phone }}', '{{ order.customer_name|escapejs }}')" id="orderDetailBlacklistBtn" class="{% if order.customer_score.risk_level == 'BLACKLISTED' %}bg-rose-700 hover:bg-rose-800 text-white font-black{% else %}bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold border border-rose-300{% endif %} px-2.5 py-1 rounded-lg text-xs inline-flex items-center gap-1 cursor-pointer transition shadow-2xs" title="Block or unblock this phone number from placing COD orders">
-                            <i class="fa-solid fa-ban text-[10px]"></i> <span id="orderDetailBlacklistTxt">{% if order.customer_score.risk_level == 'BLACKLISTED' %}Unblock Phone{% else %}Block Phone{% endif %}</span>
+                        <button type="button" onclick="toggleBlacklistOrderDetail('{{ order.customer_phone }}', '{{ order.customer_name|escapejs }}')" id="orderDetailBlacklistBtn" class="{% if order.customer_score.risk_level == 'BLACKLISTED' %}bg-rose-700 hover:bg-rose-800 text-white font-black{% else %}bg-white hover:bg-rose-50 text-rose-700 font-bold border border-rose-200{% endif %} px-2.5 py-1 rounded-lg text-[11px] inline-flex items-center gap-1.5 cursor-pointer transition shadow-2xs" title="Block or unblock this phone number">
+                            <i class="fa-solid fa-ban text-[10px]"></i>
+                            <span id="orderDetailBlacklistTxt">{% if order.customer_score.risk_level == 'BLACKLISTED' %}Unblock Phone{% else %}Block Phone{% endif %}</span>
                         </button>
                         {% endif %}
                     </div>
+                    
+                    <!-- WhatsApp Messaging Grid (Clean 4-Item Row) -->
+                    {% if order.customer_phone %}
+                    <div class="space-y-1.5 pt-0.5">
+                        <div class="flex items-center justify-between text-[11px] font-bold text-gray-500">
+                            <span><i class="fa-brands fa-whatsapp text-emerald-600 mr-1"></i>WhatsApp Messaging</span>
+                            <span class="text-[10px] text-gray-400 font-normal">One-click templates</span>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                            <a href="https://wa.me/{{ order.whatsapp_phone_international }}?text=Hello%20{{ order.customer_name|urlencode }},%20from%20Pickpickles%20regarding%20order%20#{{ order.order_number }}" target="_blank"
+                                class="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 rounded-xl px-2 py-2 text-center text-[11px] font-bold flex items-center justify-center gap-1.5 transition shadow-2xs" title="Open Direct WhatsApp Chat">
+                                <i class="fa-solid fa-comment-dots text-[11px] text-emerald-600"></i>
+                                <span>Chat</span>
+                            </a>
+                            <a href="{{ order.whatsapp_order_confirmation_url }}" target="_blank"
+                                class="bg-white hover:bg-blue-50 text-blue-800 border border-blue-200/80 rounded-xl px-2 py-2 text-center text-[11px] font-bold flex items-center justify-center gap-1.5 transition shadow-2xs" title="Send WhatsApp Order Confirmation">
+                                <i class="fa-solid fa-circle-check text-[11px] text-blue-600"></i>
+                                <span>Confirm</span>
+                            </a>
+                            <a href="{{ order.whatsapp_shipping_instruction_url }}" target="_blank"
+                                class="bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-200/80 rounded-xl px-2 py-2 text-center text-[11px] font-bold flex items-center justify-center gap-1.5 transition shadow-2xs" title="Send Pickle Storage Instructions">
+                                <i class="fa-solid fa-box-open text-[11px] text-emerald-600"></i>
+                                <span>Storage</span>
+                            </a>
+                            <a href="{{ order.whatsapp_feedback_url }}" target="_blank"
+                                class="bg-white hover:bg-amber-50 text-amber-800 border border-amber-200/80 rounded-xl px-2 py-2 text-center text-[11px] font-bold flex items-center justify-center gap-1.5 transition shadow-2xs" title="Ask Customer for Review & Feedback">
+                                <i class="fa-solid fa-star text-[11px] text-amber-500"></i>
+                                <span>Review</span>
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
 
                 {% if order.customer_score.risk_level == 'BLACKLISTED' %}
@@ -428,57 +485,6 @@
                 </div>
                 {% endif %}
 
-                <!-- Steadfast Live Consignment Bar (if active) -->
-                {% if order.steadfast_consignment_id %}
-                <div class="flex items-center justify-between text-xs bg-cyan-50/90 p-2.5 rounded-xl border border-cyan-200 shadow-2xs">
-                    <div class="flex items-center gap-1.5 flex-wrap">
-                        <i class="fa-solid fa-truck-fast text-cyan-600"></i>
-                        <span class="text-gray-500 font-bold">Steadfast:</span>
-                        <strong class="font-mono text-gray-900 font-bold bg-white px-1.5 py-0.5 rounded border border-cyan-200">{{ order.steadfast_tracking_code|default:order.steadfast_consignment_id }}</strong>
-                        {% if order.steadfast_order_status %}
-                        <span class="text-[10px] font-black uppercase px-1.5 py-0.5 bg-cyan-100 text-cyan-800 rounded border border-cyan-300">
-                            {{ order.steadfast_order_status }}
-                        </span>
-                        {% endif %}
-                    </div>
-                    <div class="flex items-center gap-2 font-bold text-xs shrink-0">
-                        <a href="{% url 'dashboard:sync_single_steadfast_order' order.order_number %}" class="bg-cyan-700 hover:bg-cyan-800 text-white px-2 py-0.5 rounded-lg inline-flex items-center gap-1 font-extrabold shadow-2xs transition" title="Fetch live consignment tracking from Steadfast API">
-                            <i class="fa-solid fa-rotate text-[10px]"></i>
-                            <span>Sync</span>
-                        </a>
-                        <a href="https://steadfast.com.bd/tracking/{{ order.steadfast_tracking_code|default:order.steadfast_consignment_id }}" target="_blank" class="text-cyan-700 hover:text-cyan-900 underline flex items-center gap-1">
-                            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-                            <span>Track</span>
-                        </a>
-                    </div>
-                </div>
-                {% endif %}
-
-                <!-- Pathao Live Consignment Bar (if active) -->
-                {% if order.pathao_consignment_id %}
-                <div class="flex items-center justify-between text-xs bg-red-50/80 p-2.5 rounded-xl border border-red-200 shadow-2xs">
-                    <div class="flex items-center gap-1.5 flex-wrap">
-                        <i class="fa-solid fa-paper-plane text-[#ea1d24]"></i>
-                        <span class="text-gray-500 font-bold">Pathao:</span>
-                        <strong class="font-mono text-gray-900 font-bold bg-white px-1.5 py-0.5 rounded border border-red-200">{{ order.pathao_tracking_code|default:order.pathao_consignment_id }}</strong>
-                        {% if order.pathao_order_status %}
-                        <span class="text-[10px] font-black uppercase px-1.5 py-0.5 bg-red-100 text-red-800 rounded border border-red-300">
-                            {{ order.pathao_order_status }}
-                        </span>
-                        {% endif %}
-                    </div>
-                    <div class="flex items-center gap-2 font-bold text-xs shrink-0">
-                        <a href="{% url 'dashboard:sync_single_pathao_order' order.order_number %}" class="bg-red-600 hover:bg-red-700 text-white px-2 py-0.5 rounded-lg inline-flex items-center gap-1 font-extrabold shadow-2xs transition" title="Fetch live consignment tracking from Pathao Courier API">
-                            <i class="fa-solid fa-rotate text-[10px]"></i>
-                            <span>Sync</span>
-                        </a>
-                        <a href="https://merchant.pathao.com/tracking?consignment_id={{ order.pathao_consignment_id }}" target="_blank" class="text-red-600 hover:text-red-800 underline flex items-center gap-1">
-                            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-                            <span>Track</span>
-                        </a>
-                    </div>
-                </div>
-                {% endif %}
             </div>
 
         </div>

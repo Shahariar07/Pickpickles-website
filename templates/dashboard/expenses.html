@@ -109,18 +109,33 @@
     <div class="bg-white p-4 sm:p-5 rounded-3xl border border-gray-200 shadow-xs space-y-4">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
 
-            <!-- Search Form -->
-            <form method="GET" action="{% url 'dashboard:expenses' %}" class="flex-1 max-w-md">
+            <!-- Search & Subcategory Form -->
+            <form method="GET" action="{% url 'dashboard:expenses' %}" class="flex-1 max-w-xl flex flex-col sm:flex-row gap-2">
                 <input type="hidden" name="category" value="{{ category_filter }}">
-                <div class="relative flex items-center">
+                <div class="relative flex-1 flex items-center">
                     <i class="fa-solid fa-magnifying-glass absolute left-3.5 text-gray-400 text-xs"></i>
                     <input type="text" name="q" value="{{ search_query }}"
                         placeholder="Search by title, invoice #, notes..."
-                        class="w-full bg-gray-50 pl-9 pr-20 py-2.5 rounded-xl border border-gray-200 text-xs font-medium focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        class="w-full bg-gray-50 pl-9 pr-4 py-2 rounded-xl border border-gray-200 text-xs font-medium focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                </div>
+                <div class="flex items-center gap-2">
+                    <select name="sub_category" onchange="this.form.submit()" class="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-700 focus:bg-white focus:ring-2 focus:ring-brand-500 cursor-pointer">
+                        <option value="">All Sub-Heads (সব সাব-হেড)</option>
+                        {% for sub in dynamic_subcategories %}
+                        <option value="{{ sub.name }}" {% if sub_category_filter == sub.name %}selected{% endif %}>
+                            {{ sub.parent.name }} ➔ {{ sub.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
                     <button type="submit"
-                        class="absolute right-1.5 bg-brand-700 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg hover:bg-brand-800 transition">
-                        Search
+                        class="bg-brand-700 text-white font-bold text-[11px] px-3.5 py-2 rounded-xl hover:bg-brand-800 transition shrink-0">
+                        Filter
                     </button>
+                    {% if sub_category_filter or category_filter != 'ALL' or search_query %}
+                    <a href="{% url 'dashboard:expenses' %}" class="bg-gray-100 text-gray-600 hover:bg-gray-200 font-bold text-[11px] px-2.5 py-2 rounded-xl transition shrink-0" title="Reset All Filters">
+                        <i class="fa-solid fa-xmark"></i>
+                    </a>
+                    {% endif %}
                 </div>
             </form>
 
@@ -130,21 +145,34 @@
 
         </div>
 
+        {% if sub_category_filter %}
+        <div class="flex items-center gap-2 pt-1 pb-0.5">
+            <span class="text-[11px] text-gray-400 font-semibold uppercase">Active Sub-Category:</span>
+            <span class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-full text-xs font-bold">
+                <i class="fa-solid fa-filter text-[10px] text-emerald-600"></i>
+                <span>{{ sub_category_filter }}</span>
+                <a href="?category={{ category_filter }}&q={{ search_query }}" class="text-gray-400 hover:text-rose-600 ml-1" title="Clear sub-category filter">
+                    <i class="fa-solid fa-circle-xmark text-xs"></i>
+                </a>
+            </span>
+        </div>
+        {% endif %}
+
         <!-- Category Filter Tabs -->
         <div
             class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-bold scrollbar-none border-t border-gray-100 pt-3">
-            <a href="?category=ALL&q={{ search_query }}"
-                class="px-3 py-1.5 rounded-xl whitespace-nowrap transition {% if category_filter == 'ALL' %}bg-gray-900 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+            <a href="?category=ALL&sub_category={{ sub_category_filter }}&q={{ search_query }}"
+                class="px-3 py-1.5 rounded-xl whitespace-nowrap transition {% if category_filter == 'ALL' and not sub_category_filter %}bg-gray-900 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
                 All Expenses
             </a>
             {% for cat in parent_categories %}
-            <a href="?category={{ cat.slug }}&q={{ search_query }}"
+            <a href="?category={{ cat.slug }}&sub_category={{ sub_category_filter }}&q={{ search_query }}"
                 class="px-3 py-1.5 rounded-xl whitespace-nowrap transition {% if category_filter == cat.slug or category_filter == cat.name %}bg-brand-700 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
                 {{ cat.name }}
             </a>
             {% empty %}
             {% for code, label in category_choices %}
-            <a href="?category={{ code }}&q={{ search_query }}"
+            <a href="?category={{ code }}&sub_category={{ sub_category_filter }}&q={{ search_query }}"
                 class="px-3 py-1.5 rounded-xl whitespace-nowrap transition {% if category_filter == code %}bg-brand-700 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
                 {{ label }}
             </a>

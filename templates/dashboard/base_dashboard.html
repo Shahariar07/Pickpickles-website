@@ -52,7 +52,7 @@
 
         <!-- Mobile Top Bar with Drawer Toggle -->
         <div
-            class="md:hidden bg-brand-900 text-white px-3 sm:px-4 py-3.5 flex items-center justify-between sticky top-0 z-40 border-b border-brand-800 shadow-md">
+            class="md:hidden relative bg-brand-900 text-white px-3 sm:px-4 py-3.5 flex items-center justify-between sticky top-0 z-40 border-b border-brand-800 shadow-md">
             <div class="flex items-center gap-2.5 min-w-0">
                 <button type="button" onclick="toggleSidebar()"
                     class="p-2 rounded-xl text-gray-300 hover:text-white hover:bg-brand-800 focus:outline-none transition shrink-0">
@@ -80,55 +80,54 @@
                 </button>
 
                 <!-- Notifications Bell Mobile -->
-                <div class="relative">
-                    <button type="button" onclick="toggleNotificationDropdown('mobileNotificationDropdown')"
-                        class="w-10 h-10 rounded-xl text-gray-300 hover:text-white hover:bg-brand-800 flex items-center justify-center transition relative active:scale-95"
-                        aria-label="View notifications">
-                        <i class="fa-solid fa-bell text-base"></i>
-                        <span id="mobileNotificationBadge"
-                            class="hidden absolute top-1 right-1 min-w-[16px] h-4 px-1 bg-rose-500 text-[9px] font-black text-white rounded-full flex items-center justify-center animate-pulse shadow-xs">0</span>
-                    </button>
-                    <!-- Mobile Notification Dropdown Panel -->
-                    <div id="mobileNotificationDropdown"
-                        class="hidden absolute right-0 mt-2 w-[calc(100vw-24px)] max-w-xs bg-white text-gray-800 rounded-2xl shadow-2xl border border-gray-200 py-3 z-50">
-                        <div class="px-4 pb-2 border-b border-gray-100 flex items-center justify-between">
-                            <span class="font-bold text-xs text-gray-900">Pending Orders</span>
-                            <span id="mobilePendingCountText"
-                                class="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">0
-                                pending</span>
-                        </div>
-                        <div id="mobileNotificationList"
-                            class="max-h-60 overflow-y-auto divide-y divide-gray-100 text-xs">
-                            <div class="p-4 text-center text-gray-400 text-xs">No pending orders</div>
-                        </div>
-                        <div
-                            class="px-3 py-2 bg-gray-50 border-t border-gray-100 flex items-center justify-between text-[11px]">
-                            <span class="text-gray-600 font-semibold flex items-center gap-1">
-                                <i class="fa-solid fa-clock text-amber-600"></i>
-                                <span>Reminder:</span>
-                            </span>
-                            <select id="mobileReminderIntervalSelect" onchange="changeReminderInterval(this.value)"
-                                class="text-[11px] font-bold bg-white border border-gray-200 rounded-lg px-2 py-1 text-gray-700">
-                                <option value="5">Every 5m</option>
-                                <option value="10" selected>Every 10m (Default)</option>
-                                <option value="15">Every 15m</option>
-                                <option value="30">Every 30m</option>
-                            </select>
-                        </div>
-                        <div class="pt-2 px-3 border-t border-gray-100">
-                            <a href="{% url 'dashboard:orders' %}"
-                                class="block text-center text-[11px] font-bold text-brand-700 hover:text-brand-800 py-1">
-                                Open Orders Hub →
-                            </a>
-                        </div>
-                    </div>
-                </div>
+                <button type="button" onclick="toggleNotificationDropdown('mobileNotificationDropdown')"
+                    class="w-10 h-10 rounded-xl text-gray-300 hover:text-white hover:bg-brand-800 flex items-center justify-center transition relative active:scale-95"
+                    aria-label="View notifications">
+                    <i class="fa-solid fa-bell text-base"></i>
+                    <span id="mobileNotificationBadge"
+                        class="hidden absolute top-1 right-1 min-w-[16px] h-4 px-1 bg-rose-500 text-[9px] font-black text-white rounded-full flex items-center justify-center animate-pulse shadow-xs">0</span>
+                </button>
 
                 <a href="{% url 'dashboard:logout' %}"
                     class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-rose-900/60 hover:bg-rose-800 text-rose-200 text-xs font-bold transition shrink-0 ml-1">
                     <i class="fa-solid fa-right-from-bracket"></i>
                     <span>Log Out</span>
                 </a>
+            </div>
+
+            <!-- Mobile Notification Dropdown Panel -->
+            <div id="mobileNotificationDropdown"
+                class="hidden absolute top-full right-2 sm:right-3 mt-1.5 w-[calc(100vw-20px)] max-w-xs bg-white text-gray-800 rounded-2xl shadow-2xl border border-gray-200 py-3 z-50">
+                <div class="px-4 pb-2 border-b border-gray-100 flex items-center justify-between">
+                    <span class="font-bold text-xs text-gray-900">Pending Orders</span>
+                    <span id="mobilePendingCountText"
+                        class="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">0
+                        pending</span>
+                </div>
+                <div id="mobileNotificationList"
+                    class="max-h-60 overflow-y-auto divide-y divide-gray-100 text-xs">
+                    <div class="p-4 text-center text-gray-400 text-xs">No pending orders</div>
+                </div>
+                <div
+                    class="px-3 py-2 bg-gray-50 border-t border-gray-100 flex items-center justify-between text-[11px]">
+                    <span class="text-gray-600 font-semibold flex items-center gap-1">
+                        <i class="fa-solid fa-clock text-amber-600"></i>
+                        <span>Reminder:</span>
+                    </span>
+                    <select id="mobileReminderIntervalSelect" onchange="changeReminderInterval(this.value)"
+                        class="text-[11px] font-bold bg-white border border-gray-200 rounded-lg px-2 py-1 text-gray-700">
+                        <option value="5">Every 5m</option>
+                        <option value="10" selected>Every 10m (Default)</option>
+                        <option value="15">Every 15m</option>
+                        <option value="30">Every 30m</option>
+                    </select>
+                </div>
+                <div class="pt-2 px-3 border-t border-gray-100">
+                    <a href="{% url 'dashboard:orders' %}"
+                        class="block text-center text-[11px] font-bold text-brand-700 hover:text-brand-800 py-1">
+                        Open Orders Hub →
+                    </a>
+                </div>
             </div>
         </div>
 
