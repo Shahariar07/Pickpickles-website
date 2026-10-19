@@ -62,14 +62,22 @@
                 <div class="relative w-full max-w-sm sm:max-w-md p-4 sm:p-6 rounded-3xl shadow-2xl border-2 border-emerald-400" style="background-color: #082816;">
                     
                     <!-- Segmented Best 3 Switcher Pills -->
-                    <div class="flex items-center justify-between gap-1 p-1 bg-black/50 backdrop-blur-md rounded-2xl border border-emerald-500/40 mb-3 sm:mb-4 text-xs">
+                    <div class="flex items-center justify-between gap-1.5 p-1 bg-black/50 backdrop-blur-md rounded-2xl border border-emerald-500/40 mb-3 sm:mb-4 text-xs">
                         {% for hero_pickle in top_best_sellers %}
                         <button type="button" 
                                 onclick="switchHeroPickle({{ forloop.counter0 }})" 
                                 id="hero-pill-{{ forloop.counter0 }}" 
-                                class="hero-pill-btn flex-1 py-1.5 px-1.5 sm:px-2 rounded-xl text-center transition-all cursor-pointer flex items-center justify-center gap-1 sm:gap-1.5 {% if forloop.first %}bg-amber-400 text-slate-950 font-black shadow-md ring-1 ring-amber-300{% else %}text-emerald-200/90 hover:text-white hover:bg-white/10 font-bold{% endif %}">
-                            <span>{% if forloop.counter == 1 %}🥇 #1{% elif forloop.counter == 2 %}🥈 #2{% else %}🥉 #3{% endif %}</span>
-                            <span class="truncate text-[10px] sm:text-xs max-w-[65px] sm:max-w-none">{{ hero_pickle.name|truncatewords:2 }}</span>
+                                class="hero-pill-btn flex-1 py-2 px-2 rounded-xl text-center transition-all cursor-pointer flex items-center justify-center gap-1.5 {% if forloop.first %}bg-amber-400 text-slate-950 font-black shadow-md ring-1 ring-amber-300{% else %}text-emerald-200/90 hover:text-white hover:bg-white/10 font-bold{% endif %}">
+                            <span class="text-xs sm:text-sm">{% if forloop.counter == 1 %}🥇{% elif forloop.counter == 2 %}🥈{% else %}🥉{% endif %}</span>
+                            <span class="text-xs font-black tracking-wide whitespace-nowrap">
+                                {% if forloop.counter == 1 %}
+                                    #1 <span class="hidden sm:inline">Best Seller</span><span class="sm:hidden">Best</span>
+                                {% elif forloop.counter == 2 %}
+                                    #2 <span class="hidden sm:inline">Ranking</span><span class="sm:hidden">Rank</span>
+                                {% else %}
+                                    #3 <span class="hidden sm:inline">Ranking</span><span class="sm:hidden">Rank</span>
+                                {% endif %}
+                            </span>
                         </button>
                         {% endfor %}
                     </div>
@@ -452,6 +460,25 @@
                     <p class="text-xs sm:text-sm text-slate-800 font-medium italic leading-relaxed">
                         "{{ review.comment }}"
                     </p>
+
+                    <!-- Attached Customer Screenshot or Photo -->
+                    {% if review.image %}
+                    <div class="pt-2">
+                        <button type="button" 
+                                onclick="openHomeReviewLightbox('{{ review.image_url }}', '{{ review.reviewer_name|escapejs }}', '{{ review.product.name|default:"Homemade Pickles"|escapejs }}')" 
+                                class="relative group/img block w-full rounded-xl overflow-hidden border border-emerald-200 bg-gray-50 aspect-16/9 cursor-pointer shadow-2xs hover:shadow-sm transition">
+                            <img src="{{ review.image_url }}" alt="Review photo by {{ review.reviewer_name }}" class="w-full h-full object-cover group-hover/img:scale-105 transition duration-300">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end justify-between p-2 text-white">
+                                <span class="inline-flex items-center gap-1 text-[9px] font-black bg-black/60 backdrop-blur-xs px-2 py-0.5 rounded-full border border-white/20 text-white">
+                                    <i class="fa-solid fa-camera text-amber-400"></i> Screenshot / Photo
+                                </span>
+                                <span class="w-6 h-6 rounded-full bg-white/20 backdrop-blur-xs flex items-center justify-center text-[10px] group-hover/img:scale-110 transition shadow-xs">
+                                    <i class="fa-solid fa-magnifying-glass-plus"></i>
+                                </span>
+                            </div>
+                        </button>
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
                     <div class="min-w-0 pr-2">
@@ -459,7 +486,7 @@
                         <span class="text-slate-500 font-semibold text-[11px] truncate block">📍 {{ review.reviewer_location|default:"Dhaka, Bangladesh" }}</span>
                     </div>
                     <span class="bg-emerald-100 text-emerald-900 font-extrabold px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] border border-emerald-300 truncate max-w-[140px] shrink-0">
-                        🥒 {{ review.product.name }}
+                        🥒 {{ review.product.name|default:"All Pickles" }}
                     </span>
                 </div>
             </div>
@@ -651,5 +678,37 @@ function switchHeroPickle(index) {
         }
     });
 }
+
+function openHomeReviewLightbox(url, reviewer, product) {
+    if (!url) return;
+    document.getElementById('homeReviewLightboxImg').src = url;
+    document.getElementById('homeReviewLightboxName').textContent = reviewer ? ('Feedback by ' + reviewer) : 'Customer Feedback Screenshot';
+    document.getElementById('homeReviewLightboxProduct').textContent = product ? ('🥒 ' + product) : '';
+    document.getElementById('homeReviewLightboxModal').classList.remove('hidden');
+}
+
+function closeHomeReviewLightbox(e) {
+    if (e && e.target && e.target.id !== 'homeReviewLightboxModal' && !e.target.closest('button')) return;
+    document.getElementById('homeReviewLightboxModal').classList.add('hidden');
+    document.getElementById('homeReviewLightboxImg').src = '';
+}
 </script>
+
+<!-- Fullscreen Lightbox Modal for Homepage Review Screenshots -->
+<div id="homeReviewLightboxModal" class="fixed inset-0 z-50 bg-black/85 hidden flex items-center justify-center p-3 sm:p-6 backdrop-blur-xs" onclick="closeHomeReviewLightbox(event)">
+    <div class="relative max-w-2xl w-full max-h-[92vh] flex flex-col items-center" onclick="event.stopPropagation()">
+        <div class="w-full flex items-center justify-between pb-2 text-white">
+            <div class="min-w-0 pr-3">
+                <span id="homeReviewLightboxName" class="text-xs sm:text-sm font-black block truncate">Customer Feedback Screenshot</span>
+                <span id="homeReviewLightboxProduct" class="text-[11px] text-emerald-300 font-semibold block truncate"></span>
+            </div>
+            <button type="button" onclick="closeHomeReviewLightbox()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm transition cursor-pointer">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="w-full flex items-center justify-center overflow-hidden rounded-2xl bg-black border border-white/20 shadow-2xl p-1">
+            <img id="homeReviewLightboxImg" src="" alt="Review Screenshot" class="max-w-full max-h-[75vh] object-contain rounded-xl">
+        </div>
+    </div>
+</div>
 {% endblock %}

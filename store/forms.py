@@ -138,3 +138,4 @@ class ReviewForm(forms.ModelForm):
         if 'product' in self.fields:
             self.fields['product'].required = False
             self.fields['product'].empty_label = "🥒 Pickpickles (General Pickle Experience)"
+

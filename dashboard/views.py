@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
-from django.db.models import Sum, Count, Q
+from django.db.models import Sum, Count, Q, Avg
 from django.utils import timezone
 from django.http import HttpResponse, JsonResponse
 from decimal import Decimal
@@ -18,11 +18,93 @@ from django.contrib.auth.models import User
 from store.models import Order, OrderItem, Product, Category, Review, calculate_pathao_delivery_fee
 from store.pathao import PathaoCourierService
 from store.steadfast import SteadfastCourierService
-from .models import Expense, ExpenseCategory, DamageLog, OrderReturn, StockLog, ProductionBatch, BatchItem, BlacklistedCustomer
+from .models import Expense, ExpenseCategory, DamageLog, OrderReturn, StockLog, ProductionBatch, BatchItem, BlacklistedCustomer, StaffSecurityProfile, DashboardSecurityConfig
 
 
 def is_staff_user(user):
     return user.is_authenticated and (user.is_staff or user.is_superuser)
+
+
+def can_user_delete(user):
+    """
+    Checks if a user has permission to delete any record across the platform.
+    Rule:
+    1. Superusers (Administrators) can ALWAYS delete records.
+    2. If user is unauthenticated or not staff: False.
+    3. If strict_admin_only_delete is enabled: ONLY superusers can delete (returns False for staff).
+    4. If strict_admin_only_delete is disabled AND allow_staff_delete_override is True:
+       returns True if user has an active StaffSecurityProfile with can_delete_records=True.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    
+    try:
+        config = DashboardSecurityConfig.get_config()
+        if config.strict_admin_only_delete:
+            return False
+        
+        if config.allow_staff_delete_override:
+            profile = getattr(user, 'security_profile', None)
+            if profile and profile.can_delete_records:
+                return True
+    except Exception:
+        pass
+    
+    return False
+
+
+def can_user_edit(user):
+    """
+    Checks if a user has permission to edit records (customer details, order status, products, expenses).
+    Superusers always can edit.
+    If strict_admin_only_edit is True, only superusers can edit.
+    Otherwise, checks user's StaffSecurityProfile.can_edit_records.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    
+    try:
+        config = DashboardSecurityConfig.get_config()
+        if config.strict_admin_only_edit:
+            return False
+        
+        profile = getattr(user, 'security_profile', None)
+        if profile is not None:
+            return profile.can_edit_records
+    except Exception:
+        pass
+    
+    return True
+
+
+def can_user_dispatch(user):
+    """
+    Checks if a user has permission to dispatch orders to Pathao/Steadfast courier.
+    Superusers always can dispatch.
+    If strict_admin_only_dispatch is True, only superusers can dispatch.
+    Otherwise, checks user's StaffSecurityProfile.can_dispatch_courier.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    
+    try:
+        config = DashboardSecurityConfig.get_config()
+        if config.strict_admin_only_dispatch:
+            return False
+        
+        profile = getattr(user, 'security_profile', None)
+        if profile is not None:
+            return profile.can_dispatch_courier
+    except Exception:
+        pass
+    
+    return True
 
 
 def dashboard_login(request):
@@ -749,6 +831,9 @@ def order_detail(request, order_number):
         sync_parcel_status_with_cache(order, force=False, user=request.user)
     
     if request.method == 'POST':
+        if not can_user_edit(request.user):
+            messages.error(request, 'Permission Denied: অর্ডারের বিবরণ বা স্ট্যাটাস এডিট করার অনুমতি নেই। (Only authorized staff/admin can edit orders.)')
+            return redirect('dashboard:order_detail', order_number=order.order_number)
         new_status = request.POST.get('order_status')
         new_payment_status = request.POST.get('payment_status')
         admin_notes = request.POST.get('admin_notes')
@@ -793,6 +878,11 @@ def order_detail(request, order_number):
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def update_order_status_quick(request, order_number):
     if request.method == 'POST':
+        if not can_user_edit(request.user):
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'Permission Denied: অর্ডার স্ট্যাটাস পরিবর্তন করার অনুমতি নেই।'}, status=403)
+            messages.error(request, 'Permission Denied: অর্ডার স্ট্যাটাস পরিবর্তন করার অনুমতি নেই। (Status editing restricted.)')
+            return redirect(request.META.get('HTTP_REFERER') or 'dashboard:index')
         order = get_object_or_404(Order, order_number=order_number)
         new_status = request.POST.get('status')
         if new_status in dict(Order.ORDER_STATUS_CHOICES) and new_status != order.order_status:
@@ -831,6 +921,9 @@ def edit_order_customer(request, order_number):
     """
     order = get_object_or_404(Order, order_number=order_number)
     if request.method == 'POST':
+        if not can_user_edit(request.user):
+            messages.error(request, 'Permission Denied: কাস্টমার তথ্য বা ঠিকানা এডিট করার অনুমতি নেই। (Customer info editing restricted.)')
+            return redirect('dashboard:order_detail', order_number=order.order_number)
         name = request.POST.get('customer_name', '').strip()
         phone = request.POST.get('customer_phone', '').strip()
         address = request.POST.get('delivery_address', '').strip()
@@ -897,6 +990,10 @@ def dispatch_order_to_pathao(request, order_number):
     fallback_url = request.META.get('HTTP_REFERER') or reverse('dashboard:order_detail', kwargs={'order_number': order_number})
     
     if request.method == 'POST':
+        if not can_user_dispatch(request.user):
+            messages.error(request, 'Permission Denied: কুরিয়ারে পার্সেল পাঠানোর অনুমতি আপনার আইডিতে নেই। (Courier dispatch permission required.)')
+            return redirect(fallback_url)
+            
         pathao_service = PathaoCourierService()
         
         if not pathao_service.is_configured():
@@ -924,6 +1021,10 @@ def dispatch_order_to_steadfast(request, order_number):
     fallback_url = request.META.get('HTTP_REFERER') or reverse('dashboard:order_detail', kwargs={'order_number': order_number})
 
     if request.method == 'POST':
+        if not can_user_dispatch(request.user):
+            messages.error(request, 'Permission Denied: কুরিয়ারে পার্সেল পাঠানোর অনুমতি আপনার আইডিতে নেই। (Courier dispatch permission required.)')
+            return redirect(fallback_url)
+
         steadfast_service = SteadfastCourierService()
 
         if not steadfast_service.is_configured():
@@ -1213,8 +1314,8 @@ def create_manual_order(request):
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def delete_order(request, order_number):
-    if not request.user.is_superuser:
-        messages.error(request, 'Permission Denied: Staff accounts are restricted from deleting orders. Only Administrator can delete orders.')
+    if not can_user_delete(request.user):
+        messages.error(request, 'Permission Denied: Admin ছাড়া কেউ কোনো অর্ডার ডিলিট করতে পারবেন না। (Order deletion restricted to Administrator.)')
         return redirect('dashboard:orders')
 
     if request.method == 'POST':
@@ -1228,8 +1329,8 @@ def delete_order(request, order_number):
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def orders_trash(request):
-    if not request.user.is_superuser:
-        messages.error(request, 'Permission Denied: Staff accounts cannot access the Trash Archive. Administrator privileges required.')
+    if not can_user_delete(request.user):
+        messages.error(request, 'Permission Denied: Admin ছাড়া ট্র্যাশ আর্কাইভে এক্সেস নিষিদ্ধ। (Trash archive access restricted to Administrator.)')
         return redirect('dashboard:orders')
 
     trash_orders = Order.trash_objects.all().prefetch_related('items').order_by('-deleted_at')
@@ -1268,8 +1369,8 @@ def orders_trash(request):
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def restore_order(request, order_number):
-    if not request.user.is_superuser:
-        messages.error(request, 'Permission Denied: Only Administrator can restore orders from Trash.')
+    if not can_user_delete(request.user):
+        messages.error(request, 'Permission Denied: Admin ছাড়া কেউ অর্ডার রিস্টোর করতে পারবেন না।')
         return redirect('dashboard:orders')
 
     if request.method == 'POST':
@@ -1282,8 +1383,8 @@ def restore_order(request, order_number):
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def permanent_delete_order(request, order_number):
-    if not request.user.is_superuser:
-        messages.error(request, 'Permission Denied: Staff accounts are restricted from permanently deleting orders. Only Administrator can delete.')
+    if not can_user_delete(request.user):
+        messages.error(request, 'Permission Denied: Admin ছাড়া স্থায়ীভাবে ডিলিট করার অনুমতি নেই। (Permanent deletion restricted to Administrator.)')
         return redirect('dashboard:orders_trash')
 
     if request.method == 'POST':
@@ -1299,20 +1400,6 @@ def permanent_delete_order(request, order_number):
         messages.success(request, f'Order #{o_num} has been permanently deleted from the database.')
         return redirect('dashboard:orders_trash')
     return redirect('dashboard:orders_trash')
-
-
-@user_passes_test(is_staff_user, login_url='dashboard:login')
-def edit_order_customer(request, order_number):
-    if request.method == 'POST':
-        order = get_object_or_404(Order, order_number=order_number)
-        order.customer_name = request.POST.get('customer_name', order.customer_name).strip()
-        order.customer_phone = request.POST.get('customer_phone', order.customer_phone).strip()
-        order.delivery_address = request.POST.get('delivery_address', order.delivery_address).strip()
-        order.delivery_city = request.POST.get('delivery_city', order.delivery_city).strip()
-        order.save()
-        messages.success(request, f'Customer shipping details for #{order.order_number} updated.')
-        return redirect('dashboard:order_detail', order_number=order.order_number)
-    return redirect('dashboard:order_detail', order_number=order_number)
 
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
@@ -1351,8 +1438,8 @@ def stock_manager(request):
 
         # 1. DELETE PRODUCT
         if action == 'delete_product' or 'delete_product' in request.POST:
-            if not request.user.is_superuser:
-                messages.error(request, 'Permission Denied: Staff accounts are restricted from deleting products. Only Administrator can delete.')
+            if not can_user_delete(request.user):
+                messages.error(request, 'Permission Denied: Admin ছাড়া কেউ প্রোডাক্ট ডিলিট করতে পারবেন না। (Only Administrator can delete products.)')
                 return redirect('dashboard:stock_manager')
             product = get_object_or_404(Product, id=product_id)
             prod_name = product.name
@@ -1362,6 +1449,9 @@ def stock_manager(request):
 
         # 2. FULL EDIT PRODUCT
         elif action == 'edit_product' or 'edit_product' in request.POST:
+            if not can_user_edit(request.user):
+                messages.error(request, 'Permission Denied: প্রোডাক্ট তথ্য এডিট করার অনুমতি নেই। (Product editing restricted.)')
+                return redirect('dashboard:stock_manager')
             product = get_object_or_404(Product, id=product_id)
             try:
                 name_val = request.POST.get('name')
@@ -1510,6 +1600,9 @@ def stock_manager(request):
 
         # 4. TOGGLE IN-STOCK STATUS
         elif 'toggle_stock' in request.POST or action == 'toggle_stock':
+            if not can_user_edit(request.user):
+                messages.error(request, 'Permission Denied: স্টক পরিবর্তনের অনুমতি নেই। (Stock modification restricted.)')
+                return redirect('dashboard:stock_manager')
             product = get_object_or_404(Product, id=product_id)
             product.is_in_stock = not product.is_in_stock
             product.save()
@@ -1518,6 +1611,9 @@ def stock_manager(request):
 
         # 5. QUICK PRICE & STOCK UPDATE
         elif 'update_pricing' in request.POST or action == 'update_pricing':
+            if not can_user_edit(request.user):
+                messages.error(request, 'Permission Denied: মূল্য বা স্টক পরিবর্তনের অনুমতি নেই। (Pricing/stock editing restricted.)')
+                return redirect('dashboard:stock_manager')
             product = get_object_or_404(Product, id=product_id)
             try:
                 new_price = request.POST.get('price_bdt')
@@ -1716,8 +1812,8 @@ def stock_manager(request):
 
         # 7. DELETE CATEGORY
         elif action == 'delete_category' or 'delete_category' in request.POST:
-            if not request.user.is_superuser:
-                messages.error(request, 'Permission Denied: Staff accounts are restricted from deleting categories. Only Administrator can delete.')
+            if not can_user_delete(request.user):
+                messages.error(request, 'Permission Denied: Admin ছাড়া কেউ ক্যাটাগরি ডিলিট করতে পারবেন না। (Only Administrator can delete categories.)')
                 return redirect('dashboard:stock_manager')
             cat_id = request.POST.get('category_id')
             cat = get_object_or_404(Category, id=cat_id)
@@ -2032,6 +2128,10 @@ def delete_production_batch(request, batch_id):
     """
     Delete a production batch with optional stock reversion.
     """
+    if not can_user_delete(request.user):
+        messages.error(request, 'Permission Denied: Admin ছাড়া কেউ প্রোডাকশন ব্যাচ ডিলিট করতে পারবেন না। (Only Administrator can delete production batches.)')
+        return redirect('dashboard:production_batches')
+
     if request.method == 'POST':
         batch = get_object_or_404(ProductionBatch, id=batch_id)
         batch_name = batch.batch_number
@@ -2525,8 +2625,8 @@ def damage_returns_manager(request):
 
         # 2. DELETE DAMAGE LOG
         elif action == 'delete_damage':
-            if not request.user.is_superuser:
-                messages.error(request, 'Permission Denied: Staff accounts are restricted from deleting damage logs. Only Administrator can delete.')
+            if not can_user_delete(request.user):
+                messages.error(request, 'Permission Denied: Admin ছাড়া কেউ ড্যামেজ রেকর্ড ডিলিট করতে পারবেন না। (Only Administrator can delete damage logs.)')
                 return redirect('dashboard:damage_returns')
             damage_id = request.POST.get('damage_id')
             log = get_object_or_404(DamageLog, id=damage_id)
@@ -2538,8 +2638,8 @@ def damage_returns_manager(request):
 
         # 2.5 DELETE RETURN LOG
         elif action == 'delete_return':
-            if not request.user.is_superuser:
-                messages.error(request, 'Permission Denied: Staff accounts are restricted from deleting return logs. Only Administrator can delete.')
+            if not can_user_delete(request.user):
+                messages.error(request, 'Permission Denied: Admin ছাড়া কেউ রিটার্ন রেকর্ড ডিলিট করতে পারবেন না। (Only Administrator can delete return logs.)')
                 return redirect('dashboard:damage_returns')
             ret_id = request.POST.get('return_id')
             ret = get_object_or_404(OrderReturn, id=ret_id)
@@ -2742,6 +2842,8 @@ def reviews_manager(request):
     total_reviews = all_reviews.count()
     approved_count = all_reviews.filter(is_approved=True).count()
     pending_reviews_count = all_reviews.filter(is_approved=False).count()
+    avg_rating = all_reviews.filter(is_approved=True).aggregate(Avg('rating'))['rating__avg']
+    overall_rating = round(avg_rating, 1) if avg_rating else 5.0
 
     status_filter = request.GET.get('status', '').strip().lower()
     reviews = all_reviews
@@ -2768,8 +2870,8 @@ def reviews_manager(request):
 
         # 2. Delete Review
         elif action == 'delete_review':
-            if not request.user.is_superuser:
-                messages.error(request, 'Permission Denied: Staff accounts are restricted from deleting reviews. Only Administrator can delete.')
+            if not can_user_delete(request.user):
+                messages.error(request, 'Permission Denied: Admin ছাড়া কেউ রিভিউ ডিলিট করতে পারবেন না। (Only Administrator can delete reviews.)')
                 return redirect('dashboard:reviews')
             review = get_object_or_404(Review, id=review_id)
             r_name = review.reviewer_name
@@ -2782,13 +2884,17 @@ def reviews_manager(request):
 
         # 3. Add Manual Review
         elif action == 'create_review':
-            prod_id = request.POST.get('product_id')
-            product = get_object_or_404(Product, id=prod_id)
+            prod_id = request.POST.get('product_id', '').strip()
+            product = None
+            if prod_id and prod_id != '0' and prod_id.lower() != 'all':
+                product = Product.objects.filter(id=prod_id).first()
+
             name = request.POST.get('reviewer_name', 'Verified Customer').strip()
             location = request.POST.get('reviewer_location', 'Dhaka').strip()
             rating = int(request.POST.get('rating', 5))
             crunch_score = int(request.POST.get('crunch_score', 5))
             comment = request.POST.get('comment', '').strip()
+            image_file = request.FILES.get('image')
 
             Review.objects.create(
                 product=product,
@@ -2796,9 +2902,11 @@ def reviews_manager(request):
                 reviewer_location=location,
                 rating=rating,
                 comment=comment,
+                image=image_file,
                 is_approved=True
             )
-            messages.success(request, f'Review for {product.name} added successfully!')
+            target_name = product.name if product else "All Pickles (General Review)"
+            messages.success(request, f'Review for {target_name} added successfully!')
             return redirect('dashboard:reviews')
 
     # Pagination (Default: 10 per page)
@@ -2834,6 +2942,7 @@ def reviews_manager(request):
         'total_reviews': total_reviews,
         'approved_count': approved_count,
         'pending_reviews_count': pending_reviews_count,
+        'overall_rating': overall_rating,
         'status_filter': status_filter,
     }
     return render(request, 'dashboard/reviews.html', context)
@@ -3056,6 +3165,9 @@ def expense_manager(request):
 
         # 2. EDIT EXPENSE
         elif action == 'edit_expense' or 'edit_expense' in request.POST:
+            if not can_user_edit(request.user):
+                messages.error(request, 'Permission Denied: খরচ রেকর্ড এডিট করার অনুমতি নেই। (Expense editing restricted.)')
+                return get_safe_redirect()
             expense = get_object_or_404(Expense, id=expense_id)
             try:
                 expense.title = request.POST.get('title', expense.title).strip()
@@ -3078,8 +3190,8 @@ def expense_manager(request):
 
         # 3. DELETE EXPENSE
         elif action == 'delete_expense' or 'delete_expense' in request.POST:
-            if not request.user.is_superuser:
-                messages.error(request, 'Permission Denied: Staff accounts are restricted from deleting expense records. Only Administrator can delete.')
+            if not can_user_delete(request.user):
+                messages.error(request, 'Permission Denied: Admin ছাড়া কেউ খরচ রেকর্ড ডিলিট করতে পারবেন না। (Only Administrator can delete expense records.)')
                 return get_safe_redirect()
             expense = get_object_or_404(Expense, id=expense_id)
             title = expense.title
@@ -3793,80 +3905,230 @@ def business_profitability(request):
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def admin_users_manager(request):
     if not request.user.is_superuser:
-        messages.error(request, 'Permission Denied: Only Administrator has access to Staff & Admin user management.')
+        messages.error(request, 'Permission Denied: শুধুমাত্র অ্যাডমিনিস্ট্রেটরদের জন্য আইডি ও সিকিউরিটি ব্যবস্থাপনা উন্মুক্ত। (Administrator privileges required.)')
         return redirect('dashboard:index')
 
-    users = User.objects.all().order_by('-date_joined')
+    security_config = DashboardSecurityConfig.get_config()
+    users = User.objects.all().order_by('-is_superuser', '-is_staff', '-date_joined')
 
     if request.method == 'POST':
         action = request.POST.get('action')
         user_id = request.POST.get('user_id')
 
-        # 1. CREATE ADMIN / STAFF USER
+        # 1. CREATE ADMIN / STAFF ID
         if action == 'create_user':
             username = request.POST.get('username', '').strip()
+            full_name = request.POST.get('full_name', '').strip()
             email = request.POST.get('email', '').strip()
             password = request.POST.get('password', '').strip()
-            is_staff = request.POST.get('is_staff') == 'on'
-            is_superuser = request.POST.get('is_superuser') == 'on'
+            employee_id = request.POST.get('employee_id', '').strip()
+            phone = request.POST.get('phone', '').strip()
+            notes = request.POST.get('notes', '').strip()
+            role = request.POST.get('role', 'staff')
+            can_delete = request.POST.get('can_delete') == 'on'
+            can_edit = request.POST.get('can_edit') == 'on'
+            can_dispatch = request.POST.get('can_dispatch') == 'on'
+
+            is_superuser = (role == 'admin')
+            is_staff = (role in ['admin', 'staff'])
 
             if not username or not password:
-                messages.error(request, 'Username and password are required.')
-            elif User.objects.filter(username=username).exists():
-                messages.error(request, f'Username "{username}" already exists.')
+                messages.error(request, 'Username এবং Password আবশ্যক।')
+            elif User.objects.filter(username__iexact=username).exists():
+                messages.error(request, f'Username "{username}" ইতিমধ্যেই বিদ্যমান। অন্য ইউজারনেম নির্বাচন করুন।')
             else:
                 new_user = User.objects.create_user(
                     username=username,
                     email=email,
                     password=password,
-                    is_staff=is_staff or is_superuser,
+                    first_name=full_name,
+                    is_staff=is_staff,
                     is_superuser=is_superuser
                 )
-                messages.success(request, f'Admin user "{username}" created successfully!')
+                StaffSecurityProfile.objects.create(
+                    user=new_user,
+                    employee_id=employee_id,
+                    phone=phone,
+                    can_delete_records=can_delete if not is_superuser else True,
+                    can_edit_records=can_edit if not is_superuser else True,
+                    can_dispatch_courier=can_dispatch if not is_superuser else True,
+                    notes=notes
+                )
+                perm_summary = []
+                if can_delete or is_superuser:
+                    perm_summary.append("ডিলিট")
+                if can_edit or is_superuser:
+                    perm_summary.append("এডিট")
+                if can_dispatch or is_superuser:
+                    perm_summary.append("কুরিয়ার বুকিং")
+                perm_text = ", ".join(perm_summary) if perm_summary else "কোন বিশেষ অ্যাক্সেস নেই (Restricted)"
+                messages.success(request, f'নতুন আইডি "{username}" সফলভাবে তৈরি করা হয়েছে! (অনুমোদিত: {perm_text})')
             return redirect('dashboard:admin_users')
 
-        # 2. CHANGE USER PASSWORD
+        # 2. UPDATE GLOBAL SECURITY & RESTRICTION POLICIES
+        elif action == 'update_security_config':
+            strict_mode = request.POST.get('strict_admin_only_delete') == 'on'
+            staff_override = request.POST.get('allow_staff_delete_override') == 'on'
+            strict_edit = request.POST.get('strict_admin_only_edit') == 'on'
+            strict_dispatch = request.POST.get('strict_admin_only_dispatch') == 'on'
+
+            security_config.strict_admin_only_delete = strict_mode
+            security_config.allow_staff_delete_override = staff_override
+            security_config.strict_admin_only_edit = strict_edit
+            security_config.strict_admin_only_dispatch = strict_dispatch
+            security_config.updated_by = request.user
+            security_config.save()
+
+            messages.success(request, 'নিরাপত্তা পলিসি সফলভাবে সংরক্ষিত ও কার্যকর করা হয়েছে!')
+            return redirect('dashboard:admin_users')
+
+        # 3. TOGGLE PER-USER DELETE PERMISSION
+        elif action == 'toggle_user_delete':
+            target_user = get_object_or_404(User, id=user_id)
+            profile, _ = StaffSecurityProfile.objects.get_or_create(user=target_user)
+            profile.can_delete_records = not profile.can_delete_records
+            profile.save()
+            st_text = "অনুমোদিত (Allowed)" if profile.can_delete_records else "নিষিদ্ধ (Restricted)"
+            messages.success(request, f'ইউজার {target_user.username}-এর জন্য ডিলিট অনুমতি এখন {st_text}।')
+            return redirect('dashboard:admin_users')
+
+        # 3B. TOGGLE PER-USER EDIT PERMISSION
+        elif action == 'toggle_user_edit':
+            target_user = get_object_or_404(User, id=user_id)
+            profile, _ = StaffSecurityProfile.objects.get_or_create(user=target_user)
+            profile.can_edit_records = not profile.can_edit_records
+            profile.save()
+            st_text = "অনুমোদিত (Allowed)" if profile.can_edit_records else "নিষিদ্ধ (Restricted)"
+            messages.success(request, f'ইউজার {target_user.username}-এর জন্য এডিট অনুমতি এখন {st_text}।')
+            return redirect('dashboard:admin_users')
+
+        # 3C. TOGGLE PER-USER DISPATCH PERMISSION
+        elif action == 'toggle_user_dispatch':
+            target_user = get_object_or_404(User, id=user_id)
+            profile, _ = StaffSecurityProfile.objects.get_or_create(user=target_user)
+            profile.can_dispatch_courier = not profile.can_dispatch_courier
+            profile.save()
+            st_text = "অনুমোদিত (Allowed)" if profile.can_dispatch_courier else "নিষিদ্ধ (Restricted)"
+            messages.success(request, f'ইউজার {target_user.username}-এর জন্য কুরিয়ারে পাঠানো অনুমতি এখন {st_text}।')
+            return redirect('dashboard:admin_users')
+
+        # 4. EDIT USER / ID DETAILS
+        elif action == 'edit_user':
+            target_user = get_object_or_404(User, id=user_id)
+            full_name = request.POST.get('full_name', '').strip()
+            email = request.POST.get('email', '').strip()
+            employee_id = request.POST.get('employee_id', '').strip()
+            phone = request.POST.get('phone', '').strip()
+            notes = request.POST.get('notes', '').strip()
+            role = request.POST.get('role', 'staff')
+            can_delete = request.POST.get('can_delete') == 'on'
+            can_edit = request.POST.get('can_edit') == 'on'
+            can_dispatch = request.POST.get('can_dispatch') == 'on'
+
+            target_user.first_name = full_name
+            target_user.email = email
+            if target_user != request.user:
+                if role == 'admin':
+                    target_user.is_superuser = True
+                    target_user.is_staff = True
+                elif role == 'staff':
+                    target_user.is_superuser = False
+                    target_user.is_staff = True
+                else:
+                    target_user.is_superuser = False
+                    target_user.is_staff = False
+            target_user.save()
+
+            profile, _ = StaffSecurityProfile.objects.get_or_create(user=target_user)
+            profile.employee_id = employee_id
+            profile.phone = phone
+            profile.notes = notes
+            profile.can_delete_records = can_delete if not target_user.is_superuser else True
+            profile.can_edit_records = can_edit if not target_user.is_superuser else True
+            profile.can_dispatch_courier = can_dispatch if not target_user.is_superuser else True
+            profile.save()
+
+            messages.success(request, f'আইডি "{target_user.username}"-এর বিবরণ ও পারমিশন সফলভাবে আপডেট করা হয়েছে।')
+            return redirect('dashboard:admin_users')
+
+        # 5. CHANGE USER PASSWORD
         elif action == 'change_password':
             target_user = get_object_or_404(User, id=user_id)
             new_pw = request.POST.get('new_password', '').strip()
             if new_pw:
                 target_user.set_password(new_pw)
                 target_user.save()
-                messages.success(request, f'Password for {target_user.username} updated successfully.')
+                messages.success(request, f'{target_user.username}-এর পাসওয়ার্ড সফলভাবে পরিবর্তিত হয়েছে।')
             else:
-                messages.error(request, 'Password cannot be empty.')
+                messages.error(request, 'Password খালি রাখা যাবে না।')
             return redirect('dashboard:admin_users')
 
-        # 3. TOGGLE STAFF STATUS
+        # 6. TOGGLE STAFF STATUS
         elif action == 'toggle_staff':
             target_user = get_object_or_404(User, id=user_id)
             if target_user == request.user and target_user.is_superuser:
-                messages.error(request, 'You cannot remove your own superuser access.')
+                messages.error(request, 'আপনি নিজের সুপারইউজার অ্যাক্সেস বাতিল করতে পারবেন না।')
             else:
                 target_user.is_staff = not target_user.is_staff
                 target_user.save()
-                messages.success(request, f'Staff status for {target_user.username} updated.')
+                messages.success(request, f'{target_user.username}-এর Staff রোল পরিবর্তিত হয়েছে।')
             return redirect('dashboard:admin_users')
 
-        # 4. DELETE USER
+        # 7. DELETE USER ACCOUNT
         elif action == 'delete_user':
-            if not request.user.is_superuser:
-                messages.error(request, 'Permission Denied: Staff accounts are restricted from deleting users. Only Administrator can delete.')
-                return redirect('dashboard:admin_users')
             target_user = get_object_or_404(User, id=user_id)
             if target_user == request.user:
-                messages.error(request, 'You cannot delete your own account.')
+                messages.error(request, 'আপনি নিজের আইডি ডিলিট করতে পারবেন না।')
             else:
                 u_name = target_user.username
                 target_user.delete()
-                messages.success(request, f'User account "{u_name}" deleted.')
+                messages.success(request, f'আইডি অ্যাকাউন্ট "{u_name}" সফলভাবে মুছে ফেলা হয়েছে।')
             return redirect('dashboard:admin_users')
 
+    # Prepare user objects with security profiles
+    user_list = []
+    delete_permitted_count = 0
+    edit_permitted_count = 0
+    dispatch_permitted_count = 0
+    for u in users:
+        profile, _ = StaffSecurityProfile.objects.get_or_create(user=u)
+        effective_delete = u.is_superuser or (
+            not security_config.strict_admin_only_delete and
+            security_config.allow_staff_delete_override and
+            profile.can_delete_records
+        )
+        effective_edit = u.is_superuser or (
+            not security_config.strict_admin_only_edit and
+            profile.can_edit_records
+        )
+        effective_dispatch = u.is_superuser or (
+            not security_config.strict_admin_only_dispatch and
+            profile.can_dispatch_courier
+        )
+        if effective_delete:
+            delete_permitted_count += 1
+        if effective_edit:
+            edit_permitted_count += 1
+        if effective_dispatch:
+            dispatch_permitted_count += 1
+
+        user_list.append({
+            'user': u,
+            'profile': profile,
+            'effective_delete': effective_delete,
+            'effective_edit': effective_edit,
+            'effective_dispatch': effective_dispatch,
+        })
+
     context = {
-        'users': users,
+        'user_list': user_list,
+        'security_config': security_config,
         'total_users': users.count(),
         'staff_count': users.filter(is_staff=True).count(),
         'superuser_count': users.filter(is_superuser=True).count(),
+        'delete_permitted_count': delete_permitted_count,
+        'edit_permitted_count': edit_permitted_count,
+        'dispatch_permitted_count': dispatch_permitted_count,
         'orders_count': Order.objects.count(),
         'products_count': Product.objects.count(),
         'categories_count': Category.objects.count(),
@@ -3897,6 +4159,9 @@ def pickle_categories_manager(request):
 
         # 2. Edit Category
         elif action == 'edit_category':
+            if not can_user_edit(request.user):
+                messages.error(request, 'Permission Denied: ক্যাটাগরি এডিট করার অনুমতি নেই। (Category editing restricted.)')
+                return redirect('dashboard:pickle_categories')
             cat = get_object_or_404(Category, id=cat_id)
             cat.name = request.POST.get('name', cat.name).strip()
             cat.description = request.POST.get('description', cat.description).strip()
@@ -3907,8 +4172,8 @@ def pickle_categories_manager(request):
 
         # 3. Delete Category
         elif action == 'delete_category':
-            if not request.user.is_superuser:
-                messages.error(request, 'Permission Denied: Staff accounts are restricted from deleting categories. Only Administrator can delete.')
+            if not can_user_delete(request.user):
+                messages.error(request, 'Permission Denied: Admin ছাড়া কেউ ক্যাটাগরি ডিলিট করতে পারবেন না। (Only Administrator can delete categories.)')
                 return redirect('dashboard:pickle_categories')
             cat = get_object_or_404(Category, id=cat_id)
             c_name = cat.name
@@ -3973,6 +4238,9 @@ def expense_categories_manager(request):
 
         # 2. Edit Category (Head or Sub-category)
         elif action == 'edit_category':
+            if not can_user_edit(request.user):
+                messages.error(request, 'Permission Denied: খরচ ক্যাটাগরি এডিট করার অনুমতি নেই। (Expense category editing restricted.)')
+                return redirect('dashboard:expense_categories')
             cat = get_object_or_404(ExpenseCategory, id=cat_id)
             target_head = cat.parent_id if cat.parent_id else cat.id
             old_name = cat.name
@@ -4028,8 +4296,8 @@ def expense_categories_manager(request):
 
         # 3. Delete Category (Head or Sub-category)
         elif action == 'delete_category':
-            if not request.user.is_staff and not request.user.is_superuser:
-                messages.error(request, 'Permission Denied: Staff authorization required to delete categories.')
+            if not can_user_delete(request.user):
+                messages.error(request, 'Permission Denied: Admin ছাড়া কেউ খরচ ক্যাটাগরি ডিলিট করতে পারবেন না। (Only Administrator can delete expense categories.)')
                 return redirect('dashboard:expense_categories')
             cat = get_object_or_404(ExpenseCategory, id=cat_id)
             c_name = cat.name
@@ -4624,6 +4892,9 @@ def blacklist_manager(request):
             messages.success(request, f"Entry for {entry.phone} is now {status_txt}.")
             
         elif action == 'delete':
+            if not can_user_delete(request.user):
+                messages.error(request, 'Permission Denied: Admin ছাড়া কেউ ব্ল্যাকলিস্ট এন্ট্রি ডিলিট করতে পারবেন না। (Only Administrator can delete blacklist records.)')
+                return redirect('dashboard:blacklist_manager')
             entry_id = request.POST.get('entry_id')
             entry = get_object_or_404(BlacklistedCustomer, id=entry_id)
             entry.delete()

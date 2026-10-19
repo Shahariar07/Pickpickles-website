@@ -220,6 +220,23 @@
                     </div>
                 </div>
                 <p class="text-xs sm:text-sm text-gray-700 leading-snug sm:leading-relaxed italic">"{{ r.comment }}"</p>
+                {% if r.image %}
+                <div class="mt-2.5">
+                    <button type="button" 
+                            onclick="openProdReviewLightbox('{{ r.image_url }}', '{{ r.reviewer_name|escapejs }}')" 
+                            class="relative group/img block w-full rounded-xl overflow-hidden border border-emerald-200 bg-gray-50 aspect-16/9 cursor-pointer shadow-2xs hover:shadow-sm transition">
+                        <img src="{{ r.image_url }}" alt="Review photo by {{ r.reviewer_name }}" class="w-full h-full object-cover group-hover/img:scale-105 transition duration-300">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end justify-between p-2 text-white">
+                            <span class="inline-flex items-center gap-1 text-[9px] font-black bg-black/60 backdrop-blur-xs px-2 py-0.5 rounded-full border border-white/20 text-white">
+                                <i class="fa-solid fa-camera text-amber-400"></i> Screenshot / Photo
+                            </span>
+                            <span class="w-6 h-6 rounded-full bg-white/20 backdrop-blur-xs flex items-center justify-center text-[10px] group-hover/img:scale-110 transition shadow-xs">
+                                <i class="fa-solid fa-magnifying-glass-plus"></i>
+                            </span>
+                        </div>
+                    </button>
+                </div>
+                {% endif %}
                 <div class="mt-3 pt-2.5 border-t border-gray-100 flex items-center justify-between text-[10px] text-gray-400">
                     <span>{{ r.created_at|date:"M d, Y" }}</span>
                     <span class="text-emerald-700 font-bold">Verified Crunch</span>
@@ -263,5 +280,33 @@ if (typeof fbq === 'function') {
     });
 }
 {% endif %}
+
+function openProdReviewLightbox(url, reviewer) {
+    if (!url) return;
+    document.getElementById('prodReviewLightboxImg').src = url;
+    document.getElementById('prodReviewLightboxName').textContent = reviewer ? ('Feedback by ' + reviewer) : 'Customer Review Screenshot';
+    document.getElementById('prodReviewLightboxModal').classList.remove('hidden');
+}
+
+function closeProdReviewLightbox(e) {
+    if (e && e.target && e.target.id !== 'prodReviewLightboxModal' && !e.target.closest('button')) return;
+    document.getElementById('prodReviewLightboxModal').classList.add('hidden');
+    document.getElementById('prodReviewLightboxImg').src = '';
+}
 </script>
+
+<!-- Fullscreen Lightbox Modal for Product Review Screenshots -->
+<div id="prodReviewLightboxModal" class="fixed inset-0 z-50 bg-black/85 hidden flex items-center justify-center p-3 sm:p-6 backdrop-blur-xs" onclick="closeProdReviewLightbox(event)">
+    <div class="relative max-w-2xl w-full max-h-[92vh] flex flex-col items-center" onclick="event.stopPropagation()">
+        <div class="w-full flex items-center justify-between pb-2 text-white">
+            <span id="prodReviewLightboxName" class="text-xs sm:text-sm font-black truncate">Customer Review Screenshot</span>
+            <button type="button" onclick="closeProdReviewLightbox()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm transition cursor-pointer">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="w-full flex items-center justify-center overflow-hidden rounded-2xl bg-black border border-white/20 shadow-2xl p-1">
+            <img id="prodReviewLightboxImg" src="" alt="Review Screenshot" class="max-w-full max-h-[75vh] object-contain rounded-xl">
+        </div>
+    </div>
+</div>
 {% endblock %}

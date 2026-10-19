@@ -1050,12 +1050,23 @@ class Review(models.Model):
     reviewer_location = models.CharField(max_length=100, default="Dhaka, BD")
     rating = models.PositiveSmallIntegerField(default=5)
     comment = models.TextField()
+    image = models.ImageField(upload_to='reviews/', blank=True, null=True, help_text="Customer photo or screenshot")
     is_approved = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['-created_at']
 
+    @property
+    def image_url(self):
+        if self.image:
+            try:
+                return self.image.url
+            except Exception:
+                return ""
+        return ""
+
     def __str__(self):
         prod = f" on {self.product.name}" if self.product else ""
         return f"{self.reviewer_name}{prod} ({self.rating}★)"
+

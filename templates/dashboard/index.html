@@ -46,6 +46,12 @@
                 <i class="fa-solid fa-calculator text-brand-950 text-xs"></i>
                 <span>Smart Profit</span>
             </a>
+            {% if request.user.is_superuser %}
+            <a href="{% url 'dashboard:admin_users' %}" class="bg-purple-800/80 hover:bg-purple-700 text-purple-200 hover:text-white font-bold text-xs px-3.5 py-2 rounded-xl border border-purple-500/50 backdrop-blur-md flex items-center gap-1.5 transition active:scale-95">
+                <i class="fa-solid fa-id-card-clip text-amber-300 text-xs"></i>
+                <span>Staff IDs (+আইডি তৈরি)</span>
+            </a>
+            {% endif %}
         </div>
     </div>
 

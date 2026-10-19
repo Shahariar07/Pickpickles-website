@@ -81,6 +81,7 @@
                     {% endif %}
                 {% elif order.order_status not in 'DELIVERED,CANCELLED' %}
                     <!-- Dispatch Buttons if Not Dispatched -->
+                    {% if can_dispatch %}
                     <button type="button" onclick="openSteadfastModal()"
                         class="h-9 bg-[#0284c7] hover:bg-[#0369a1] text-white font-bold text-xs px-3.5 rounded-xl shadow-xs inline-flex items-center gap-1.5 transition cursor-pointer active:scale-95">
                         <i class="fa-solid fa-truck-fast"></i>
@@ -91,6 +92,12 @@
                         <i class="fa-solid fa-paper-plane"></i>
                         <span>Send to Pathao</span>
                     </button>
+                    {% else %}
+                    <span class="h-9 bg-gray-100 text-gray-400 font-bold text-xs px-3.5 rounded-xl border border-gray-200 inline-flex items-center gap-1.5 cursor-not-allowed" title="কুরিয়ারে পার্সেল বুকিংয়ের অনুমতি নেই (Courier dispatch restricted)">
+                        <i class="fa-solid fa-lock text-[11px]"></i>
+                        <span>Courier Dispatch Locked</span>
+                    </span>
+                    {% endif %}
                 {% endif %}
 
                 <!-- 3. Return Order -->
@@ -100,12 +107,16 @@
                     <span>Return</span>
                 </button>
 
-                <!-- 4. Trash Order (Superuser only) -->
-                {% if request.user.is_superuser %}
+                <!-- 4. Trash Order -->
+                {% if can_delete %}
                 <button type="button" onclick="openDeleteOrderModal()"
                     class="h-9 w-9 bg-white hover:bg-rose-50 text-rose-600 hover:text-rose-700 text-xs font-bold rounded-xl border border-rose-200 shadow-2xs inline-flex items-center justify-center transition cursor-pointer active:scale-95" title="Move to Trash">
                     <i class="fa-solid fa-trash-can"></i>
                 </button>
+                {% else %}
+                <span class="h-9 w-9 bg-gray-100 text-gray-400 text-xs font-bold rounded-xl border border-gray-200 shadow-2xs inline-flex items-center justify-center cursor-not-allowed" title="অর্ডার ডিলিট শুধুমাত্র অ্যাডমিনের জন্য সংরক্ষিত (Admin Only)">
+                    <i class="fa-solid fa-lock text-[11px]"></i>
+                </span>
                 {% endif %}
             </div>
         </div>
@@ -287,10 +298,17 @@
                 </div>
 
                 <div class="pt-1">
+                    {% if can_edit %}
                     <button type="submit" class="w-full bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs py-2.5 rounded-xl shadow-xs transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99]">
                         <i class="fa-solid fa-floppy-disk text-xs"></i>
                         <span>Update Status & Payment</span>
                     </button>
+                    {% else %}
+                    <div class="w-full bg-gray-100 text-gray-400 font-bold text-xs py-2.5 rounded-xl border border-gray-200 flex items-center justify-center gap-2 cursor-not-allowed" title="স্ট্যাটাস বা তথ্য পরিবর্তনের অনুমতি নেই">
+                        <i class="fa-solid fa-lock text-xs"></i>
+                        <span>Editing Restricted (স্ট্যাটাস পরিবর্তন লকড)</span>
+                    </div>
+                    {% endif %}
                 </div>
             </form>
 
@@ -300,9 +318,15 @@
                     <h3 class="font-display font-black text-sm text-gray-900 flex items-center gap-2">
                         <i class="fa-solid fa-user text-brand-600"></i> Customer Profile
                     </h3>
+                    {% if can_edit %}
                     <button type="button" onclick="openEditCustomerModal()" class="text-xs font-bold text-brand-600 hover:text-brand-800 underline cursor-pointer">
                         Edit Info
                     </button>
+                    {% else %}
+                    <span class="text-xs font-semibold text-gray-400 inline-flex items-center gap-1 cursor-not-allowed" title="কাস্টমার তথ্য এডিট অনুমতি নেই">
+                        <i class="fa-solid fa-lock text-[10px]"></i> Edit Locked
+                    </span>
+                    {% endif %}
                 </div>
 
                 <!-- Recipient Info & Structured Contact Actions -->
@@ -454,9 +478,15 @@
                     <h3 class="font-display font-black text-sm text-gray-900 flex items-center gap-2">
                         <i class="fa-solid fa-location-dot text-brand-600"></i> Delivery Address & Zone
                     </h3>
+                    {% if can_edit %}
                     <button type="button" onclick="openEditCustomerModal()" class="text-xs font-bold text-brand-600 hover:text-brand-800 underline cursor-pointer">
                         Edit Address
                     </button>
+                    {% else %}
+                    <span class="text-xs font-semibold text-gray-400 inline-flex items-center gap-1 cursor-not-allowed" title="ঠিকানা এডিট করার অনুমতি নেই">
+                        <i class="fa-solid fa-lock text-[10px]"></i> Edit Locked
+                    </span>
+                    {% endif %}
                 </div>
 
                 <!-- Address Box -->
@@ -814,7 +844,7 @@
     </div>
 </div>
 
-{% if request.user.is_superuser %}
+{% if can_delete %}
 <!-- DELETE ORDER CONFIRMATION MODAL -->
 <div id="deleteOrderModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative text-center">

@@ -134,12 +134,14 @@
                                 {% if item.is_active %}Unblock & Recover{% else %}Activate Block{% endif %}
                             </button>
 
+                            {% if can_delete %}
                             <!-- Delete Entry with Custom Modal -->
                             <button type="button" 
                                 onclick="openBlacklistActionModal('{{ item.id }}', '{{ item.phone }}', '{{ item.customer_name|escapejs }}', 'delete', false)" 
                                 class="text-rose-600 hover:text-rose-800 hover:bg-rose-50 p-1.5 rounded-lg transition cursor-pointer" title="Delete">
                                 <i class="fa-solid fa-trash-can"></i>
                             </button>
+                            {% endif %}
                         </td>
                     </tr>
                     {% empty %}

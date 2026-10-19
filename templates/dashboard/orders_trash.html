@@ -167,8 +167,8 @@
                                 <span>Restore Order</span>
                             </button>
 
-                            {% if request.user.is_superuser %}
-                            <!-- 2. Permanent Delete Button (Superuser only) -->
+                            {% if can_delete %}
+                            <!-- 2. Permanent Delete Button -->
                             <div class="mt-1">
                                 <button type="button" onclick="openPermanentDeleteModal('{{ order.order_number }}', '{{ order.customer_name|escapejs }}')" class="text-rose-600 hover:text-rose-800 text-[11px] font-bold underline transition cursor-pointer">
                                     Permanent Delete
@@ -239,6 +239,7 @@
     </div>
 </div>
 
+{% if can_delete %}
 <!-- PERMANENT DELETE CONFIRMATION MODAL -->
 <div id="permanentDeleteModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative text-center">
@@ -269,6 +270,7 @@
 
     </div>
 </div>
+{% endif %}
 
 <script>
 function openRestoreModal(orderNumber, customerName, customerPhone) {

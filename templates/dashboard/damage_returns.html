@@ -190,8 +190,8 @@
                                 <button type="button" onclick="openUpdateReturnModal('{{ ret.id }}', '{{ ret.order.order_number }}', '{{ ret.return_status }}', '{{ ret.courier_return_fee }}', '{{ ret.notes|escapejs }}')" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-[11px] px-3 py-1.5 rounded-xl transition">
                                     Update Status
                                 </button>
-                                {% if request.user.is_superuser %}
-                                <button type="button" onclick="openDeleteReturnModal('{{ ret.id }}', '{{ ret.order.order_number }}')" class="p-1.5 text-gray-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition" title="Delete Return Record">
+                                {% if can_delete %}
+                                <button type="button" onclick="openDeleteReturnModal('{{ ret.id }}', '{{ ret.order.order_number }}')" class="p-1.5 text-gray-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition cursor-pointer" title="Delete Return Record">
                                     <i class="fa-solid fa-trash-can text-xs"></i>
                                 </button>
                                 {% endif %}
@@ -340,7 +340,7 @@
                             -৳{{ log.total_loss_bdt|floatformat:0 }}
                         </td>
                         <td class="py-3 px-3 text-right">
-                            {% if request.user.is_superuser %}
+                            {% if can_delete %}
                             <button 
                                 type="button" 
                                 onclick="openDeleteDamageModal('{{ log.id }}', '{{ log.product.name|escapejs }}', '{{ log.quantity }}')"
@@ -634,7 +634,7 @@
     </div>
 </div>
 
-{% if request.user.is_superuser %}
+{% if can_delete %}
 <!-- DELETE DAMAGE CONFIRMATION MODAL -->
 <div id="deleteDamageModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative text-center">

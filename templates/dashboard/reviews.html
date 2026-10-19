@@ -33,7 +33,7 @@
     </div>
 
     <!-- Quick Stats -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
         <a href="{% url 'dashboard:reviews' %}" class="bg-white p-4 rounded-2xl border {% if not status_filter %}border-brand-500 ring-2 ring-brand-500/20{% else %}border-gray-200{% endif %} hover:border-brand-300 shadow-xs flex items-center justify-between transition">
             <div>
                 <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Total Reviews</span>
@@ -43,6 +43,18 @@
                 <i class="fa-solid fa-comments"></i>
             </span>
         </a>
+
+        <div class="bg-white p-4 rounded-2xl border border-amber-200 bg-amber-50/20 shadow-xs flex items-center justify-between">
+            <div>
+                <span class="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">Overall Rating</span>
+                <span class="font-display font-black text-2xl text-amber-600 mt-0.5 flex items-center gap-1">
+                    ★ {{ overall_rating|floatformat:1 }} <span class="text-[11px] text-gray-400 font-bold">/ 5.0</span>
+                </span>
+            </div>
+            <span class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-sm font-black">
+                <i class="fa-solid fa-star"></i>
+            </span>
+        </div>
 
         <a href="{% url 'dashboard:reviews' %}?status=pending" class="bg-white p-4 rounded-2xl border {% if status_filter == 'pending' %}border-amber-500 ring-2 ring-amber-500/20{% else %}{% if pending_reviews_count %}border-amber-300 bg-amber-50/40{% else %}border-gray-200{% endif %}{% endif %} hover:border-amber-400 shadow-xs flex items-center justify-between transition">
             <div>
@@ -108,7 +120,13 @@
                             <span class="text-gray-400 text-[11px]">{{ r.reviewer_location|default:"Dhaka" }} • {{ r.created_at|date:"M d, Y" }}</span>
                         </td>
                         <td class="p-4">
+                            {% if r.product %}
                             <span class="font-bold text-gray-900">{{ r.product.name }}</span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1 font-extrabold text-emerald-900 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded-lg text-[11px]">
+                                🥒 All Pickles (Overall)
+                            </span>
+                            {% endif %}
                         </td>
                         <td class="p-4">
                             <div class="text-amber-500 font-bold text-xs">
@@ -116,7 +134,22 @@
                             </div>
                         </td>
                         <td class="p-4 max-w-xs">
-                            <p class="text-gray-700 italic truncate">{{ r.comment }}</p>
+                            <div class="flex items-start gap-2.5">
+                                {% if r.image %}
+                                <button type="button" onclick="openLightbox('{{ r.image_url }}', '{{ r.reviewer_name|escapejs }}')" class="shrink-0 group relative cursor-pointer" title="Click to view full screenshot">
+                                    <img src="{{ r.image_url }}" alt="Screenshot" class="w-11 h-11 object-cover rounded-lg border border-emerald-300 shadow-2xs group-hover:scale-105 transition">
+                                    <span class="absolute inset-0 bg-black/35 rounded-lg opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[10px] transition"><i class="fa-solid fa-magnifying-glass-plus"></i></span>
+                                </button>
+                                {% endif %}
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-gray-700 italic text-xs leading-snug line-clamp-2">{{ r.comment }}</p>
+                                    {% if r.image %}
+                                    <button type="button" onclick="openLightbox('{{ r.image_url }}', '{{ r.reviewer_name|escapejs }}')" class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 hover:text-emerald-900 mt-1 cursor-pointer">
+                                        <i class="fa-solid fa-image"></i> View Screenshot
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </td>
                         <td class="p-4 text-center">
                             {% if r.is_approved %}
@@ -145,7 +178,7 @@
                                 {% endif %}
                             </form>
 
-                            {% if request.user.is_superuser %}
+                            {% if can_delete %}
                             <button type="button" onclick="openDeleteReviewModal('{{ r.id }}', '{{ r.reviewer_name|escapejs }}')" class="px-2 py-1 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold text-[11px] transition cursor-pointer" title="Delete Review">
                                 <i class="fa-solid fa-trash-can"></i>
                             </button>
@@ -266,17 +299,19 @@
             </button>
         </div>
 
-        <form method="POST" class="space-y-4 text-xs">
+        <form method="POST" enctype="multipart/form-data" class="space-y-4 text-xs">
             {% csrf_token %}
             <input type="hidden" name="action" value="create_review">
 
             <div>
-                <label class="font-bold text-gray-700 block mb-1">Pickle Product *</label>
-                <select name="product_id" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900">
+                <label class="font-bold text-gray-700 block mb-1">Pickle Product</label>
+                <select name="product_id" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:ring-2 focus:ring-brand-500 focus:outline-hidden transition">
+                    <option value="" selected>🥒 All Pickles (Overall Brand / General Experience)</option>
                     {% for p in products %}
                     <option value="{{ p.id }}">{{ p.name }}</option>
                     {% endfor %}
                 </select>
+                <span class="text-[10px] text-gray-400 mt-1 block">সব আচারের জন্য সাধারণভাবে ওভারঅল রেটিং দিতে "All Pickles (Overall)" রাখুন</span>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -313,6 +348,12 @@
                 <textarea name="comment" required rows="3" placeholder="Write the customer feedback or testimonial..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900"></textarea>
             </div>
 
+            <div>
+                <label class="font-bold text-gray-700 block mb-1">Customer Screenshot / Photo (Optional)</label>
+                <input type="file" name="image" accept="image/*" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs text-gray-700 font-medium file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-brand-100 file:text-brand-900 hover:file:bg-brand-200 cursor-pointer">
+                <span class="text-[10px] text-gray-400 mt-1 block">Upload WhatsApp/Messenger screenshot, customer photo, or delivery picture</span>
+            </div>
+
             <div class="pt-3 border-t border-gray-100 flex items-center justify-end gap-2">
                 <button type="button" onclick="closeReviewModal()" class="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold transition">Cancel</button>
                 <button type="submit" class="px-5 py-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold transition shadow-md">Add Review</button>
@@ -321,7 +362,7 @@
     </div>
 </div>
 
-{% if request.user.is_superuser %}
+{% if can_delete %}
 <!-- DELETE REVIEW CONFIRMATION MODAL -->
 <div id="deleteReviewModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative text-center">
@@ -368,5 +409,29 @@ function openDeleteReviewModal(reviewId, reviewerName) {
 function closeDeleteReviewModal() {
     document.getElementById('deleteReviewModal').classList.add('hidden');
 }
+function openLightbox(url, title) {
+    if (!url) return;
+    document.getElementById('lightboxImg').src = url;
+    document.getElementById('lightboxTitle').textContent = title ? ('Review by ' + title) : 'Review Screenshot';
+    document.getElementById('imageLightboxModal').classList.remove('hidden');
+}
+function closeLightbox(e) {
+    if (e && e.target && e.target.id !== 'imageLightboxModal' && !e.target.closest('button')) return;
+    document.getElementById('imageLightboxModal').classList.add('hidden');
+    document.getElementById('lightboxImg').src = '';
+}
 </script>
+
+<!-- IMAGE / SCREENSHOT LIGHTBOX MODAL -->
+<div id="imageLightboxModal" class="fixed inset-0 z-50 bg-black/80 hidden flex items-center justify-center p-4 backdrop-blur-xs" onclick="closeLightbox(event)">
+    <div class="relative max-w-2xl w-full max-h-[90vh] flex flex-col items-center" onclick="event.stopPropagation()">
+        <div class="w-full flex items-center justify-between pb-2 text-white">
+            <span id="lightboxTitle" class="text-xs font-bold truncate">Review Screenshot</span>
+            <button type="button" onclick="closeLightbox()" class="text-white/80 hover:text-white text-xl p-1 transition cursor-pointer">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <img id="lightboxImg" src="" alt="Screenshot" class="max-w-full max-h-[80vh] rounded-2xl shadow-2xl object-contain border border-white/20 bg-black">
+    </div>
+</div>
 {% endblock %}

@@ -294,3 +294,67 @@ class BlacklistedCustomer(models.Model):
         return f"{self.phone} ({self.customer_name or 'Unknown'}) - {self.reason}"
 
 
+class StaffSecurityProfile(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='security_profile')
+    employee_id = models.CharField(max_length=50, blank=True, help_text="e.g. PKP-EMP-01 or Staff Code")
+    phone = models.CharField(max_length=20, blank=True)
+    can_delete_records = models.BooleanField(
+        default=False,
+        help_text="Whether this user has explicit permission to delete records when strict admin mode is disabled."
+    )
+    can_edit_records = models.BooleanField(
+        default=True,
+        help_text="Whether this user has permission to edit records (customer details, products, expenses, etc.)."
+    )
+    can_dispatch_courier = models.BooleanField(
+        default=True,
+        help_text="Whether this user has permission to dispatch orders to Pathao/Steadfast courier."
+    )
+    notes = models.TextField(blank=True, help_text="Designation, role notes")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Staff Security Profile'
+        verbose_name_plural = 'Staff Security Profiles'
+
+    def __str__(self):
+        del_status = 'Can Delete' if self.can_delete_records else 'Delete Restricted'
+        edit_status = 'Can Edit' if self.can_edit_records else 'Edit Restricted'
+        dispatch_status = 'Can Dispatch' if self.can_dispatch_courier else 'Dispatch Restricted'
+        return f"{self.user.username} [{self.employee_id or 'No ID'}] ({del_status}, {edit_status}, {dispatch_status})"
+
+
+class DashboardSecurityConfig(models.Model):
+    strict_admin_only_delete = models.BooleanField(
+        default=True,
+        help_text="Strict Mode: ONLY Superuser/Admin can delete any record across the entire platform. Staff cannot delete anything."
+    )
+    allow_staff_delete_override = models.BooleanField(
+        default=False,
+        help_text="If True, staff members with individual can_delete_records=True are allowed to delete."
+    )
+    strict_admin_only_edit = models.BooleanField(
+        default=False,
+        help_text="Strict Mode: ONLY Superuser/Admin can edit records (orders, products, expenses). Staff cannot edit anything."
+    )
+    strict_admin_only_dispatch = models.BooleanField(
+        default=False,
+        help_text="Strict Mode: ONLY Superuser/Admin can dispatch orders to couriers."
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Dashboard Security Config'
+        verbose_name_plural = 'Dashboard Security Configs'
+
+    @classmethod
+    def get_config(cls):
+        config, _ = cls.objects.get_or_create(id=1)
+        return config
+
+    def __str__(self):
+        return f"Security Config (Strict Admin Delete: {self.strict_admin_only_delete}, Strict Edit: {self.strict_admin_only_edit}, Strict Dispatch: {self.strict_admin_only_dispatch})"
+
+

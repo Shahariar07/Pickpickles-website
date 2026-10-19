@@ -69,6 +69,62 @@ def cart_context(request):
         auto_whatsapp_url = request.session.pop('auto_whatsapp_url', None)
         auto_whatsapp_order_number = request.session.pop('auto_whatsapp_order_number', None)
 
+    can_delete = False
+    can_edit = False
+    can_dispatch = False
+    strict_admin_only_delete = True
+    strict_admin_only_edit = False
+    strict_admin_only_dispatch = False
+    try:
+        user = getattr(request, 'user', None)
+        if user and user.is_authenticated:
+            if user.is_superuser:
+                can_delete = True
+                can_edit = True
+                can_dispatch = True
+            else:
+                from dashboard.models import DashboardSecurityConfig
+                cfg = DashboardSecurityConfig.get_config()
+                strict_admin_only_delete = cfg.strict_admin_only_delete
+                strict_admin_only_edit = cfg.strict_admin_only_edit
+                strict_admin_only_dispatch = cfg.strict_admin_only_dispatch
+
+                profile = getattr(user, 'security_profile', None)
+
+                # Delete permission
+                if not cfg.strict_admin_only_delete and cfg.allow_staff_delete_override:
+                    if profile and profile.can_delete_records:
+                        can_delete = True
+
+                # Edit permission
+                if not cfg.strict_admin_only_edit:
+                    can_edit = profile.can_edit_records if profile else True
+
+                # Dispatch permission
+                if not cfg.strict_admin_only_dispatch:
+                    can_dispatch = profile.can_dispatch_courier if profile else True
+    except Exception:
+        pass
+
+    base_context = {
+        'site_categories': Category.objects.all() if 'Category' in locals() or 'Category' in globals() else [],
+        'STATIC_VERSION': static_version,
+        'META_PIXEL_ID': meta_pixel_id,
+        'GOOGLE_ANALYTICS_ID': google_analytics_id,
+        'CLOUDFLARE_TURNSTILE_SITE_KEY': cloudflare_turnstile_site_key,
+        'global_trash_count': trash_orders_count,
+        'pending_reviews_count': pending_reviews_count,
+        'auto_whatsapp_url': auto_whatsapp_url,
+        'auto_whatsapp_order_number': auto_whatsapp_order_number,
+        'can_delete': can_delete,
+        'can_edit': can_edit,
+        'can_dispatch': can_dispatch,
+        'strict_admin_only_delete': strict_admin_only_delete,
+        'strict_admin_only_edit': strict_admin_only_edit,
+        'strict_admin_only_dispatch': strict_admin_only_dispatch,
+        'is_admin_user': bool(getattr(request, 'user', None) and request.user.is_authenticated and request.user.is_superuser),
+    }
+
     try:
         if not hasattr(request, 'session'):
             return {
@@ -77,15 +133,7 @@ def cart_context(request):
                 'cart_subtotal': 0,
                 'free_delivery_unlocked': False,
                 'items_needed_for_free_delivery': 4,
-                'site_categories': [],
-                'STATIC_VERSION': static_version,
-                'META_PIXEL_ID': meta_pixel_id,
-                'GOOGLE_ANALYTICS_ID': google_analytics_id,
-                'CLOUDFLARE_TURNSTILE_SITE_KEY': cloudflare_turnstile_site_key,
-                'global_trash_count': trash_orders_count,
-                'pending_reviews_count': pending_reviews_count,
-                'auto_whatsapp_url': auto_whatsapp_url,
-                'auto_whatsapp_order_number': auto_whatsapp_order_number,
+                **base_context,
             }
         cart = Cart(request)
         return {
@@ -94,15 +142,7 @@ def cart_context(request):
             'cart_subtotal': cart.get_subtotal(),
             'free_delivery_unlocked': cart.is_free_delivery(),
             'items_needed_for_free_delivery': cart.items_needed_for_free_delivery(),
-            'site_categories': Category.objects.all(),
-            'STATIC_VERSION': static_version,
-            'META_PIXEL_ID': meta_pixel_id,
-            'GOOGLE_ANALYTICS_ID': google_analytics_id,
-            'CLOUDFLARE_TURNSTILE_SITE_KEY': cloudflare_turnstile_site_key,
-            'global_trash_count': trash_orders_count,
-            'pending_reviews_count': pending_reviews_count,
-            'auto_whatsapp_url': auto_whatsapp_url,
-            'auto_whatsapp_order_number': auto_whatsapp_order_number,
+            **base_context,
         }
     except Exception:
         return {
@@ -111,14 +151,6 @@ def cart_context(request):
             'cart_subtotal': 0,
             'free_delivery_unlocked': False,
             'items_needed_for_free_delivery': 4,
-            'site_categories': [],
-            'STATIC_VERSION': static_version,
-            'META_PIXEL_ID': meta_pixel_id,
-            'GOOGLE_ANALYTICS_ID': google_analytics_id,
-            'CLOUDFLARE_TURNSTILE_SITE_KEY': cloudflare_turnstile_site_key,
-            'global_trash_count': trash_orders_count,
-            'pending_reviews_count': pending_reviews_count,
-            'auto_whatsapp_url': auto_whatsapp_url,
-            'auto_whatsapp_order_number': auto_whatsapp_order_number,
+            **base_context,
         }
 

@@ -214,6 +214,7 @@
                                     <span class="sr-only">Edit Head</span>
                                 </button>
 
+                                {% if can_delete %}
                                 <!-- Delete Head Button (Just Icon) -->
                                 <button type="button" 
                                         onclick="openDeleteExpCatModal('{{ item.head.id }}', '{{ item.head.name|escapejs }}', true)"
@@ -222,6 +223,7 @@
                                     <i class="fa-solid fa-trash-can text-sm"></i>
                                     <span class="sr-only">Delete Head</span>
                                 </button>
+                                {% endif %}
                             </div>
                         </div>
 
@@ -304,12 +306,14 @@
                                         title="Edit Sub-category">
                                     <i class="fa-solid fa-pen-to-square text-xs"></i>
                                 </button>
+                                {% if can_delete %}
                                 <button type="button" 
                                         onclick="openDeleteExpCatModal('{{ sub.id }}', '{{ sub.name|escapejs }}', false)"
                                         class="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
                                         title="Delete Sub-category">
                                     <i class="fa-solid fa-trash-can text-xs"></i>
                                 </button>
+                                {% endif %}
                             </div>
                         </div>
 
@@ -534,6 +538,7 @@
     </div>
 </div>
 
+{% if can_delete %}
 <!-- ========================================================================= -->
 <!-- 3. DELETE EXPENSE CATEGORY MODAL -->
 <!-- ========================================================================= -->
@@ -565,6 +570,7 @@
 
     </div>
 </div>
+{% endif %}
 
 <script>
 // Switch active head in Master-Detail studio view
