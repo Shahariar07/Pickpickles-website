@@ -265,7 +265,6 @@
                                 class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'admin_users' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-amber-200/90 hover:text-white hover:bg-brand-800{% endif %}">
                                 <i class="fa-solid fa-id-card-clip text-amber-400 text-sm w-4 text-center"></i>
                                 <span>Staff & Admin IDs</span>
-                                <span class="ml-auto px-2 py-0.5 text-[9px] font-black bg-amber-400/20 text-amber-300 rounded-full border border-amber-400/30">ID Create</span>
                             </a>
                             {% endif %}
 
@@ -449,7 +448,7 @@
                     <a href="{% url 'dashboard:admin_users' %}"
                         class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 border border-amber-300 text-xs font-extrabold px-3 py-2 rounded-xl transition flex items-center gap-1.5 shadow-2xs">
                         <i class="fa-solid fa-id-card text-amber-600"></i>
-                        <span>Staff IDs (+আইডি)</span>
+                        <span>Staff IDs</span>
                     </a>
                     {% endif %}
 

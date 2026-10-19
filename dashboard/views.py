@@ -2909,6 +2909,43 @@ def reviews_manager(request):
             messages.success(request, f'Review for {target_name} added successfully!')
             return redirect('dashboard:reviews')
 
+        # 4. Edit Review
+        elif action == 'edit_review':
+            if not can_user_edit(request.user):
+                messages.error(request, 'Permission Denied: রিভিউ এডিট করার অনুমতি আপনার নেই। (Only Admin/Authorized Staff can edit reviews.)')
+                return redirect('dashboard:reviews')
+
+            review = get_object_or_404(Review, id=review_id)
+            prod_id = request.POST.get('product_id', '').strip()
+            if prod_id and prod_id != '0' and prod_id.lower() != 'all':
+                review.product = Product.objects.filter(id=prod_id).first()
+            else:
+                review.product = None
+
+            review.reviewer_name = request.POST.get('reviewer_name', review.reviewer_name).strip() or review.reviewer_name
+            review.reviewer_location = request.POST.get('reviewer_location', review.reviewer_location).strip() or review.reviewer_location
+            try:
+                review.rating = int(request.POST.get('rating', review.rating))
+            except (ValueError, TypeError):
+                pass
+
+            review.comment = request.POST.get('comment', review.comment).strip() or review.comment
+
+            if 'image' in request.FILES:
+                review.image = request.FILES['image']
+            elif request.POST.get('remove_image') == 'true':
+                review.image = None
+
+            if 'is_approved' in request.POST:
+                review.is_approved = (request.POST.get('is_approved') in ['1', 'true', 'True'])
+
+            review.save()
+            messages.success(request, f'Review by {review.reviewer_name} updated successfully!')
+            redirect_url = reverse('dashboard:reviews')
+            if status_filter:
+                redirect_url += f'?status={status_filter}'
+            return redirect(redirect_url)
+
     # Pagination (Default: 10 per page)
     page_number = request.GET.get('page', 1)
     per_page = request.GET.get('per_page', 10)
@@ -2944,6 +2981,8 @@ def reviews_manager(request):
         'pending_reviews_count': pending_reviews_count,
         'overall_rating': overall_rating,
         'status_filter': status_filter,
+        'can_edit': can_user_edit(request.user),
+        'can_delete': can_user_delete(request.user),
     }
     return render(request, 'dashboard/reviews.html', context)
 

@@ -178,6 +178,15 @@
                                 {% endif %}
                             </form>
 
+                            {% if can_edit %}
+                            <button type="button" 
+                                    onclick="openEditReviewModal('{{ r.id }}', '{{ r.reviewer_name|escapejs }}', '{{ r.reviewer_location|escapejs }}', '{{ r.product.id|default:"" }}', '{{ r.rating }}', '{{ r.comment|escapejs }}', '{{ r.image_url|escapejs }}', {{ r.is_approved|yesno:"true,false" }})" 
+                                    class="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[11px] transition inline-flex items-center gap-1 cursor-pointer" 
+                                    title="Edit Review">
+                                <i class="fa-solid fa-pen-to-square"></i> Edit
+                            </button>
+                            {% endif %}
+
                             {% if can_delete %}
                             <button type="button" onclick="openDeleteReviewModal('{{ r.id }}', '{{ r.reviewer_name|escapejs }}')" class="px-2 py-1 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold text-[11px] transition cursor-pointer" title="Delete Review">
                                 <i class="fa-solid fa-trash-can"></i>
@@ -362,6 +371,102 @@
     </div>
 </div>
 
+{% if can_edit %}
+<!-- EDIT REVIEW MODAL -->
+<div id="editReviewModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-5 shadow-2xl relative max-h-[95vh] overflow-y-auto">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+            <div class="flex items-center gap-2">
+                <span class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-sm font-black">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                </span>
+                <h3 class="font-display font-black text-xl text-gray-900">Edit Customer Review</h3>
+            </div>
+            <button type="button" onclick="closeEditReviewModal()" class="text-gray-400 hover:text-gray-700 text-lg p-1 cursor-pointer">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" class="space-y-4 text-xs">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="edit_review">
+            <input type="hidden" id="edit_review_id" name="review_id" value="">
+
+            <div>
+                <label class="font-bold text-gray-700 block mb-1">Pickle Product</label>
+                <select id="edit_product_id" name="product_id" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2.5 font-bold text-gray-900 focus:ring-2 focus:ring-brand-500 focus:outline-hidden transition">
+                    <option value="">🥒 All Pickles (Overall Brand / General Experience)</option>
+                    {% for p in products %}
+                    <option value="{{ p.id }}">{{ p.name }}</option>
+                    {% endfor %}
+                </select>
+                <span class="text-[10px] text-gray-400 mt-1 block">সব আচারের জন্য সাধারণভাবে ওভারঅল রেটিং রাখতে "All Pickles" সিলেক্ট করুন</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Customer Name *</label>
+                    <input type="text" id="edit_reviewer_name" name="reviewer_name" required placeholder="e.g. Tanvir Ahmed" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold">
+                </div>
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Location / Area</label>
+                    <input type="text" id="edit_reviewer_location" name="reviewer_location" placeholder="e.g. Dhanmondi, Dhaka" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Overall Rating (1-5)</label>
+                    <select id="edit_rating" name="rating" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 font-bold text-gray-900">
+                        <option value="5">⭐⭐⭐⭐⭐ (5/5)</option>
+                        <option value="4">⭐⭐⭐⭐ (4/5)</option>
+                        <option value="3">⭐⭐⭐ (3/5)</option>
+                        <option value="2">⭐⭐ (2/5)</option>
+                        <option value="1">⭐ (1/5)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Visibility Status</label>
+                    <select id="edit_is_approved" name="is_approved" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 font-bold text-gray-900">
+                        <option value="1">✅ Live & Approved</option>
+                        <option value="0">⏳ Pending Approval / Hidden</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="font-bold text-gray-700 block mb-1">Review Comment *</label>
+                <textarea id="edit_comment" name="comment" required rows="3" placeholder="Write customer feedback..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900"></textarea>
+            </div>
+
+            <div class="space-y-2">
+                <label class="font-bold text-gray-700 block mb-1">Customer Screenshot / Photo</label>
+                <!-- Current Screenshot Preview -->
+                <div id="edit_current_image_container" class="hidden items-center gap-3 p-2.5 bg-gray-50 rounded-xl border border-gray-200">
+                    <img id="edit_current_image_preview" src="" alt="Current screenshot" class="w-12 h-12 object-cover rounded-lg border border-gray-300 shrink-0">
+                    <div class="min-w-0 flex-1">
+                        <span class="text-xs font-bold text-gray-700 block">Current screenshot attached</span>
+                        <label class="inline-flex items-center gap-1.5 mt-1 text-[11px] font-bold text-rose-600 cursor-pointer">
+                            <input type="checkbox" name="remove_image" value="true" class="rounded text-rose-600 focus:ring-rose-500">
+                            <span>Remove this screenshot</span>
+                        </label>
+                    </div>
+                </div>
+                <input type="file" name="image" accept="image/*" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs text-gray-700 font-medium file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-brand-100 file:text-brand-900 hover:file:bg-brand-200 cursor-pointer">
+                <span class="text-[10px] text-gray-400 block">Choose a new file to replace or upload a new screenshot</span>
+            </div>
+
+            <div class="pt-3 border-t border-gray-100 flex items-center justify-end gap-2">
+                <button type="button" onclick="closeEditReviewModal()" class="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold transition cursor-pointer">Cancel</button>
+                <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition shadow-md cursor-pointer flex items-center gap-1.5">
+                    <i class="fa-solid fa-floppy-disk"></i> Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
 {% if can_delete %}
 <!-- DELETE REVIEW CONFIRMATION MODAL -->
 <div id="deleteReviewModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
@@ -400,6 +505,35 @@ function openReviewModal() {
 }
 function closeReviewModal() {
     document.getElementById('addReviewModal').classList.add('hidden');
+}
+function openEditReviewModal(id, reviewerName, location, productId, rating, comment, imageUrl, isApproved) {
+    document.getElementById('edit_review_id').value = id;
+    document.getElementById('edit_reviewer_name').value = reviewerName;
+    document.getElementById('edit_reviewer_location').value = location;
+    document.getElementById('edit_product_id').value = productId || '';
+    document.getElementById('edit_rating').value = rating;
+    document.getElementById('edit_comment').value = comment;
+    document.getElementById('edit_is_approved').value = isApproved ? '1' : '0';
+
+    const imgContainer = document.getElementById('edit_current_image_container');
+    const imgPreview = document.getElementById('edit_current_image_preview');
+    const removeImgCheckbox = document.querySelector('input[name="remove_image"]');
+    if (removeImgCheckbox) removeImgCheckbox.checked = false;
+
+    if (imageUrl) {
+        imgPreview.src = imageUrl;
+        imgContainer.classList.remove('hidden');
+        imgContainer.classList.add('flex');
+    } else {
+        imgPreview.src = '';
+        imgContainer.classList.add('hidden');
+        imgContainer.classList.remove('flex');
+    }
+
+    document.getElementById('editReviewModal').classList.remove('hidden');
+}
+function closeEditReviewModal() {
+    document.getElementById('editReviewModal').classList.add('hidden');
 }
 function openDeleteReviewModal(reviewId, reviewerName) {
     document.getElementById('del_review_id').value = reviewId;
