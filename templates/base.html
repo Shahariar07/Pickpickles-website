@@ -157,13 +157,6 @@
                         <i class="fa-solid fa-magnifying-glass text-brand-600"></i> Track
                     </a>
 
-                    <!-- Admin Dashboard Quick Link -->
-                    {% if user.is_staff %}
-                    <a href="{% url 'dashboard:index' %}"
-                        class="hidden sm:inline-flex items-center gap-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 px-3 py-1.5 rounded-full text-xs font-bold border border-brand-300 transition-all">
-                        <i class="fa-solid fa-gauge-high"></i> Orders Hub
-                    </a>
-                    {% endif %}
 
                     <!-- Cart Trigger Button -->
                     <button id="cartDrawerBtn" onclick="toggleCartDrawer(true)"

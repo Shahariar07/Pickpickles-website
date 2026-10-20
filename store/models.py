@@ -92,7 +92,7 @@ class Product(models.Model):
         if not hasattr(self, '_cached_demand'):
             self._cached_demand = self.order_items.filter(
                 order__is_deleted=False,
-                order__order_status__in=['PENDING', 'CONFIRMED', 'PACKING']
+                order__order_status__in=['PENDING', 'CONFIRMED']
             ).aggregate(models.Sum('quantity'))['quantity__sum'] or 0
         return self._cached_demand
 
@@ -727,10 +727,60 @@ class Order(models.Model):
         return self.pathao_order_status
 
     @property
+    def is_courier_delivered(self):
+        c = (self.active_courier_status or '').lower()
+        return any(term in c for term in ['delivered', 'partial_delivered', 'partial_delivery'])
+
+    @property
+    def is_courier_in_transit(self):
+        c = (self.active_courier_status or '').lower()
+        return any(term in c for term in ['transit', 'delivery', 'sent_to_hub']) or self.is_courier_delivered
+
+    @property
+    def is_courier_picked_up(self):
+        c = (self.active_courier_status or '').lower()
+        return any(term in c for term in ['picked_up', 'received_at_hub']) or self.is_courier_in_transit
+
+    @property
+    def active_courier_status_display(self):
+        if not self.active_courier_status:
+            return "In Review" if (self.steadfast_consignment_id or self.pathao_consignment_id) else "Not Dispatched"
+        raw = str(self.active_courier_status).strip().lower().replace('-', '_').replace(' ', '_')
+        display_map = {
+            'in_review': 'In Review',
+            'pending': 'Pending Pickup',
+            'created': 'Booking Created',
+            'pickup_requested': 'Pickup Requested',
+            'picked_up': 'Picked Up',
+            'received_at_hub': 'Received at Hub',
+            'in_transit': 'In Transit',
+            'out_for_delivery': 'Out for Delivery',
+            'hold': 'On Hold',
+            'delivered': 'Delivered',
+            'delivered_approval_pending': 'Delivered',
+            'partial_delivered': 'Partially Delivered',
+            'partial_delivery': 'Partially Delivered',
+            'cancelled': 'Cancelled',
+            'cancelled_approval_pending': 'Cancelled',
+            'returned': 'Returned',
+        }
+        return display_map.get(raw, self.active_courier_status.replace('_', ' ').title())
+
+    @property
+    def active_courier_status_badge_class(self):
+        c = (self.active_courier_status or '').lower()
+        if 'delivered' in c:
+            return 'bg-emerald-50 text-emerald-800 border-emerald-300 ring-1 ring-emerald-500/20'
+        if 'transit' in c or 'delivery' in c:
+            return 'bg-blue-50 text-blue-800 border-blue-300 ring-1 ring-blue-500/20'
+        if 'cancel' in c or 'return' in c or 'failed' in c:
+            return 'bg-rose-50 text-rose-800 border-rose-300 ring-1 ring-rose-500/20'
+        return 'bg-amber-50 text-amber-800 border-amber-300 ring-1 ring-amber-500/20'
+
+    @property
     def active_tracking_url(self):
         if self.active_courier == 'STEADFAST':
-            code = self.steadfast_tracking_code or self.steadfast_consignment_id
-            return f"https://steadfast.com.bd/tracking/{code}" if code else "https://steadfast.com.bd/tracking"
+            return "https://steadfast.com.bd/tracking"
         elif self.active_courier == 'PATHAO':
             cid = self.pathao_consignment_id
             return f"https://merchant.pathao.com/tracking?consignment_id={cid}" if cid else "https://merchant.pathao.com/tracking"
@@ -962,35 +1012,7 @@ Warm regards,
                 raw_status = str(info.get('order_status') or info.get('delivery_status') or info.get('order_status_slug') or '').strip()
                 if raw_status:
                     self.pathao_order_status = raw_status
-                    clean = raw_status.lower().replace('-', '_').replace(' ', '_')
-                    
-                    status_map = {
-                        'pending': 'PENDING',
-                        'created': 'PENDING',
-                        'draft': 'PENDING',
-                        'pickup_requested': 'PENDING',
-                        'pickup_assigned': 'CONFIRMED',
-                        'assigned_for_pickup': 'CONFIRMED',
-                        'picked_up': 'PACKING',
-                        'received_at_hub': 'PACKING',
-                        'in_transit': 'OUT_FOR_DELIVERY',
-                        'sent_to_hub': 'OUT_FOR_DELIVERY',
-                        'out_for_delivery': 'OUT_FOR_DELIVERY',
-                        'assigned_for_delivery': 'OUT_FOR_DELIVERY',
-                        'delivered': 'DELIVERED',
-                        'partial_delivery': 'DELIVERED',
-                        'returned': 'CANCELLED',
-                        'return_in_progress': 'CANCELLED',
-                        'cancelled': 'CANCELLED',
-                        'delivery_failed': 'CANCELLED',
-                    }
-                    if clean in status_map:
-                        mapped = status_map[clean]
-                        if self.order_status != mapped:
-                            self.order_status = mapped
-                            if mapped == 'DELIVERED' and self.payment_status == 'UNPAID':
-                                self.payment_status = 'PAID'
-                    self.save(update_fields=['pathao_order_status', 'order_status', 'payment_status'])
+                    self.save(update_fields=['pathao_order_status'])
                     return raw_status
         except Exception:
             pass

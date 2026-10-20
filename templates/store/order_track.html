@@ -14,7 +14,7 @@
             Track Your Pickle Delivery
         </h1>
         <p class="text-xs sm:text-sm text-gray-500 mt-1">
-            Enter your Order ID (e.g. PKP-0001) or your 11-digit mobile number.
+            Enter your Order ID (e.g. PKP-00073), mobile number, or Courier Tracking Code.
         </p>
     </div>
 
@@ -23,7 +23,7 @@
         <div class="flex flex-col sm:flex-row gap-2 max-w-lg mx-auto bg-white p-2 rounded-2xl sm:rounded-full border-2 border-gray-200 shadow-md focus-within:border-brand-500 transition">
             <div class="flex-1 flex items-center px-3">
                 <i class="fa-solid fa-magnifying-glass text-gray-400 text-sm mr-2"></i>
-                <input type="text" name="q" value="{{ query }}" placeholder="Order ID (e.g. PKP-0001) or Phone (017...)" required class="w-full text-xs sm:text-sm font-semibold border-0 focus:ring-0 text-gray-900 placeholder-gray-400">
+                <input type="text" name="q" value="{{ query }}" placeholder="Order ID (PKP-00073), Phone, or Tracking Code (SFR...)" required class="w-full text-xs sm:text-sm font-semibold border-0 focus:ring-0 text-gray-900 placeholder-gray-400">
             </div>
             <button type="submit" class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs sm:text-sm px-6 py-3 rounded-xl sm:rounded-full shadow-md transition">
                 Track Order
@@ -38,18 +38,19 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-gray-100 gap-3">
             <div>
                 <span class="text-xs text-gray-400 font-bold block">Order Number</span>
-                <span class="font-display font-black text-2xl text-brand-800">#{{ order.order_number }}</span>
+                <span class="font-display font-black text-2xl text-brand-800 whitespace-nowrap">#{{ order.order_number }}</span>
             </div>
-            <div class="flex items-center gap-2 flex-wrap">
-                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black border {{ order.badge_color }} shadow-2xs">
+            <div class="flex flex-col items-start sm:items-end gap-1.5 sm:ml-auto">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black border {{ order.badge_color }} shadow-2xs whitespace-nowrap">
                     <i class="{{ order.status_icon }}"></i>
                     <span>{{ order.get_order_status_display }}</span>
                 </span>
-                {% if order.active_courier_status %}
-                <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold {% if order.active_courier == 'STEADFAST' %}bg-cyan-50 text-cyan-700 border border-cyan-200{% else %}bg-blue-50 text-blue-700 border border-blue-200{% endif %}">
-                    <i class="fa-solid fa-truck-fast text-[11px] {% if order.active_courier == 'STEADFAST' %}text-cyan-600{% else %}text-blue-600{% endif %}"></i>
-                    <span>{{ order.active_courier_name }}: {{ order.active_courier_status }}</span>
-                </span>
+                {% if order.active_courier_status or order.active_consignment_id %}
+                <button type="button" onclick="openCourierModal()" title="Click to view live courier status" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border {{ order.active_courier_status_badge_class }} hover:shadow-md transition active:scale-95 cursor-pointer group whitespace-nowrap">
+                    <i class="fa-solid fa-truck-fast text-[11px] group-hover:animate-bounce"></i>
+                    <span>{{ order.active_courier_name }}: <span id="headerCourierStatusText">{{ order.active_courier_status_display }}</span></span>
+                    <i class="fa-solid fa-chevron-right text-[9px] opacity-60 ml-0.5"></i>
+                </button>
                 {% endif %}
             </div>
         </div>
@@ -85,73 +86,50 @@
 
                     <!-- Step 2: Confirmed -->
                     <div class="flex sm:flex-col items-center sm:text-center gap-3 sm:gap-2">
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold {% if order.order_status in 'CONFIRMED,PACKING,OUT_FOR_DELIVERY,DELIVERED' %}bg-emerald-600 text-white shadow-md{% else %}bg-gray-100 text-gray-400{% endif %}">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold {% if order.order_status in 'CONFIRMED,PACKING,OUT_FOR_DELIVERY,DELIVERED' or order.is_courier_picked_up %}bg-emerald-600 text-white shadow-md{% else %}bg-gray-100 text-gray-400{% endif %}">
                             <i class="fa-solid fa-file-circle-check"></i>
                         </div>
                         <div>
-                            <span class="text-xs font-bold {% if order.order_status in 'CONFIRMED,PACKING,OUT_FOR_DELIVERY,DELIVERED' %}text-gray-900{% else %}text-gray-400{% endif %} block">Confirmed</span>
+                            <span class="text-xs font-bold {% if order.order_status in 'CONFIRMED,PACKING,OUT_FOR_DELIVERY,DELIVERED' or order.is_courier_picked_up %}text-gray-900{% else %}text-gray-400{% endif %} block">Confirmed</span>
                             <span class="text-[10px] text-gray-400">Order verified</span>
                         </div>
                     </div>
 
                     <!-- Step 3: Packing -->
                     <div class="flex sm:flex-col items-center sm:text-center gap-3 sm:gap-2">
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold {% if order.order_status in 'PACKING,OUT_FOR_DELIVERY,DELIVERED' %}bg-emerald-600 text-white shadow-md{% else %}bg-gray-100 text-gray-400{% endif %}">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold {% if order.order_status in 'PACKING,OUT_FOR_DELIVERY,DELIVERED' or order.is_courier_picked_up %}bg-emerald-600 text-white shadow-md{% else %}bg-gray-100 text-gray-400{% endif %}">
                             <i class="fa-solid fa-box-open"></i>
                         </div>
                         <div>
-                            <span class="text-xs font-bold {% if order.order_status in 'PACKING,OUT_FOR_DELIVERY,DELIVERED' %}text-gray-900{% else %}text-gray-400{% endif %} block">Packing</span>
+                            <span class="text-xs font-bold {% if order.order_status in 'PACKING,OUT_FOR_DELIVERY,DELIVERED' or order.is_courier_picked_up %}text-gray-900{% else %}text-gray-400{% endif %} block">Packing</span>
                             <span class="text-[10px] text-gray-400">Fresh jars prepared</span>
                         </div>
                     </div>
 
                     <!-- Step 4: Out for Delivery -->
                     <div class="flex sm:flex-col items-center sm:text-center gap-3 sm:gap-2">
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold {% if order.order_status in 'OUT_FOR_DELIVERY,DELIVERED' %}bg-emerald-600 text-white shadow-md{% else %}bg-gray-100 text-gray-400{% endif %}">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold {% if order.order_status in 'OUT_FOR_DELIVERY,DELIVERED' or order.is_courier_in_transit %}bg-emerald-600 text-white shadow-md{% else %}bg-gray-100 text-gray-400{% endif %}">
                             <i class="fa-solid fa-truck-fast"></i>
                         </div>
                         <div>
-                            <span class="text-xs font-bold {% if order.order_status in 'OUT_FOR_DELIVERY,DELIVERED' %}text-gray-900{% else %}text-gray-400{% endif %} block">Out for Delivery</span>
-                            <span class="text-[10px] text-gray-400">On the way to you</span>
+                            <span class="text-xs font-bold {% if order.order_status in 'OUT_FOR_DELIVERY,DELIVERED' or order.is_courier_in_transit %}text-gray-900{% else %}text-gray-400{% endif %} block">Out for Delivery</span>
+                            <span class="text-[10px] text-gray-400">{% if order.is_courier_in_transit %}With {{ order.active_courier_name }}{% else %}On the way to you{% endif %}</span>
                         </div>
                     </div>
 
                     <!-- Step 5: Delivered -->
                     <div class="flex sm:flex-col items-center sm:text-center gap-3 sm:gap-2">
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold {% if order.order_status == 'DELIVERED' %}bg-emerald-600 text-white shadow-md{% else %}bg-gray-100 text-gray-400{% endif %}">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold {% if order.order_status == 'DELIVERED' or order.is_courier_delivered %}bg-emerald-600 text-white shadow-md{% else %}bg-gray-100 text-gray-400{% endif %}">
                             <i class="fa-solid fa-circle-check"></i>
                         </div>
                         <div>
-                            <span class="text-xs font-bold {% if order.order_status == 'DELIVERED' %}text-gray-900{% else %}text-gray-400{% endif %} block">Delivered</span>
-                            <span class="text-[10px] text-gray-400">Enjoy the crunch!</span>
+                            <span class="text-xs font-bold {% if order.order_status == 'DELIVERED' or order.is_courier_delivered %}text-gray-900{% else %}text-gray-400{% endif %} block">Delivered</span>
+                            <span class="text-[10px] text-gray-400">{% if order.is_courier_delivered %}Delivered by {{ order.active_courier_name }}{% else %}Enjoy the crunch!{% endif %}</span>
                         </div>
                     </div>
 
                 </div>
             </div>
-        </div>
-        {% endif %}
-
-        {% if order.active_consignment_id or order.active_tracking_code %}
-        <!-- Courier Live Tracking Info Box -->
-        <div class="bg-gradient-to-r from-emerald-50 via-white to-blue-50 p-4 sm:p-5 rounded-2xl border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-emerald-700 text-white flex items-center justify-center text-lg shrink-0 shadow-xs">
-                    <i class="fa-solid fa-truck-fast"></i>
-                </div>
-                <div>
-                    <h4 class="font-bold text-gray-900 text-sm">Dispatched via {{ order.active_courier_name }}</h4>
-                    <p class="text-gray-500 mt-0.5">
-                        Tracking Code: <strong class="font-mono text-gray-900 bg-white px-2 py-0.5 rounded border border-gray-200">{{ order.active_tracking_code }}</strong>
-                    </p>
-                </div>
-            </div>
-            {% if order.active_tracking_url %}
-            <a href="{{ order.active_tracking_url }}" target="_blank" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-4 py-2.5 rounded-xl shadow-xs inline-flex items-center justify-center gap-1.5 transition whitespace-nowrap">
-                <span>Live {{ order.active_courier_name }} Tracking</span>
-                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-            </a>
-            {% endif %}
         </div>
         {% endif %}
 
@@ -177,7 +155,201 @@
         </div>
 
     </div>
+
+    <!-- Live Courier Tracking Modal -->
+    <div id="courierModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-slate-950/75 backdrop-blur-xs transition-opacity" onclick="closeCourierModal()"></div>
+
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+            <div class="relative transform overflow-hidden rounded-3xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg border border-gray-200">
+                
+                <!-- Modal Header -->
+                <div class="bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 p-6 text-white flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg border border-emerald-400/30">
+                            <i class="fa-solid fa-truck-fast"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-display font-black text-base text-white flex items-center gap-2">
+                                <span>{{ order.active_courier_name }}</span>
+                                <span class="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">Live API</span>
+                            </h3>
+                            <p class="text-emerald-200/70 text-xs">Official Real-Time Courier Tracking</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="closeCourierModal()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm transition">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="p-6 space-y-5">
+                    
+                    <!-- Live Status Highlight Box -->
+                    <div id="modalStatusBox" class="p-4 rounded-2xl border flex items-center justify-between gap-3 {{ order.active_courier_status_badge_class }}">
+                        <div class="flex items-center gap-3">
+                            <span class="relative flex h-3.5 w-3.5">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full {% if order.is_courier_delivered %}bg-emerald-400{% elif order.is_courier_in_transit %}bg-blue-400{% else %}bg-amber-400{% endif %} opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-3.5 w-3.5 {% if order.is_courier_delivered %}bg-emerald-500{% elif order.is_courier_in_transit %}bg-blue-500{% else %}bg-amber-500{% endif %}"></span>
+                            </span>
+                            <div>
+                                <span class="text-[11px] font-bold opacity-75 uppercase tracking-wider block">Live Delivery Status</span>
+                                <h4 id="modalStatusTitle" class="text-sm font-black">{{ order.active_courier_status_display }}</h4>
+                            </div>
+                        </div>
+                        <button type="button" onclick="refreshCourierStatusLive('{{ order.order_number }}')" id="refreshStatusBtn" title="Refresh live status from courier API" class="text-xs font-bold px-3 py-1.5 rounded-xl bg-white border border-gray-200 shadow-2xs hover:bg-gray-50 text-gray-700 transition flex items-center gap-1.5 active:scale-95 cursor-pointer">
+                            <i class="fa-solid fa-rotate text-[11px]" id="refreshSpinnerIcon"></i>
+                            <span>Refresh</span>
+                        </button>
+                    </div>
+
+                    <!-- Courier Shipment Details -->
+                    <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100 space-y-3 text-xs">
+                        <div class="flex items-center justify-between pb-2 border-b border-gray-200/60">
+                            <span class="text-gray-500 font-medium">Tracking Code</span>
+                            <div class="flex items-center gap-2">
+                                <strong id="modalTrackingCode" class="font-mono text-gray-900 text-xs bg-white px-2 py-0.5 rounded border border-gray-200 select-all">{{ order.active_tracking_code }}</strong>
+                                <button type="button" onclick="copyTrackingCode('{{ order.active_tracking_code }}', this)" class="text-brand-700 hover:text-brand-800 font-bold flex items-center gap-1 cursor-pointer">
+                                    <i class="fa-regular fa-copy"></i>
+                                    <span>Copy</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between pb-2 border-b border-gray-200/60">
+                            <span class="text-gray-500 font-medium">Consignment ID</span>
+                            <strong id="modalConsignmentId" class="font-mono text-gray-900">#{{ order.active_consignment_id|default:"N/A" }}</strong>
+                        </div>
+
+                        <div class="flex items-center justify-between pb-2 border-b border-gray-200/60">
+                            <span class="text-gray-500 font-medium">Recipient Customer</span>
+                            <strong id="modalCustomerName" class="text-gray-900">{{ order.customer_name }}</strong>
+                        </div>
+
+                        <div class="flex items-start justify-between pb-2 border-b border-gray-200/60 gap-2">
+                            <span class="text-gray-500 font-medium shrink-0">Destination</span>
+                            <span id="modalDestination" class="font-semibold text-gray-800 text-right">{{ order.delivery_address }}, {{ order.delivery_city }}</span>
+                        </div>
+
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-500 font-medium">Collection Amount (COD)</span>
+                            <strong id="modalCodAmount" class="font-display font-black text-brand-700">৳{{ order.total_amount }} ({{ order.get_payment_status_display }})</strong>
+                        </div>
+                    </div>
+
+                    <!-- Status Explanation Note -->
+                    <div class="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/70 text-xs text-emerald-900 flex items-start gap-2.5">
+                        <i class="fa-solid fa-circle-info text-emerald-600 mt-0.5 shrink-0 text-sm"></i>
+                        <p class="text-[11px] leading-relaxed" id="modalStatusNote">
+                            {% if order.is_courier_delivered %}
+                            আপনার পার্সেলটি কুরিয়ার সফলভাবে ডেলিভারি সম্পন্ন করেছে। Pickpickles-এর সাথে থাকার জন্য ধন্যবাদ!
+                            {% elif order.is_courier_in_transit %}
+                            আপনার পার্সেলটি কুরিয়ার রাইডারের কাছে ডেলিভারির উদ্দেশ্যে চলমান আছে। খুব শীঘ্রই আপনার কাছে পৌঁছে যাবে।
+                            {% elif order.is_courier_picked_up %}
+                            পার্সেলটি কুরিয়ার গ্রহণ করেছে এবং ডেলিভারি হাবে স্থানান্তরিত হচ্ছে।
+                            {% else %}
+                            পার্সেল বুকিং সম্পন্ন হয়েছে। কুরিয়ার হাব থেকে পিকআপের পর লাইভ মুভমেন্ট শুরু হবে।
+                            {% endif %}
+                        </p>
+                    </div>
+
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="bg-gray-50 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-gray-100 text-xs">
+                    <span class="text-[11px] text-gray-400 flex items-center gap-1">
+                        <i class="fa-solid fa-shield-halved text-emerald-600"></i>
+                        <span>Verified via {{ order.active_courier_name }} API</span>
+                    </span>
+                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                        {% if order.active_tracking_url %}
+                        <a href="{{ order.active_tracking_url }}" target="_blank" onclick="copyTrackingCode('{{ order.active_tracking_code }}', null)" class="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2.5 rounded-xl transition inline-flex items-center justify-center gap-1.5 active:scale-95 text-xs">
+                            <span>Open Steadfast Site</span>
+                            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                        </a>
+                        {% endif %}
+                        <button type="button" onclick="closeCourierModal()" class="w-full sm:w-auto bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold px-4 py-2.5 rounded-xl transition text-xs">
+                            Close
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
     {% endif %}
 
 </div>
+
+<script>
+function copyTrackingCode(text, btn) {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(function() {
+        if (btn) {
+            var orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check text-emerald-400"></i> Copied!';
+            setTimeout(function() { btn.innerHTML = orig; }, 2000);
+        }
+    });
+}
+
+function openCourierModal() {
+    var modal = document.getElementById('courierModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+    }
+}
+
+function closeCourierModal() {
+    var modal = document.getElementById('courierModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+    }
+}
+
+function refreshCourierStatusLive(orderNumber) {
+    var icon = document.getElementById('refreshSpinnerIcon');
+    if (icon) icon.classList.add('fa-spin');
+
+    fetch('/api/courier-live-status/' + encodeURIComponent(orderNumber) + '/')
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data.success) {
+                var title = document.getElementById('modalStatusTitle');
+                if (title) title.innerText = data.status_display;
+
+                var headerText = document.getElementById('headerCourierStatusText');
+                if (headerText) headerText.innerText = data.status_display;
+
+                var note = document.getElementById('modalStatusNote');
+                if (note) {
+                    var s = (data.raw_status || '').toLowerCase();
+                    if (s.indexOf('delivered') !== -1) {
+                        note.innerText = 'আপনার পার্সেলটি কুরিয়ার সফলভাবে ডেলিভারি সম্পন্ন করেছে। Pickpickles-এর সাথে থাকার জন্য ধন্যবাদ!';
+                    } else if (s.indexOf('transit') !== -1 || s.indexOf('delivery') !== -1) {
+                        note.innerText = 'আপনার পার্সেলটি কুরিয়ার রাইডারের কাছে ডেলিভারির উদ্দেশ্যে চলমান আছে। খুব শীঘ্রই আপনার কাছে পৌঁছে যাবে।';
+                    } else if (s.indexOf('picked_up') !== -1 || s.indexOf('hub') !== -1) {
+                        note.innerText = 'পার্সেলটি কুরিয়ার গ্রহণ করেছে এবং ডেলিভারি হাবে স্থানান্তরিত হচ্ছে।';
+                    } else {
+                        note.innerText = 'পার্সেল বুকিং সম্পন্ন হয়েছে। কুরিয়ার হাব থেকে পিকআপের পর লাইভ মুভমেন্ট শুরু হবে।';
+                    }
+                }
+            }
+        })
+        .catch(function(err) {
+            console.error('Error refreshing courier status:', err);
+        })
+        .finally(function() {
+            if (icon) icon.classList.remove('fa-spin');
+        });
+}
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeCourierModal();
+});
+</script>
 {% endblock %}

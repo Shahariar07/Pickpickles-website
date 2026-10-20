@@ -506,7 +506,15 @@ def order_track(request):
             Q(order_number__iexact=query) |
             Q(order_number__iexact=clean_q) |
             Q(order_number__icontains=clean_q) |
-            Q(customer_phone__icontains=query)
+            Q(customer_phone__icontains=query) |
+            Q(steadfast_tracking_code__iexact=query) |
+            Q(steadfast_tracking_code__iexact=clean_q) |
+            Q(steadfast_consignment_id__iexact=query) |
+            Q(steadfast_consignment_id__iexact=clean_q) |
+            Q(pathao_tracking_code__iexact=query) |
+            Q(pathao_tracking_code__iexact=clean_q) |
+            Q(pathao_consignment_id__iexact=query) |
+            Q(pathao_consignment_id__iexact=clean_q)
         )
         if num_match:
             try:
@@ -521,10 +529,11 @@ def order_track(request):
         if order:
             try:
                 order.sync_courier_status()
+                order.refresh_from_db()
             except Exception:
                 pass
         else:
-            messages.error(request, f'No order found matching "{query}". Please verify your Order ID (e.g. PKP-00001) or Phone number.')
+            messages.error(request, f'No order found matching "{query}". Please verify your Order ID (e.g. PKP-00001), Phone number, or Courier Tracking Code.')
 
     return render(request, 'store/order_track.html', {'order': order, 'query': query})
 
@@ -782,31 +791,7 @@ def steadfast_webhook(request):
 
     if raw_status:
         order.steadfast_order_status = raw_status
-        clean = raw_status.lower().replace('-', '_').replace(' ', '_')
-
-        status_map = {
-            'in_review': 'CONFIRMED',
-            'pending': 'CONFIRMED',
-            'picked_up': 'PACKING',
-            'received_at_hub': 'PACKING',
-            'in_transit': 'OUT_FOR_DELIVERY',
-            'hold': 'OUT_FOR_DELIVERY',
-            'delivered': 'DELIVERED',
-            'delivered_approval_pending': 'DELIVERED',
-            'partial_delivered': 'DELIVERED',
-            'partial_delivered_approval_pending': 'DELIVERED',
-            'cancelled': 'CANCELLED',
-            'cancelled_approval_pending': 'CANCELLED',
-            'unknown': 'CANCELLED',
-        }
-
-        if clean in status_map:
-            mapped = status_map[clean]
-            order.order_status = mapped
-            if mapped == 'DELIVERED' and order.payment_status == 'UNPAID':
-                order.payment_status = 'PAID'
-
-        order.save(update_fields=['steadfast_order_status', 'order_status', 'payment_status'])
+        order.save(update_fields=['steadfast_order_status'])
 
     return JsonResponse({
         'status': 'success',
@@ -814,5 +799,47 @@ def steadfast_webhook(request):
         'order_status': order.order_status,
         'payment_status': order.payment_status,
         'steadfast_order_status': order.steadfast_order_status,
+    })
+
+
+def courier_live_status_ajax(request, order_number):
+    """
+    AJAX endpoint to query live courier tracking status directly from Steadfast / Pathao API.
+    Used by the Track Order page modal and interactive widgets.
+    """
+    clean_val = str(order_number or '').strip()
+    order = Order.all_objects.filter(
+        Q(order_number__iexact=clean_val) |
+        Q(steadfast_tracking_code__iexact=clean_val) |
+        Q(steadfast_consignment_id__iexact=clean_val) |
+        Q(pathao_tracking_code__iexact=clean_val) |
+        Q(pathao_consignment_id__iexact=clean_val)
+    ).first()
+
+    if not order:
+        return JsonResponse({'success': False, 'message': 'Order not found'}, status=404)
+
+    # Sync live from courier
+    try:
+        order.sync_courier_status()
+        order.refresh_from_db()
+    except Exception:
+        pass
+
+    return JsonResponse({
+        'success': True,
+        'order_number': order.order_number,
+        'courier_name': order.active_courier_name,
+        'courier_provider': order.active_courier,
+        'consignment_id': order.active_consignment_id or '',
+        'tracking_code': order.active_tracking_code or '',
+        'raw_status': order.active_courier_status or 'in_review',
+        'status_display': order.active_courier_status_display,
+        'status_badge_class': order.active_courier_status_badge_class,
+        'customer_name': order.customer_name,
+        'destination': f"{order.delivery_address}, {order.delivery_city}".strip(', '),
+        'total_amount': str(order.total_amount),
+        'payment_status': order.get_payment_status_display(),
+        'active_tracking_url': order.active_tracking_url or 'https://steadfast.com.bd/tracking',
     })
 

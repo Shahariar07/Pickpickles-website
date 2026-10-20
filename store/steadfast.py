@@ -481,30 +481,5 @@ class SteadfastCourierService:
             return None
 
         order.steadfast_order_status = delivery_status
-        clean = delivery_status.lower().replace('-', '_').replace(' ', '_')
-
-        status_map = {
-            'in_review': 'CONFIRMED',
-            'pending': 'CONFIRMED',
-            'picked_up': 'PACKING',
-            'received_at_hub': 'PACKING',
-            'in_transit': 'OUT_FOR_DELIVERY',
-            'hold': 'OUT_FOR_DELIVERY',
-            'delivered': 'DELIVERED',
-            'delivered_approval_pending': 'DELIVERED',
-            'partial_delivered': 'DELIVERED',
-            'partial_delivered_approval_pending': 'DELIVERED',
-            'cancelled': 'CANCELLED',
-            'cancelled_approval_pending': 'CANCELLED',
-            'unknown': 'CANCELLED',
-        }
-
-        if clean in status_map:
-            mapped = status_map[clean]
-            if order.order_status != mapped:
-                order.order_status = mapped
-                if mapped == 'DELIVERED' and order.payment_status == 'UNPAID':
-                    order.payment_status = 'PAID'
-
-        order.save(update_fields=['steadfast_order_status', 'order_status', 'payment_status'])
+        order.save(update_fields=['steadfast_order_status'])
         return delivery_status

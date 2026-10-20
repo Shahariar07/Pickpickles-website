@@ -574,13 +574,26 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 30);
     }, { passive: true });
 
-    // Auto-scroll selected category pill into view on mobile
+    // Ensure fresh site link visits start strictly at the top of the page
+    if (!window.location.hash) {
+        if ('scrollRestoration' in history) {
+            history.scrollRestoration = 'manual';
+        }
+        window.scrollTo(0, 0);
+    }
+
+    window.addEventListener('pageshow', function() {
+        if (!window.location.hash) {
+            window.scrollTo(0, 0);
+        }
+    });
+
+    // Horizontally scroll the category pills container ONLY if user specifically clicked/navigated to #pickle-menu
     const activePill = document.getElementById('activeCategoryPill');
     const pillContainer = document.getElementById('categoryPillsContainer');
-    if (activePill && pillContainer && window.innerWidth < 640) {
-        setTimeout(function() {
-            activePill.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-        }, 150);
+    if (activePill && pillContainer && window.location.hash === '#pickle-menu') {
+        const offset = activePill.offsetLeft - (pillContainer.offsetWidth / 2) + (activePill.offsetWidth / 2);
+        pillContainer.scrollLeft = Math.max(0, offset);
     }
 });
 </script>

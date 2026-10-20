@@ -722,20 +722,19 @@ def orders_list(request):
     return render(request, 'dashboard/orders_list.html', context)
 
 
-DISPATCHED_ORDER_STATUSES = {'OUT_FOR_DELIVERY', 'DELIVERED'}
+PACKED_ORDER_STATUSES = {'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'}
 
 def adjust_inventory_for_order_status_change(order, old_status, new_status, user=None):
     """
-    Physical Inventory Model (Option 2):
-    Stock is deducted ONLY when the order is physically dispatched/shipped to courier
-    (transitions to OUT_FOR_DELIVERY or DELIVERED).
-    Stock is restored if a dispatched order is cancelled or reverted back to PENDING/CONFIRMED/PACKING.
+    Packing Inventory Model:
+    Stock is deducted when the order is being packed (transitions to PACKING, OUT_FOR_DELIVERY, or DELIVERED).
+    Stock is restored if a packed order is cancelled or reverted back to PENDING/CONFIRMED before packing.
     """
-    was_dispatched = old_status in DISPATCHED_ORDER_STATUSES
-    now_dispatched = new_status in DISPATCHED_ORDER_STATUSES
+    was_packed = old_status in PACKED_ORDER_STATUSES
+    now_packed = new_status in PACKED_ORDER_STATUSES
 
-    if not was_dispatched and now_dispatched:
-        # Deduct physical stock when dispatched/shipped to courier
+    if not was_packed and now_packed:
+        # Deduct physical stock when packing fresh jars into the parcel
         for itm in order.items.all():
             if itm.product:
                 prev_stock = itm.product.stock_count
@@ -753,16 +752,16 @@ def adjust_inventory_for_order_status_change(order, old_status, new_status, user
                     previous_stock=prev_stock,
                     resulting_stock=new_stock,
                     order=order,
-                    reference=f"Dispatched #{order.order_number}",
-                    notes=f"Order #{order.order_number} dispatched to courier ({old_status} -> {new_status}). Customer: {order.customer_name}",
+                    reference=f"Packed #{order.order_number}",
+                    notes=f"Order #{order.order_number} packed into parcel ({old_status} -> {new_status}). Customer: {order.customer_name}",
                     created_by=user if getattr(user, 'is_authenticated', False) else None
                 )
-    elif was_dispatched and not now_dispatched:
+    elif was_packed and not now_packed:
         # If this order has an OrderReturn associated, return logic dictates stock
         if hasattr(order, 'returns') and order.returns.exists():
             return
 
-        # Restore physical stock when a dispatched order is cancelled or reverted back to queue
+        # Restore physical stock when a packed order is cancelled or reverted back to queue
         for itm in order.items.all():
             if itm.product:
                 prev_stock = itm.product.stock_count
@@ -780,7 +779,7 @@ def adjust_inventory_for_order_status_change(order, old_status, new_status, user
                     resulting_stock=new_stock,
                     order=order,
                     reference=f"Reverted #{order.order_number}",
-                    notes=f"Dispatched Order #{order.order_number} reverted ({old_status} -> {new_status}). Stock restored.",
+                    notes=f"Order #{order.order_number} cancelled/reverted from packing ({old_status} -> {new_status}). Restored {restore_qty} jars to stock.",
                     created_by=user if getattr(user, 'is_authenticated', False) else None
                 )
 
@@ -789,8 +788,8 @@ def sync_parcel_status_with_cache(order, force=False, user=None):
     """
     Auto-updates parcel status from Steadfast or Pathao Courier API with smart caching.
     - Caches for 5 minutes during active transit to avoid API rate limits.
-    - Caches for 24 hours if already DELIVERED or CANCELLED.
-    - Updates order_status and courier_order_status in DB automatically.
+    - Updates courier parcel status (steadfast_order_status / pathao_order_status) only.
+    - Does NOT modify store order_status.
     """
     if not (order.steadfast_consignment_id or order.pathao_consignment_id or order.steadfast_tracking_code):
         return None
@@ -802,7 +801,6 @@ def sync_parcel_status_with_cache(order, force=False, user=None):
             return cached_status
 
     updated_status = None
-    old_status = order.order_status
     try:
         # Sync with appropriate courier
         if order.steadfast_consignment_id or (order.courier_provider == 'STEADFAST' and order.steadfast_tracking_code):
@@ -810,11 +808,7 @@ def sync_parcel_status_with_cache(order, force=False, user=None):
         elif order.pathao_consignment_id or order.courier_provider == 'PATHAO':
             updated_status = order.sync_pathao_status()
 
-        if updated_status and old_status != order.order_status:
-            adjust_inventory_for_order_status_change(order, old_status, order.order_status, user=user)
-
-        # 24 hours for finalized orders, 5 minutes for active transit
-        ttl = 86400 if order.order_status in ['DELIVERED', 'CANCELLED'] else 300
+        ttl = 300
         cache.set(cache_key, updated_status or 'SYNCED', timeout=ttl)
     except Exception:
         cache.set(cache_key, 'ERROR_COOLDOWN', timeout=60)
@@ -1002,12 +996,6 @@ def dispatch_order_to_pathao(request, order_number):
             
         result = pathao_service.create_order(order)
         if result.get('success'):
-            # Automatically confirm order and adjust inventory if currently pending
-            if order.order_status == 'PENDING':
-                adjust_inventory_for_order_status_change(order, 'PENDING', 'CONFIRMED')
-                order.order_status = 'CONFIRMED'
-                order.save(update_fields=['order_status'])
-                
             messages.success(request, result.get('message', f'Order #{order.order_number} dispatched to Pathao Courier!'))
         else:
             messages.error(request, result.get('message', 'Failed to dispatch to Pathao.'))
@@ -1033,11 +1021,6 @@ def dispatch_order_to_steadfast(request, order_number):
 
         result = steadfast_service.create_order(order)
         if result.get('success'):
-            if order.order_status == 'PENDING':
-                adjust_inventory_for_order_status_change(order, 'PENDING', 'CONFIRMED')
-                order.order_status = 'CONFIRMED'
-                order.save(update_fields=['order_status'])
-
             messages.success(request, result.get('message', f'Order #{order.order_number} dispatched to Steadfast Courier!'))
         else:
             messages.error(request, result.get('message', 'Failed to dispatch to Steadfast.'))
@@ -1048,28 +1031,21 @@ def dispatch_order_to_steadfast(request, order_number):
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def sync_all_pathao_orders(request):
     """
-    1-Click Bulk Sync: Query Pathao Courier API for all active orders with consignment IDs.
-    Automatically marks orders as DELIVERED and payment as PAID when delivered.
+    1-Click Bulk Sync: Query Pathao Courier API for active parcels.
+    Updates courier tracking status without altering store order status.
     """
     active_orders = Order.objects.filter(
-        pathao_consignment_id__isnull=False,
-        order_status__in=['PENDING', 'CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY']
-    )
+        pathao_consignment_id__isnull=False
+    ).exclude(order_status__in=['DELIVERED', 'CANCELLED'])
     synced_count = 0
-    delivered_count = 0
 
     for order in active_orders:
-        old_status = order.order_status
         new_status = order.sync_pathao_status()
         if new_status:
             synced_count += 1
-            if old_status != order.order_status:
-                adjust_inventory_for_order_status_change(order, old_status, order.order_status, user=request.user)
-            if old_status != 'DELIVERED' and order.order_status == 'DELIVERED':
-                delivered_count += 1
 
     if synced_count > 0:
-        messages.success(request, f"Synced {synced_count} active Pathao orders. {delivered_count} newly marked as Delivered 🎉")
+        messages.success(request, f"Synced {synced_count} active Pathao parcel statuses.")
     else:
         messages.info(request, "No active Pathao orders needed syncing, or Pathao API is not configured.")
 
@@ -1079,28 +1055,21 @@ def sync_all_pathao_orders(request):
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def sync_all_steadfast_orders(request):
     """
-    1-Click Bulk Sync: Query Steadfast Courier API for all active orders with consignment IDs.
-    Automatically marks orders as DELIVERED and payment as PAID when delivered.
+    1-Click Bulk Sync: Query Steadfast Courier API for active parcels.
+    Updates courier tracking status without altering store order status.
     """
     active_orders = Order.objects.filter(
-        steadfast_consignment_id__isnull=False,
-        order_status__in=['PENDING', 'CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY']
-    )
+        Q(steadfast_consignment_id__isnull=False) | Q(steadfast_tracking_code__isnull=False)
+    ).exclude(order_status__in=['DELIVERED', 'CANCELLED'])
     synced_count = 0
-    delivered_count = 0
 
     for order in active_orders:
-        old_status = order.order_status
         new_status = order.sync_steadfast_status()
         if new_status:
             synced_count += 1
-            if old_status != order.order_status:
-                adjust_inventory_for_order_status_change(order, old_status, order.order_status, user=request.user)
-            if old_status != 'DELIVERED' and order.order_status == 'DELIVERED':
-                delivered_count += 1
 
     if synced_count > 0:
-        messages.success(request, f"Synced {synced_count} active Steadfast orders. {delivered_count} newly marked as Delivered 🎉")
+        messages.success(request, f"Synced {synced_count} active Steadfast parcel statuses.")
     else:
         messages.info(request, "No active Steadfast orders needed syncing, or Steadfast API is not configured.")
 
@@ -1111,26 +1080,20 @@ def sync_all_steadfast_orders(request):
 def sync_all_courier_orders(request):
     """
     Unified 1-Click Sync for all active orders across both Pathao and Steadfast couriers.
+    Updates courier tracking status without altering store order status.
     """
     active_orders = Order.objects.filter(
-        Q(pathao_consignment_id__isnull=False) | Q(steadfast_consignment_id__isnull=False),
-        order_status__in=['PENDING', 'CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY']
-    )
+        Q(pathao_consignment_id__isnull=False) | Q(steadfast_consignment_id__isnull=False) | Q(steadfast_tracking_code__isnull=False)
+    ).exclude(order_status__in=['DELIVERED', 'CANCELLED'])
     synced_count = 0
-    delivered_count = 0
 
     for order in active_orders:
-        old_status = order.order_status
         new_status = order.sync_courier_status()
         if new_status:
             synced_count += 1
-            if old_status != order.order_status:
-                adjust_inventory_for_order_status_change(order, old_status, order.order_status, user=request.user)
-            if old_status != 'DELIVERED' and order.order_status == 'DELIVERED':
-                delivered_count += 1
 
     if synced_count > 0:
-        messages.success(request, f"Synced {synced_count} active courier orders (Pathao & Steadfast). {delivered_count} newly marked as Delivered 🎉")
+        messages.success(request, f"Synced {synced_count} active courier parcel statuses (Pathao & Steadfast).")
     else:
         messages.info(request, "No active courier orders needed syncing, or courier APIs are not configured.")
 
@@ -1147,12 +1110,9 @@ def sync_single_pathao_order(request, order_number):
         messages.warning(request, f"Order #{order.order_number} has not been dispatched to Pathao yet.")
     else:
         cache.delete(f"courier_auto_sync_{order.order_number}")
-        old_status = order.order_status
         status = order.sync_pathao_status()
         if status:
-            if old_status != order.order_status:
-                adjust_inventory_for_order_status_change(order, old_status, order.order_status, user=request.user)
-            messages.success(request, f"Pathao status updated: {order.pathao_order_status} (Order status: {order.get_order_status_display()})")
+            messages.success(request, f"Pathao status updated: {order.pathao_order_status}")
             cache.set(f"courier_auto_sync_{order.order_number}", status, timeout=300)
         else:
             messages.info(request, "Could not fetch updated status from Pathao Courier API or no new status update.")
@@ -1173,12 +1133,9 @@ def sync_single_steadfast_order(request, order_number):
         messages.warning(request, f"Order #{order.order_number} has not been dispatched to Steadfast yet.")
     else:
         cache.delete(f"courier_auto_sync_{order.order_number}")
-        old_status = order.order_status
         status = order.sync_steadfast_status()
         if status:
-            if old_status != order.order_status:
-                adjust_inventory_for_order_status_change(order, old_status, order.order_status, user=request.user)
-            messages.success(request, f"Steadfast status updated: {order.steadfast_order_status} (Order status: {order.get_order_status_display()})")
+            messages.success(request, f"Steadfast status updated: {order.steadfast_order_status}")
             cache.set(f"courier_auto_sync_{order.order_number}", status, timeout=300)
         else:
             messages.info(request, "Could not fetch updated status from Steadfast Courier API or no new status update.")

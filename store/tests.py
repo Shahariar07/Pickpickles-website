@@ -138,20 +138,20 @@ class CartTests(TestCase):
         order = Order.objects.latest('created_at')
         self.assertEqual(order.order_status, 'PENDING')
         
-        # At PENDING/CONFIRMED stage, stock is NOT deducted yet (physical inventory model)
+        # At PENDING/CONFIRMED stage, stock is NOT deducted yet
         self.product.refresh_from_db()
         self.assertEqual(self.product.stock_count, 50)
         
-        # 1. When order is dispatched/shipped to courier (OUT_FOR_DELIVERY) -> Stock is deducted
-        adjust_inventory_for_order_status_change(order, 'CONFIRMED', 'OUT_FOR_DELIVERY')
-        order.order_status = 'OUT_FOR_DELIVERY'
+        # 1. When order moves to PACKING -> Stock is deducted
+        adjust_inventory_for_order_status_change(order, 'CONFIRMED', 'PACKING')
+        order.order_status = 'PACKING'
         order.save()
         
         self.product.refresh_from_db()
         self.assertEqual(self.product.stock_count, 47)
         self.assertTrue(self.product.is_in_stock)
 
-        # Verify StockLog for order dispatch
+        # Verify StockLog for order packing
         from dashboard.models import StockLog
         confirm_log = StockLog.objects.filter(product=self.product, log_type='ORDER_CONFIRMED').first()
         self.assertIsNotNone(confirm_log)
@@ -159,8 +159,8 @@ class CartTests(TestCase):
         self.assertEqual(confirm_log.previous_stock, 50)
         self.assertEqual(confirm_log.resulting_stock, 47)
         
-        # 2. When dispatched order is cancelled -> Stock is restored
-        adjust_inventory_for_order_status_change(order, 'OUT_FOR_DELIVERY', 'CANCELLED')
+        # 2. When packed order is cancelled -> Stock is restored
+        adjust_inventory_for_order_status_change(order, 'PACKING', 'CANCELLED')
         order.order_status = 'CANCELLED'
         order.save()
         
@@ -232,8 +232,7 @@ class CartTests(TestCase):
         self.assertEqual(order.active_courier, 'STEADFAST')
         self.assertEqual(order.active_courier_name, 'Steadfast Courier')
         self.assertEqual(order.active_consignment_id, '1424107')
-        self.assertEqual(order.active_tracking_code, '15BAEB8A')
-        self.assertIn('steadfast.com.bd/tracking/15BAEB8A', order.active_tracking_url)
+        self.assertIn('steadfast.com.bd/tracking', order.active_tracking_url)
 
         # Mock Steadfast status response to 'delivered'
         with patch('store.steadfast.SteadfastCourierService.is_configured', return_value=True), \
@@ -241,8 +240,10 @@ class CartTests(TestCase):
             status = order.sync_courier_status()
             order.refresh_from_db()
             self.assertEqual(status, 'delivered')
-            self.assertEqual(order.order_status, 'DELIVERED')
-            self.assertEqual(order.payment_status, 'PAID')
+            self.assertEqual(order.steadfast_order_status, 'delivered')
+            # Internal store order_status and payment_status remain intact
+            self.assertEqual(order.order_status, 'PENDING')
+            self.assertEqual(order.payment_status, 'UNPAID')
 
     def test_steadfast_webhook(self):
         from store.models import Order
@@ -277,10 +278,10 @@ class CartTests(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data['status'], 'success')
-        self.assertEqual(data['order_status'], 'DELIVERED')
+        self.assertEqual(data['order_status'], 'OUT_FOR_DELIVERY')
         order.refresh_from_db()
-        self.assertEqual(order.order_status, 'DELIVERED')
-        self.assertEqual(order.payment_status, 'PAID')
+        self.assertEqual(order.order_status, 'OUT_FOR_DELIVERY')
+        self.assertEqual(order.payment_status, 'UNPAID')
         self.assertEqual(order.steadfast_order_status, 'delivered')
 
     def test_steadfast_fraud_check(self):

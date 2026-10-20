@@ -22,5 +22,6 @@ urlpatterns = [
     path('500/', views.custom_500_view, name='custom_500'),
     path('api/pathao/webhook/', views.pathao_webhook, name='pathao_webhook'),
     path('api/steadfast/webhook/', views.steadfast_webhook, name='steadfast_webhook'),
+    path('api/courier-live-status/<str:order_number>/', views.courier_live_status_ajax, name='courier_live_status_ajax'),
 ]
 
