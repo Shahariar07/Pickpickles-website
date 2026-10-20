@@ -102,9 +102,15 @@
             <!-- Price Box -->
             <div class="bg-emerald-50 p-4 sm:p-5 rounded-2xl border-2 border-emerald-300 flex items-center justify-between">
                 <div>
-                    <span class="text-xs text-slate-700 font-bold block">Price in Bangladeshi Taka</span>
-                    <div class="flex items-baseline gap-2">
-                        <span class="font-display font-black text-3xl text-emerald-950">৳{{ product.price_bdt }}</span>
+                    <span class="text-xs text-slate-700 font-bold block mb-1">Price in Bangladeshi Taka</span>
+                    <div class="flex items-baseline gap-2.5 flex-wrap">
+                        <span class="font-display font-black text-3xl text-emerald-950">৳{{ product.price_bdt|floatformat:0 }}</span>
+                        {% if product.original_price_bdt and product.original_price_bdt > product.price_bdt %}
+                        <span class="text-lg line-through text-slate-500 font-bold">৳{{ product.original_price_bdt|floatformat:0 }}</span>
+                        <span class="text-xs font-black bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full border border-rose-300">
+                            Save ৳{{ product.discount_amount|floatformat:0 }} ({{ product.discount_percent }}% OFF)
+                        </span>
+                        {% endif %}
                     </div>
                 </div>
 

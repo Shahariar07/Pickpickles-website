@@ -133,6 +133,12 @@ class Product(models.Model):
         return 0
 
     @property
+    def discount_amount(self):
+        if self.original_price_bdt and self.original_price_bdt > self.price_bdt:
+            return self.original_price_bdt - self.price_bdt
+        return 0
+
+    @property
     def average_rating(self):
         approved = self.reviews.filter(is_approved=True)
         if approved.exists():

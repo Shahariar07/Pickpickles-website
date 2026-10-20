@@ -217,6 +217,25 @@
         </p>
     </div>
 
+    <!-- Special Offer Callout: FREE Nationwide Delivery on 4+ Jars -->
+    <div class="mb-8 max-w-2xl mx-auto bg-gradient-to-r from-emerald-900 via-emerald-800 to-teal-900 text-white rounded-2xl p-4 sm:p-5 shadow-lg border border-emerald-500/40 flex items-center justify-between gap-3 text-left">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center text-xl shrink-0 border border-white/20">
+                🚚
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="bg-amber-400 text-slate-950 text-[10px] sm:text-xs font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Free Delivery Offer</span>
+                    <span class="text-xs sm:text-sm font-extrabold text-emerald-200">Across Bangladesh</span>
+                </div>
+                <p class="text-xs sm:text-sm text-white/90 font-medium mt-0.5">Order any <strong>4 or more jars</strong> to get <strong>100% FREE Home Delivery</strong> (Save ৳150)!</p>
+            </div>
+        </div>
+        <div class="hidden sm:flex items-center shrink-0">
+            <span class="text-xs font-extrabold bg-white/15 text-white border border-white/30 px-3 py-1.5 rounded-xl">Auto Applied in Cart</span>
+        </div>
+    </div>
+
     <!-- Category Filter Tabs: Horizontal swipeable chips on mobile, centered row on desktop -->
     <div class="relative mb-6 sm:mb-8 -mx-3 sm:mx-0">
         <div id="categoryPillsContainer" class="flex items-center overflow-x-auto no-scrollbar gap-2 px-3 sm:px-0 sm:flex-wrap sm:justify-center text-xs font-bold scroll-smooth pb-1">
@@ -325,9 +344,19 @@
                 <!-- Price and Add to Cart Row -->
                 <div class="pt-2 sm:pt-4 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
                     <div>
-                        <span class="text-[9px] sm:text-[11px] text-slate-600 font-bold block uppercase">Price</span>
-                        <div class="flex items-baseline gap-1">
-                            <span class="font-display font-black text-base sm:text-2xl text-slate-950">৳{{ product.price_bdt }}</span>
+                        <div class="flex items-center gap-1.5 mb-0.5">
+                            <span class="text-[9px] sm:text-[11px] text-slate-600 font-bold uppercase">Price</span>
+                            {% if product.original_price_bdt and product.original_price_bdt > product.price_bdt %}
+                            <span class="text-[9px] sm:text-[10px] font-black bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded border border-rose-200">
+                                Save ৳{{ product.discount_amount|floatformat:0 }}
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div class="flex items-baseline gap-1.5 flex-wrap">
+                            <span class="font-display font-black text-base sm:text-2xl text-slate-950">৳{{ product.price_bdt|floatformat:0 }}</span>
+                            {% if product.original_price_bdt and product.original_price_bdt > product.price_bdt %}
+                            <span class="text-xs sm:text-sm line-through text-slate-500 font-bold">৳{{ product.original_price_bdt|floatformat:0 }}</span>
+                            {% endif %}
                         </div>
                     </div>
 
@@ -573,20 +602,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }, 30);
     }, { passive: true });
-
-    // Ensure fresh site link visits start strictly at the top of the page
-    if (!window.location.hash) {
-        if ('scrollRestoration' in history) {
-            history.scrollRestoration = 'manual';
-        }
-        window.scrollTo(0, 0);
-    }
-
-    window.addEventListener('pageshow', function() {
-        if (!window.location.hash) {
-            window.scrollTo(0, 0);
-        }
-    });
 
     // Horizontally scroll the category pills container ONLY if user specifically clicked/navigated to #pickle-menu
     const activePill = document.getElementById('activeCategoryPill');
