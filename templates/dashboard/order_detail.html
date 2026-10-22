@@ -188,6 +188,7 @@
         <!-- Inline Step Actions -->
         <div class="flex items-center gap-2 shrink-0">
             {% if order.order_status == 'PENDING' %}
+            {% if can_edit %}
             <form action="{% url 'dashboard:update_order_status_quick' order.order_number %}" method="POST" class="inline-block">
                 {% csrf_token %}
                 <input type="hidden" name="status" value="CONFIRMED">
@@ -196,12 +197,14 @@
                     <span>Confirm Order</span>
                 </button>
             </form>
+            {% endif %}
             <a href="https://wa.me/880{{ order.customer_phone|slice:'-10:' }}?text=Hello%20{{ order.customer_name|urlencode }},%20from%20Pickpickles%20regarding%20order%20#{{ order.order_number }}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-2xs flex items-center gap-1.5 transition">
                 <i class="fa-brands fa-whatsapp text-sm"></i>
                 <span>WhatsApp</span>
             </a>
 
             {% elif order.order_status == 'CONFIRMED' %}
+            {% if can_edit %}
             <form action="{% url 'dashboard:update_order_status_quick' order.order_number %}" method="POST" class="inline-block">
                 {% csrf_token %}
                 <input type="hidden" name="status" value="PACKING">
@@ -210,8 +213,10 @@
                     <span>Mark as Packing</span>
                 </button>
             </form>
+            {% endif %}
 
             {% elif order.order_status == 'PACKING' %}
+            {% if can_edit %}
             <form action="{% url 'dashboard:update_order_status_quick' order.order_number %}" method="POST" class="inline-block">
                 {% csrf_token %}
                 <input type="hidden" name="status" value="OUT_FOR_DELIVERY">
@@ -220,6 +225,7 @@
                     <span>Mark Out for Delivery</span>
                 </button>
             </form>
+            {% endif %}
 
             {% elif order.order_status == 'OUT_FOR_DELIVERY' %}
             {% if order.customer_phone %}
@@ -228,6 +234,7 @@
                 <span>সংরক্ষণ নির্দেশিকা পাঠান</span>
             </a>
             {% endif %}
+            {% if can_edit %}
             <form action="{% url 'dashboard:update_order_status_quick' order.order_number %}" method="POST" class="inline-block">
                 {% csrf_token %}
                 <input type="hidden" name="status" value="DELIVERED">
@@ -236,6 +243,7 @@
                     <span>Mark Delivered 🎉</span>
                 </button>
             </form>
+            {% endif %}
             {% endif %}
         </div>
     </div>
@@ -539,8 +547,8 @@
                         <div class="flex items-start gap-3 min-w-0 flex-1">
                             <!-- Product Image / Thumbnail -->
                             <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-white border border-gray-200 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs mt-0.5">
-                                {% if item.product and item.product.image %}
-                                <img src="{{ item.product.image.url }}" alt="{{ item.product_name }}" class="w-full h-full object-cover">
+                                {% if item.product %}
+                                <img src="{{ item.product.primary_image_url }}" alt="{{ item.product_name }}" class="w-full h-full object-cover">
                                 {% else %}
                                 <span class="text-2xl">🥒</span>
                                 {% endif %}

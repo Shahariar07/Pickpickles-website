@@ -25,6 +25,7 @@
         </div>
 
         <div class="flex items-center gap-2 flex-wrap shrink-0">
+            {% if can_edit %}
             <button type="button" onclick="openDamageModal()" class="bg-rose-700 hover:bg-rose-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs flex items-center gap-1.5 transition active:scale-95">
                 <i class="fa-solid fa-burst text-rose-200"></i>
                 <span>Log Damaged Jars</span>
@@ -33,6 +34,7 @@
                 <i class="fa-solid fa-rotate-left text-amber-200"></i>
                 <span>Log Returned Parcel</span>
             </button>
+            {% endif %}
         </div>
     </div>
 
@@ -187,13 +189,18 @@
                         </td>
                         <td class="py-3 px-3 text-right">
                             <div class="flex items-center justify-end gap-1.5">
-                                <button type="button" onclick="openUpdateReturnModal('{{ ret.id }}', '{{ ret.order.order_number }}', '{{ ret.return_status }}', '{{ ret.courier_return_fee }}', '{{ ret.notes|escapejs }}')" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-[11px] px-3 py-1.5 rounded-xl transition">
+                                {% if can_edit %}
+                                <button type="button" onclick="openUpdateReturnModal('{{ ret.id }}', '{{ ret.order.order_number }}', '{{ ret.return_status }}', '{{ ret.courier_return_fee }}', '{{ ret.notes|escapejs }}')" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-[11px] px-3 py-1.5 rounded-xl transition cursor-pointer">
                                     Update Status
                                 </button>
+                                {% endif %}
                                 {% if can_delete %}
                                 <button type="button" onclick="openDeleteReturnModal('{{ ret.id }}', '{{ ret.order.order_number }}')" class="p-1.5 text-gray-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition cursor-pointer" title="Delete Return Record">
                                     <i class="fa-solid fa-trash-can text-xs"></i>
                                 </button>
+                                {% endif %}
+                                {% if not can_edit and not can_delete %}
+                                <span class="text-[11px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-lg">View Only</span>
                                 {% endif %}
                             </div>
                         </td>

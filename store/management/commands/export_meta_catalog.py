@@ -56,7 +56,7 @@ class Command(BaseCommand):
                 image_link = f'{base_url}/media/{raw_img}'
 
             product_link = f'{base_url}/product/{p.slug}/'
-            avail = 'in stock' if (p.is_in_stock and p.stock_count > 0) else 'out of stock'
+            avail = 'in stock' if (p.is_in_stock and p.stock_count > 0) else 'preorder'
             price_val = f'{p.price_bdt:.2f} BDT'
             title = f'{p.name} ({p.jar_weight_grams}g)'
             cat_name = p.category.name if p.category else 'Pickles'

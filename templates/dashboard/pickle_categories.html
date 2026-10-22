@@ -25,10 +25,12 @@
         </div>
         
         <div class="flex items-center gap-2">
-            <button type="button" onclick="openAddCatModal()" class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md flex items-center gap-2 transition active:scale-95">
+            {% if can_edit %}
+            <button type="button" onclick="openAddCatModal()" class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md flex items-center gap-2 transition active:scale-95 cursor-pointer">
                 <i class="fa-solid fa-plus text-brand-accent"></i>
                 <span>Add Pickle Category</span>
             </button>
+            {% endif %}
             <a href="{% url 'dashboard:stock_manager' %}" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs px-4 py-2.5 rounded-xl border border-gray-300 flex items-center gap-2 transition">
                 <i class="fa-solid fa-boxes-stacked text-brand-600"></i>
                 <span>View Products</span>
@@ -90,15 +92,22 @@
                         <!-- Actions -->
                         <td class="p-4 text-right">
                             <div class="flex items-center justify-end gap-2">
-                                <button type="button" onclick="openEditCatModal('{{ cat.id }}', '{{ cat.name|escapejs }}', '{{ cat.description|escapejs }}', '{{ cat.icon|escapejs }}')" class="bg-gray-100 hover:bg-brand-50 hover:text-brand-800 text-gray-700 px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 transition">
+                                {% if can_edit %}
+                                <button type="button" onclick="openEditCatModal('{{ cat.id }}', '{{ cat.name|escapejs }}', '{{ cat.description|escapejs }}', '{{ cat.icon|escapejs }}')" class="bg-gray-100 hover:bg-brand-50 hover:text-brand-800 text-gray-700 px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 transition cursor-pointer">
                                     <i class="fa-solid fa-pen-to-square text-brand-600"></i>
                                     <span>Edit</span>
                                 </button>
+                                {% endif %}
                                 {% if can_delete %}
                                 <button type="button" onclick="openDeleteCatModal('{{ cat.id }}', '{{ cat.name|escapejs }}')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 transition cursor-pointer">
                                     <i class="fa-solid fa-trash-can"></i>
                                     <span>Delete</span>
                                 </button>
+                                {% endif %}
+                                {% if not can_edit and not can_delete %}
+                                <span class="text-[11px] font-bold text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full inline-flex items-center gap-1">
+                                    <i class="fa-solid fa-lock text-[10px]"></i> View Only
+                                </span>
                                 {% endif %}
                             </div>
                         </td>
@@ -118,6 +127,7 @@
 
 </div>
 
+{% if can_edit %}
 <!-- ADD CATEGORY MODAL -->
 <div id="addCatModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative">
@@ -192,6 +202,7 @@
         </form>
     </div>
 </div>
+{% endif %}
 
 {% if can_delete %}
 <!-- DELETE CATEGORY CONFIRMATION MODAL -->

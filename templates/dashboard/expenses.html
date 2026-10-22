@@ -33,11 +33,13 @@
                 <i class="fa-solid fa-file-invoice text-gray-500"></i>
                 <span>P&L Statement</span>
             </a>
+            {% if can_edit %}
             <button type="button" onclick="openAddExpenseModal()"
                 class="bg-brand-700 hover:bg-brand-800 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-md flex items-center gap-2 transition active:scale-95 cursor-pointer">
                 <i class="fa-solid fa-plus text-brand-accent"></i>
                 <span>Record Expense</span>
             </button>
+            {% endif %}
         </div>
     </div>
 
@@ -271,6 +273,7 @@
                         <!-- Col 6: Edit & Delete Actions -->
                         <td class="py-3.5 px-4 sm:pr-6 align-top text-right">
                             <div class="flex items-center justify-end gap-1">
+                                {% if can_edit %}
                                 <button type="button" 
                                     onclick="openEditExpenseModal({
                                         id: '{{ exp.id }}',
@@ -289,6 +292,7 @@
                                     title="Edit Expense">
                                     <i class="fa-solid fa-pen-to-square text-xs text-brand-600"></i>
                                 </button>
+                                {% endif %}
 
                                 {% if can_delete %}
                                 <button type="button" 
@@ -297,6 +301,10 @@
                                     title="Delete Expense">
                                     <i class="fa-solid fa-trash-can text-xs"></i>
                                 </button>
+                                {% endif %}
+
+                                {% if not can_edit and not can_delete %}
+                                <span class="text-[11px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-lg">View Only</span>
                                 {% endif %}
                             </div>
                         </td>

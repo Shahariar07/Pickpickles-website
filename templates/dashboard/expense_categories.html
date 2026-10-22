@@ -29,11 +29,13 @@
             </div>
             
             <div class="flex items-center gap-2.5 flex-wrap">
+                {% if can_edit %}
                 <!-- Add Category / Head Button -->
                 <button type="button" onclick="openAddExpCatModal('')" class="bg-brand-700 hover:bg-brand-800 text-white font-extrabold text-xs px-4 py-2.5 rounded-2xl shadow-md hover:shadow-brand-700/20 flex items-center gap-2 transition active:scale-95 cursor-pointer">
                     <i class="fa-solid fa-folder-plus text-brand-accent"></i>
                     <span>Add New Cost Head</span>
                 </button>
+                {% endif %}
                 <a href="{% url 'dashboard:expenses' %}" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs px-4 py-2.5 rounded-2xl border border-gray-300 flex items-center gap-2 transition">
                     <i class="fa-solid fa-receipt text-brand-600"></i>
                     <span>Expenses Ledger</span>
@@ -153,11 +155,13 @@
                 {% endfor %}
             </div>
 
+            {% if can_edit %}
             <!-- Add New Head Bottom Action -->
             <button type="button" onclick="openAddExpCatModal('')" class="w-full bg-white hover:bg-gray-50 border-2 border-dashed border-gray-300 hover:border-brand-500 text-gray-600 hover:text-brand-700 p-3 rounded-2xl text-xs font-black flex items-center justify-center gap-2 transition cursor-pointer">
                 <i class="fa-solid fa-plus text-xs"></i>
                 <span>Create Another Head Category</span>
             </button>
+            {% endif %}
 
         </div>
 
@@ -197,6 +201,7 @@
 
                             <!-- Head Action Buttons -->
                             <div class="flex items-center gap-2 shrink-0 flex-wrap">
+                                {% if can_edit %}
                                 <!-- Add Sub-category Button -->
                                 <button type="button" 
                                         onclick="openAddExpCatModal('{{ item.head.id }}')"
@@ -213,6 +218,7 @@
                                     <i class="fa-solid fa-pen-to-square text-sm"></i>
                                     <span class="sr-only">Edit Head</span>
                                 </button>
+                                {% endif %}
 
                                 {% if can_delete %}
                                 <!-- Delete Head Button (Just Icon) -->
@@ -223,6 +229,11 @@
                                     <i class="fa-solid fa-trash-can text-sm"></i>
                                     <span class="sr-only">Delete Head</span>
                                 </button>
+                                {% endif %}
+                                {% if not can_edit and not can_delete %}
+                                <span class="text-[11px] font-bold text-white/80 bg-white/20 px-2.5 py-1 rounded-full inline-flex items-center gap-1 backdrop-blur-xs">
+                                    <i class="fa-solid fa-lock text-[10px]"></i> View Only
+                                </span>
                                 {% endif %}
                             </div>
                         </div>
@@ -268,12 +279,14 @@
                         <p class="text-[11px] text-gray-400 font-semibold">{{ item.head.sub_count }} items under "{{ item.head.name }}"</p>
                     </div>
 
+                    {% if can_edit %}
                     <button type="button" 
                             onclick="openAddExpCatModal('{{ item.head.id }}')"
                             class="bg-brand-50 hover:bg-brand-100 text-brand-800 font-extrabold text-xs px-3.5 py-2 rounded-xl border border-brand-200 transition flex items-center gap-1.5 self-start sm:self-auto cursor-pointer">
                         <i class="fa-solid fa-circle-plus text-brand-600"></i>
                         <span>Add Sub-category</span>
                     </button>
+                    {% endif %}
                 </div>
 
                 <!-- 3. SUBCATEGORIES GRID (Beautiful Mini-Cards) -->
@@ -300,12 +313,14 @@
 
                             <!-- Actions Menu -->
                             <div class="flex items-center gap-1 shrink-0">
+                                {% if can_edit %}
                                 <button type="button" 
                                         onclick="openEditExpCatModal('{{ sub.id }}', '{{ sub.name|escapejs }}', '{{ sub.description|escapejs }}', '{{ sub.icon|escapejs }}', '{{ item.head.id }}')"
                                         class="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-brand-700 hover:bg-brand-50 transition cursor-pointer"
                                         title="Edit Sub-category">
                                     <i class="fa-solid fa-pen-to-square text-xs"></i>
                                 </button>
+                                {% endif %}
                                 {% if can_delete %}
                                 <button type="button" 
                                         onclick="openDeleteExpCatModal('{{ sub.id }}', '{{ sub.name|escapejs }}', false)"
@@ -356,12 +371,14 @@
                             "{{ item.head.name }}" খাতের অধীনে এখনও কোনো নির্দিষ্ট সাব-ক্যাটাগরি তৈরি করা হয়নি। সাব-ক্যাটাগরি যুক্ত করলে ইউনিট অনুযায়ী সঠিক খরচের রিপোর্ট পাওয়া যাবে।
                         </p>
                     </div>
+                    {% if can_edit %}
                     <button type="button" 
                             onclick="openAddExpCatModal('{{ item.head.id }}')"
                             class="bg-brand-700 hover:bg-brand-800 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-md inline-flex items-center gap-2 transition active:scale-95 cursor-pointer">
                         <i class="fa-solid fa-plus text-brand-accent"></i>
                         <span>Add First Sub-category to {{ item.head.name }}</span>
                     </button>
+                    {% endif %}
                 </div>
                 {% endif %}
 
@@ -378,6 +395,7 @@
 
 </div>
 
+{% if can_edit %}
 <!-- ========================================================================= -->
 <!-- 1. ADD EXPENSE CATEGORY / SUBCATEGORY MODAL -->
 <!-- ========================================================================= -->
@@ -537,6 +555,7 @@
         </form>
     </div>
 </div>
+{% endif %}
 
 {% if can_delete %}
 <!-- ========================================================================= -->

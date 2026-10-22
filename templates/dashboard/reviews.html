@@ -25,10 +25,12 @@
         </div>
         
         <div class="flex items-center gap-2">
-            <button type="button" onclick="openReviewModal()" class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md flex items-center gap-2 transition active:scale-95">
+            {% if can_edit %}
+            <button type="button" onclick="openReviewModal()" class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md flex items-center gap-2 transition active:scale-95 cursor-pointer">
                 <i class="fa-solid fa-plus text-brand-accent"></i>
                 <span>Add Customer Review</span>
             </button>
+            {% endif %}
         </div>
     </div>
 
@@ -163,22 +165,22 @@
                             {% endif %}
                         </td>
                         <td class="p-4 text-right space-x-1">
+                            {% if can_edit %}
                             <form method="POST" class="inline">
                                 {% csrf_token %}
                                 <input type="hidden" name="action" value="toggle_approve">
                                 <input type="hidden" name="review_id" value="{{ r.id }}">
                                 {% if r.is_approved %}
-                                <button type="submit" class="px-2.5 py-1 rounded-lg border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold text-[11px] transition">
+                                <button type="submit" class="px-2.5 py-1 rounded-lg border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold text-[11px] transition cursor-pointer">
                                     Hide
                                 </button>
                                 {% else %}
-                                <button type="submit" class="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] shadow-sm transition inline-flex items-center gap-1">
+                                <button type="submit" class="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] shadow-sm transition inline-flex items-center gap-1 cursor-pointer">
                                     <i class="fa-solid fa-check text-xs"></i> Approve
                                 </button>
                                 {% endif %}
                             </form>
 
-                            {% if can_edit %}
                             <button type="button" 
                                     onclick="openEditReviewModal('{{ r.id }}', '{{ r.reviewer_name|escapejs }}', '{{ r.reviewer_location|escapejs }}', '{{ r.product.id|default:"" }}', '{{ r.rating }}', '{{ r.comment|escapejs }}', '{{ r.image_url|escapejs }}', {{ r.is_approved|yesno:"true,false" }})" 
                                     class="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[11px] transition inline-flex items-center gap-1 cursor-pointer" 
@@ -191,6 +193,12 @@
                             <button type="button" onclick="openDeleteReviewModal('{{ r.id }}', '{{ r.reviewer_name|escapejs }}')" class="px-2 py-1 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold text-[11px] transition cursor-pointer" title="Delete Review">
                                 <i class="fa-solid fa-trash-can"></i>
                             </button>
+                            {% endif %}
+
+                            {% if not can_edit and not can_delete %}
+                            <span class="text-[11px] font-bold text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full inline-flex items-center gap-1">
+                                <i class="fa-solid fa-lock text-[10px]"></i> View Only
+                            </span>
                             {% endif %}
                         </td>
                     </tr>
@@ -298,6 +306,7 @@
 
 </div>
 
+{% if can_edit %}
 <!-- ADD REVIEW MODAL -->
 <div id="addReviewModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-5 shadow-2xl relative">
@@ -370,6 +379,7 @@
         </form>
     </div>
 </div>
+{% endif %}
 
 {% if can_edit %}
 <!-- EDIT REVIEW MODAL -->

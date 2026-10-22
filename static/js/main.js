@@ -163,7 +163,9 @@ function renderCartDrawer(items, subtotal) {
                             <i class="fa-solid fa-trash-can"></i>
                         </button>
                     </div>
-                    <p class="text-xs text-gray-500">${item.weight}g Jar • ৳${parseFloat(item.price).toFixed(2)}</p>
+                    <p class="text-xs text-gray-500">
+                        ${item.weight}g Jar • ৳${parseFloat(item.price).toFixed(2)}
+                    </p>
                     <div class="flex items-center justify-between mt-2.5">
                         <div class="flex items-center border border-gray-200 rounded-lg bg-white overflow-hidden shadow-xs">
                             <button onclick="ajaxUpdateCart(${item.product_id}, 'decrease')" class="px-2.5 py-1 text-xs text-gray-600 hover:bg-gray-100 active:bg-gray-200 font-bold">-</button>

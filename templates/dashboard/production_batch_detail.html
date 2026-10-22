@@ -44,10 +44,17 @@
                 <span>প্রিন্ট (Print)</span>
             </button>
 
-            <button type="button" onclick="openEditBatchModal()" class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md flex items-center gap-1.5 transition active:scale-95">
-                <i class="fa-solid fa-pen-to-square text-brand-accent"></i>
-                <span>তথ্য এডিট করুন</span>
+            {% if can_edit %}
+            <button type="button" onclick="openAddFlavorModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
+                <i class="fa-solid fa-plus-circle text-emerald-200"></i>
+                <span>আচার যোগ করুন</span>
             </button>
+
+            <button type="button" onclick="openEditBatchModal()" class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
+                <i class="fa-solid fa-pen-to-square text-brand-accent"></i>
+                <span>ব্যাচ ও আচারের হিসাব এডিট করুন</span>
+            </button>
+            {% endif %}
 
             {% if can_delete %}
             <button type="button" onclick="openDeleteBatchModal()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-3.5 py-2.5 rounded-xl border border-rose-200 flex items-center gap-1.5 transition active:scale-95 cursor-pointer" title="Delete Batch">
@@ -147,7 +154,13 @@
                     আচারের ফ্লেভার অনুযায়ী উৎপাদনের বিবরণ (Flavor-wise Production Breakdown)
                 </h3>
             </div>
-            <span class="text-xs font-bold text-gray-400">Total {{ items|length }} varieties</span>
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-gray-400">Total {{ items|length }} varieties</span>
+                <button type="button" onclick="openAddFlavorModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-xs flex items-center gap-1 transition active:scale-95 cursor-pointer">
+                    <i class="fa-solid fa-plus text-[10px]"></i>
+                    <span>আচার যোগ করুন</span>
+                </button>
+            </div>
         </div>
 
         <div class="overflow-x-auto">
@@ -160,6 +173,7 @@
                         <th class="py-3.5 px-4 text-right">সম্ভাব্য মোট মূল্য (Total Value)</th>
                         <th class="py-3.5 px-4 text-center">বর্তমান লাইভ স্টক (Warehouse Stock)</th>
                         <th class="py-3.5 px-4 text-center">স্টক স্ট্যাটাস (Status)</th>
+                        <th class="py-3.5 px-4 text-center">অ্যাকশন (Actions)</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 text-xs">
@@ -168,8 +182,8 @@
                         <!-- Product Info -->
                         <td class="py-4 px-4 sm:px-6 font-bold text-gray-900">
                             <div class="flex items-center gap-3">
-                                {% if item.product.image %}
-                                <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" class="w-10 h-10 rounded-xl object-cover border border-gray-200 shrink-0">
+                                {% if item.product %}
+                                <img src="{{ item.product.primary_image_url }}" alt="{{ item.product.name }}" class="w-10 h-10 rounded-xl object-cover border border-gray-200 shrink-0">
                                 {% else %}
                                 <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center text-sm font-black shrink-0">
                                     <i class="fa-solid fa-jar"></i>
@@ -223,10 +237,31 @@
                             </span>
                             {% endif %}
                         </td>
+
+                        <!-- Actions -->
+                        <td class="py-4 px-4 text-center whitespace-nowrap">
+                            <div class="flex items-center justify-center gap-1.5">
+                                {% if can_edit %}
+                                <button type="button" onclick="openQuickEditModal({{ item.id }}, '{{ item.product.name|escapejs }}', {{ item.quantity }}, {{ item.product.stock_count }})"
+                                    class="p-2 rounded-xl bg-brand-50 hover:bg-brand-100 text-brand-800 border border-brand-200 transition active:scale-95 cursor-pointer" title="এই আচারের সংখ্যা পরিবর্তন করুন">
+                                    <i class="fa-solid fa-pen-to-square text-xs"></i>
+                                </button>
+                                {% endif %}
+                                {% if can_delete %}
+                                <button type="button" onclick="openDeleteItemModal({{ item.id }}, '{{ item.product.name|escapejs }}', {{ item.quantity }})"
+                                    class="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition active:scale-95 cursor-pointer" title="ব্যাচ থেকে এই আচার বাদ দিন">
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                </button>
+                                {% endif %}
+                                {% if not can_edit and not can_delete %}
+                                <span class="text-[11px] font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-lg">View Only</span>
+                                {% endif %}
+                            </div>
+                        </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="py-8 text-center text-gray-400 italic">
+                        <td colspan="7" class="py-8 text-center text-gray-400 italic">
                             এই ব্যাচে কোনো আচারের আইটেম রেকর্ড পাওয়া যায়নি।
                         </td>
                     </tr>
@@ -240,7 +275,7 @@
                         <td class="py-3.5 px-4 text-center font-black text-emerald-800">+{{ total_jars }} Jars</td>
                         <td class="py-3.5 px-4 text-right text-gray-500">—</td>
                         <td class="py-3.5 px-4 text-right text-indigo-900 font-display text-sm">৳{{ total_retail_value|floatformat:0 }}</td>
-                        <td colspan="2" class="py-3.5 px-4"></td>
+                        <td colspan="3" class="py-3.5 px-4"></td>
                     </tr>
                 </tfoot>
             </table>
@@ -250,53 +285,350 @@
 </div>
 
 <!-- ========================================== -->
-<!-- ✏️ EDIT BATCH INFO MODAL -->
+<!-- ✏️ EDIT BATCH & FLAVORS MODAL (FULL) -->
 <!-- ========================================== -->
-<div id="editBatchModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs hidden animate-fade-in">
-    <div class="bg-white rounded-3xl p-5 sm:p-7 max-w-lg w-full shadow-2xl border border-gray-100 flex flex-col transform transition-all scale-100">
+<div id="editBatchModal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs hidden animate-fade-in">
+    <div class="bg-white rounded-3xl max-w-3xl w-full max-h-[92vh] shadow-2xl border border-gray-100 flex flex-col overflow-hidden transform transition-all">
         
-        <div class="flex items-center justify-between pb-4 border-b border-gray-100">
-            <h3 class="font-display font-black text-base text-gray-900">
-                ব্যাচ তথ্য এডিট করুন (Edit Batch Info)
-            </h3>
-            <button type="button" onclick="closeEditBatchModal()" class="w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 flex items-center justify-center text-sm transition">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between p-5 sm:px-7 border-b border-gray-100 bg-linear-to-r from-gray-50 to-white">
+            <div class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-2xl bg-brand-100 text-brand-800 flex items-center justify-center text-base shrink-0">
+                    <i class="fa-solid fa-sliders"></i>
+                </div>
+                <div>
+                    <h3 class="font-display font-black text-base sm:text-lg text-gray-900 leading-tight">
+                        ব্যাচ ও আচারের হিসাব এডিট করুন
+                    </h3>
+                    <p class="text-[11px] sm:text-xs text-gray-500">
+                        ব্যাচের বিবরণ এবং প্রতিটি আচারের পরিমাণ পরিবর্তন করুন। ইনভেন্টরি স্বয়ংক্রিয়ভাবে আপডেট হবে।
+                    </p>
+                </div>
+            </div>
+            <button type="button" onclick="closeEditBatchModal()" class="w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 flex items-center justify-center text-sm transition cursor-pointer">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
 
-        <form method="POST" action="{% url 'dashboard:production_batch_detail' batch.id %}" class="space-y-4 mt-4">
+        <form method="POST" action="{% url 'dashboard:production_batch_detail' batch.id %}" class="flex flex-col flex-1 min-h-0">
             {% csrf_token %}
-            <input type="hidden" name="action" value="edit_batch_info">
+            <input type="hidden" name="action" value="edit_batch_full">
+
+            <!-- Scrollable Modal Body -->
+            <div class="p-5 sm:p-7 space-y-6 overflow-y-auto flex-1 divide-y divide-gray-100">
+
+                <!-- Section 1: Batch Info -->
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-black uppercase tracking-wider text-brand-800 flex items-center gap-1.5">
+                            <i class="fa-solid fa-circle-info"></i> ব্যাচের মূল তথ্য (Batch Details)
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">ব্যাচ নাম্বার / নাম <span class="text-rose-500">*</span></label>
+                            <input type="text" name="batch_number" required value="{{ batch.batch_number }}"
+                                class="w-full px-3.5 py-2 text-xs font-bold border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-500 bg-white">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">উৎপাদনের তারিখ <span class="text-rose-500">*</span></label>
+                            <input type="date" name="production_date" required value="{{ batch.production_date|date:'Y-m-d' }}"
+                                class="w-full px-3.5 py-2 text-xs font-bold border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-500 bg-white">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">মোট উৎপাদন খরচ (Total Cost ৳)</label>
+                            <input type="number" step="0.01" name="total_cost_bdt" value="{{ batch.total_cost_bdt }}"
+                                placeholder="উদাঃ 15000"
+                                class="w-full px-3.5 py-2 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">ব্যাচ নোট ও বিবরণ</label>
+                            <input type="text" name="notes" value="{{ batch.notes }}"
+                                placeholder="ব্যাচ সম্পর্কিত বিশেষ নোট..."
+                                class="w-full px-3.5 py-2 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Pickle Quantities with Live Inventory Sync -->
+                <div class="pt-6 space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                            <span class="text-xs font-black uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
+                                <i class="fa-solid fa-jar"></i> আচারের উৎপাদন হিসাব ও ইনভেন্টরি সমন্বয়
+                            </span>
+                            <p class="text-[11px] text-gray-500 mt-0.5">
+                                পরিমাণ বাড়ালে স্টক বাড়বে (+), কমালে স্টক কমবে (-)। ০ লিখলে ব্যাচ থেকে বাদ পড়বে।
+                            </p>
+                        </div>
+                        <div class="relative w-full sm:w-56 shrink-0">
+                            <input type="text" id="modalPickleSearch" onkeyup="filterModalPickles()" placeholder="আচার খুঁজুন..."
+                                class="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500">
+                            <i class="fa-solid fa-search absolute left-2.5 top-2.5 text-gray-400 text-xs"></i>
+                        </div>
+                    </div>
+
+                    <!-- Information Alert -->
+                    <div class="p-3 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs text-emerald-950 flex items-start gap-2.5">
+                        <i class="fa-solid fa-arrow-trend-up text-emerald-600 mt-0.5 text-sm"></i>
+                        <p class="text-[11px] leading-relaxed">
+                            <strong>অটো-ইনভেন্টরি পরিবর্তন:</strong> আপনি যে পার্থক্য (Delta) পরিবর্তন করবেন, সিস্টেম স্বয়ংক্রিয়ভাবে গুদাম ইনভেন্টরি (<span class="font-bold">Product Stock</span>) অ্যাডজাস্ট করবে এবং অডিট ট্রেইল হিসেবে <span class="font-bold">Stock Log</span> রেকর্ড তৈরি করবে।
+                        </p>
+                    </div>
+
+                    <!-- Pickle List Items -->
+                    <div class="space-y-2 max-h-80 overflow-y-auto pr-1" id="modalPicklesList">
+                        {% for p in all_products %}
+                        <div class="pickle-row flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-2xl border transition {% if p.is_in_this_batch %}border-brand-200 bg-brand-50/30{% else %}border-gray-200 bg-white hover:bg-gray-50/50{% endif %}"
+                            data-pickle-name="{{ p.name|lower }}">
+                            
+                            <!-- Left: Product Identity -->
+                            <div class="flex items-center gap-3 min-w-0">
+                                {% if p %}
+                                <img src="{{ p.primary_image_url }}" alt="{{ p.name }}" class="w-10 h-10 rounded-xl object-cover border border-gray-200 shrink-0">
+                                {% else %}
+                                <div class="w-10 h-10 rounded-xl bg-gray-100 text-gray-400 flex items-center justify-center shrink-0">
+                                    <i class="fa-solid fa-jar text-sm"></i>
+                                </div>
+                                {% endif %}
+                                <div class="min-w-0">
+                                    <div class="font-bold text-xs text-gray-900 truncate flex items-center gap-1.5">
+                                        <span>{{ p.name }}</span>
+                                        {% if p.is_in_this_batch %}
+                                        <span class="px-1.5 py-0.2 rounded text-[10px] font-black bg-brand-100 text-brand-800">
+                                            ব্যাচে আছে
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-[11px] text-gray-500 flex items-center gap-2 mt-0.5">
+                                        <span>বর্তমান স্টক: <strong class="{% if p.stock_count > 0 %}text-emerald-700{% else %}text-rose-600{% endif %}">{{ p.stock_count }} জার</strong></span>
+                                        <span>•</span>
+                                        <span>ব্যাচে ছিল: <strong class="text-gray-800">{{ p.current_batch_qty }} জার</strong></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right: Quantity Input & Delta Indicator -->
+                            <div class="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
+                                <!-- Delta Badge -->
+                                <span id="delta_badge_{{ p.id }}" class="text-[11px] font-bold px-2 py-1 rounded-lg bg-gray-100 text-gray-500 whitespace-nowrap min-w-[85px] text-center">
+                                    অপরিবর্তিত
+                                </span>
+
+                                <div class="flex items-center gap-1">
+                                    <label class="text-[11px] font-bold text-gray-500 hidden sm:inline">ব্যাচ জার:</label>
+                                    <input type="number" min="0" name="batch_qty_{{ p.id }}" id="batch_qty_{{ p.id }}"
+                                        value="{{ p.current_batch_qty }}"
+                                        data-old-qty="{{ p.current_batch_qty }}"
+                                        data-stock="{{ p.stock_count }}"
+                                        oninput="onBatchQtyChange({{ p.id }})"
+                                        class="batch-qty-input w-20 px-2.5 py-1.5 text-xs font-black text-center border rounded-xl focus:ring-2 focus:ring-brand-500 {% if p.current_batch_qty > 0 %}border-brand-400 bg-brand-50/50 text-brand-950{% else %}border-gray-300 bg-white text-gray-700{% endif %}">
+                                </div>
+                            </div>
+
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-4 sm:px-7 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
+                <div class="text-[11px] text-gray-500 hidden sm:block">
+                    <i class="fa-solid fa-shield-halved text-brand-700"></i> ইনভেন্টরি ট্র্যাকিং সিস্টেম অ্যাক্টিভ
+                </div>
+                <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    <button type="button" onclick="closeEditBatchModal()" class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 font-bold text-xs hover:bg-gray-100 transition cursor-pointer">
+                        বাতিল (Cancel)
+                    </button>
+                    <button type="submit" class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md transition cursor-pointer flex items-center gap-1.5">
+                        <i class="fa-solid fa-floppy-disk text-brand-accent"></i>
+                        <span>হিসাব ও স্টক সেভ করুন</span>
+                    </button>
+                </div>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- ⚡ QUICK EDIT SINGLE ITEM MODAL -->
+<!-- ========================================== -->
+<div id="quickEditModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs hidden animate-fade-in">
+    <div class="bg-white rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl border border-gray-100 space-y-4">
+        
+        <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+            <div class="flex items-center gap-2">
+                <div class="w-9 h-9 rounded-xl bg-brand-100 text-brand-800 flex items-center justify-center text-sm shrink-0">
+                    <i class="fa-solid fa-pen"></i>
+                </div>
+                <div>
+                    <h3 class="font-display font-black text-sm text-gray-900" id="quickEditTitle">
+                        আচারের সংখ্যা এডিট করুন
+                    </h3>
+                    <p class="text-[11px] text-gray-500">ব্যাচ আইটেমের সংখ্যা ও স্টক পরিবর্তন</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeQuickEditModal()" class="w-7 h-7 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 flex items-center justify-center text-xs transition cursor-pointer">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form method="POST" action="{% url 'dashboard:production_batch_detail' batch.id %}" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="edit_batch_item_qty">
+            <input type="hidden" name="item_id" id="quickEditItemId">
+
+            <div class="bg-gray-50 p-3 rounded-2xl border border-gray-200 text-xs space-y-1.5">
+                <div class="flex justify-between">
+                    <span class="text-gray-500">আচারের নাম:</span>
+                    <strong class="text-gray-900" id="quickEditNameDisplay"></strong>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500">বর্তমান ব্যাচ পরিমাণ:</span>
+                    <strong class="text-gray-900"><span id="quickEditOldQtyDisplay">0</span> জার</strong>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500">বর্তমান গুদাম স্টক:</span>
+                    <strong class="text-emerald-700"><span id="quickEditStockDisplay">0</span> জার</strong>
+                </div>
+            </div>
 
             <div>
-                <label class="block text-xs font-bold text-gray-700 mb-1">ব্যাচ নাম্বার / নাম</label>
-                <input type="text" name="batch_number" required value="{{ batch.batch_number }}"
+                <label class="block text-xs font-bold text-gray-700 mb-1.5">
+                    এই ব্যাচে নতুন উৎপাদিত জার সংখ্যা <span class="text-rose-500">*</span>
+                </label>
+                <div class="relative">
+                    <input type="number" min="0" required name="quantity" id="quickEditQuantityInput"
+                        oninput="onQuickEditQtyChange()"
+                        class="w-full px-4 py-2.5 text-base font-black text-center border-2 border-brand-300 rounded-xl focus:ring-2 focus:ring-brand-500 bg-white">
+                </div>
+                <p class="text-[11px] text-gray-500 mt-1">০ (শূন্য) দিলে এই ব্যাচ থেকে আচারটি বাদ পড়বে।</p>
+            </div>
+
+            <!-- Live Delta Preview Box -->
+            <div id="quickEditDeltaBox" class="p-3 rounded-xl border text-xs flex items-center justify-between font-bold bg-gray-50 border-gray-200 text-gray-700">
+                <span>স্টক সমন্বয়:</span>
+                <span id="quickEditDeltaText">কোনো পরিবর্তন নেই</span>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                <button type="button" onclick="closeQuickEditModal()" class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 font-bold text-xs hover:bg-gray-100 transition cursor-pointer">
+                    বাতিল
+                </button>
+                <button type="submit" class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md transition cursor-pointer">
+                    আপডেট ও স্টক সেভ
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- ➕ ADD FLAVOR TO BATCH MODAL -->
+<!-- ========================================== -->
+<div id="addFlavorModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs hidden animate-fade-in">
+    <div class="bg-white rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl border border-gray-100 space-y-4">
+        
+        <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+            <div class="flex items-center gap-2">
+                <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-sm shrink-0">
+                    <i class="fa-solid fa-plus-circle"></i>
+                </div>
+                <div>
+                    <h3 class="font-display font-black text-sm text-gray-900">
+                        ব্যাচে নতুন আচার যোগ করুন
+                    </h3>
+                    <p class="text-[11px] text-gray-500">ব্যাচে অতিরিক্ত আচার যুক্ত করুন</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeAddFlavorModal()" class="w-7 h-7 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 flex items-center justify-center text-xs transition cursor-pointer">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form method="POST" action="{% url 'dashboard:production_batch_detail' batch.id %}" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_single_flavor">
+
+            <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1">আচার পছন্দ করুন <span class="text-rose-500">*</span></label>
+                <select name="product_id" required class="w-full px-3.5 py-2 text-xs font-bold border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-500 bg-white">
+                    <option value="" disabled selected>-- আচার নির্বাচন করুন --</option>
+                    {% for p in all_products %}
+                    <option value="{{ p.id }}">
+                        {{ p.name }} (বর্তমান স্টক: {{ p.stock_count }} জার{% if p.is_in_this_batch %}, ব্যাচে ইতিমধ্যে {{ p.current_batch_qty }} জার আছে{% endif %})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1">যোগ করার পরিমাণ (জার) <span class="text-rose-500">*</span></label>
+                <input type="number" min="1" required name="quantity" placeholder="উদাঃ 15"
                     class="w-full px-3.5 py-2 text-xs font-bold border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-500 bg-white">
+                <p class="text-[11px] text-emerald-700 font-semibold mt-1">
+                    <i class="fa-solid fa-check-circle"></i> এই পরিমাণ জার সরাসরি গুদামের স্টকে যুক্ত হবে।
+                </p>
             </div>
 
+            <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                <button type="button" onclick="closeAddFlavorModal()" class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 font-bold text-xs hover:bg-gray-100 transition cursor-pointer">
+                    বাতিল
+                </button>
+                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-5 py-2 rounded-xl shadow-md transition cursor-pointer flex items-center gap-1.5">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>ব্যাচে যোগ করুন</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- 🗑️ DELETE BATCH ITEM CONFIRMATION MODAL -->
+<!-- ========================================== -->
+<div id="deleteItemModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs hidden animate-fade-in">
+    <div class="bg-white rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl border border-rose-100 space-y-4">
+        
+        <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-lg shrink-0">
+                <i class="fa-solid fa-trash-can"></i>
+            </div>
             <div>
-                <label class="block text-xs font-bold text-gray-700 mb-1">উৎপাদনের তারিখ</label>
-                <input type="date" name="production_date" required value="{{ batch.production_date|date:'Y-m-d' }}"
-                    class="w-full px-3.5 py-2 text-xs font-bold border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-500 bg-white">
+                <h3 class="font-display font-black text-sm sm:text-base text-gray-900">আচারটি ব্যাচ থেকে বাদ দেবেন?</h3>
+                <p class="text-xs text-gray-500">ব্যাচ থেকে <strong class="text-gray-900" id="deleteItemNameDisplay"></strong> বাদ দিতে যাচ্ছেন।</p>
+            </div>
+        </div>
+
+        <form method="POST" action="{% url 'dashboard:production_batch_detail' batch.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete_batch_item">
+            <input type="hidden" name="item_id" id="deleteItemId">
+
+            <div class="bg-rose-50/70 p-3.5 rounded-2xl border border-rose-200 text-xs space-y-2 mb-4">
+                <div class="text-xs text-rose-950">
+                    এই ব্যাচে উৎপাদিত ছিল: <strong class="text-rose-900" id="deleteItemQtyDisplay">0</strong> টি জার।
+                </div>
+                <label class="flex items-start gap-2 cursor-pointer font-bold text-rose-950 pt-1 border-t border-rose-200/60">
+                    <input type="checkbox" name="revert_stock" value="1" checked class="mt-0.5 rounded text-rose-600 focus:ring-rose-500">
+                    <span>উৎপাদিত জারগুলো ওয়্যারহাউস স্টক (Inventory) থেকে বিয়োগ (Revert) করুন।</span>
+                </label>
+                <p class="text-[11px] text-rose-800/80 pl-5">টিক দেওয়া থাকলে ইনভেন্টরি থেকে এই পরিমাণ জার বিয়োগ হবে।</p>
             </div>
 
-            <div>
-                <label class="block text-xs font-bold text-gray-700 mb-1">ব্যাচ নোট ও বিবরণ</label>
-                <textarea name="notes" rows="3" class="w-full px-3.5 py-2 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-500">{{ batch.notes }}</textarea>
-            </div>
-
-            <div>
-                <label class="block text-xs font-bold text-gray-700 mb-1">মোট উৎপাদন খরচ ৳ (Total Cost)</label>
-                <input type="number" step="0.01" name="total_cost_bdt" value="{{ batch.total_cost_bdt }}"
-                    class="w-full px-3.5 py-2 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-500">
-            </div>
-
-            <div class="pt-3 border-t border-gray-100 flex items-center justify-end gap-2">
-                <button type="button" onclick="closeEditBatchModal()" class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 font-bold text-xs hover:bg-gray-100 transition">
+            <div class="flex items-center justify-end gap-2">
+                <button type="button" onclick="closeDeleteItemModal()" class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 font-bold text-xs hover:bg-gray-100 transition cursor-pointer">
                     Cancel
                 </button>
-                <button type="submit" class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-5 py-2 rounded-xl shadow-md transition">
-                    সংরক্ষণ করুন (Save)
+                <button type="submit" class="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-xs transition cursor-pointer">
+                    হ্যাঁ, বাদ দিন
                 </button>
             </div>
         </form>
@@ -305,7 +637,7 @@
 
 {% if can_delete %}
 <!-- ========================================== -->
-<!-- 🗑️ DELETE BATCH CONFIRMATION MODAL -->
+<!-- 🗑️ DELETE FULL BATCH CONFIRMATION MODAL -->
 <!-- ========================================== -->
 <div id="deleteBatchModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs hidden animate-fade-in">
     <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-rose-100 space-y-4">
@@ -314,7 +646,7 @@
                 <i class="fa-solid fa-triangle-exclamation"></i>
             </div>
             <div>
-                <h3 class="font-display font-black text-base text-gray-900">ব্যাচ মুছে ফেলবেন?</h3>
+                <h3 class="font-display font-black text-base text-gray-900">পুরো ব্যাচ মুছে ফেলবেন?</h3>
                 <p class="text-xs text-gray-500">আপনি <strong class="text-gray-900">{{ batch.batch_number }}</strong> ব্যাচটি ডিলিট করতে যাচ্ছেন।</p>
             </div>
         </div>
@@ -344,6 +676,7 @@
 {% endif %}
 
 <script>
+// --- Full Batch Modal ---
 function openEditBatchModal() {
     document.getElementById('editBatchModal').classList.remove('hidden');
 }
@@ -352,12 +685,118 @@ function closeEditBatchModal() {
     document.getElementById('editBatchModal').classList.add('hidden');
 }
 
+function filterModalPickles() {
+    const q = document.getElementById('modalPickleSearch').value.toLowerCase().trim();
+    const rows = document.querySelectorAll('#modalPicklesList .pickle-row');
+    rows.forEach(r => {
+        const name = r.getAttribute('data-pickle-name') || '';
+        if (!q || name.includes(q)) {
+            r.style.display = 'flex';
+        } else {
+            r.style.display = 'none';
+        }
+    });
+}
+
+function onBatchQtyChange(productId) {
+    const input = document.getElementById('batch_qty_' + productId);
+    const badge = document.getElementById('delta_badge_' + productId);
+    if (!input || !badge) return;
+
+    const oldQty = parseInt(input.getAttribute('data-old-qty') || '0', 10);
+    const newQty = parseInt(input.value || '0', 10);
+    const delta = newQty - oldQty;
+
+    if (delta > 0) {
+        badge.className = 'text-[11px] font-bold px-2 py-1 rounded-lg bg-emerald-100 text-emerald-800 whitespace-nowrap min-w-[85px] text-center border border-emerald-300';
+        badge.innerHTML = `<i class="fa-solid fa-arrow-up text-[10px]"></i> +${delta} স্টক বৃদ্ধি`;
+    } else if (delta < 0) {
+        badge.className = 'text-[11px] font-bold px-2 py-1 rounded-lg bg-rose-100 text-rose-800 whitespace-nowrap min-w-[85px] text-center border border-rose-300';
+        badge.innerHTML = `<i class="fa-solid fa-arrow-down text-[10px]"></i> ${delta} স্টক হ্রাস`;
+    } else {
+        badge.className = 'text-[11px] font-bold px-2 py-1 rounded-lg bg-gray-100 text-gray-500 whitespace-nowrap min-w-[85px] text-center';
+        badge.innerHTML = 'অপরিবর্তিত';
+    }
+}
+
+// --- Quick Single-Item Modal ---
+let quickEditOldQty = 0;
+let quickEditStock = 0;
+
+function openQuickEditModal(itemId, itemName, currentBatchQty, currentStock) {
+    quickEditOldQty = currentBatchQty;
+    quickEditStock = currentStock;
+
+    document.getElementById('quickEditItemId').value = itemId;
+    document.getElementById('quickEditTitle').innerText = `${itemName} - পরিমাণ পরিবর্তন`;
+    document.getElementById('quickEditNameDisplay').innerText = itemName;
+    document.getElementById('quickEditOldQtyDisplay').innerText = currentBatchQty;
+    document.getElementById('quickEditStockDisplay').innerText = currentStock;
+    
+    const qtyInput = document.getElementById('quickEditQuantityInput');
+    qtyInput.value = currentBatchQty;
+    onQuickEditQtyChange();
+
+    document.getElementById('quickEditModal').classList.remove('hidden');
+}
+
+function closeQuickEditModal() {
+    document.getElementById('quickEditModal').classList.add('hidden');
+}
+
+function onQuickEditQtyChange() {
+    const input = document.getElementById('quickEditQuantityInput');
+    const box = document.getElementById('quickEditDeltaBox');
+    const text = document.getElementById('quickEditDeltaText');
+    if (!input || !box || !text) return;
+
+    const newQty = parseInt(input.value || '0', 10);
+    const delta = newQty - quickEditOldQty;
+    const estStock = Math.max(0, quickEditStock + delta);
+
+    if (delta > 0) {
+        box.className = 'p-3 rounded-xl border text-xs flex items-center justify-between font-bold bg-emerald-50 border-emerald-300 text-emerald-900';
+        text.innerHTML = `<span class="inline-flex items-center gap-1"><i class="fa-solid fa-plus-circle"></i> +${delta} জার স্টকে যোগ হবে (নতুন স্টক: ${estStock})</span>`;
+    } else if (delta < 0) {
+        box.className = 'p-3 rounded-xl border text-xs flex items-center justify-between font-bold bg-rose-50 border-rose-300 text-rose-900';
+        text.innerHTML = `<span class="inline-flex items-center gap-1"><i class="fa-solid fa-minus-circle"></i> ${delta} জার স্টক থেকে বিয়োগ হবে (নতুন স্টক: ${estStock})</span>`;
+    } else {
+        box.className = 'p-3 rounded-xl border text-xs flex items-center justify-between font-bold bg-gray-50 border-gray-200 text-gray-700';
+        text.innerHTML = 'কোনো পরিবর্তন নেই';
+    }
+}
+
+// --- Add Flavor Modal ---
+function openAddFlavorModal() {
+    document.getElementById('addFlavorModal').classList.remove('hidden');
+}
+
+function closeAddFlavorModal() {
+    document.getElementById('addFlavorModal').classList.add('hidden');
+}
+
+// --- Delete Item Modal ---
+function openDeleteItemModal(itemId, itemName, currentBatchQty) {
+    document.getElementById('deleteItemId').value = itemId;
+    document.getElementById('deleteItemNameDisplay').innerText = itemName;
+    document.getElementById('deleteItemQtyDisplay').innerText = currentBatchQty;
+    document.getElementById('deleteItemModal').classList.remove('hidden');
+}
+
+function closeDeleteItemModal() {
+    document.getElementById('deleteItemModal').classList.add('hidden');
+}
+
+// --- Delete Full Batch Modal ---
 function openDeleteBatchModal() {
-    document.getElementById('deleteBatchModal').classList.remove('hidden');
+    const m = document.getElementById('deleteBatchModal');
+    if (m) m.classList.remove('hidden');
 }
 
 function closeDeleteBatchModal() {
-    document.getElementById('deleteBatchModal').classList.add('hidden');
+    const m = document.getElementById('deleteBatchModal');
+    if (m) m.classList.add('hidden');
 }
 </script>
 {% endblock %}
+

@@ -172,20 +172,24 @@
                                     <i class="fa-solid fa-circle-check text-emerald-600"></i>
                                     <span>Sent ({% if order.days_since_sent == 0 %}today{% else %}{{ order.days_since_sent }}d ago{% endif %})</span>
                                 </span>
+                                {% if can_edit %}
                                 <button type="button" onclick="undoReminderSent('{{ order.order_number }}')" class="text-gray-400 hover:text-rose-600 hover:bg-rose-50 px-2 py-1 rounded text-[11px] font-semibold transition cursor-pointer" title="Move back to Pending">
                                     Undo
                                 </button>
+                                {% endif %}
                                 {% else %}
+                                {% if can_edit %}
                                 <button type="button" onclick="markReminderSent('{{ order.order_number }}')" class="bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs px-2.5 py-1.5 rounded-lg inline-flex items-center gap-1 transition shadow-2xs cursor-pointer" title="Move to Done without opening WhatsApp">
                                     <i class="fa-solid fa-check text-xs text-amber-700"></i>
                                     <span>Done</span>
                                 </button>
                                 {% endif %}
+                                {% endif %}
 
                                 <a href="{{ order.whatsapp_1month_review_request_url }}" target="_blank" 
-                                   onclick="markReminderSent('{{ order.order_number }}')"
+                                   {% if can_edit %}onclick="markReminderSent('{{ order.order_number }}')"{% endif %}
                                    class="{% if order.is_feedback_done %}bg-gray-100 hover:bg-gray-200 text-gray-700{% else %}bg-emerald-600 hover:bg-emerald-700 text-white{% endif %} font-bold text-xs px-2.5 py-1.5 rounded-lg inline-flex items-center gap-1 transition shadow-2xs" 
-                                   title="{% if order.is_feedback_done %}Already sent. Click to resend WhatsApp message{% else %}Send WhatsApp Review Request (Moves to Done){% endif %}">
+                                   title="{% if order.is_feedback_done %}Already sent. Click to resend WhatsApp message{% else %}Send WhatsApp Review Request{% endif %}">
                                     <i class="fa-brands fa-whatsapp text-xs {% if order.is_feedback_done %}text-emerald-600{% endif %}"></i>
                                     <span>{% if order.is_feedback_done %}Resend{% else %}WhatsApp{% endif %}</span>
                                 </a>
@@ -237,18 +241,22 @@
                         <i class="fa-solid fa-circle-check text-emerald-600"></i>
                         <span>Sent ({% if order.days_since_sent == 0 %}today{% else %}{{ order.days_since_sent }}d ago{% endif %})</span>
                     </span>
+                    {% if can_edit %}
                     <button type="button" onclick="undoReminderSent('{{ order.order_number }}')" class="text-xs text-rose-600 font-semibold px-2 py-1 hover:bg-rose-50 rounded">
                         Undo
                     </button>
+                    {% endif %}
                     {% else %}
+                    {% if can_edit %}
                     <button type="button" onclick="markReminderSent('{{ order.order_number }}')" class="bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs px-2.5 py-1.5 rounded-lg flex items-center gap-1">
                         <i class="fa-solid fa-check text-amber-700"></i>
                         <span>Done</span>
                     </button>
                     {% endif %}
+                    {% endif %}
 
                     <a href="{{ order.whatsapp_1month_review_request_url }}" target="_blank" 
-                       onclick="markReminderSent('{{ order.order_number }}')"
+                       {% if can_edit %}onclick="markReminderSent('{{ order.order_number }}')"{% endif %}
                        class="flex-1 {% if order.is_feedback_done %}bg-gray-100 hover:bg-gray-200 text-gray-700{% else %}bg-emerald-600 hover:bg-emerald-700 text-white{% endif %} font-bold text-xs py-1.5 rounded-lg text-center flex items-center justify-center gap-1">
                         <i class="fa-brands fa-whatsapp text-xs {% if order.is_feedback_done %}text-emerald-600{% endif %}"></i>
                         <span>{% if order.is_feedback_done %}Resend WhatsApp{% else %}Send WhatsApp{% endif %}</span>
@@ -328,6 +336,7 @@
                 <i class="fa-solid fa-copy text-gray-500"></i>
                 <span id="copyBtnTxt">Copy Message</span>
             </button>
+            {% if can_edit %}
             <button type="button" onclick="modalMarkAsDoneOnly()" class="bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs px-3 py-2 rounded-xl border border-amber-300 flex items-center gap-1 transition cursor-pointer">
                 <i class="fa-solid fa-check text-amber-700"></i>
                 <span>Move to Done (Done-এ পাঠান)</span>
@@ -336,6 +345,12 @@
                 <i class="fa-brands fa-whatsapp text-sm"></i>
                 <span>Open WhatsApp & Move to Done</span>
             </a>
+            {% else %}
+            <a href="#" id="modalDirectWaLink" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition shadow-sm">
+                <i class="fa-brands fa-whatsapp text-sm"></i>
+                <span>Open WhatsApp</span>
+            </a>
+            {% endif %}
         </div>
     </div>
 </div>

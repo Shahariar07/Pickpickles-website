@@ -85,6 +85,16 @@ class Product(models.Model):
         super().save(*args, **kwargs)
 
     @property
+    def is_available_in_stock(self):
+        """True if the item is physically in stock and ready to pack immediately."""
+        return self.is_in_stock and self.stock_count > 0
+
+    @property
+    def is_preorder(self):
+        """Always False as user requested standard direct Add to Bag with no pre-order distinction."""
+        return False
+
+    @property
     def ordered_demand_count(self):
         """Total quantity demanded across all active unfulfilled orders."""
         if hasattr(self, '_computed_demand'):
@@ -152,39 +162,54 @@ class Product(models.Model):
 
     @property
     def primary_image_url(self):
-        # 1. Check self.image if file actually exists on disk
+        candidates = []
+
+        # 1. Image field candidates
         if self.image and self.image.name:
+            clean_name = self.image.name.lstrip('/\\')
+            candidates.append(clean_name)
+            candidates.append(clean_name.replace('products_v2/', 'products/'))
+            candidates.append(clean_name.replace('products/', 'products_v2/'))
+            candidates.append(clean_name.replace('-', '_'))
+
+        # 2. image_url field candidates
+        if self.image_url and self.image_url.strip():
+            raw_url = self.image_url.strip()
+            if raw_url.startswith('/media/'):
+                rel_path = raw_url.replace('/media/', '').split('?')[0].lstrip('/\\')
+                candidates.append(rel_path)
+                candidates.append(rel_path.replace('products_v2/', 'products/'))
+                candidates.append(rel_path.replace('products/', 'products_v2/'))
+                candidates.append(rel_path.replace('-', '_'))
+            elif raw_url.startswith('http://') or raw_url.startswith('https://') or raw_url.startswith('/static/'):
+                return raw_url
+
+        # 3. Fallback: Slug matching with both underscores and hyphens
+        slug_bases = []
+        if self.slug:
+            slug_bases.append(self.slug.replace('-', '_'))
+            slug_bases.append(self.slug)
+        if self.name:
+            from django.utils.text import slugify
+            name_slug = slugify(self.name)
+            slug_bases.append(name_slug.replace('-', '_'))
+            slug_bases.append(name_slug)
+
+        for base in slug_bases:
+            for ext in ['.webp', '.jpg', '.png', '.jpeg']:
+                candidates.append(f"products/{base}{ext}")
+                candidates.append(f"products_v2/{base}{ext}")
+
+        # Check each candidate on disk
+        for rel_path in candidates:
             try:
-                local_path = os.path.join(settings.MEDIA_ROOT, self.image.name)
+                local_path = os.path.join(settings.MEDIA_ROOT, rel_path.replace('/', os.sep))
                 if os.path.exists(local_path):
                     ts = int(os.path.getmtime(local_path))
-                    url = self.image.url
-                    separator = '&' if '?' in url else '?'
-                    return f"{url}{separator}v={ts}"
+                    clean_rel = rel_path.replace('\\', '/')
+                    return f"/media/{clean_rel}?v={ts}"
             except Exception:
                 pass
-
-        # 2. Check self.image_url
-        if self.image_url and self.image_url.strip():
-            url = self.image_url.strip()
-            if url.startswith('/media/'):
-                rel_path = url.replace('/media/', '').split('?')[0]
-                local_path = os.path.join(settings.MEDIA_ROOT, rel_path)
-                if os.path.exists(local_path):
-                    ts = int(os.path.getmtime(local_path))
-                    separator = '&' if '?' in url else '?'
-                    return f"{url.split('?')[0]}{separator}v={ts}"
-            elif url.startswith('http://') or url.startswith('https://') or url.startswith('/static/'):
-                return url
-
-        # 3. Fallback: Check media/products/ matching slug
-        if self.slug:
-            for ext in ['.webp', '.jpg', '.png', '.jpeg']:
-                rel_path = f"products/{self.slug}{ext}"
-                local_path = os.path.join(settings.MEDIA_ROOT, rel_path)
-                if os.path.exists(local_path):
-                    ts = int(os.path.getmtime(local_path))
-                    return f"/media/{rel_path}?v={ts}"
 
         return "/static/images/pickle_default.png"
 

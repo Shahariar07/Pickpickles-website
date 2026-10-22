@@ -25,13 +25,44 @@ def is_staff_user(user):
     return user.is_authenticated and (user.is_staff or user.is_superuser)
 
 
+def is_view_only_user(user):
+    """
+    Checks if a user is in View-Only (Restricted) mode like Mitu.
+    View-only users can browse and view all dashboard pages,
+    but cannot edit, create, delete, dispatch, or modify anything.
+    """
+    if not user or not user.is_authenticated:
+        return True
+    if user.is_superuser:
+        return False
+    
+    # Username 'mitu' or any user configured with edit restrictions
+    if getattr(user, 'username', '').strip().lower() == 'mitu':
+        return True
+
+    profile = getattr(user, 'security_profile', None)
+    if profile is not None:
+        if not profile.can_edit_records:
+            return True
+        return False
+
+    try:
+        config = DashboardSecurityConfig.get_config()
+        if config.strict_admin_only_edit:
+            return True
+    except Exception:
+        pass
+
+    return False
+
+
 def can_user_delete(user):
     """
     Checks if a user has permission to delete any record across the platform.
     Rule:
     1. Superusers (Administrators) can ALWAYS delete records.
-    2. If user is unauthenticated or not staff: False.
-    3. If strict_admin_only_delete is enabled: ONLY superusers can delete (returns False for staff).
+    2. If user is unauthenticated or view-only (like Mitu): False.
+    3. If strict_admin_only_delete is enabled: ONLY superusers can delete.
     4. If strict_admin_only_delete is disabled AND allow_staff_delete_override is True:
        returns True if user has an active StaffSecurityProfile with can_delete_records=True.
     """
@@ -39,6 +70,8 @@ def can_user_delete(user):
         return False
     if user.is_superuser:
         return True
+    if is_view_only_user(user):
+        return False
     
     try:
         config = DashboardSecurityConfig.get_config()
@@ -57,8 +90,9 @@ def can_user_delete(user):
 
 def can_user_edit(user):
     """
-    Checks if a user has permission to edit records (customer details, order status, products, expenses).
+    Checks if a user has permission to edit/create records (orders, products, batches, expenses, etc.).
     Superusers always can edit.
+    View-only users (like Mitu) CANNOT edit anything.
     If strict_admin_only_edit is True, only superusers can edit.
     Otherwise, checks user's StaffSecurityProfile.can_edit_records.
     """
@@ -66,6 +100,8 @@ def can_user_edit(user):
         return False
     if user.is_superuser:
         return True
+    if is_view_only_user(user):
+        return False
     
     try:
         config = DashboardSecurityConfig.get_config()
@@ -85,6 +121,7 @@ def can_user_dispatch(user):
     """
     Checks if a user has permission to dispatch orders to Pathao/Steadfast courier.
     Superusers always can dispatch.
+    View-only users (like Mitu) CANNOT dispatch.
     If strict_admin_only_dispatch is True, only superusers can dispatch.
     Otherwise, checks user's StaffSecurityProfile.can_dispatch_courier.
     """
@@ -92,6 +129,8 @@ def can_user_dispatch(user):
         return False
     if user.is_superuser:
         return True
+    if is_view_only_user(user):
+        return False
     
     try:
         config = DashboardSecurityConfig.get_config()
@@ -291,10 +330,12 @@ def dashboard_index(request):
     delivery_rate = round((delivered_count / total_orders_count) * 100, 1) if total_orders_count > 0 else 0
     
     # Inventory & Low Stock Tracking (Ultra-fast 1-Query Batch Demand)
+    # Orders in PACKING, OUT_FOR_DELIVERY, or DELIVERED have already had physical stock deducted.
+    # Therefore, active unfulfilled demand is strictly orders in PENDING or CONFIRMED status.
     active_demands = dict(
         OrderItem.objects.filter(
             order__is_deleted=False,
-            order__order_status__in=['PENDING', 'CONFIRMED', 'PACKING']
+            order__order_status__in=['PENDING', 'CONFIRMED']
         ).values('product_id').annotate(total_demand=Sum('quantity')).values_list('product_id', 'total_demand')
     )
 
@@ -1149,6 +1190,9 @@ def sync_single_steadfast_order(request, order_number):
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def create_manual_order(request):
     if request.method == 'POST':
+        if not can_user_edit(request.user):
+            messages.error(request, 'Permission Denied: আপনার আইডিতে শুধুমাত্র দেখার অনুমতি (View-Only) রয়েছে। ম্যানুয়াল অর্ডার তৈরি করার অনুমতি নেই।')
+            return redirect('dashboard:orders')
         try:
             customer_name = request.POST.get('customer_name', '').strip()
             customer_phone = request.POST.get('customer_phone', '').strip()
@@ -1347,7 +1391,7 @@ def permanent_delete_order(request, order_number):
     if request.method == 'POST':
         order = get_object_or_404(Order.trash_objects, order_number=order_number)
         o_num = order.order_number
-        if order.order_status in DISPATCHED_ORDER_STATUSES:
+        if order.order_status in PACKED_ORDER_STATUSES:
             for itm in order.items.all():
                 if itm.product:
                     itm.product.stock_count += itm.quantity
@@ -1481,6 +1525,9 @@ def stock_manager(request):
 
         # 3. CREATE NEW PRODUCT
         elif action == 'create_product' or 'create_product' in request.POST:
+            if not can_user_edit(request.user):
+                messages.error(request, 'Permission Denied: নতুন প্রোডাক্ট যুক্ত করার অনুমতি নেই। (Product creation restricted.)')
+                return redirect('dashboard:stock_manager')
             try:
                 name = request.POST.get('name', '').strip()
                 tagline = request.POST.get('tagline', '').strip()
@@ -1843,6 +1890,9 @@ def production_batches_list(request):
         
         # 1. CREATE NEW BATCH
         if action == 'create_batch':
+            if not can_user_edit(request.user):
+                messages.error(request, 'Permission Denied: নতুন প্রোডাকশন ব্যাচ তৈরি করার অনুমতি নেই। (Batch creation restricted.)')
+                return redirect('dashboard:production_batches')
             batch_ref = request.POST.get('batch_reference', '').strip()
             notes = request.POST.get('notes', '').strip()
             prod_date_str = request.POST.get('production_date', '').strip()
@@ -2038,7 +2088,7 @@ def production_batches_list(request):
 def production_batch_detail(request, batch_id):
     """
     Detailed breakdown page for an individual production batch.
-    Shows exact date, quantities added per flavor, unit prices, notes, and remaining stock.
+    Allows editing batch info and individual pickle quantities with automatic warehouse inventory adjustments.
     """
     batch = get_object_or_404(
         ProductionBatch.objects.prefetch_related('items__product__category', 'created_by'),
@@ -2047,8 +2097,16 @@ def production_batch_detail(request, batch_id):
 
     if request.method == 'POST':
         action = request.POST.get('action')
-        if action == 'edit_batch_info':
-            batch.batch_number = request.POST.get('batch_number', batch.batch_number).strip() or batch.batch_number
+
+        # 1. FULL BATCH & FLAVOR QUANTITIES EDIT
+        if action in ['edit_batch_info', 'edit_batch_full']:
+            if not can_user_edit(request.user):
+                messages.error(request, 'Permission Denied: প্রোডাকশন ব্যাচ এডিট করার অনুমতি নেই।')
+                return redirect('dashboard:production_batch_detail', batch_id=batch.id)
+
+            old_batch_number = batch.batch_number
+            new_batch_number = request.POST.get('batch_number', batch.batch_number).strip() or batch.batch_number
+            batch.batch_number = new_batch_number
             batch.notes = request.POST.get('notes', '').strip()
             prod_date_str = request.POST.get('production_date', '').strip()
             if prod_date_str:
@@ -2063,19 +2121,229 @@ def production_batch_detail(request, batch_id):
                 except Exception:
                     pass
             batch.save()
-            messages.success(request, f'ব্যাচ "{batch.batch_number}" এর তথ্য সফলভাবে আপডেট হয়েছে।')
+
+            if old_batch_number != new_batch_number:
+                StockLog.objects.filter(reference=old_batch_number).update(reference=new_batch_number)
+
+            # Process individual flavor quantities
+            adjusted_changes = []
+            all_prods = {p.id: p for p in Product.objects.all()}
+            existing_items_map = {item.product_id: item for item in batch.items.all()}
+
+            has_qty_inputs = any(k.startswith('batch_qty_') for k in request.POST.keys())
+            if has_qty_inputs:
+                for key, val in request.POST.items():
+                    if key.startswith('batch_qty_'):
+                        try:
+                            p_id = int(key.replace('batch_qty_', ''))
+                            new_qty = max(0, int(val) if val and str(val).strip() != '' else 0)
+                        except (ValueError, TypeError):
+                            continue
+
+                        prod = all_prods.get(p_id)
+                        if not prod:
+                            continue
+
+                        existing_item = existing_items_map.get(p_id)
+                        old_qty = existing_item.quantity if existing_item else 0
+                        delta = new_qty - old_qty
+
+                        if delta != 0:
+                            prev_stock = prod.stock_count
+                            new_stock = max(0, prev_stock + delta)
+                            prod.stock_count = new_stock
+                            prod.is_in_stock = (new_stock > 0)
+                            prod.save(update_fields=['stock_count', 'is_in_stock'])
+
+                            if new_qty > 0:
+                                if existing_item:
+                                    existing_item.quantity = new_qty
+                                    existing_item.notes = f"{prod.name}: {new_qty} jars (edited from {old_qty})"
+                                    existing_item.save(update_fields=['quantity', 'notes'])
+                                else:
+                                    BatchItem.objects.create(
+                                        batch=batch,
+                                        product=prod,
+                                        quantity=new_qty,
+                                        notes=f"{prod.name}: +{new_qty} jars (added in batch edit)"
+                                    )
+                            else:
+                                if existing_item:
+                                    existing_item.delete()
+
+                            sign = '+' if delta > 0 else ''
+                            StockLog.objects.create(
+                                product=prod,
+                                log_type='RESTOCK' if delta > 0 else 'STOCK_ADJUSTMENT',
+                                quantity_delta=delta,
+                                previous_stock=prev_stock,
+                                resulting_stock=new_stock,
+                                reference=batch.batch_number,
+                                notes=f"Batch Edit ({batch.batch_number}): {prod.name} {sign}{delta} jars ({old_qty} -> {new_qty}). Resulting stock: {new_stock}",
+                                created_by=request.user if request.user.is_authenticated else None
+                            )
+                            adjusted_changes.append(f"{prod.name} ({sign}{delta})")
+
+            msg_suffix = f" এবং আচারের স্টকে সমন্বয় করা হয়েছে: {', '.join(adjusted_changes)}" if adjusted_changes else ""
+            messages.success(request, f'ব্যাচ "{batch.batch_number}" সফলভাবে আপডেট হয়েছে{msg_suffix}।')
+            return redirect('dashboard:production_batch_detail', batch_id=batch.id)
+
+        # 2. QUICK EDIT SINGLE ITEM QUANTITY
+        elif action == 'edit_batch_item_qty':
+            if not can_user_edit(request.user):
+                messages.error(request, 'Permission Denied: আচারের সংখ্যা এডিট করার অনুমতি নেই।')
+                return redirect('dashboard:production_batch_detail', batch_id=batch.id)
+
+            item_id = request.POST.get('item_id')
+            item = get_object_or_404(BatchItem, id=item_id, batch=batch)
+            try:
+                new_qty = max(0, int(request.POST.get('quantity', item.quantity)))
+            except (ValueError, TypeError):
+                new_qty = item.quantity
+
+            old_qty = item.quantity
+            delta = new_qty - old_qty
+
+            if delta != 0:
+                prod = item.product
+                prev_stock = prod.stock_count
+                new_stock = max(0, prev_stock + delta)
+                prod.stock_count = new_stock
+                prod.is_in_stock = (new_stock > 0)
+                prod.save(update_fields=['stock_count', 'is_in_stock'])
+
+                sign = '+' if delta > 0 else ''
+                if new_qty > 0:
+                    item.quantity = new_qty
+                    item.notes = f"{prod.name}: {new_qty} jars (edited from {old_qty})"
+                    item.save(update_fields=['quantity', 'notes'])
+                else:
+                    item.delete()
+
+                StockLog.objects.create(
+                    product=prod,
+                    log_type='RESTOCK' if delta > 0 else 'STOCK_ADJUSTMENT',
+                    quantity_delta=delta,
+                    previous_stock=prev_stock,
+                    resulting_stock=new_stock,
+                    reference=batch.batch_number,
+                    notes=f"Batch Item Edit ({batch.batch_number}): {prod.name} {sign}{delta} jars ({old_qty} -> {new_qty}). Resulting stock: {new_stock}",
+                    created_by=request.user if request.user.is_authenticated else None
+                )
+                messages.success(request, f'{prod.name} এর পরিমাণ আপডেট করা হয়েছে: {old_qty} -> {new_qty} জার ({sign}{delta} ইনভেন্টরি সমন্বয়)।')
+            else:
+                messages.info(request, f'{item.product.name} এর সংখ্যা অপরিবর্তিত রয়েছে।')
+            return redirect('dashboard:production_batch_detail', batch_id=batch.id)
+
+        # 3. ADD SINGLE FLAVOR TO THIS BATCH
+        elif action == 'add_single_flavor':
+            if not can_user_edit(request.user):
+                messages.error(request, 'Permission Denied: আচার যোগ করার অনুমতি নেই।')
+                return redirect('dashboard:production_batch_detail', batch_id=batch.id)
+
+            prod_id = request.POST.get('product_id')
+            prod = get_object_or_404(Product, id=prod_id)
+            try:
+                add_qty = int(request.POST.get('quantity', 0))
+            except (ValueError, TypeError):
+                add_qty = 0
+
+            if add_qty > 0:
+                existing_item = batch.items.filter(product=prod).first()
+                prev_stock = prod.stock_count
+                new_stock = prev_stock + add_qty
+                prod.stock_count = new_stock
+                prod.is_in_stock = True
+                prod.save(update_fields=['stock_count', 'is_in_stock'])
+
+                if existing_item:
+                    existing_item.quantity += add_qty
+                    existing_item.notes = f"{prod.name}: +{existing_item.quantity} jars"
+                    existing_item.save(update_fields=['quantity', 'notes'])
+                    msg_txt = f'ব্যাচে "{prod.name}" এ অতিরিক্ত +{add_qty} জার যোগ হয়েছে (মোট {existing_item.quantity} জার)।'
+                else:
+                    BatchItem.objects.create(
+                        batch=batch,
+                        product=prod,
+                        quantity=add_qty,
+                        notes=f"{prod.name}: +{add_qty} jars (added to batch)"
+                    )
+                    msg_txt = f'ব্যাচে "{prod.name}" নতুনভাবে +{add_qty} জার যুক্ত করা হয়েছে।'
+
+                StockLog.objects.create(
+                    product=prod,
+                    log_type='RESTOCK',
+                    quantity_delta=add_qty,
+                    previous_stock=prev_stock,
+                    resulting_stock=new_stock,
+                    reference=batch.batch_number,
+                    notes=f"Added to Batch ({batch.batch_number}): {prod.name} +{add_qty} jars",
+                    created_by=request.user if request.user.is_authenticated else None
+                )
+                messages.success(request, msg_txt)
+            else:
+                messages.error(request, 'পরিমাণ অবশ্যই ১ বা তার বেশি হতে হবে।')
+            return redirect('dashboard:production_batch_detail', batch_id=batch.id)
+
+        # 4. REMOVE ITEM FROM BATCH
+        elif action == 'delete_batch_item':
+            if not can_user_delete(request.user):
+                messages.error(request, 'Permission Denied: আইটেম মুছে ফেলার অনুমতি নেই।')
+                return redirect('dashboard:production_batch_detail', batch_id=batch.id)
+
+            item_id = request.POST.get('item_id')
+            item = get_object_or_404(BatchItem, id=item_id, batch=batch)
+            prod = item.product
+            revert_stock = request.POST.get('revert_stock') in ('1', 'true', 'on', 'yes')
+            removed_qty = item.quantity
+
+            if revert_stock and prod:
+                prev_stock = prod.stock_count
+                new_stock = max(0, prev_stock - removed_qty)
+                prod.stock_count = new_stock
+                if new_stock == 0:
+                    prod.is_in_stock = False
+                prod.save(update_fields=['stock_count', 'is_in_stock'])
+
+                StockLog.objects.create(
+                    product=prod,
+                    log_type='STOCK_ADJUSTMENT',
+                    quantity_delta=-removed_qty,
+                    previous_stock=prev_stock,
+                    resulting_stock=new_stock,
+                    reference=batch.batch_number,
+                    notes=f"Removed from Batch ({batch.batch_number}): {prod.name} -{removed_qty} jars reverted from stock",
+                    created_by=request.user if request.user.is_authenticated else None
+                )
+
+            item_name = prod.name if prod else "আচার"
+            item.delete()
+            revert_msg = f" (স্টক থেকে {removed_qty} জার বিয়োগ হয়েছে)" if revert_stock else ""
+            messages.success(request, f'ব্যাচ থেকে "{item_name}" বাদ দেওয়া হয়েছে{revert_msg}।')
             return redirect('dashboard:production_batch_detail', batch_id=batch.id)
 
     items = list(batch.items.select_related('product__category').all())
     total_jars = sum(i.quantity for i in items)
     total_retail_value = sum(i.total_retail_value for i in items)
 
+    all_products = list(Product.objects.all().select_related('category').order_by('name'))
+    existing_product_ids = {item.product_id for item in items}
+    available_products_to_add = [p for p in all_products if p.id not in existing_product_ids]
+
+    for p in all_products:
+        p.current_batch_qty = next((i.quantity for i in items if i.product_id == p.id), 0)
+        p.is_in_this_batch = p.id in existing_product_ids
+
     context = {
         'batch': batch,
         'items': items,
         'total_jars': total_jars,
         'total_retail_value': total_retail_value,
+        'all_products': all_products,
+        'available_products_to_add': available_products_to_add,
         'today_date': timezone.now().date().strftime('%Y-%m-%d'),
+        'can_delete': can_user_delete(request.user),
+        'can_edit': can_user_edit(request.user),
     }
     return render(request, 'dashboard/production_batch_detail.html', context)
 
@@ -2516,6 +2784,9 @@ def damage_returns_manager(request):
 
         # 1. RECORD DAMAGE LOG
         if action == 'record_damage':
+            if not can_user_edit(request.user):
+                messages.error(request, 'Permission Denied: ড্যামেজ রেকর্ড যুক্ত করার অনুমতি নেই। (Damage recording restricted.)')
+                return redirect('dashboard:damage_returns')
             try:
                 prod_id = request.POST.get('product_id')
                 product = get_object_or_404(Product, id=prod_id)
@@ -2612,6 +2883,9 @@ def damage_returns_manager(request):
 
         # 3. RECORD COURIER RETURN
         elif action == 'record_return':
+            if not can_user_edit(request.user):
+                messages.error(request, 'Permission Denied: রিটার্ন রেকর্ড করার অনুমতি নেই। (Return recording restricted.)')
+                return redirect('dashboard:damage_returns')
             try:
                 order_id = request.POST.get('order_id')
                 order = get_object_or_404(Order, id=order_id)
@@ -2649,6 +2923,9 @@ def damage_returns_manager(request):
 
         # 4. UPDATE RETURN STATUS
         elif action == 'update_return_status':
+            if not can_user_edit(request.user):
+                messages.error(request, 'Permission Denied: রিটার্ন স্ট্যাটাস পরিবর্তন করার অনুমতি নেই।')
+                return redirect('dashboard:damage_returns')
             try:
                 ret_id = request.POST.get('return_id')
                 ret = get_object_or_404(OrderReturn, id=ret_id)
@@ -2764,6 +3041,9 @@ def mark_order_returned(request, order_number):
     """Quick handler to mark an order as returned from the order detail view."""
     order = get_object_or_404(Order, order_number=order_number)
     if request.method == 'POST':
+        if not can_user_edit(request.user):
+            messages.error(request, 'Permission Denied: অর্ডার রিটার্ন চিহ্নিত করার অনুমতি নেই।')
+            return redirect('dashboard:order_detail', order_number=order.order_number)
         reason = request.POST.get('return_reason', 'CUSTOMER_REFUSED')
         status = request.POST.get('return_status', 'RETURNING')
         fee = float(request.POST.get('courier_return_fee', 0.00))
@@ -2815,6 +3095,12 @@ def reviews_manager(request):
 
         # 1. Toggle Approve
         if action == 'toggle_approve':
+            if not can_user_edit(request.user):
+                messages.error(request, 'Permission Denied: রিভিউ অনুমোদন বা স্ট্যাটাস পরিবর্তন করার অনুমতি নেই।')
+                redirect_url = reverse('dashboard:reviews')
+                if status_filter:
+                    redirect_url += f'?status={status_filter}'
+                return redirect(redirect_url)
             review = get_object_or_404(Review, id=review_id)
             review.is_approved = not review.is_approved
             review.save()
@@ -3071,6 +3357,11 @@ def feedback_reminders_manager(request):
 def mark_feedback_reminder_sent(request, order_number):
     """Marks an order's review request message as sent now, or unmarks it if action=undo."""
     if request.method in ['POST', 'GET']:
+        if not can_user_edit(request.user):
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('format') == 'json':
+                return JsonResponse({'success': False, 'error': 'Permission Denied: রিমাইন্ডার আপডেট করার অনুমতি নেই।'}, status=403)
+            messages.error(request, 'Permission Denied: রিমাইন্ডার আপডেট করার অনুমতি নেই।')
+            return redirect('dashboard:feedback_reminders')
         order = get_object_or_404(Order, order_number=order_number)
         action = request.GET.get('action') or request.POST.get('action')
 
@@ -3129,6 +3420,9 @@ def expense_manager(request):
 
         # 1. CREATE EXPENSE
         if action == 'create_expense' or 'create_expense' in request.POST:
+            if not can_user_edit(request.user):
+                messages.error(request, 'Permission Denied: খরচ রেকর্ড তৈরি করার অনুমতি নেই। (Expense creation restricted.)')
+                return get_safe_redirect()
             try:
                 title = request.POST.get('title').strip()
                 category = request.POST.get('category', 'RAW_MATERIAL')
@@ -4143,6 +4437,9 @@ def pickle_categories_manager(request):
 
         # 1. Create Category
         if action == 'create_category':
+            if not can_user_edit(request.user):
+                messages.error(request, 'Permission Denied: নতুন ক্যাটাগরি তৈরি করার অনুমতি নেই। (Category creation restricted.)')
+                return redirect('dashboard:pickle_categories')
             name = request.POST.get('name', '').strip()
             description = request.POST.get('description', '').strip()
             icon = request.POST.get('icon', 'fa-jar').strip()
@@ -4211,6 +4508,9 @@ def expense_categories_manager(request):
 
         # 1. Add Category
         if action == 'create_category':
+            if not can_user_edit(request.user):
+                messages.error(request, 'Permission Denied: নতুন খরচ ক্যাটাগরি তৈরি করার অনুমতি নেই। (Expense category creation restricted.)')
+                return redirect('dashboard:expense_categories')
             name = request.POST.get('name', '').strip()
             parent_id = request.POST.get('parent_id')
             parent = ExpenseCategory.objects.filter(id=parent_id).first() if parent_id else None
@@ -4855,6 +5155,9 @@ def blacklist_manager(request):
     if request.method == 'POST':
         action = request.POST.get('action')
         if action == 'add':
+            if not can_user_edit(request.user):
+                messages.error(request, 'Permission Denied: ব্ল্যাকলিস্টে নম্বর যুক্ত করার অনুমতি নেই। (Blacklist creation restricted.)')
+                return redirect('dashboard:blacklist_manager')
             phone = request.POST.get('phone', '').strip()
             name = request.POST.get('customer_name', '').strip()
             reason = request.POST.get('reason', '').strip() or "Fake orders / prank harassment"
@@ -4880,6 +5183,9 @@ def blacklist_manager(request):
                 messages.error(request, "Please provide a valid phone number.")
                 
         elif action == 'toggle':
+            if not can_user_edit(request.user):
+                messages.error(request, 'Permission Denied: ব্ল্যাকলিস্ট স্ট্যাটাস পরিবর্তন করার অনুমতি নেই।')
+                return redirect('dashboard:blacklist_manager')
             entry_id = request.POST.get('entry_id')
             entry = get_object_or_404(BlacklistedCustomer, id=entry_id)
             entry.is_active = not entry.is_active
@@ -4949,6 +5255,8 @@ def toggle_blacklist_ajax(request):
     1-Click AJAX API to block or unblock a phone number directly from Order views.
     """
     if request.method == 'POST':
+        if not can_user_edit(request.user):
+            return JsonResponse({'success': False, 'error': 'Permission Denied: আপনার আইডিতে শুধুমাত্র দেখার অনুমতি রয়েছে।'}, status=403)
         phone = request.POST.get('phone', '').strip()
         name = request.POST.get('customer_name', '').strip()
         reason = request.POST.get('reason', '').strip() or "Fake order / courier refusal"

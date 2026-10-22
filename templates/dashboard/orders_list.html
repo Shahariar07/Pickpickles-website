@@ -37,10 +37,12 @@
                 <i class="fa-solid fa-paper-plane text-red-600"></i>
                 <span>Sync Pathao</span>
             </a>
+            {% if can_edit %}
             <button type="button" onclick="openManualOrderModal()" class="bg-brand-700 hover:bg-brand-800 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-md flex items-center gap-1.5 transition active:scale-95">
                 <i class="fa-solid fa-plus text-brand-accent"></i>
                 <span>Manual Order</span>
             </button>
+            {% endif %}
             <a href="{% url 'dashboard:orders' %}" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold px-3.5 py-2.5 rounded-xl flex items-center gap-1.5 transition">
                 <i class="fa-solid fa-arrows-rotate"></i>
                 <span>Refresh</span>
@@ -143,7 +145,7 @@
                 </div>
 
                 <!-- Delivery Zone Filter -->
-                <div class="flex items-center gap-1 text-xs font-semibold">
+                <div class="flex items-center gap-1 text-xs font-semibold flex-wrap">
                     <span class="text-gray-400 font-bold mr-1">Zone:</span>
                     <a href="?status={{ status_filter }}&period={{ period_filter }}&zone=ALL&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-2.5 py-1 rounded-xl {% if zone_filter == 'ALL' %}bg-brand-700 text-white font-bold{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">All</a>
                     <a href="?status={{ status_filter }}&period={{ period_filter }}&zone=INSIDE_DHAKA&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-2.5 py-1 rounded-xl {% if zone_filter == 'INSIDE_DHAKA' %}bg-brand-700 text-white font-bold{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Inside Dhaka</a>
@@ -153,8 +155,8 @@
 
         </div>
 
-        <!-- Status Filter Tabs with Icons & Distinct Colors -->
-        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-bold scrollbar-none border-t border-gray-100 pt-3">
+        <!-- Status Filter Tabs with Icons & Distinct Colors (Wrapped & Zero Scrollbar) -->
+        <div class="flex flex-wrap items-center gap-1.5 pb-1 text-xs font-bold border-t border-gray-100 pt-3 scrollbar-none" style="scrollbar-width: none; -ms-overflow-style: none;">
             <a href="?status=ALL&period={{ period_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&per_page={{ per_page }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition flex items-center gap-1.5 {% if status_filter == 'ALL' %}bg-gray-900 text-white shadow-xs{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
                 <i class="fa-solid fa-list-check"></i>
                 <span>All Orders ({{ total_orders_count }})</span>
@@ -192,19 +194,51 @@
         </div>
     </div>
 
-    <!-- Orders List Table Card (Clean Spreadsheet View) -->
-    <div id="ordersTableView" class="bg-white rounded-2xl border border-gray-200 shadow-2xs overflow-hidden">
+    <!-- Orders List Section (Mobile Cards + Spreadsheet Table) -->
+    <div id="ordersSection" class="bg-white rounded-2xl sm:rounded-3xl border border-gray-200 shadow-2xs overflow-hidden">
+        
+        <!-- Section Toolbar: Item Count, Select All, and Mobile View Switcher -->
+        <div class="px-4 py-3 sm:px-6 sm:py-3.5 bg-gray-50/90 border-b border-gray-200 flex items-center justify-between gap-3 flex-wrap">
+            <div class="flex items-center gap-3">
+                <label class="inline-flex items-center gap-2 text-xs font-extrabold text-gray-800 cursor-pointer select-none">
+                    <input 
+                        type="checkbox" 
+                        id="selectAllOrdersCheckbox" 
+                        onchange="toggleSelectAllOrders(this)" 
+                        class="select-all-orders-toggle w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300 cursor-pointer"
+                        title="Select All Orders"
+                    >
+                    <span>Select All</span>
+                </label>
+                <span class="text-xs text-gray-400 font-semibold">•</span>
+                <span class="text-xs text-gray-600 font-bold">
+                    {{ paginator.count }} Order{{ paginator.count|pluralize }}
+                </span>
+            </div>
 
-        <div class="overflow-x-auto">
+            <!-- View Switcher (Visible on mobile/tablet screens < lg) -->
+            <div class="lg:hidden flex items-center gap-1 bg-white p-1 rounded-xl border border-gray-200 text-xs shadow-2xs">
+                <button type="button" id="btnViewCards" onclick="setOrdersViewMode('cards')" class="px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1.5 bg-brand-700 text-white shadow-xs">
+                    <i class="fa-solid fa-table-cells-large text-[10px]"></i>
+                    <span>Cards</span>
+                </button>
+                <button type="button" id="btnViewTable" onclick="setOrdersViewMode('table')" class="px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1.5 bg-gray-100 text-gray-600 hover:text-gray-900">
+                    <i class="fa-solid fa-table-list text-[10px]"></i>
+                    <span>Table</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 1. DESKTOP SPREADSHEET TABLE VIEW (Default on lg screens >= 1024px) -->
+        <div id="ordersDesktopTableView" class="hidden lg:block overflow-x-auto">
             <table class="w-full text-left border-collapse text-xs">
                 <thead>
-                    <tr class="bg-gray-50 border-b border-gray-200 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider">
+                    <tr class="bg-gray-50/80 border-b border-gray-200 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider">
                         <th class="py-3 pl-4 pr-1 sm:pl-6 w-8 align-middle">
                             <input 
                                 type="checkbox" 
-                                id="selectAllOrdersCheckbox" 
                                 onchange="toggleSelectAllOrders(this)" 
-                                class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300 cursor-pointer"
+                                class="select-all-orders-toggle w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300 cursor-pointer"
                                 title="Select All Orders"
                             >
                         </th>
@@ -251,9 +285,11 @@
                         <td class="py-3 px-4 align-middle">
                             <div class="flex items-center gap-1.5 flex-wrap">
                                 <span class="font-bold text-gray-900 truncate">{{ order.customer_name }}</span>
+                                {% if order.customer_score %}
                                 <span class="text-[9px] font-bold px-1.5 py-0.2 rounded border {{ order.customer_score.badge_class }} shrink-0" title="{{ order.customer_score.text }}">
                                     {{ order.customer_score.short_label }}
                                 </span>
+                                {% endif %}
                                 {% if order.delivery_instruction %}
                                 <span class="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs shrink-0" title="Customer & Delivery Instruction: {{ order.delivery_instruction }}">
                                     <i class="fa-solid fa-note-sticky text-amber-600 text-[8px]"></i> Instruction
@@ -333,7 +369,7 @@
                                 >
                                     <i class="fa-solid fa-truck-ramp-box text-xs"></i>
                                 </a>
-                                {% elif order.order_status not in 'DELIVERED,CANCELLED' %}
+                                {% elif order.order_status not in 'DELIVERED,CANCELLED' and can_dispatch %}
                                 <button 
                                     type="button" 
                                     id="sf_btn_{{ order.order_number }}"
@@ -355,7 +391,7 @@
                                 >
                                     <i class="fa-solid fa-motorcycle text-xs"></i>
                                 </a>
-                                {% elif order.order_status not in 'DELIVERED,CANCELLED' %}
+                                {% elif order.order_status not in 'DELIVERED,CANCELLED' and can_dispatch %}
                                 <button 
                                     type="button" 
                                     id="pathao_btn_{{ order.order_number }}"
@@ -408,19 +444,207 @@
                     {% empty %}
                     <tr>
                         <td colspan="7" class="text-center py-12 px-4 text-gray-400 text-xs">
-                            No orders found
+                            <i class="fa-solid fa-box-open text-3xl text-gray-300 mb-2 block"></i>
+                            No orders found matching your filters.
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+
+        <!-- 2. MOBILE RESPONSIVE CARDS VIEW (Default on mobile & tablets < 1024px) -->
+        <div id="ordersMobileCardView" class="block lg:hidden divide-y divide-gray-100">
+            {% for order in orders %}
+            <div 
+                class="p-4 sm:p-5 space-y-3.5 bg-white hover:bg-gray-50/70 transition cursor-pointer"
+                onclick="if(!event.target.closest('a, button, select, input, form, label')) { window.location='{% url 'dashboard:order_detail' order.order_number %}'; }"
+            >
+                <!-- Card Header: Checkbox + Order # + Time + Status Selector (Wrap-safe) -->
+                <div class="flex items-start justify-between gap-2 flex-wrap">
+                    <div class="flex items-center gap-2.5 min-w-0" onclick="event.stopPropagation()">
+                        <input 
+                            type="checkbox" 
+                            class="order-select-checkbox w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300 cursor-pointer shrink-0 mt-0.5"
+                            value="{{ order.order_number }}"
+                            data-order-number="{{ order.order_number }}"
+                            data-customer-name="{{ order.customer_name|escapejs }}"
+                            data-phone="{{ order.customer_phone }}"
+                            data-status="{{ order.order_status }}"
+                            data-wa-url="{{ order.whatsapp_shipping_instruction_url|escapejs }}"
+                            onchange="updateSelectedOrdersBar()"
+                        >
+                        <div class="min-w-0">
+                            <a href="{% url 'dashboard:order_detail' order.order_number %}" class="font-display font-black text-sm sm:text-base text-brand-800 hover:underline block truncate">
+                                #{{ order.order_number }}
+                            </a>
+                            <span class="text-[10px] sm:text-[11px] text-gray-400 font-medium block">
+                                {{ order.created_at|date:"M d, Y • h:i A" }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Quick Status Dropdown (Fixed max-width, cleanly wrapped) -->
+                    <div class="shrink-0 ml-auto" onclick="event.stopPropagation()">
+                        {% if can_edit %}
+                        <form action="{% url 'dashboard:update_order_status_quick' order.order_number %}" method="POST" class="inline-block">
+                            {% csrf_token %}
+                            <select name="status" onchange="this.form.submit()" class="border rounded-xl px-2.5 py-1 text-[11px] font-black cursor-pointer shadow-2xs focus:outline-none focus:ring-2 focus:ring-brand-500 transition max-w-[155px] truncate {{ order.status_select_class }}">
+                                {% for code, label in status_choices %}
+                                <option value="{{ code }}" {% if order.order_status == code %}selected{% endif %} class="bg-white text-gray-900 font-bold py-1">
+                                    {% if code == 'DELIVERED' %}🟢 {{ label }}
+                                    {% elif code == 'PENDING' %}🟡 {{ label }}
+                                    {% elif code == 'CANCELLED' %}🔴 {{ label }}
+                                    {% elif code == 'CONFIRMED' %}🔵 {{ label }}
+                                    {% elif code == 'PACKING' %}📦 {{ label }}
+                                    {% elif code == 'OUT_FOR_DELIVERY' %}🚚 {{ label }}
+                                    {% else %}{{ label }}{% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-black border shadow-2xs {{ order.status_select_class }} opacity-90 cursor-not-allowed">
+                            <i class="fa-solid fa-lock text-[8px]"></i>
+                            {{ order.get_order_status_display }}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Customer Info & Address Card -->
+                <div class="bg-gray-50/80 p-3 sm:p-3.5 rounded-2xl border border-gray-100 space-y-2">
+                    <div class="flex items-start justify-between gap-2 flex-wrap">
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <i class="fa-solid fa-user text-gray-400 text-xs shrink-0"></i>
+                                <strong class="font-extrabold text-gray-900 text-xs sm:text-sm truncate">{{ order.customer_name }}</strong>
+                                {% if order.customer_score %}
+                                <span class="text-[9px] font-bold px-1.5 py-0.2 rounded border {{ order.customer_score.badge_class }} shrink-0">
+                                    {{ order.customer_score.short_label }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            <div class="flex items-center gap-2 mt-1 text-xs text-gray-500 flex-wrap">
+                                <a href="tel:{{ order.customer_phone }}" onclick="event.stopPropagation()" class="text-emerald-700 hover:underline font-bold font-mono inline-flex items-center gap-1">
+                                    <i class="fa-solid fa-phone text-[10px]"></i>
+                                    <span>{{ order.customer_phone }}</span>
+                                </a>
+                                <span class="text-gray-300">•</span>
+                                <span class="text-gray-600 inline-flex items-center gap-1">
+                                    <i class="fa-solid fa-location-dot text-gray-400 text-[10px]"></i>
+                                    <span>{{ order.delivery_city }} ({{ order.get_delivery_zone_display }})</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Delivery Instruction Alert Box if present -->
+                    {% if order.delivery_instruction %}
+                    <div class="flex items-start gap-1.5 bg-amber-50 border border-amber-200/90 rounded-xl p-2 text-[11px] text-amber-950 font-medium">
+                        <i class="fa-solid fa-clipboard-list text-amber-600 text-[11px] shrink-0 mt-0.5"></i>
+                        <span class="break-words leading-tight"><strong>Instruction:</strong> {{ order.delivery_instruction }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Items & Pricing Banner -->
+                <div class="flex items-center justify-between gap-2 px-1 text-xs flex-wrap">
+                    <!-- Left: Jars and items list -->
+                    <div class="min-w-0 flex-1">
+                        <span class="font-bold text-gray-800 flex items-center gap-1.5">
+                            <i class="fa-solid fa-jar text-brand-600 text-xs"></i>
+                            <span>{{ order.total_items_count }} Jar{% if order.total_items_count != 1 %}s{% endif %}</span>
+                        </span>
+                        <div class="text-[11px] text-gray-500 truncate max-w-xs mt-0.5" title="{% for item in order.items.all %}{{ item.product_name }} ({{ item.quantity }}){% if not forloop.last %}, {% endif %}{% endfor %}">
+                            {% for item in order.items.all %}
+                            {{ item.product_name }} ({{ item.quantity }}){% if not forloop.last %}, {% endif %}
+                            {% empty %}
+                            Pickles
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Right: Amount + Payment Status Pill -->
+                    <div class="text-right shrink-0">
+                        <div class="font-display font-black text-sm sm:text-base text-gray-900">
+                            ৳{{ order.total_amount }}
+                        </div>
+                        <div class="flex items-center gap-1 justify-end mt-0.5 flex-wrap">
+                            <span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded {% if order.payment_status == 'PAID' %}bg-emerald-100 text-emerald-800{% else %}bg-amber-100 text-amber-800{% endif %}">
+                                {{ order.payment_status }}
+                            </span>
+                            {% if order.payment_trx_id %}
+                            <span class="text-[9px] font-mono font-bold text-pink-700 bg-pink-50 px-1.5 py-0.5 rounded border border-pink-200" title="Trx: {{ order.payment_trx_id }}">
+                                Trx: {{ order.payment_trx_id }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons: Clean, 100% Wrap-Safe Row -->
+                <div class="pt-2 border-t border-gray-100 flex items-center justify-between gap-2 flex-wrap" onclick="event.stopPropagation()">
+                    <!-- Secondary Courier & Utility Buttons -->
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        {% if order.steadfast_consignment_id %}
+                        <a href="https://steadfast.com.bd/tracking/{{ order.steadfast_tracking_code|default:order.steadfast_consignment_id }}" target="_blank" class="px-2.5 py-1.5 rounded-xl bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-300 text-xs font-bold inline-flex items-center gap-1 transition" title="Track Steadfast">
+                            <i class="fa-solid fa-truck-ramp-box text-[10px]"></i> <span>Track SF</span>
+                        </a>
+                        {% elif order.order_status not in 'DELIVERED,CANCELLED' and can_dispatch %}
+                        <button type="button" onclick="openSteadfastModal('{{ order.order_number }}', '{{ order.customer_name|escapejs }}', '{{ order.customer_phone|escapejs }}', '{{ order.delivery_address|escapejs }}', '{{ order.delivery_city|escapejs }}', '{{ order.get_delivery_zone_display|escapejs }}', '{{ order.total_amount }}', '{{ order.total_items_count }}', '{{ order.payment_status }}')" class="px-2.5 py-1.5 rounded-xl bg-cyan-50 hover:bg-cyan-100 text-cyan-700 border border-cyan-200 text-xs font-bold inline-flex items-center gap-1 transition cursor-pointer">
+                            <i class="fa-solid fa-truck-fast text-[10px]"></i> <span>SF</span>
+                        </button>
+                        {% endif %}
+
+                        {% if order.pathao_consignment_id %}
+                        <a href="https://merchant.pathao.com/tracking?consignment_id={{ order.pathao_consignment_id }}" target="_blank" class="px-2.5 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-800 border border-red-300 text-xs font-bold inline-flex items-center gap-1 transition" title="Track Pathao">
+                            <i class="fa-solid fa-motorcycle text-[10px]"></i> <span>Pathao</span>
+                        </a>
+                        {% elif order.order_status not in 'DELIVERED,CANCELLED' and can_dispatch %}
+                        <button type="button" onclick="openPathaoModal('{{ order.order_number }}', '{{ order.customer_name|escapejs }}', '{{ order.customer_phone|escapejs }}', '{{ order.delivery_address|escapejs }}', '{{ order.delivery_city|escapejs }}', '{{ order.get_delivery_zone_display|escapejs }}', '{{ order.total_amount }}', '{{ order.total_items_count }}', '{{ order.payment_status }}')" class="px-2.5 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-bold inline-flex items-center gap-1 transition cursor-pointer">
+                            <i class="fa-solid fa-paper-plane text-[10px]"></i> <span>Pathao</span>
+                        </button>
+                        {% endif %}
+
+                        {% if order.order_status not in 'DELIVERED,CANCELLED' and order.customer_phone %}
+                        <a href="{{ order.whatsapp_shipping_instruction_url }}" target="_blank" class="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs inline-flex items-center justify-center transition" title="Send WhatsApp Delivery Instructions">
+                            <i class="fa-brands fa-whatsapp text-sm text-emerald-600"></i>
+                        </a>
+                        {% endif %}
+
+                        <a href="{% url 'dashboard:order_invoice' order.order_number %}" target="_blank" class="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs inline-flex items-center justify-center transition" title="Print Invoice">
+                            <i class="fa-solid fa-print"></i>
+                        </a>
+
+                        {% if can_delete %}
+                        <button type="button" onclick="openDeleteOrderModal('{{ order.order_number }}', '{{ order.customer_name|escapejs }}')" class="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs inline-flex items-center justify-center transition cursor-pointer" title="Delete Order (Trash)">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+
+                    <!-- Primary View Button -->
+                    <a href="{% url 'dashboard:order_detail' order.order_number %}" class="bg-brand-700 hover:bg-brand-800 text-white font-black text-xs px-4 py-2 rounded-xl shadow-xs transition inline-flex items-center gap-1.5 shrink-0 ml-auto">
+                        <span>View</span>
+                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-12 px-4 text-gray-400 text-xs">
+                <i class="fa-solid fa-box-open text-3xl text-gray-300 mb-2 block"></i>
+                No orders found matching your filters.
+            </div>
+            {% endfor %}
+        </div>
+
     </div>
 
     <!-- FLOATING BULK ACTIONS BAR (STICKY AT BOTTOM) -->
-    <div id="bulkActionBar" class="fixed bottom-6 inset-x-0 mx-auto max-w-2xl z-40 hidden px-4 transition-all duration-300 transform translate-y-4 opacity-0">
-        <div class="bg-gray-900/95 backdrop-blur-md text-white px-4 py-3 rounded-2xl shadow-2xl border border-gray-700 flex items-center justify-between gap-3 flex-wrap">
-            <div class="flex items-center gap-2.5">
+    <div id="bulkActionBar" class="fixed bottom-4 sm:bottom-6 inset-x-0 mx-auto max-w-lg sm:max-w-2xl w-[calc(100%-20px)] sm:w-full z-40 hidden px-2 sm:px-4 transition-all duration-300 transform translate-y-4 opacity-0">
+        <div class="bg-gray-900/95 backdrop-blur-md text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl shadow-2xl border border-gray-700 flex items-center justify-between gap-2.5 flex-wrap">
+            <div class="flex items-center gap-2">
                 <span class="w-7 h-7 rounded-xl bg-emerald-500/20 text-emerald-400 font-black text-xs flex items-center justify-center border border-emerald-500/30" id="bulkBarCount">0</span>
                 <span class="text-xs font-bold text-gray-200">Selected</span>
                 <button type="button" onclick="selectOnlyShippedOrders()" class="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 hover:underline cursor-pointer pl-1">
@@ -431,7 +655,7 @@
                 <button 
                     type="button" 
                     onclick="openBulkWhatsAppModal()" 
-                    class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold px-3.5 py-2 rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer active:scale-95"
+                    class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer active:scale-95"
                 >
                     <i class="fa-brands fa-whatsapp text-sm"></i>
                     <span>Send WhatsApp Bulk</span>
@@ -439,7 +663,7 @@
                 <button 
                     type="button" 
                     onclick="clearOrderSelection()" 
-                    class="bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold px-2.5 py-2 rounded-xl transition cursor-pointer"
+                    class="bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold px-2.5 py-1.5 sm:py-2 rounded-xl transition cursor-pointer"
                     title="Clear selection"
                 >
                     <i class="fa-solid fa-xmark"></i>
@@ -450,97 +674,160 @@
 
     <!-- 3. Modern Responsive Pagination & Results Bar -->
     {% if paginator.count > 0 %}
-    <div class="bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-gray-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div id="ordersPaginationBar" class="bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-gray-200 shadow-xs">
         
-        <!-- Left: Showing items count & Per page selector -->
-        <div class="flex flex-wrap items-center gap-3 text-xs text-gray-500 font-medium">
-            <span>
-                Showing <strong class="text-gray-900 font-black">{{ page_obj.start_index }}</strong> to <strong class="text-gray-900 font-black">{{ page_obj.end_index }}</strong> of <strong class="text-gray-900 font-black">{{ paginator.count }}</strong> orders
-            </span>
+        <!-- ============================================== -->
+        <!-- MOBILE & TABLET PAGINATION (< 1024px) -->
+        <!-- ============================================== -->
+        <div class="lg:hidden space-y-3">
+            <!-- Info & Per-Page Row -->
+            <div class="flex items-center justify-between text-xs text-gray-500 font-medium">
+                <span>
+                    Showing <strong class="text-gray-900 font-black">{{ page_obj.start_index }}</strong> - <strong class="text-gray-900 font-black">{{ page_obj.end_index }}</strong> of <strong class="text-gray-900 font-black">{{ paginator.count }}</strong>
+                </span>
 
-            <!-- Per Page Selector Form -->
-            <form method="GET" action="{% url 'dashboard:orders' %}" class="inline-flex items-center gap-1.5 ml-1">
-                <input type="hidden" name="status" value="{{ status_filter }}">
-                <input type="hidden" name="period" value="{{ period_filter }}">
-                <input type="hidden" name="zone" value="{{ zone_filter }}">
-                <input type="hidden" name="payment" value="{{ payment_filter }}">
-                <input type="hidden" name="q" value="{{ search_query }}">
-                <label for="per_page_select" class="text-[11px] text-gray-400 font-semibold uppercase tracking-wider">Per page:</label>
-                <select id="per_page_select" name="per_page" onchange="this.form.submit()" class="bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-2 py-1 text-xs font-bold text-gray-700 cursor-pointer focus:ring-2 focus:ring-brand-500 focus:outline-none">
-                    <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
-                    <option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
-                    <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
-                    <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
-                </select>
-            </form>
+                <form method="GET" action="{% url 'dashboard:orders' %}" class="inline-flex items-center gap-1.5">
+                    <input type="hidden" name="status" value="{{ status_filter }}">
+                    <input type="hidden" name="period" value="{{ period_filter }}">
+                    <input type="hidden" name="zone" value="{{ zone_filter }}">
+                    <input type="hidden" name="payment" value="{{ payment_filter }}">
+                    <input type="hidden" name="q" value="{{ search_query }}">
+                    <label for="per_page_select_mobile" class="text-[10px] text-gray-400 font-bold uppercase">Per page:</label>
+                    <select id="per_page_select_mobile" name="per_page" onchange="this.form.submit()" class="bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-2 py-1 text-xs font-bold text-gray-800 focus:outline-none">
+                        <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+                        <option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+                        <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                        <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+                    </select>
+                </form>
+            </div>
+
+            <!-- Previous / Current Page / Next Row (Large touch buttons) -->
+            <div class="flex items-center justify-between gap-2 pt-1">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}&status={{ status_filter }}&period={{ period_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}#ordersSection" 
+                   class="flex-1 py-2.5 px-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs text-center flex items-center justify-center gap-1.5 transition active:scale-95 border border-gray-200 shadow-2xs">
+                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                    <span>Previous</span>
+                </a>
+                {% else %}
+                <span class="flex-1 py-2.5 px-3 rounded-xl bg-gray-50 text-gray-300 font-bold text-xs text-center flex items-center justify-center gap-1.5 border border-gray-100 cursor-not-allowed">
+                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                    <span>Previous</span>
+                </span>
+                {% endif %}
+
+                <span class="px-3 py-2 rounded-xl bg-gray-50 text-xs font-black text-gray-700 border border-gray-200 shrink-0">
+                    Page {{ page_obj.number }} of {{ paginator.num_pages }}
+                </span>
+
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}&status={{ status_filter }}&period={{ period_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}#ordersSection" 
+                   class="flex-1 py-2.5 px-3 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs text-center flex items-center justify-center gap-1.5 transition active:scale-95 shadow-xs">
+                    <span>Next</span>
+                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                </a>
+                {% else %}
+                <span class="flex-1 py-2.5 px-3 rounded-xl bg-gray-50 text-gray-300 font-bold text-xs text-center flex items-center justify-center gap-1.5 border border-gray-100 cursor-not-allowed">
+                    <span>Next</span>
+                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                </span>
+                {% endif %}
+            </div>
         </div>
 
-        <!-- Right: Pagination Buttons & Page Indicator -->
-        <div class="flex flex-wrap items-center gap-2">
-            <span class="text-xs text-gray-600 font-bold bg-gray-50 px-2.5 py-1 rounded-xl border border-gray-200">
-                Page <strong class="text-gray-900 font-black">{{ page_obj.number }}</strong> of <strong class="text-gray-900 font-black">{{ paginator.num_pages }}</strong>
-            </span>
+        <!-- ============================================== -->
+        <!-- DESKTOP PAGINATION (Screens >= 1024px) -->
+        <!-- ============================================== -->
+        <div class="hidden lg:flex flex-row items-center justify-between gap-4">
+            <!-- Left: Showing items count & Per page selector -->
+            <div class="flex flex-wrap items-center gap-3 text-xs text-gray-500 font-medium">
+                <span>
+                    Showing <strong class="text-gray-900 font-black">{{ page_obj.start_index }}</strong> to <strong class="text-gray-900 font-black">{{ page_obj.end_index }}</strong> of <strong class="text-gray-900 font-black">{{ paginator.count }}</strong> orders
+                </span>
 
-            {% if paginator.num_pages > 1 %}
-            <nav class="flex items-center gap-1 text-xs font-bold" aria-label="Orders Pagination">
-                
-                <!-- First & Prev Page -->
-                {% if page_obj.has_previous %}
-                <a href="?page=1&status={{ status_filter }}&period={{ period_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}" class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="First Page">
-                    <i class="fa-solid fa-angles-left text-[10px]"></i>
-                </a>
-                <a href="?page={{ page_obj.previous_page_number }}&status={{ status_filter }}&period={{ period_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}" class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="Previous Page">
-                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
-                    <span class="hidden sm:inline text-[11px]">Prev</span>
-                </a>
-                {% else %}
-                <span class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-300 border border-gray-100 cursor-not-allowed">
-                    <i class="fa-solid fa-angles-left text-[10px]"></i>
+                <!-- Per Page Selector Form -->
+                <form method="GET" action="{% url 'dashboard:orders' %}" class="inline-flex items-center gap-1.5 ml-1">
+                    <input type="hidden" name="status" value="{{ status_filter }}">
+                    <input type="hidden" name="period" value="{{ period_filter }}">
+                    <input type="hidden" name="zone" value="{{ zone_filter }}">
+                    <input type="hidden" name="payment" value="{{ payment_filter }}">
+                    <input type="hidden" name="q" value="{{ search_query }}">
+                    <label for="per_page_select" class="text-[11px] text-gray-400 font-semibold uppercase tracking-wider">Per page:</label>
+                    <select id="per_page_select" name="per_page" onchange="this.form.submit()" class="bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-2 py-1 text-xs font-bold text-gray-700 cursor-pointer focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+                        <option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+                        <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                        <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+                    </select>
+                </form>
+            </div>
+
+            <!-- Right: Pagination Buttons & Page Indicator -->
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="text-xs text-gray-600 font-bold bg-gray-50 px-2.5 py-1 rounded-xl border border-gray-200">
+                    Page <strong class="text-gray-900 font-black">{{ page_obj.number }}</strong> of <strong class="text-gray-900 font-black">{{ paginator.num_pages }}</strong>
                 </span>
-                <span class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-300 border border-gray-100 cursor-not-allowed">
-                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
-                    <span class="hidden sm:inline text-[11px]">Prev</span>
-                </span>
+
+                {% if paginator.num_pages > 1 %}
+                <nav class="flex items-center gap-1 text-xs font-bold" aria-label="Orders Pagination">
+                    <!-- First & Prev Page -->
+                    {% if page_obj.has_previous %}
+                    <a href="?page=1&status={{ status_filter }}&period={{ period_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}#ordersSection" class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="First Page">
+                        <i class="fa-solid fa-angles-left text-[10px]"></i>
+                    </a>
+                    <a href="?page={{ page_obj.previous_page_number }}&status={{ status_filter }}&period={{ period_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}#ordersSection" class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="Previous Page">
+                        <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                        <span class="hidden sm:inline text-[11px]">Prev</span>
+                    </a>
+                    {% else %}
+                    <span class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-300 border border-gray-100 cursor-not-allowed">
+                        <i class="fa-solid fa-angles-left text-[10px]"></i>
+                    </span>
+                    <span class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-300 border border-gray-100 cursor-not-allowed">
+                        <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                        <span class="hidden sm:inline text-[11px]">Prev</span>
+                    </span>
+                    {% endif %}
+
+                    <!-- Page Number Pills -->
+                    <div class="flex items-center gap-1 mx-1">
+                        {% for p in elided_page_range %}
+                            {% if p == page_obj.paginator.ELLIPSIS or p == '…' or p == '...' %}
+                            <span class="w-8 h-8 flex items-center justify-center text-gray-400 font-bold text-xs">…</span>
+                            {% elif p == page_obj.number %}
+                            <span class="w-8 h-8 rounded-xl flex items-center justify-center bg-brand-700 text-white font-extrabold text-xs shadow-xs ring-2 ring-brand-500/20">
+                                {{ p }}
+                            </span>
+                            {% else %}
+                            <a href="?page={{ p }}&status={{ status_filter }}&period={{ period_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}#ordersSection" class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-700 hover:bg-brand-50 hover:text-brand-900 hover:border-brand-300 transition border border-gray-200 text-xs shadow-2xs">
+                                {{ p }}
+                            </a>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    <!-- Next & Last Page -->
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}&status={{ status_filter }}&period={{ period_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}#ordersSection" class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="Next Page">
+                        <span class="hidden sm:inline text-[11px]">Next</span>
+                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                    </a>
+                    <a href="?page={{ paginator.num_pages }}&status={{ status_filter }}&period={{ period_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}#ordersSection" class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="Last Page">
+                        <i class="fa-solid fa-angles-right text-[10px]"></i>
+                    </a>
+                    {% else %}
+                    <span class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-300 border border-gray-100 cursor-not-allowed">
+                        <span class="hidden sm:inline text-[11px]">Next</span>
+                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                    </span>
+                    <span class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-300 border border-gray-100 cursor-not-allowed">
+                        <i class="fa-solid fa-angles-right text-[10px]"></i>
+                    </span>
+                    {% endif %}
+                </nav>
                 {% endif %}
-
-                <!-- Page Number Pills -->
-                <div class="flex items-center gap-1 mx-1">
-                    {% for p in elided_page_range %}
-                        {% if p == page_obj.paginator.ELLIPSIS or p == '…' or p == '...' %}
-                        <span class="w-8 h-8 flex items-center justify-center text-gray-400 font-bold text-xs">…</span>
-                        {% elif p == page_obj.number %}
-                        <span class="w-8 h-8 rounded-xl flex items-center justify-center bg-brand-700 text-white font-extrabold text-xs shadow-xs ring-2 ring-brand-500/20">
-                            {{ p }}
-                        </span>
-                        {% else %}
-                        <a href="?page={{ p }}&status={{ status_filter }}&period={{ period_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}" class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-700 hover:bg-brand-50 hover:text-brand-900 hover:border-brand-300 transition border border-gray-200 text-xs shadow-2xs">
-                            {{ p }}
-                        </a>
-                        {% endif %}
-                    {% endfor %}
-                </div>
-
-                <!-- Next & Last Page -->
-                {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}&status={{ status_filter }}&period={{ period_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}" class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="Next Page">
-                    <span class="hidden sm:inline text-[11px]">Next</span>
-                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                </a>
-                <a href="?page={{ paginator.num_pages }}&status={{ status_filter }}&period={{ period_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query|urlencode }}&per_page={{ per_page }}" class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="Last Page">
-                    <i class="fa-solid fa-angles-right text-[10px]"></i>
-                </a>
-                {% else %}
-                <span class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-300 border border-gray-100 cursor-not-allowed">
-                    <span class="hidden sm:inline text-[11px]">Next</span>
-                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                </span>
-                <span class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-300 border border-gray-100 cursor-not-allowed">
-                    <i class="fa-solid fa-angles-right text-[10px]"></i>
-                </span>
-                {% endif %}
-
-            </nav>
-            {% endif %}
+            </div>
         </div>
 
     </div>
@@ -1700,14 +1987,70 @@ function closeFraudModal() {
 }
 
 /* ========================================================
+   MOBILE & TABLET VIEW SWITCHER (CARDS VS TABLE)
+   ======================================================== */
+function setOrdersViewMode(mode) {
+    const cardsView = document.getElementById('ordersMobileCardView');
+    const tableView = document.getElementById('ordersDesktopTableView');
+    const btnCards = document.getElementById('btnViewCards');
+    const btnTable = document.getElementById('btnViewTable');
+
+    if (!cardsView || !tableView) return;
+
+    if (mode === 'table') {
+        cardsView.classList.add('hidden');
+        cardsView.classList.remove('block');
+        tableView.classList.remove('hidden');
+        tableView.classList.add('block');
+        if (btnTable) {
+            btnTable.className = "px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1.5 bg-brand-700 text-white shadow-xs";
+        }
+        if (btnCards) {
+            btnCards.className = "px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1.5 bg-gray-100 text-gray-600 hover:text-gray-900";
+        }
+        try { sessionStorage.setItem('pickpickles_orders_view_mode', 'table'); } catch(e) {}
+    } else {
+        cardsView.classList.remove('hidden');
+        cardsView.classList.add('block');
+        tableView.classList.add('hidden');
+        tableView.classList.remove('block');
+        if (!tableView.classList.contains('lg:block')) {
+            tableView.classList.add('lg:block');
+        }
+        if (btnCards) {
+            btnCards.className = "px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1.5 bg-brand-700 text-white shadow-xs";
+        }
+        if (btnTable) {
+            btnTable.className = "px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1.5 bg-gray-100 text-gray-600 hover:text-gray-900";
+        }
+        try { sessionStorage.setItem('pickpickles_orders_view_mode', 'cards'); } catch(e) {}
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        // Clear old stale localStorage setting if any so mobile users always default to cards
+        localStorage.removeItem('pickpickles_orders_view_mode');
+        const sessionMode = sessionStorage.getItem('pickpickles_orders_view_mode');
+        if (window.innerWidth < 1024 && sessionMode === 'table') {
+            setOrdersViewMode('table');
+        }
+    } catch(e) {}
+});
+
+/* ========================================================
    BULK ORDER SELECTION & WHATSAPP BROADCAST HANDLER
    ======================================================== */
 let bulkSelectedOrdersQueue = [];
 
 function toggleSelectAllOrders(masterCheckbox) {
+    const isChecked = masterCheckbox.checked;
+    document.querySelectorAll('.select-all-orders-toggle').forEach(el => {
+        el.checked = isChecked;
+    });
     const checkboxes = document.querySelectorAll('.order-select-checkbox');
     checkboxes.forEach(cb => {
-        cb.checked = masterCheckbox.checked;
+        cb.checked = isChecked;
     });
     updateSelectedOrdersBar();
 }
@@ -1723,8 +2066,10 @@ function selectOnlyShippedOrders() {
             cb.checked = false;
         }
     });
-    const master = document.getElementById('selectAllOrdersCheckbox');
-    if (master) master.checked = (count > 0 && count === checkboxes.length);
+    const isAll = (count > 0 && count === checkboxes.length);
+    document.querySelectorAll('.select-all-orders-toggle').forEach(el => {
+        el.checked = isAll;
+    });
     updateSelectedOrdersBar();
 }
 
@@ -1733,8 +2078,9 @@ function clearOrderSelection() {
     checkboxes.forEach(cb => {
         cb.checked = false;
     });
-    const master = document.getElementById('selectAllOrdersCheckbox');
-    if (master) master.checked = false;
+    document.querySelectorAll('.select-all-orders-toggle').forEach(el => {
+        el.checked = false;
+    });
     updateSelectedOrdersBar();
 }
 

@@ -48,6 +48,7 @@
                     <i class="fa-solid fa-clock-rotate-left text-indigo-600"></i>
                     <span>Ledger</span>
                 </a>
+                {% if can_edit %}
                 <button type="button" onclick="openRestockModal()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-3 sm:px-3.5 py-2 rounded-xl shadow-2xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
                     <i class="fa-solid fa-plus-circle text-emerald-200"></i>
                     <span>Add Batch</span>
@@ -56,6 +57,7 @@
                     <i class="fa-solid fa-circle-plus text-brand-accent"></i>
                     <span>+ New Pickle</span>
                 </button>
+                {% endif %}
             </div>
 
         </div>
@@ -412,6 +414,7 @@
 
                         <!-- Col 5: Quick Price & Stock Edit Inputs -->
                         <td class="py-3 px-4 align-middle">
+                            {% if can_edit %}
                             <form method="POST" class="flex items-center gap-1.5">
                                 {% csrf_token %}
                                 <input type="hidden" name="action" value="update_pricing">
@@ -426,12 +429,20 @@
                                     <i class="fa-solid fa-check"></i>
                                 </button>
                             </form>
+                            {% else %}
+                            <div class="flex items-center gap-2 text-xs font-bold text-gray-700">
+                                <span class="text-indigo-950 font-black">৳{{ product.price_bdt|floatformat:0 }}</span>
+                                <span class="text-gray-300">•</span>
+                                <span class="{% if product.stock_count > 0 %}text-emerald-700{% else %}text-rose-600{% endif %} font-black">{{ product.stock_count }} pcs</span>
+                            </div>
+                            {% endif %}
                         </td>
 
                         <!-- Col 6: Actions Toolbar -->
                         <td class="py-3 px-4 sm:pr-5 align-middle text-right">
                             <div class="flex items-center justify-end gap-1 whitespace-nowrap">
                                 
+                                {% if can_edit %}
                                 <!-- Restock Modal Button -->
                                 <button type="button" 
                                     onclick="openRestockModal('{{ product.id }}', '{{ product.name|escapejs }}', '{{ product.needed_stock }}', '{{ product.stock_count }}', '{{ product.target_stock_level }}')" 
@@ -440,12 +451,14 @@
                                     <i class="fa-solid fa-plus-circle text-[11px]"></i>
                                     <span>Restock</span>
                                 </button>
+                                {% endif %}
 
-                                <!-- Ledger History -->
+                                <!-- Ledger History (Always viewable) -->
                                 <a href="{% url 'dashboard:product_stock_ledger' product.id %}" class="p-1.5 rounded-lg bg-gray-100 hover:bg-indigo-50 text-gray-500 hover:text-indigo-700 transition" title="View Stock Ledger History">
                                     <i class="fa-solid fa-clock-rotate-left"></i>
                                 </a>
 
+                                {% if can_edit %}
                                 <!-- Edit Product Modal -->
                                 <button type="button" 
                                     onclick="openEditModal({
@@ -487,11 +500,16 @@
                                         <i class="fa-solid {% if product.is_in_stock %}fa-eye{% else %}fa-eye-slash{% endif %}"></i>
                                     </button>
                                 </form>
+                                {% endif %}
 
                                 {% if can_delete %}
                                 <button type="button" onclick="openDeleteModal('{{ product.id }}', '{{ product.name|escapejs }}')" class="p-1.5 rounded-lg bg-gray-100 hover:bg-rose-50 text-gray-400 hover:text-rose-600 transition cursor-pointer" title="Delete Product">
                                     <i class="fa-solid fa-trash-can"></i>
                                 </button>
+                                {% endif %}
+
+                                {% if not can_edit and not can_delete %}
+                                <span class="text-[11px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-lg">View Only</span>
                                 {% endif %}
 
                             </div>

@@ -212,17 +212,11 @@ def cart_add(request, product_id):
     cart = Cart(request)
     product = get_object_or_404(Product, id=product_id)
     
-    if not product.is_in_stock:
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('format') == 'json':
-            return JsonResponse({'success': False, 'message': f'{product.name} is currently out of stock.'}, status=400)
-        messages.error(request, f'Sorry, {product.name} is currently out of stock.')
-        next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'store:index'
-        return redirect(next_url)
-    
     quantity = int(request.POST.get('quantity', 1))
     override = request.POST.get('override', 'false') == 'true'
     
     cart.add(product=product, quantity=quantity, override_quantity=override)
+    is_preorder = False
     
     if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('format') == 'json':
         items_data = [
@@ -235,12 +229,14 @@ def cart_add(request, product_id):
                 'image_url': item['product'].primary_image_url,
                 'weight': item['product'].jar_weight_grams,
                 'slug': item['product'].slug,
+                'is_preorder': False,
             }
             for item in cart
         ]
+        msg = f'Added {product.name} to your pickle jar bag!'
         return JsonResponse({
             'success': True,
-            'message': f'Added {product.name} to your pickle jar bag!',
+            'message': msg,
             'cart_total_items': len(cart),
             'cart_subtotal': float(cart.get_subtotal()),
             'total_weight_grams': cart.get_total_weight_grams(),
@@ -256,10 +252,12 @@ def cart_add(request, product_id):
                 'name': product.name,
                 'price': float(product.price_bdt),
                 'quantity': quantity,
+                'is_preorder': False,
             }
         })
         
-    messages.success(request, f'Added "{product.name}" to your jar cart!')
+    flash_msg = f'Added "{product.name}" to your jar cart!'
+    messages.success(request, flash_msg)
     next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'store:cart_view'
     return redirect(next_url)
 
@@ -281,6 +279,7 @@ def cart_remove(request, product_id):
                 'image_url': item['product'].primary_image_url,
                 'weight': item['product'].jar_weight_grams,
                 'slug': item['product'].slug,
+                'is_preorder': False,
             }
             for item in cart
         ]
@@ -337,6 +336,7 @@ def cart_update_ajax(request):
                 'image_url': item['product'].primary_image_url,
                 'weight': item['product'].jar_weight_grams,
                 'slug': item['product'].slug,
+                'is_preorder': False,
             }
             for item in cart
         ]
@@ -587,7 +587,7 @@ def sitemap_xml(request):
         })
 
     # 3. Dynamic Product detail pages
-    products = Product.objects.filter(is_in_stock=True).order_by('-updated_at')
+    products = Product.objects.all().order_by('-updated_at')
     for product in products:
         lastmod = product.updated_at.strftime('%Y-%m-%d') if product.updated_at else timezone.now().strftime('%Y-%m-%d')
         urls.append({

@@ -44,6 +44,19 @@
             }
         }
     </script>
+    <style>
+        .scrollbar-none::-webkit-scrollbar,
+        .no-scrollbar::-webkit-scrollbar {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+        }
+        .scrollbar-none,
+        .no-scrollbar {
+            -ms-overflow-style: none !important;
+            scrollbar-width: none !important;
+        }
+    </style>
 </head>
 
 <body class="bg-gray-100 text-gray-800 font-sans antialiased h-full overflow-x-hidden">
@@ -295,6 +308,7 @@
                                 <span class="ml-auto px-1.5 py-0.2 text-[9px] font-black bg-rose-500/20 text-rose-300 rounded border border-rose-400/30">Shield</span>
                             </a>
 
+                            {% if can_delete %}
                             <!-- Orders Trash & Archive -->
                             <a href="{% url 'dashboard:orders_trash' %}"
                                 class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'orders_trash' %}bg-rose-700 text-white shadow-md shadow-rose-700/30 font-extrabold{% else %}text-rose-200/80 hover:text-white hover:bg-rose-900/40{% endif %}">
@@ -305,6 +319,7 @@
                                     {{ global_trash_count }}
                                 </span>
                             </a>
+                            {% endif %}
                         </nav>
                     </div>
 
@@ -321,6 +336,7 @@
                                 <i class="fa-solid fa-arrow-up-right-from-square text-[10px] ml-auto opacity-60"></i>
                             </a>
 
+                            {% if request.user.is_superuser %}
                             <!-- Django Admin Native -->
                             <a href="/admin/" target="_blank"
                                 class="px-3.5 py-2 rounded-2xl text-gray-400 hover:text-white hover:bg-brand-800 transition flex items-center gap-3">
@@ -328,6 +344,7 @@
                                 <span>Django Admin</span>
                                 <i class="fa-solid fa-arrow-up-right-from-square text-[10px] ml-auto opacity-60"></i>
                             </a>
+                            {% endif %}
                         </nav>
                     </div>
                 </div>
@@ -344,7 +361,13 @@
                         </div>
                         <div class="truncate">
                             <span class="block text-xs font-bold text-white truncate">{{ user.username|default:"Admin" }}</span>
+                            {% if is_view_only %}
+                            <span class="inline-flex items-center gap-1 text-[9px] font-black text-amber-300 bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-600/50 mt-0.5">
+                                <i class="fa-solid fa-eye text-[8px]"></i> View-Only (সীমাবদ্ধ)
+                            </span>
+                            {% else %}
                             <span class="block text-[10px] text-emerald-400 font-medium">● Logged In</span>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -450,6 +473,14 @@
                         <i class="fa-solid fa-id-card text-amber-600"></i>
                         <span>Staff IDs</span>
                     </a>
+                    {% endif %}
+
+                    {% if is_view_only %}
+                    <!-- View-Only Mode Pill -->
+                    <div class="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-black shadow-2xs" title="আপনার আইডিতে শুধুমাত্র দেখার অনুমতি রয়েছে (View-Only)">
+                        <i class="fa-solid fa-eye text-amber-600"></i>
+                        <span>ভিউ-অনলি মোড (View-Only)</span>
+                    </div>
                     {% endif %}
 
                     <!-- Direct Orders Hub Button -->

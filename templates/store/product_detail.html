@@ -113,18 +113,9 @@
                         {% endif %}
                     </div>
                 </div>
-
-                {% if not product.is_in_stock or product.stock_count == 0 %}
-                <div class="text-right">
-                    <span class="inline-flex items-center gap-1.5 text-rose-900 bg-rose-200 border border-rose-300 px-3.5 py-1 rounded-full text-xs font-black">
-                        <i class="fa-solid fa-circle-xmark"></i> Out of Stock
-                    </span>
-                </div>
-                {% endif %}
             </div>
 
             <!-- Add to Cart Form -->
-            {% if product.is_in_stock and product.stock_count > 0 %}
             <form action="{% url 'store:cart_add' product.id %}" method="POST" class="space-y-4">
                 {% csrf_token %}
                 <div class="flex items-center gap-4">
@@ -140,11 +131,6 @@
                     </button>
                 </div>
             </form>
-            {% else %}
-            <div class="p-4 bg-rose-50 border-2 border-rose-200 rounded-2xl text-center text-rose-800 font-bold text-sm">
-                <i class="fa-solid fa-bell mr-1"></i> This pickle is currently sold out. New handcrafted batch coming soon!
-            </div>
-            {% endif %}
 
             <!-- Description & Flavor Specs -->
             <div class="space-y-4 pt-4 border-t border-slate-200">
