@@ -1,4 +1,5 @@
 import os
+import re
 import uuid
 from django.conf import settings
 from django.db import models
@@ -83,6 +84,12 @@ class Product(models.Model):
         if not self.slug:
             self.slug = slugify(self.name)
         super().save(*args, **kwargs)
+        if self.image and self.image.name and (not self.image_url or self.image_url.endswith('pickle_default.png')):
+            clean_name = self.image.name.lstrip('/\\').replace('\\', '/')
+            new_url = f"/media/{clean_name}"
+            if self.image_url != new_url:
+                Product.objects.filter(pk=self.pk).update(image_url=new_url)
+                self.image_url = new_url
 
     @property
     def is_available_in_stock(self):
@@ -173,18 +180,29 @@ class Product(models.Model):
             candidates.append(clean_name.replace('-', '_'))
             candidates.append(clean_name.replace('_', '-'))
 
+            # Strip Django random upload suffix (e.g. pickled_bell_peppers_4C5nLGI.webp -> pickled_bell_peppers.webp)
+            base_file = os.path.basename(clean_name)
+            root_name, ext = os.path.splitext(base_file)
+            clean_root = re.sub(r'_[a-zA-Z0-9]{5,12}$', '', root_name)
+            if clean_root != root_name:
+                candidates.append(f"products/{clean_root}{ext}")
+                candidates.append(f"products/{clean_root.replace('-', '_')}{ext}")
+                candidates.append(f"products/{clean_root.replace('_', '-')}{ext}")
+
         # 2. image_url field candidates
         if self.image_url and self.image_url.strip():
             raw_url = self.image_url.strip()
-            if raw_url.startswith('/media/'):
-                rel_path = raw_url.replace('/media/', '').split('?')[0].lstrip('/\\').replace('\\', '/')
-                if not rel_path.startswith('products/'):
-                    rel_path = f"products/{os.path.basename(rel_path)}"
-                candidates.append(rel_path)
-                candidates.append(rel_path.replace('-', '_'))
-                candidates.append(rel_path.replace('_', '-'))
-            elif raw_url.startswith('http://') or raw_url.startswith('https://') or raw_url.startswith('/static/'):
-                return raw_url
+            # Do NOT treat default placeholder as a real product image
+            if not raw_url.endswith('pickle_default.png'):
+                if raw_url.startswith('/media/'):
+                    rel_path = raw_url.replace('/media/', '').split('?')[0].lstrip('/\\').replace('\\', '/')
+                    if not rel_path.startswith('products/'):
+                        rel_path = f"products/{os.path.basename(rel_path)}"
+                    candidates.append(rel_path)
+                    candidates.append(rel_path.replace('-', '_'))
+                    candidates.append(rel_path.replace('_', '-'))
+                elif raw_url.startswith('http://') or raw_url.startswith('https://') or raw_url.startswith('/static/'):
+                    return raw_url
 
         # 3. Fallback: Slug and name matching directly in main products/ folder
         slug_bases = []
@@ -213,7 +231,7 @@ class Product(models.Model):
                 pass
 
         # Fallbacks if file-on-disk check cannot be completed
-        if self.image_url and self.image_url.strip():
+        if self.image_url and self.image_url.strip() and not self.image_url.strip().endswith('pickle_default.png'):
             return self.image_url.strip()
         if self.image and self.image.name:
             return self.image.url

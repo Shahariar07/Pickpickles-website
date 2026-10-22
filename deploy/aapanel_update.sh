@@ -26,10 +26,15 @@ echo ">>> [3/5] Installing/Updating requirements..."
 echo ">>> [4/5] Running database migrations..."
 "$VENV_BIN/python" manage.py migrate
 
-echo ">>> [5/5] Collecting static files..."
+echo ">>> [5/6] Collecting static files..."
 "$VENV_BIN/python" manage.py collectstatic --noinput
 
+echo ">>> [6/6] Auto-linking product images..."
+"$VENV_BIN/python" manage.py link_product_images || true
+
 # Fix permissions for media and database in aaPanel (www user)
+mkdir -p "$PROJECT_DIR/media/products" 2>/dev/null || true
+mkdir -p "$PROJECT_DIR/media/reviews" 2>/dev/null || true
 chown -R www:www "$PROJECT_DIR" 2>/dev/null || true
 chmod -R 775 "$PROJECT_DIR/media" 2>/dev/null || true
 chmod 664 "$PROJECT_DIR/db.sqlite3" 2>/dev/null || true

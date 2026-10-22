@@ -18,6 +18,7 @@ pip install -r requirements.txt
 echo ">>> Running migrations & collecting static files..."
 python manage.py migrate
 python manage.py collectstatic --noinput
+python manage.py link_product_images || true
 
 echo ">>> Restarting services..."
 sudo systemctl restart gunicorn_pickpickles

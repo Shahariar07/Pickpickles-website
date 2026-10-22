@@ -1503,13 +1503,22 @@ def stock_manager(request):
                 product.is_in_stock = request.POST.get('is_in_stock') in ['on', 'true', '1', True]
                 product.is_featured = request.POST.get('is_featured') in ['on', 'true', '1', True]
                 
-                image_url = request.POST.get('image_url')
-                if image_url is not None:
-                    product.image_url = image_url.strip()
-                    
-                if 'image' in request.FILES:
+                if 'image' in request.FILES and request.FILES['image']:
                     product.image = request.FILES['image']
-                    
+                    product.save()
+                    if product.image and product.image.name:
+                        clean_name = product.image.name.lstrip('/\\').replace('\\', '/')
+                        product.image_url = f"/media/{clean_name}"
+                else:
+                    image_url = request.POST.get('image_url')
+                    if image_url is not None:
+                        clean_url = image_url.strip()
+                        if clean_url and not clean_url.endswith('pickle_default.png'):
+                            product.image_url = clean_url
+                        elif product.image and product.image.name:
+                            clean_name = product.image.name.lstrip('/\\').replace('\\', '/')
+                            product.image_url = f"/media/{clean_name}"
+
                 product.ingredients = request.POST.get('ingredients', '').strip() or product.ingredients
                 product.flavor_profile = request.POST.get('flavor_profile', '').strip() or product.flavor_profile
                 product.pairing_suggestions = request.POST.get('pairing_suggestions', '').strip() or product.pairing_suggestions
@@ -1587,15 +1596,22 @@ def stock_manager(request):
                     target_stock_level=target_stock_level,
                     is_in_stock=is_in_stock,
                     is_featured=is_featured,
-                    image_url=image_url or "/static/images/pickle_default.png",
+                    image_url=image_url if (image_url and not image_url.endswith('pickle_default.png')) else '',
                     ingredients=ingredients or "Fresh Local Cucumbers, Pure Cane Vinegar, Himalayan Pink Salt, Garlic, Spices.",
                     flavor_profile=flavor_profile or "Crisp, Tangy, Garlic & Whole Spices",
                     pairing_suggestions=pairing_suggestions or "Burgers, Sandwiches, Snacks",
                     shelf_life=shelf_life or "Always keep refrigerated for maximum crunch. Best enjoyed within 2 months."
                 )
-                if 'image' in request.FILES:
+                if 'image' in request.FILES and request.FILES['image']:
                     new_prod.image = request.FILES['image']
                     new_prod.save()
+                    if new_prod.image and new_prod.image.name:
+                        clean_name = new_prod.image.name.lstrip('/\\').replace('\\', '/')
+                        new_prod.image_url = f"/media/{clean_name}"
+                        new_prod.save(update_fields=['image_url'])
+                elif not new_prod.image_url:
+                    new_prod.image_url = f"/media/products/{new_prod.slug.replace('-', '_')}.webp"
+                    new_prod.save(update_fields=['image_url'])
 
                 messages.success(request, f'New pickle jar "{new_prod.name}" successfully added to catalog!')
             except Exception as e:

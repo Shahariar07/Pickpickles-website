@@ -1179,11 +1179,19 @@ function previewImage(input, previewId, nameId) {
         const file = input.files[0];
         const reader = new FileReader();
         reader.onload = function(e) {
-            document.getElementById(previewId).src = e.target.result;
+            const previewEl = document.getElementById(previewId);
+            if (previewEl) previewEl.src = e.target.result;
         };
         reader.readAsDataURL(file);
         if (nameId) {
-            document.getElementById(nameId).textContent = '✓ ' + file.name;
+            const nameEl = document.getElementById(nameId);
+            if (nameEl) nameEl.textContent = '✓ ' + file.name;
+        }
+        const urlInputId = (input.id === 'edit_image_file') ? 'edit_image_url' : 'add_image_url';
+        const urlInput = document.getElementById(urlInputId);
+        if (urlInput) {
+            urlInput.value = '';
+            urlInput.placeholder = '✓ Selected file: ' + file.name;
         }
     }
 }
@@ -1220,7 +1228,13 @@ function openEditModal(prod) {
     setVal('edit_ingredients', prod.ingredients);
     setVal('edit_flavor_profile', prod.flavorProfile);
     setVal('edit_pairing_suggestions', prod.pairingSuggestions);
-    setVal('edit_image_url', prod.imageUrl);
+    
+    const cleanImgUrl = (prod.imageUrl && !prod.imageUrl.includes('pickle_default.png')) ? prod.imageUrl : '';
+    setVal('edit_image_url', cleanImgUrl);
+    const editUrlInput = document.getElementById('edit_image_url');
+    if (editUrlInput) {
+        editUrlInput.placeholder = '/media/products/your_pickle.webp';
+    }
     
     setChecked('edit_is_in_stock', prod.isInStock);
     setChecked('edit_is_featured', prod.isFeatured);
