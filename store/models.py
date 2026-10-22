@@ -164,43 +164,44 @@ class Product(models.Model):
     def primary_image_url(self):
         candidates = []
 
-        # 1. Image field candidates
+        # 1. Image field candidates (strictly in main products/ folder)
         if self.image and self.image.name:
-            clean_name = self.image.name.lstrip('/\\')
+            clean_name = self.image.name.lstrip('/\\').replace('\\', '/')
+            if not clean_name.startswith('products/'):
+                clean_name = f"products/{os.path.basename(clean_name)}"
             candidates.append(clean_name)
-            candidates.append(clean_name.replace('products_v2/', 'products/'))
-            candidates.append(clean_name.replace('products/', 'products_v2/'))
             candidates.append(clean_name.replace('-', '_'))
+            candidates.append(clean_name.replace('_', '-'))
 
         # 2. image_url field candidates
         if self.image_url and self.image_url.strip():
             raw_url = self.image_url.strip()
             if raw_url.startswith('/media/'):
-                rel_path = raw_url.replace('/media/', '').split('?')[0].lstrip('/\\')
+                rel_path = raw_url.replace('/media/', '').split('?')[0].lstrip('/\\').replace('\\', '/')
+                if not rel_path.startswith('products/'):
+                    rel_path = f"products/{os.path.basename(rel_path)}"
                 candidates.append(rel_path)
-                candidates.append(rel_path.replace('products_v2/', 'products/'))
-                candidates.append(rel_path.replace('products/', 'products_v2/'))
                 candidates.append(rel_path.replace('-', '_'))
+                candidates.append(rel_path.replace('_', '-'))
             elif raw_url.startswith('http://') or raw_url.startswith('https://') or raw_url.startswith('/static/'):
                 return raw_url
 
-        # 3. Fallback: Slug matching with both underscores and hyphens
+        # 3. Fallback: Slug and name matching directly in main products/ folder
         slug_bases = []
         if self.slug:
             slug_bases.append(self.slug.replace('-', '_'))
-            slug_bases.append(self.slug)
+            slug_bases.append(self.slug.replace('_', '-'))
         if self.name:
             from django.utils.text import slugify
             name_slug = slugify(self.name)
             slug_bases.append(name_slug.replace('-', '_'))
-            slug_bases.append(name_slug)
+            slug_bases.append(name_slug.replace('_', '-'))
 
         for base in slug_bases:
             for ext in ['.webp', '.jpg', '.png', '.jpeg']:
                 candidates.append(f"products/{base}{ext}")
-                candidates.append(f"products_v2/{base}{ext}")
 
-        # Check each candidate on disk
+        # Check each candidate on disk in the main products folder
         for rel_path in candidates:
             try:
                 local_path = os.path.join(settings.MEDIA_ROOT, rel_path.replace('/', os.sep))
@@ -210,6 +211,14 @@ class Product(models.Model):
                     return f"/media/{clean_rel}?v={ts}"
             except Exception:
                 pass
+
+        # Fallbacks if file-on-disk check cannot be completed
+        if self.image_url and self.image_url.strip():
+            return self.image_url.strip()
+        if self.image and self.image.name:
+            return self.image.url
+        if self.slug:
+            return f"/media/products/{self.slug.replace('-', '_')}.webp"
 
         return "/static/images/pickle_default.png"
 
