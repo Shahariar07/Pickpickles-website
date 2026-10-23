@@ -97,6 +97,100 @@
     class="bg-gray-50 text-slate-900 font-sans antialiased pb-20 md:pb-0 flex flex-col min-h-screen overflow-x-hidden">
     <div style="display:none;" id="globalCsrfContainer">{% csrf_token %}</div>
 
+    <!-- ========================================================== -->
+    <!-- WEBSITE PAGE LOADING ANIMATION (Preloader & Top Progress)   -->
+    <!-- ========================================================== -->
+    <!-- 1. Sleek Top Slim Progress Bar (Brand Accent & Emerald) -->
+    <div id="topPageProgressBar" 
+         class="fixed top-0 left-0 h-[3px] w-0 bg-gradient-to-r from-amber-400 via-emerald-400 to-amber-300 z-[99999] pointer-events-none transition-all duration-300 ease-out shadow-xs shadow-amber-400/30"></div>
+
+    <!-- 2. Smooth Brand Preloader Screen (Deep Signature Forest Green & Warm Amber) -->
+    <div id="pagePreloader" 
+         class="fixed inset-0 z-[99998] bg-[#092d18] flex flex-col items-center justify-center transition-opacity duration-300 ease-out">
+        
+        <!-- Glowing Ambient Circle -->
+        <div class="relative flex items-center justify-center mb-4">
+            <!-- Pulsing outer rotating ring (Pickle Amber & Herb Green) -->
+            <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-amber-400/50 animate-spin" style="animation-duration: 3s;"></div>
+            <!-- Glowing emerald pulse background -->
+            <div class="absolute inset-0 rounded-full bg-emerald-500/20 blur-xl animate-pulse"></div>
+            <!-- Center Brand Logo -->
+            <img src="{% static 'images/logo.png' %}" alt="Pickpickles" 
+                 class="absolute w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover shadow-2xl border-2 border-amber-400/70">
+        </div>
+        
+        <!-- Brand Title & Subtext -->
+        <div class="text-center space-y-1">
+            <span class="font-display font-extrabold text-base sm:text-lg tracking-tight text-white block">
+                PICK<span class="text-amber-400">PICKLES</span>
+            </span>
+            <div class="flex items-center justify-center gap-1.5 text-[11px] font-bold text-emerald-200/80">
+                <span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
+                <span>Crafting Artisanal Crunch...</span>
+            </div>
+        </div>
+
+        <!-- Matching Brand Progress Indicator -->
+        <div class="w-28 sm:w-36 h-1 bg-[#04170c] border border-brand-800/60 rounded-full overflow-hidden mt-4">
+            <div class="h-full bg-gradient-to-r from-emerald-500 via-amber-400 to-emerald-400 rounded-full animate-pulse w-full"></div>
+        </div>
+    </div>
+
+    <script>
+        // Smoothly dismiss preloader on page load
+        (function() {
+            const preloader = document.getElementById('pagePreloader');
+            const progressBar = document.getElementById('topPageProgressBar');
+            
+            function hidePreloader() {
+                if (preloader && preloader.style.display !== 'none') {
+                    preloader.style.opacity = '0';
+                    preloader.style.pointerEvents = 'none';
+                    setTimeout(function() {
+                        preloader.style.display = 'none';
+                    }, 320);
+                }
+                if (progressBar) {
+                    progressBar.style.width = '100%';
+                    setTimeout(function() {
+                        progressBar.style.opacity = '0';
+                        setTimeout(function() {
+                            progressBar.style.width = '0';
+                            progressBar.style.opacity = '1';
+                        }, 200);
+                    }, 250);
+                }
+            }
+
+            // Fire on complete or max 700ms fail-safe fallback
+            if (document.readyState === 'complete') {
+                hidePreloader();
+            } else {
+                window.addEventListener('load', hidePreloader);
+                setTimeout(hidePreloader, 700);
+            }
+
+            // Top progress bar trigger on internal link clicks
+            document.addEventListener('click', function(e) {
+                const link = e.target.closest('a');
+                if (link && link.href && !link.target && !link.getAttribute('download')) {
+                    const href = link.getAttribute('href');
+                    if (href && !href.startsWith('#') && !href.startsWith('javascript:') && !href.startsWith('tel:') && !href.startsWith('mailto:')) {
+                        try {
+                            const url = new URL(link.href, window.location.origin);
+                            if (url.origin === window.location.origin && url.pathname !== window.location.pathname) {
+                                if (progressBar) {
+                                    progressBar.style.opacity = '1';
+                                    progressBar.style.width = '65%';
+                                }
+                            }
+                        } catch (err) {}
+                    }
+                }
+            });
+        })();
+    </script>
+
     <!-- Top Announcement Bar -->
     <div class="bg-[#092d18] text-white text-[11px] sm:text-xs font-semibold py-1.5 px-2 sm:px-4 text-center border-b border-[#0f4826] shadow-xs">
         <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-center gap-x-2 sm:gap-x-3 gap-y-0.5">
