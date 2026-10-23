@@ -18,7 +18,7 @@ from django.contrib.auth.models import User
 from store.models import Order, OrderItem, Product, Category, Review, calculate_pathao_delivery_fee
 from store.pathao import PathaoCourierService
 from store.steadfast import SteadfastCourierService
-from .models import Expense, ExpenseCategory, DamageLog, OrderReturn, StockLog, ProductionBatch, BatchItem, BlacklistedCustomer, StaffSecurityProfile, DashboardSecurityConfig
+from .models import Expense, ExpenseCategory, DamageLog, OrderReturn, StockLog, ProductionBatch, BatchItem, BlacklistedCustomer, StaffSecurityProfile, DashboardSecurityConfig, PriceHistory
 
 
 def is_staff_user(user):
@@ -571,8 +571,18 @@ def dashboard_index(request):
     # Recent orders preview for analytics dashboard
     recent_orders = Order.objects.all().prefetch_related('items')[:5]
 
+    # Price increase/decrease history preview for analytics dashboard
+    recent_price_changes = PriceHistory.objects.select_related('product', 'changed_by').all().order_by('-created_at')[:6]
+    price_stats = {
+        'total_events': PriceHistory.objects.count(),
+        'increases': PriceHistory.objects.filter(change_type='INCREASE').count(),
+        'decreases': PriceHistory.objects.filter(change_type='DECREASE').count(),
+    }
+
     context = {
         'recent_orders': recent_orders,
+        'recent_price_changes': recent_price_changes,
+        'price_stats': price_stats,
         'best_seller': best_seller,
         'total_orders_count': total_orders_count,
         'today_orders_count': today_orders_count,
@@ -1526,6 +1536,11 @@ def stock_manager(request):
                 if shelf_life_val is not None:
                     product.shelf_life = shelf_life_val.strip()
 
+                price_reason = request.POST.get('price_change_reason', '').strip()
+                if price_reason:
+                    product._price_change_reason = price_reason
+                product._price_changed_by = request.user if request.user.is_authenticated else None
+
                 product.save()
                 messages.success(request, f'Product "{product.name}" has been successfully updated.')
             except Exception as e:
@@ -1668,6 +1683,10 @@ def stock_manager(request):
                             notes=note or f"Stock count updated from {prev_stock} to {new_stock}",
                             created_by=request.user if request.user.is_authenticated else None
                         )
+                price_reason = request.POST.get('price_change_reason', '').strip() or note
+                if price_reason:
+                    product._price_change_reason = price_reason
+                product._price_changed_by = request.user if request.user.is_authenticated else None
                 product.save()
                 messages.success(request, f'Updated price & inventory for "{product.name}".')
             except ValueError:
@@ -1863,8 +1882,18 @@ def stock_manager(request):
                 pass
     suggested_batch_ref = f"Batch #{next_batch_num}"
 
+    # Map latest price changes for products
+    latest_price_changes_map = {}
+    for ph in PriceHistory.objects.filter(change_type__in=['INCREASE', 'DECREASE']).order_by('created_at'):
+        latest_price_changes_map[ph.product_id] = ph
+    for p in products:
+        p.latest_price_change = latest_price_changes_map.get(p.id)
+
+    recent_price_logs = PriceHistory.objects.select_related('product', 'changed_by').all().order_by('-created_at')[:6]
+
     context = {
         'products': products,
+        'recent_price_logs': recent_price_logs,
         'all_catalog_products': all_products,
         'suggested_batch_ref': suggested_batch_ref,
         'today_date': timezone.now().date().strftime('%Y-%m-%d'),
@@ -2553,6 +2582,137 @@ def product_stock_ledger(request, product_id):
     """Direct shortcut to view ledger of a specific product"""
     product = get_object_or_404(Product, id=product_id)
     return redirect(f"{reverse('dashboard:stock_ledger')}?product={product.id}&date_range=all")
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def price_history(request):
+    """
+    Comprehensive Price History & Audit Trail (মূল্য পরিবর্তনের খতিয়ান).
+    Allows filtering by Product, Change Type (All, Increase, Decrease, Initial), Date Range, and Search keywords.
+    """
+    product_filter = request.GET.get('product', '')
+    type_filter = request.GET.get('type', '')
+    date_filter = request.GET.get('date_range', 'all')
+    search_query = request.GET.get('q', '').strip()
+
+    history_qs = PriceHistory.objects.select_related('product', 'changed_by').all().order_by('-created_at')
+
+    # 1. Product Filter
+    selected_product = None
+    if product_filter:
+        try:
+            prod_id = int(product_filter)
+            history_qs = history_qs.filter(product_id=prod_id)
+            selected_product = Product.objects.filter(id=prod_id).first()
+        except ValueError:
+            pass
+
+    # 2. Type Filter
+    if type_filter and type_filter in ['INCREASE', 'DECREASE', 'INITIAL']:
+        history_qs = history_qs.filter(change_type=type_filter)
+
+    # 3. Search Query
+    if search_query:
+        history_qs = history_qs.filter(
+            Q(product__name__icontains=search_query) |
+            Q(reason__icontains=search_query) |
+            Q(notes__icontains=search_query) |
+            Q(changed_by__username__icontains=search_query)
+        )
+
+    # 4. Date Range Filter
+    now = timezone.localtime(timezone.now())
+    today = now.date()
+    today_start = timezone.make_aware(datetime.datetime.combine(today, datetime.time.min))
+    today_end = today_start + timedelta(days=1)
+
+    if date_filter == 'today':
+        history_qs = history_qs.filter(created_at__gte=today_start, created_at__lt=today_end)
+    elif date_filter == '7days':
+        start_date = today - datetime.timedelta(days=7)
+        history_qs = history_qs.filter(created_at__date__gte=start_date)
+    elif date_filter == '30days':
+        start_date = today - datetime.timedelta(days=30)
+        history_qs = history_qs.filter(created_at__date__gte=start_date)
+    elif date_filter == 'this_month':
+        start_date = today.replace(day=1)
+        history_qs = history_qs.filter(created_at__date__gte=start_date)
+    elif date_filter == 'custom':
+        custom_from = request.GET.get('from')
+        custom_to = request.GET.get('to')
+        if custom_from:
+            try:
+                from_date = datetime.datetime.strptime(custom_from, '%Y-%m-%d').date()
+                history_qs = history_qs.filter(created_at__date__gte=from_date)
+            except ValueError:
+                pass
+        if custom_to:
+            try:
+                to_date = datetime.datetime.strptime(custom_to, '%Y-%m-%d').date()
+                history_qs = history_qs.filter(created_at__date__lte=to_date)
+            except ValueError:
+                pass
+
+    # Summary Stats
+    total_records = history_qs.count()
+    increases_count = history_qs.filter(change_type='INCREASE').count()
+    decreases_count = history_qs.filter(change_type='DECREASE').count()
+    initial_count = history_qs.filter(change_type='INITIAL').count()
+    distinct_products_count = history_qs.values('product').distinct().count()
+
+    # Pagination
+    try:
+        per_page = int(request.GET.get('per_page', 10))
+    except (ValueError, TypeError):
+        per_page = 10
+    if per_page not in [5, 10, 20, 50, 100]:
+        per_page = 10
+
+    paginator = Paginator(history_qs, per_page)
+    page_number = request.GET.get('page', 1)
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    try:
+        elided_page_range = paginator.get_elided_page_range(
+            page_obj.number, on_each_side=2, on_ends=1
+        )
+    except Exception:
+        elided_page_range = paginator.page_range
+
+    all_products = Product.objects.all().order_by('name')
+
+    context = {
+        'page_obj': page_obj,
+        'records': page_obj,
+        'paginator': paginator,
+        'elided_page_range': elided_page_range,
+        'per_page': per_page,
+        'all_products': all_products,
+        'selected_product': selected_product,
+        'product_filter': product_filter,
+        'type_filter': type_filter,
+        'date_filter': date_filter,
+        'search_query': search_query,
+        'total_records': total_records,
+        'increases_count': increases_count,
+        'decreases_count': decreases_count,
+        'initial_count': initial_count,
+        'distinct_products_count': distinct_products_count,
+        'can_edit': can_user_edit(request.user),
+    }
+    return render(request, 'dashboard/price_history.html', context)
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def product_price_history(request, product_id):
+    """Direct shortcut to view price history of a specific product"""
+    product = get_object_or_404(Product, id=product_id)
+    return redirect(f"{reverse('dashboard:price_history')}?product={product.id}&date_range=all")
 
 
 def sync_order_return_state(order_return, new_status, courier_fee=None, notes=None, restock_if_intact=True, user=None):

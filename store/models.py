@@ -83,13 +83,67 @@ class Product(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = slugify(self.name)
+
+        is_new = self.pk is None
+        old_price = None
+        old_orig_price = None
+        if not is_new:
+            try:
+                orig = Product.objects.filter(pk=self.pk).values('price_bdt', 'original_price_bdt').first()
+                if orig:
+                    old_price = orig['price_bdt']
+                    old_orig_price = orig['original_price_bdt']
+            except Exception:
+                pass
+
         super().save(*args, **kwargs)
+
         if self.image and self.image.name and (not self.image_url or self.image_url.endswith('pickle_default.png')):
             clean_name = self.image.name.lstrip('/\\').replace('\\', '/')
             new_url = f"/media/{clean_name}"
             if self.image_url != new_url:
                 Product.objects.filter(pk=self.pk).update(image_url=new_url)
                 self.image_url = new_url
+
+        # Auto-track Price History
+        try:
+            from dashboard.models import PriceHistory
+            from decimal import Decimal
+
+            if is_new and self.price_bdt is not None:
+                PriceHistory.objects.create(
+                    product=self,
+                    old_price=self.price_bdt,
+                    new_price=self.price_bdt,
+                    old_original_price=self.original_price_bdt,
+                    new_original_price=self.original_price_bdt,
+                    change_type='INITIAL',
+                    reason=getattr(self, '_price_change_reason', '') or 'Initial Catalog Price',
+                    notes=getattr(self, '_price_notes', ''),
+                    changed_by=getattr(self, '_price_changed_by', None)
+                )
+            elif old_price is not None and self.price_bdt is not None:
+                price_changed = Decimal(str(old_price)) != Decimal(str(self.price_bdt))
+                orig_changed = (old_orig_price is None and self.original_price_bdt is not None) or \
+                               (old_orig_price is not None and self.original_price_bdt is None) or \
+                               (old_orig_price is not None and self.original_price_bdt is not None and Decimal(str(old_orig_price)) != Decimal(str(self.original_price_bdt)))
+
+                if price_changed or orig_changed:
+                    ch_type = 'INCREASE' if Decimal(str(self.price_bdt)) > Decimal(str(old_price)) else ('DECREASE' if Decimal(str(self.price_bdt)) < Decimal(str(old_price)) else 'INCREASE')
+                    PriceHistory.objects.create(
+                        product=self,
+                        old_price=old_price,
+                        new_price=self.price_bdt,
+                        old_original_price=old_orig_price,
+                        new_original_price=self.original_price_bdt,
+                        change_type=ch_type,
+                        reason=getattr(self, '_price_change_reason', '') or 'Price revised in Inventory / Catalog',
+                        notes=getattr(self, '_price_notes', ''),
+                        changed_by=getattr(self, '_price_changed_by', None)
+                    )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to record PriceHistory: {e}")
 
     @property
     def is_available_in_stock(self):

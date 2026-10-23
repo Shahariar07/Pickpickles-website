@@ -1,0 +1,555 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Price History & Audit Trail (মূল্য পরিবর্তনের ইতিহাস) | Pickpickles Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Top Action & Title Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-gray-200 shadow-xs">
+        <div class="min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-amber-100 text-amber-900 shrink-0">
+                    <i class="fa-solid fa-tags"></i>
+                    Price Audit Trail (মূল্য খতিয়ান)
+                </span>
+                <span class="text-xs text-gray-400 font-semibold">• {{ total_records }} price records tracked</span>
+            </div>
+            <h1 class="font-display font-black text-xl sm:text-2xl lg:text-3xl text-gray-900 mt-1.5 break-words leading-tight">
+                Product Price Change History (মূল্য পরিবর্তনের ইতিহাস)
+            </h1>
+            <p class="text-xs sm:text-sm text-gray-500 mt-1 break-words">
+                Complete audit trail of all pickle product price hikes, price cuts, promotional discounts, and catalog revisions.
+            </p>
+        </div>
+        
+        <div class="flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1 sm:pb-0 scrollbar-none shrink-0">
+            <a href="{% url 'dashboard:stock_manager' %}" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs px-3.5 py-2.5 rounded-xl border border-gray-300 flex items-center gap-1.5 transition active:scale-95 shrink-0">
+                <i class="fa-solid fa-boxes-stacked text-brand-700"></i>
+                <span>Inventory & Products</span>
+            </a>
+            
+            <a href="{% url 'dashboard:business_profitability' %}" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs px-3.5 py-2.5 rounded-xl border border-emerald-300 flex items-center gap-1.5 transition active:scale-95 shrink-0" title="Cost & profit margin analysis">
+                <i class="fa-solid fa-calculator text-emerald-600"></i>
+                <span>Profitability</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Quick Stats Summary Cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <!-- Total Price Events -->
+        <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs flex items-center justify-between">
+            <div>
+                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Total Price Events</span>
+                <span class="font-display font-black text-xl sm:text-2xl text-gray-900 mt-0.5">{{ total_records }}</span>
+                <span class="text-[10px] text-gray-400 block mt-0.5">All time records</span>
+            </div>
+            <span class="w-10 h-10 rounded-xl bg-gray-100 text-gray-700 flex items-center justify-center text-sm font-black shrink-0">
+                <i class="fa-solid fa-list-check"></i>
+            </span>
+        </div>
+
+        <!-- Price Increases (দাম বৃদ্ধি) -->
+        <div class="bg-white p-4 rounded-2xl border border-emerald-200 bg-emerald-50/20 shadow-xs flex items-center justify-between">
+            <div>
+                <span class="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">Price Increases 📈</span>
+                <span class="font-display font-black text-xl sm:text-2xl text-emerald-700 mt-0.5">+{{ increases_count }}</span>
+                <span class="text-[10px] text-emerald-600 font-semibold block mt-0.5">মূল্য বৃদ্ধি রেকর্ড</span>
+            </div>
+            <span class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-sm font-black shrink-0">
+                <i class="fa-solid fa-arrow-trend-up"></i>
+            </span>
+        </div>
+
+        <!-- Price Decreases (দাম হ্রাস) -->
+        <div class="bg-white p-4 rounded-2xl border border-blue-200 bg-blue-50/20 shadow-xs flex items-center justify-between">
+            <div>
+                <span class="text-[10px] font-bold text-blue-800 uppercase tracking-wider block">Price Decreases 📉</span>
+                <span class="font-display font-black text-xl sm:text-2xl text-blue-700 mt-0.5">-{{ decreases_count }}</span>
+                <span class="text-[10px] text-blue-600 font-semibold block mt-0.5">মূল্য হ্রাস / অফার</span>
+            </div>
+            <span class="w-10 h-10 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center text-sm font-black shrink-0">
+                <i class="fa-solid fa-arrow-trend-down"></i>
+            </span>
+        </div>
+
+        <!-- Adjusted Products Count -->
+        <div class="bg-white p-4 rounded-2xl border border-amber-200 bg-amber-50/20 shadow-xs flex items-center justify-between">
+            <div>
+                <span class="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">Active Products</span>
+                <span class="font-display font-black text-xl sm:text-2xl text-amber-800 mt-0.5">{{ distinct_products_count }}</span>
+                <span class="text-[10px] text-amber-700 font-semibold block mt-0.5">With price history</span>
+            </div>
+            <span class="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center text-sm font-black shrink-0">
+                <i class="fa-solid fa-jar"></i>
+            </span>
+        </div>
+    </div>
+
+    <!-- Filter & Search Toolbar -->
+    <div class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-xs space-y-4">
+        <form method="GET" action="{% url 'dashboard:price_history' %}" class="space-y-3">
+            
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                <!-- Search Input -->
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                    <input type="text" name="q" value="{{ search_query }}" 
+                        placeholder="Search by product name, reason, notes, admin username..." 
+                        class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition">
+                </div>
+
+                <!-- Product Selector -->
+                <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                    <label for="prod_select" class="text-xs font-bold text-gray-500 shrink-0">Product:</label>
+                    <select id="prod_select" name="product" onchange="this.form.submit()" class="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-500 w-full sm:w-56 cursor-pointer">
+                        <option value="">All Pickle Products (সকল প্রডাক্ট)</option>
+                        {% for prod in all_products %}
+                        <option value="{{ prod.id }}" {% if product_filter == prod.id|stringformat:"s" %}selected{% endif %}>
+                            {{ prod.name }} (৳{{ prod.price_bdt|floatformat:0 }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Type Selector -->
+                <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                    <label for="type_select" class="text-xs font-bold text-gray-500 shrink-0">Type:</label>
+                    <select id="type_select" name="type" onchange="this.form.submit()" class="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer">
+                        <option value="">All Event Types (সব)</option>
+                        <option value="INCREASE" {% if type_filter == 'INCREASE' %}selected{% endif %}>Price Increase 📈 (দাম বৃদ্ধি)</option>
+                        <option value="DECREASE" {% if type_filter == 'DECREASE' %}selected{% endif %}>Price Decrease 📉 (দাম হ্রাস)</option>
+                        <option value="INITIAL" {% if type_filter == 'INITIAL' %}selected{% endif %}>Initial Price 🏷️ (প্রাথমিক)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Date Range Filter Tabs -->
+            <div class="flex items-center justify-between gap-2 pt-3 border-t border-gray-100 flex-wrap">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                    <span class="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mr-1">Time:</span>
+                    <a href="?{% if product_filter %}product={{ product_filter }}&{% endif %}{% if type_filter %}type={{ type_filter }}&{% endif %}{% if search_query %}q={{ search_query }}&{% endif %}date_range=all" 
+                        class="px-2.5 py-1 rounded-lg text-xs font-bold transition {% if date_filter == 'all' %}bg-brand-700 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+                        All Time
+                    </a>
+                    <a href="?{% if product_filter %}product={{ product_filter }}&{% endif %}{% if type_filter %}type={{ type_filter }}&{% endif %}{% if search_query %}q={{ search_query }}&{% endif %}date_range=today" 
+                        class="px-2.5 py-1 rounded-lg text-xs font-bold transition {% if date_filter == 'today' %}bg-brand-700 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+                        Today
+                    </a>
+                    <a href="?{% if product_filter %}product={{ product_filter }}&{% endif %}{% if type_filter %}type={{ type_filter }}&{% endif %}{% if search_query %}q={{ search_query }}&{% endif %}date_range=7days" 
+                        class="px-2.5 py-1 rounded-lg text-xs font-bold transition {% if date_filter == '7days' %}bg-brand-700 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+                        Last 7 Days
+                    </a>
+                    <a href="?{% if product_filter %}product={{ product_filter }}&{% endif %}{% if type_filter %}type={{ type_filter }}&{% endif %}{% if search_query %}q={{ search_query }}&{% endif %}date_range=30days" 
+                        class="px-2.5 py-1 rounded-lg text-xs font-bold transition {% if date_filter == '30days' %}bg-brand-700 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+                        Last 30 Days
+                    </a>
+                    <a href="?{% if product_filter %}product={{ product_filter }}&{% endif %}{% if type_filter %}type={{ type_filter }}&{% endif %}{% if search_query %}q={{ search_query }}&{% endif %}date_range=this_month" 
+                        class="px-2.5 py-1 rounded-lg text-xs font-bold transition {% if date_filter == 'this_month' %}bg-brand-700 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+                        This Month
+                    </a>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    {% if product_filter or type_filter or search_query or date_filter != 'all' %}
+                    <a href="{% url 'dashboard:price_history' %}" class="text-xs font-bold text-rose-600 hover:text-rose-800 flex items-center gap-1">
+                        <i class="fa-solid fa-xmark"></i> Clear Filters
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+        </form>
+    </div>
+
+    <!-- Active Product Filter Notification Banner (if filtered to single product) -->
+    {% if selected_product %}
+    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+            {% if selected_product.image_url %}
+            <img src="{{ selected_product.image_url }}" alt="{{ selected_product.name }}" class="w-12 h-12 rounded-xl object-cover border border-amber-200 shadow-2xs">
+            {% else %}
+            <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-black text-lg">🥒</div>
+            {% endif %}
+            <div>
+                <span class="text-[10px] font-black uppercase text-amber-800 tracking-wider">Filtered Product</span>
+                <h3 class="font-display font-black text-gray-900 text-base leading-snug">{{ selected_product.name }}</h3>
+                <p class="text-xs text-gray-600 mt-0.5">
+                    Current Price: <strong class="font-display font-black text-gray-900">৳{{ selected_product.price_bdt|floatformat:0 }}</strong>
+                    {% if selected_product.original_price_bdt %}
+                    <span class="line-through text-gray-400 text-[11px] ml-1">৳{{ selected_product.original_price_bdt|floatformat:0 }}</span>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'dashboard:stock_manager' %}?q={{ selected_product.name|urlencode }}" class="px-3 py-1.5 rounded-xl bg-white border border-amber-300 text-amber-900 font-bold text-xs hover:bg-amber-100 transition shadow-2xs">
+                Edit in Inventory
+            </a>
+            <a href="{% url 'dashboard:price_history' %}" class="px-3 py-1.5 rounded-xl bg-amber-800 text-white font-bold text-xs hover:bg-amber-900 transition shadow-2xs">
+                View All Products
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Price History List Container -->
+    <div class="bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-gray-200 shadow-xs space-y-4">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-gray-100 gap-2">
+            <div>
+                <h3 class="font-display font-black text-base sm:text-lg text-gray-900 flex items-center gap-2">
+                    <i class="fa-solid fa-timeline text-brand-600"></i>
+                    Chronological Price Log (কালানুক্রমিক মূল্য বিবরণী)
+                </h3>
+                <p class="text-xs text-gray-400">All price changes logged chronologically with audit context</p>
+            </div>
+            <span class="text-xs font-bold text-gray-500 bg-gray-100 px-3 py-1.5 rounded-xl self-start sm:self-auto">
+                {{ total_records }} Events Recorded
+            </span>
+        </div>
+
+        <!-- Desktop Table View (>= lg screens) -->
+        <div class="hidden lg:block overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="bg-gray-50 text-[10px] font-extrabold text-gray-500 uppercase tracking-wider rounded-xl">
+                        <th class="py-3 px-3 rounded-l-xl">Date & Time</th>
+                        <th class="py-3 px-3">Product</th>
+                        <th class="py-3 px-3 text-center">Change Type</th>
+                        <th class="py-3 px-3 text-right">Previous Price</th>
+                        <th class="py-3 px-3 text-center">➔</th>
+                        <th class="py-3 px-3 text-left">New Price</th>
+                        <th class="py-3 px-3 text-center">Difference</th>
+                        <th class="py-3 px-3">Reason / Context</th>
+                        <th class="py-3 px-3 text-right rounded-r-xl">Changed By</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for rec in records %}
+                    <tr class="hover:bg-gray-50/80 transition-colors">
+                        
+                        <!-- Date -->
+                        <td class="py-3 px-3 font-semibold text-gray-600 whitespace-nowrap">
+                            {{ rec.created_at|date:"M d, Y" }}
+                            <span class="block text-[10px] text-gray-400">{{ rec.created_at|date:"h:i A" }}</span>
+                        </td>
+
+                        <!-- Product -->
+                        <td class="py-3 px-3">
+                            <div class="flex items-center gap-2.5">
+                                {% if rec.product.image_url %}
+                                <img src="{{ rec.product.image_url }}" alt="{{ rec.product.name }}" class="w-8 h-8 rounded-lg object-cover border border-gray-200 shrink-0">
+                                {% else %}
+                                <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-xs shrink-0">🥒</div>
+                                {% endif %}
+                                <div class="min-w-0">
+                                    <a href="{% url 'dashboard:product_price_history' rec.product.id %}" class="font-bold text-gray-900 hover:text-brand-700 block truncate" title="Filter this product">
+                                        {{ rec.product.name }}
+                                    </a>
+                                    <span class="text-[10px] text-gray-400">{{ rec.product.jar_weight_grams }}g • {{ rec.product.category.name|default:"Artisan" }}</span>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Change Type Badge -->
+                        <td class="py-3 px-3 text-center whitespace-nowrap">
+                            {% if rec.change_type == 'INCREASE' %}
+                            <span class="inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                <i class="fa-solid fa-arrow-trend-up text-[9px]"></i>
+                                Increased (বৃদ্ধি)
+                            </span>
+                            {% elif rec.change_type == 'DECREASE' %}
+                            <span class="inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                                <i class="fa-solid fa-arrow-trend-down text-[9px]"></i>
+                                Decreased (হ্রাস)
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200">
+                                <i class="fa-solid fa-tag text-[9px]"></i>
+                                Initial Price (প্রাথমিক)
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Previous Price -->
+                        <td class="py-3 px-3 text-right font-display font-bold text-gray-500 whitespace-nowrap">
+                            ৳{{ rec.old_price|floatformat:0 }}
+                            {% if rec.old_original_price %}
+                            <span class="text-[9px] text-gray-400 block line-through">৳{{ rec.old_original_price|floatformat:0 }}</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Arrow -->
+                        <td class="py-3 px-3 text-center text-gray-300 font-bold">➔</td>
+
+                        <!-- New Price -->
+                        <td class="py-3 px-3 text-left font-display font-black text-gray-900 whitespace-nowrap">
+                            ৳{{ rec.new_price|floatformat:0 }}
+                            {% if rec.new_original_price %}
+                            <span class="text-[9px] text-gray-400 block line-through font-normal">৳{{ rec.new_original_price|floatformat:0 }}</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Difference / Delta -->
+                        <td class="py-3 px-3 text-center whitespace-nowrap">
+                            {% if rec.change_type == 'INITIAL' %}
+                            <span class="text-[10px] font-bold text-gray-400">-</span>
+                            {% elif rec.price_delta > 0 %}
+                            <span class="inline-flex items-center gap-0.5 text-xs font-display font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
+                                +৳{{ rec.price_delta|floatformat:0 }}
+                                <span class="text-[9px] font-normal text-emerald-600">({{ rec.percentage_change }}%)</span>
+                            </span>
+                            {% elif rec.price_delta < 0 %}
+                            <span class="inline-flex items-center gap-0.5 text-xs font-display font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200">
+                                ৳{{ rec.price_delta|floatformat:0 }}
+                                <span class="text-[9px] font-normal text-blue-600">({{ rec.percentage_change }}%)</span>
+                            </span>
+                            {% else %}
+                            <span class="text-[10px] font-bold text-gray-400">Discount changed</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Reason / Notes -->
+                        <td class="py-3 px-3 text-gray-700 max-w-xs">
+                            <span class="font-semibold block truncate text-xs">{{ rec.reason|default:"No reason specified" }}</span>
+                            {% if rec.notes %}
+                            <span class="text-[10px] text-gray-400 block truncate">{{ rec.notes }}</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Changed By -->
+                        <td class="py-3 px-3 text-right whitespace-nowrap text-gray-500">
+                            {% if rec.changed_by %}
+                            <span class="font-bold text-gray-800 text-[11px] block">{{ rec.changed_by.get_full_name|default:rec.changed_by.username }}</span>
+                            <span class="text-[9px] text-gray-400">@{{ rec.changed_by.username }}</span>
+                            {% else %}
+                            <span class="text-[10px] text-gray-400">System Admin</span>
+                            {% endif %}
+                        </td>
+
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="py-12 text-center text-gray-400 text-xs font-medium">
+                            <i class="fa-solid fa-tags text-3xl text-gray-300 mb-2 block"></i>
+                            কোন মূল্য পরিবর্তনের রেকর্ড পাওয়া যায়নি (No price history records found).
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile Card View (< lg screens) -->
+        <div class="block lg:hidden space-y-2.5">
+            {% for rec in records %}
+            <div class="bg-white border border-gray-200 rounded-xl p-3 shadow-2xs hover:border-gray-300 transition-all {% if rec.change_type == 'INCREASE' %}border-l-4 border-l-emerald-500{% elif rec.change_type == 'DECREASE' %}border-l-4 border-l-blue-500{% else %}border-l-4 border-l-gray-400{% endif %}">
+                <!-- Top Row: Badge + Date -->
+                <div class="flex items-center justify-between gap-2">
+                    {% if rec.change_type == 'INCREASE' %}
+                    <span class="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200/70">
+                        <i class="fa-solid fa-arrow-trend-up text-[9px] text-emerald-600"></i>
+                        Increased (বৃদ্ধি)
+                    </span>
+                    {% elif rec.change_type == 'DECREASE' %}
+                    <span class="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200/70">
+                        <i class="fa-solid fa-arrow-trend-down text-[9px] text-blue-600"></i>
+                        Decreased (হ্রাস)
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-gray-100 text-gray-700 border border-gray-200/70">
+                        <i class="fa-solid fa-tag text-[9px] text-gray-500"></i>
+                        Initial (প্রাথমিক)
+                    </span>
+                    {% endif %}
+
+                    <span class="text-[11px] font-semibold text-gray-500 flex items-center gap-1">
+                        <i class="fa-regular fa-clock text-[10px] text-gray-400"></i>
+                        {{ rec.created_at|date:"M d, Y • h:i A" }}
+                    </span>
+                </div>
+
+                <!-- Middle Row: Product + Price Shift -->
+                <div class="flex items-start justify-between gap-2.5 mt-2 pt-2 border-t border-gray-100/80">
+                    <div class="min-w-0 flex-1">
+                        <a href="{% url 'dashboard:product_price_history' rec.product.id %}" class="font-bold text-xs text-gray-900 hover:text-brand-700 block truncate leading-snug">
+                            {{ rec.product.name }}
+                        </a>
+                        <span class="text-[10px] text-gray-400 mt-0.5 block">{{ rec.product.jar_weight_grams }}g • {{ rec.product.category.name|default:"Pickles" }}</span>
+                        
+                        {% if rec.reason %}
+                        <div class="mt-1 text-[11px] text-gray-600 bg-gray-50 p-1.5 rounded-lg border border-gray-100">
+                            <span class="font-semibold text-gray-500 text-[10px] uppercase">Reason:</span> {{ rec.reason }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Price Shift Numbers -->
+                    <div class="text-right shrink-0">
+                        <div class="flex items-center gap-1.5 justify-end">
+                            <span class="text-xs font-bold text-gray-400 line-through">৳{{ rec.old_price|floatformat:0 }}</span>
+                            <span class="text-gray-300 font-bold text-xs">➔</span>
+                            <span class="font-display font-black text-sm sm:text-base text-gray-900">৳{{ rec.new_price|floatformat:0 }}</span>
+                        </div>
+                        {% if rec.price_delta > 0 %}
+                        <span class="inline-flex items-center gap-0.5 text-[10px] font-display font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 mt-1">
+                            +৳{{ rec.price_delta|floatformat:0 }} (+{{ rec.percentage_change }}%)
+                        </span>
+                        {% elif rec.price_delta < 0 %}
+                        <span class="inline-flex items-center gap-0.5 text-[10px] font-display font-black text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 mt-1">
+                            ৳{{ rec.price_delta|floatformat:0 }} ({{ rec.percentage_change }}%)
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Bottom Row: Changed By + Link -->
+                <div class="flex items-center justify-between text-[11px] mt-2 pt-1.5 border-t border-gray-100/60 text-gray-400">
+                    <span class="text-[10px] text-gray-500 truncate">
+                        By: <strong class="text-gray-700 font-bold">{% if rec.changed_by %}{{ rec.changed_by.username }}{% else %}System{% endif %}</strong>
+                    </span>
+                    <a href="{% url 'dashboard:product_price_history' rec.product.id %}" class="text-[11px] font-bold text-brand-700 hover:text-brand-800 flex items-center gap-1 shrink-0 ml-2">
+                        Product Log <i class="fa-solid fa-chevron-right text-[8px]"></i>
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="py-8 text-center text-gray-400 text-xs font-medium bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                <i class="fa-solid fa-tags text-2xl text-gray-300 mb-1.5 block"></i>
+                কোন মূল্য পরিবর্তনের রেকর্ড পাওয়া যায়নি (No price history found).
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination Footer -->
+        <div class="pt-4 border-t border-gray-100 flex flex-col gap-3 print:hidden text-xs">
+            <!-- Left/Top: Showing entries info + Per Page select -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-gray-500">
+                <span class="text-[11px] sm:text-xs">
+                    Showing <strong class="text-gray-900 font-bold">{{ page_obj.start_index|default:0 }}</strong> to 
+                    <strong class="text-gray-900 font-bold">{{ page_obj.end_index|default:0 }}</strong> of 
+                    <strong class="text-gray-900 font-bold">{{ total_records }}</strong> price records
+                </span>
+
+                <form method="GET" action="" class="flex items-center gap-1.5 self-start sm:self-auto">
+                    {% if product_filter %}<input type="hidden" name="product" value="{{ product_filter }}">{% endif %}
+                    {% if type_filter %}<input type="hidden" name="type" value="{{ type_filter }}">{% endif %}
+                    {% if date_filter %}<input type="hidden" name="date_range" value="{{ date_filter }}">{% endif %}
+                    {% if search_query %}<input type="hidden" name="q" value="{{ search_query }}">{% endif %}
+                    {% if request.GET.from %}<input type="hidden" name="from" value="{{ request.GET.from }}">{% endif %}
+                    {% if request.GET.to %}<input type="hidden" name="to" value="{{ request.GET.to }}">{% endif %}
+                    <label for="per_page_select" class="text-[10px] sm:text-[11px] text-gray-400 font-bold uppercase tracking-wider">Per page:</label>
+                    <select id="per_page_select" name="per_page" onchange="this.form.submit()" class="bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-2 py-1 text-xs font-bold text-gray-700 cursor-pointer focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        <option value="5" {% if per_page == 5 %}selected{% endif %}>5</option>
+                        <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+                        <option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+                        <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                        <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+                    </select>
+                </form>
+            </div>
+
+            <!-- Pagination Buttons -->
+            {% if total_records > 0 %}
+            <!-- Mobile Pagination Controls (< sm) -->
+            <div class="sm:hidden flex items-center justify-between gap-2 pt-2 border-t border-gray-100">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}&product={{ product_filter|default:'' }}&type={{ type_filter|default:'' }}&date_range={{ date_filter|default:'all' }}&q={{ search_query|urlencode }}&from={{ request.GET.from|default:'' }}&to={{ request.GET.to|default:'' }}&per_page={{ per_page }}" class="flex-1 py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 text-gray-700 bg-gray-50 hover:bg-gray-100 font-bold text-xs border border-gray-200 shadow-2xs">
+                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                    <span>Prev</span>
+                </a>
+                {% else %}
+                <span class="flex-1 py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 text-gray-300 bg-gray-50 font-bold text-xs border border-gray-100 cursor-not-allowed">
+                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                    <span>Prev</span>
+                </span>
+                {% endif %}
+
+                <span class="text-xs text-gray-700 font-bold px-3 py-1.5 bg-gray-100 rounded-lg whitespace-nowrap">
+                    {{ page_obj.number }} / {{ paginator.num_pages }}
+                </span>
+
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}&product={{ product_filter|default:'' }}&type={{ type_filter|default:'' }}&date_range={{ date_filter|default:'all' }}&q={{ search_query|urlencode }}&from={{ request.GET.from|default:'' }}&to={{ request.GET.to|default:'' }}&per_page={{ per_page }}" class="flex-1 py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 text-gray-700 bg-gray-50 hover:bg-gray-100 font-bold text-xs border border-gray-200 shadow-2xs">
+                    <span>Next</span>
+                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                </a>
+                {% else %}
+                <span class="flex-1 py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 text-gray-300 bg-gray-50 font-bold text-xs border border-gray-100 cursor-not-allowed">
+                    <span>Next</span>
+                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                </span>
+                {% endif %}
+            </div>
+
+            <!-- Desktop Pagination Controls (>= sm) -->
+            <div class="hidden sm:flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                <span class="text-xs text-gray-600 font-bold bg-gray-50 px-2.5 py-1 rounded-xl border border-gray-200">
+                    Page <strong class="text-gray-900 font-black">{{ page_obj.number }}</strong> of <strong class="text-gray-900 font-black">{{ paginator.num_pages }}</strong>
+                </span>
+
+                <nav class="flex items-center gap-1 text-xs font-bold" aria-label="Price History Pagination">
+                    {% if page_obj.has_previous %}
+                    <a href="?page=1&product={{ product_filter|default:'' }}&type={{ type_filter|default:'' }}&date_range={{ date_filter|default:'all' }}&q={{ search_query|urlencode }}&from={{ request.GET.from|default:'' }}&to={{ request.GET.to|default:'' }}&per_page={{ per_page }}" class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="First Page">
+                        <i class="fa-solid fa-angles-left text-[10px]"></i>
+                    </a>
+                    <a href="?page={{ page_obj.previous_page_number }}&product={{ product_filter|default:'' }}&type={{ type_filter|default:'' }}&date_range={{ date_filter|default:'all' }}&q={{ search_query|urlencode }}&from={{ request.GET.from|default:'' }}&to={{ request.GET.to|default:'' }}&per_page={{ per_page }}" class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="Previous Page">
+                        <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                        <span class="text-[11px]">Prev</span>
+                    </a>
+                    {% else %}
+                    <span class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-300 border border-gray-100 cursor-not-allowed">
+                        <i class="fa-solid fa-angles-left text-[10px]"></i>
+                    </span>
+                    <span class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-300 border border-gray-100 cursor-not-allowed">
+                        <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                        <span class="text-[11px]">Prev</span>
+                    </span>
+                    {% endif %}
+
+                    <!-- Page Number Pills -->
+                    <div class="flex items-center gap-1 mx-1">
+                        {% for p in elided_page_range %}
+                            {% if p == page_obj.paginator.ELLIPSIS or p == '…' or p == '...' %}
+                            <span class="w-8 h-8 flex items-center justify-center text-gray-400 font-bold text-xs">…</span>
+                            {% elif p == page_obj.number %}
+                            <span class="w-8 h-8 rounded-xl flex items-center justify-center bg-brand-700 text-white font-extrabold text-xs shadow-xs ring-2 ring-brand-500/20">
+                                {{ p }}
+                            </span>
+                            {% else %}
+                            <a href="?page={{ p }}&product={{ product_filter|default:'' }}&type={{ type_filter|default:'' }}&date_range={{ date_filter|default:'all' }}&q={{ search_query|urlencode }}&from={{ request.GET.from|default:'' }}&to={{ request.GET.to|default:'' }}&per_page={{ per_page }}" class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-700 hover:bg-brand-50 hover:text-brand-900 hover:border-brand-300 transition border border-gray-200 text-xs shadow-2xs">
+                                {{ p }}
+                            </a>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}&product={{ product_filter|default:'' }}&type={{ type_filter|default:'' }}&date_range={{ date_filter|default:'all' }}&q={{ search_query|urlencode }}&from={{ request.GET.from|default:'' }}&to={{ request.GET.to|default:'' }}&per_page={{ per_page }}" class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition border border-gray-200 shadow-2xs" title="Next Page">
+                        <span class="text-[11px]">Next</span>
+                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                    </a>
+                    <a href="?page={{ paginator.num_pages }}&product={{ product_filter|default:'' }}&type={{ type_filter|default:'' }}&date_range={{ date_filter|default:'all' }}&q={{ search_query|urlencode }}&from={{ request.GET.from|default:'' }}&to={{ request.GET.to|default:'' }}&per_page={{ per_page }}" class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 hover:bg-gray-100 border border-gray-200 shadow-2xs" title="Last Page">
+                        <i class="fa-solid fa-angles-right text-[10px]"></i>
+                    </a>
+                    {% else %}
+                    <span class="px-2.5 h-8 rounded-xl flex items-center justify-center gap-1 text-gray-300 border border-gray-100 cursor-not-allowed">
+                        <span class="text-[11px]">Next</span>
+                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                    </span>
+                    <span class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-300 border border-gray-100 cursor-not-allowed">
+                        <i class="fa-solid fa-angles-right text-[10px]"></i>
+                    </span>
+                    {% endif %}
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

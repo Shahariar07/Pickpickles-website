@@ -358,3 +358,55 @@ class DashboardSecurityConfig(models.Model):
         return f"Security Config (Strict Admin Delete: {self.strict_admin_only_delete}, Strict Edit: {self.strict_admin_only_edit}, Strict Dispatch: {self.strict_admin_only_dispatch})"
 
 
+class PriceHistory(models.Model):
+    CHANGE_TYPE_CHOICES = [
+        ('INCREASE', 'Price Increased 📈 (দাম বৃদ্ধি)'),
+        ('DECREASE', 'Price Decreased 📉 (দাম হ্রাস)'),
+        ('INITIAL', 'Initial Price 🏷️ (প্রাথমিক মূল্য)'),
+    ]
+
+    product = models.ForeignKey('store.Product', on_delete=models.CASCADE, related_name='price_history')
+    old_price = models.DecimalField(max_digits=10, decimal_places=2, help_text="Previous selling price in BDT")
+    new_price = models.DecimalField(max_digits=10, decimal_places=2, help_text="New selling price in BDT")
+    old_original_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Previous strikethrough price")
+    new_original_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="New strikethrough price")
+    price_delta = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="new_price - old_price")
+    percentage_change = models.DecimalField(max_digits=6, decimal_places=2, default=0, help_text="% change")
+    change_type = models.CharField(max_length=20, choices=CHANGE_TYPE_CHOICES, default='INCREASE')
+    reason = models.CharField(max_length=255, blank=True, help_text="Reason for change e.g. Raw material cost, Promo offer")
+    notes = models.TextField(blank=True, help_text="Optional detailed explanation")
+    changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='price_changes')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Price History'
+        verbose_name_plural = 'Price Histories'
+
+    @property
+    def is_increase(self):
+        return self.new_price > self.old_price
+
+    @property
+    def is_decrease(self):
+        return self.new_price < self.old_price
+
+    def save(self, *args, **kwargs):
+        if self.old_price is not None and self.new_price is not None:
+            self.price_delta = self.new_price - self.old_price
+            if self.old_price > 0:
+                self.percentage_change = round(((self.new_price - self.old_price) / self.old_price) * 100, 2)
+            else:
+                self.percentage_change = 0
+            if self.change_type != 'INITIAL':
+                if self.new_price > self.old_price:
+                    self.change_type = 'INCREASE'
+                elif self.new_price < self.old_price:
+                    self.change_type = 'DECREASE'
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        sign = '+' if self.price_delta > 0 else ''
+        return f"{self.product.name}: BDT {self.old_price} -> {self.new_price} ({sign}{self.price_delta})"
+
+

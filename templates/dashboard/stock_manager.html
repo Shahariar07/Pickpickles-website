@@ -44,6 +44,10 @@
 
             <!-- Action Buttons -->
             <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                <a href="{% url 'dashboard:price_history' %}" class="bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-xs px-2.5 sm:px-3 py-2 rounded-xl border border-amber-300 flex items-center gap-1.5 transition active:scale-95 shadow-2xs" title="Price Increase / Decrease History (মূল্য খতিয়ান)">
+                    <i class="fa-solid fa-tags text-amber-700"></i>
+                    <span>Price History</span>
+                </a>
                 <a href="{% url 'dashboard:stock_ledger' %}" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-bold text-xs px-2.5 sm:px-3 py-2 rounded-xl border border-indigo-200 flex items-center gap-1.5 transition active:scale-95" title="Audit Log">
                     <i class="fa-solid fa-clock-rotate-left text-indigo-600"></i>
                     <span>Ledger</span>
@@ -153,9 +157,17 @@
 
                 <!-- Price -->
                 <div class="text-right shrink-0">
-                    <span class="font-display font-black text-base text-gray-900 block leading-tight">৳{{ product.price_bdt }}</span>
+                    <span class="font-display font-black text-base text-gray-900 block leading-tight">৳{{ product.price_bdt|floatformat:0 }}</span>
                     {% if product.original_price_bdt and product.original_price_bdt > product.price_bdt %}
-                    <span class="text-[10px] text-gray-400 line-through block">৳{{ product.original_price_bdt }}</span>
+                    <span class="text-[10px] text-gray-400 line-through block">৳{{ product.original_price_bdt|floatformat:0 }}</span>
+                    {% endif %}
+                    {% if product.latest_price_change %}
+                    <div class="mt-0.5">
+                        <a href="{% url 'dashboard:product_price_history' product.id %}" class="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded {% if product.latest_price_change.change_type == 'INCREASE' %}bg-emerald-50 text-emerald-800 border border-emerald-200{% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}" title="Previous price was ৳{{ product.latest_price_change.old_price|floatformat:0 }}">
+                            <span>আগে ৳{{ product.latest_price_change.old_price|floatformat:0 }}</span>
+                            <span>({% if product.latest_price_change.price_delta > 0 %}+{% endif %}৳{{ product.latest_price_change.price_delta|floatformat:0 }})</span>
+                        </a>
+                    </div>
                     {% endif %}
                 </div>
             </div>
@@ -244,6 +256,10 @@
                         <i class="fa-solid fa-plus-circle text-[11px]"></i>
                         <span>Restock</span>
                     </button>
+
+                    <a href="{% url 'dashboard:product_price_history' product.id %}" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:text-amber-700 transition" title="View Price History">
+                        <i class="fa-solid fa-tags"></i>
+                    </a>
 
                     <a href="{% url 'dashboard:product_stock_ledger' product.id %}" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:text-indigo-700 transition" title="View Stock Ledger History">
                         <i class="fa-solid fa-clock-rotate-left"></i>
@@ -348,9 +364,17 @@
                         <!-- Col 2: Selling Price -->
                         <td class="py-3 px-4 align-middle whitespace-nowrap">
                             <div>
-                                <span class="font-display font-black text-sm text-gray-900">৳{{ product.price_bdt }}</span>
+                                <span class="font-display font-black text-sm text-gray-900">৳{{ product.price_bdt|floatformat:0 }}</span>
                                 {% if product.original_price_bdt and product.original_price_bdt > product.price_bdt %}
-                                <span class="text-[10px] text-gray-400 line-through block">৳{{ product.original_price_bdt }}</span>
+                                <span class="text-[10px] text-gray-400 line-through block">৳{{ product.original_price_bdt|floatformat:0 }}</span>
+                                {% endif %}
+                                {% if product.latest_price_change %}
+                                <div class="mt-0.5">
+                                    <a href="{% url 'dashboard:product_price_history' product.id %}" class="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded {% if product.latest_price_change.change_type == 'INCREASE' %}bg-emerald-50 text-emerald-800 border border-emerald-200{% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %} hover:underline" title="Previous price was ৳{{ product.latest_price_change.old_price|floatformat:0 }}">
+                                        <span>আগে ৳{{ product.latest_price_change.old_price|floatformat:0 }}</span>
+                                        <span>({% if product.latest_price_change.price_delta > 0 %}+{% endif %}৳{{ product.latest_price_change.price_delta|floatformat:0 }})</span>
+                                    </a>
+                                </div>
                                 {% endif %}
                             </div>
                         </td>
@@ -452,6 +476,11 @@
                                     <span>Restock</span>
                                 </button>
                                 {% endif %}
+
+                                <!-- Price History (Always viewable) -->
+                                <a href="{% url 'dashboard:product_price_history' product.id %}" class="p-1.5 rounded-lg bg-gray-100 hover:bg-amber-50 text-gray-500 hover:text-amber-700 transition" title="View Price Change History for {{ product.name }}">
+                                    <i class="fa-solid fa-tags"></i>
+                                </a>
 
                                 <!-- Ledger History (Always viewable) -->
                                 <a href="{% url 'dashboard:product_stock_ledger' product.id %}" class="p-1.5 rounded-lg bg-gray-100 hover:bg-indigo-50 text-gray-500 hover:text-indigo-700 transition" title="View Stock Ledger History">
@@ -629,6 +658,16 @@
                 <div>
                     <label class="font-bold text-gray-700 block mb-1">Original Price (৳ BDT) <span class="text-gray-400 font-normal">(Optional Discount)</span></label>
                     <input type="number" step="0.01" id="edit_orig_price" name="original_price_bdt" placeholder="e.g. 420.00" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 font-bold text-gray-900 focus:bg-white">
+                </div>
+
+                <!-- Price Change Reason / Audit Note -->
+                <div class="sm:col-span-2 bg-amber-50/60 p-3 rounded-xl border border-amber-200">
+                    <label class="font-bold text-amber-900 block mb-1">
+                        <i class="fa-solid fa-tags text-amber-600 mr-1"></i>
+                        Price Change Reason / Note (মূল্য পরিবর্তনের কারণ - ঐচ্ছিক)
+                    </label>
+                    <input type="text" name="price_change_reason" placeholder="e.g. মশলার দাম বৃদ্ধি / ঈদ ধামাকা অফার / কাঁচামাল খরচ বৃদ্ধি" class="w-full bg-white border border-amber-300 rounded-lg px-3 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    <span class="text-[10px] text-amber-700 block mt-1">দাম বাড়ালে বা কমালে এই কারণটি প্রাইস হিস্ট্রিতে স্বয়ংক্রিয়ভাবে রেকর্ড থাকবে।</span>
                 </div>
 
                 <!-- Section 3: Stock & Inventory Management -->
