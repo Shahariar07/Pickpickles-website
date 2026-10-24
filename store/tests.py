@@ -23,37 +23,37 @@ class CartTests(TestCase):
         from django.test import override_settings
 
         with override_settings(PATHAO_CLIENT_ID=''):
-            # 1-3 items: Flat ৳150 nationwide across all weights and zones
+            # 1-5 items: Flat ৳150 nationwide across all weights and zones
             self.assertEqual(calculate_pathao_delivery_fee(600, 'INSIDE_DHAKA', total_items=1), Decimal('150.00'))
             self.assertEqual(calculate_pathao_delivery_fee(600, 'OUTSIDE_DHAKA', total_items=1), Decimal('150.00'))
             self.assertEqual(calculate_pathao_delivery_fee(1200, 'INSIDE_DHAKA', total_items=2), Decimal('150.00'))
             self.assertEqual(calculate_pathao_delivery_fee(1200, 'OUTSIDE_DHAKA', total_items=2), Decimal('150.00'))
             self.assertEqual(calculate_pathao_delivery_fee(1800, 'INSIDE_DHAKA', total_items=3), Decimal('150.00'))
+            self.assertEqual(calculate_pathao_delivery_fee(3000, 'INSIDE_DHAKA', total_items=5), Decimal('150.00'))
             
-            # 4 or more items: 100% FREE Delivery (৳0.00)
-            self.assertEqual(calculate_pathao_delivery_fee(2400, 'INSIDE_DHAKA', total_items=4), Decimal('0.00'))
-            self.assertEqual(calculate_pathao_delivery_fee(2400, 'OUTSIDE_DHAKA', total_items=4), Decimal('0.00'))
-            self.assertEqual(calculate_pathao_delivery_fee(3000, 'INSIDE_DHAKA', total_items=5), Decimal('0.00'))
+            # 6 or more items: 100% FREE Delivery (৳0.00)
+            self.assertEqual(calculate_pathao_delivery_fee(3600, 'INSIDE_DHAKA', total_items=6), Decimal('0.00'))
+            self.assertEqual(calculate_pathao_delivery_fee(3600, 'OUTSIDE_DHAKA', total_items=6), Decimal('0.00'))
             self.assertEqual(calculate_pathao_delivery_fee(6000, 'OUTSIDE_DHAKA', total_items=10), Decimal('0.00'))
 
-    def test_free_delivery_on_four_items_in_cart_and_checkout(self):
+    def test_free_delivery_on_six_items_in_cart_and_checkout(self):
         from store.models import Order
         from django.test import override_settings
-        # Add 4 jars to cart
+        # Add 6 jars to cart
         add_url = reverse('store:cart_add', args=[self.product.id])
         response = self.client.post(
             f"{add_url}?format=json",
-            {'quantity': 4},
+            {'quantity': 6},
             HTTP_X_REQUESTED_WITH='XMLHttpRequest'
         )
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertTrue(data['success'])
-        self.assertEqual(data['cart_total_items'], 4)
+        self.assertEqual(data['cart_total_items'], 6)
         self.assertTrue(data['free_delivery_unlocked'])
         self.assertEqual(data['items_needed_for_free_delivery'], 0)
         self.assertEqual(data['delivery_fee'], 0.0)
-        self.assertEqual(data['grand_total'], 4 * 380.0)
+        self.assertEqual(data['grand_total'], 6 * 380.0)
 
         # Complete checkout
         checkout_data = {
@@ -70,8 +70,8 @@ class CartTests(TestCase):
 
         order = Order.objects.latest('created_at')
         self.assertEqual(order.delivery_fee, Decimal('0.00'))
-        self.assertEqual(order.subtotal, Decimal('1520.00'))
-        self.assertEqual(order.total_amount, Decimal('1520.00'))
+        self.assertEqual(order.subtotal, Decimal('2280.00'))
+        self.assertEqual(order.total_amount, Decimal('2280.00'))
 
     def test_pathao_service_structure(self):
         from store.pathao import PathaoCourierService
@@ -378,5 +378,56 @@ class CartTests(TestCase):
         self.assertIn('Order Confirmation', confirm_msg)
         self.assertIn('https://pickpickles.xyz/reviews/', confirm_msg)
         self.assertTrue(order.whatsapp_order_confirmation_url.startswith('https://api.whatsapp.com/send?phone=8801712345678&text='))
+
+    def test_bangladeshi_mobile_number_validation(self):
+        from store.forms import CheckoutForm, clean_and_validate_bd_phone
+
+        # Valid BD numbers
+        valid_numbers = [
+            '01712345678',
+            '01812345678',
+            '01912345678',
+            '01312345678',
+            '01412345678',
+            '01512345678',
+            '01612345678',
+            '+8801712345678',
+            '8801712345678',
+            '01712-345678',
+            '01712 345 678',
+        ]
+        for phone in valid_numbers:
+            cleaned, err = clean_and_validate_bd_phone(phone)
+            self.assertIsNone(err, f"Expected {phone} to be valid, got error: {err}")
+            self.assertEqual(len(cleaned), 11)
+            self.assertTrue(cleaned.startswith('01'))
+
+        # Invalid numbers
+        invalid_numbers = [
+            '12345678901',     # Does not start with 01
+            '01234567890',     # Invalid operator 012
+            '01012345678',     # Invalid operator 010
+            '017123456',       # Too short (9 digits)
+            '017123456789',    # Too long (12 digits)
+            'abcdefghijk',     # Letters
+            '00000000000',     # Zeros
+            '+14155552671',    # US number
+        ]
+        for phone in invalid_numbers:
+            cleaned, err = clean_and_validate_bd_phone(phone)
+            self.assertIsNotNone(err, f"Expected {phone} to be invalid")
+
+        # Test CheckoutForm validation
+        form_data = {
+            'customer_name': 'Test User',
+            'customer_phone': '01234567890',  # Invalid BD operator
+            'delivery_address': 'Road 1, Dhanmondi',
+            'delivery_city': 'Dhaka',
+            'delivery_zone': 'INSIDE_DHAKA',
+            'payment_method': 'COD',
+        }
+        form = CheckoutForm(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('customer_phone', form.errors)
 
 

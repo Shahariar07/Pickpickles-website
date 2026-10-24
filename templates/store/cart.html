@@ -63,20 +63,20 @@
                     <span id="freeDeliveryIcon">{% if free_delivery_unlocked %}🎉{% else %}🚚{% endif %}</span>
                     <span id="freeDeliveryText">
                         {% if free_delivery_unlocked %}
-                            <strong>FREE Delivery Unlocked!</strong> (4+ jars offer)
+                            <strong>FREE Delivery Unlocked!</strong> (6+ jars offer)
                         {% else %}
                             Add <strong><span id="freeDeliveryRemaining">{{ items_needed_for_free_delivery }}</span> more jar{% if items_needed_for_free_delivery > 1 %}s{% endif %}</strong> for <strong>FREE Delivery</strong>!
                         {% endif %}
                     </span>
                 </div>
                 <div class="w-full bg-black/10 rounded-full h-2 mt-2 overflow-hidden">
-                    <div id="freeDeliveryProgressBar" class="h-2 rounded-full transition-all duration-500 {% if free_delivery_unlocked or cart_total_items >= 4 %}bg-emerald-600{% else %}bg-amber-500{% endif %}" style="width: {% if free_delivery_unlocked or cart_total_items >= 4 %}100{% elif cart_total_items == 3 %}75{% elif cart_total_items == 2 %}50{% elif cart_total_items == 1 %}25{% else %}0{% endif %}%;"></div>
+                    <div id="freeDeliveryProgressBar" class="h-2 rounded-full transition-all duration-500 {% if free_delivery_unlocked or cart_total_items >= 6 %}bg-emerald-600{% else %}bg-amber-500{% endif %}" style="width: {% if free_delivery_unlocked or cart_total_items >= 6 %}100{% elif cart_total_items == 5 %}83{% elif cart_total_items == 4 %}67{% elif cart_total_items == 3 %}50{% elif cart_total_items == 2 %}33{% elif cart_total_items == 1 %}17{% else %}0{% endif %}%;"></div>
                 </div>
                 <p class="text-[10px] mt-1.5 opacity-80" id="freeDeliverySubtext">
                     {% if free_delivery_unlocked %}
                         Special discount applied: Nationwide shipping charge is ৳0.
                     {% else %}
-                        Order 4 or more items to get 100% free delivery nationwide!
+                        Order 6 or more items to get 100% free delivery nationwide!
                     {% endif %}
                 </p>
             </div>
@@ -106,7 +106,7 @@
                     {% if free_delivery_unlocked %}
                         🎉 Enjoy free door-to-door delivery across Bangladesh!
                     {% else %}
-                        Flat ৳150 nationwide delivery across Bangladesh (Free on 4+ jars).
+                        Flat ৳150 nationwide delivery across Bangladesh (Free on 6+ jars).
                     {% endif %}
                 </p>
             </div>

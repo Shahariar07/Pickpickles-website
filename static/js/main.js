@@ -73,9 +73,9 @@ function showToast(message) {
 // Unified Free Delivery Progress Updater (Drawer & Cart Page)
 function updateFreeDeliveryProgress(totalItems) {
     const count = parseInt(totalItems, 10) || 0;
-    const isFreeDelivery = count >= 4;
-    const remainingForFree = Math.max(0, 4 - count);
-    const progressPercent = isFreeDelivery ? 100 : Math.min(100, Math.round((count / 4) * 100));
+    const isFreeDelivery = count >= 6;
+    const remainingForFree = Math.max(0, 6 - count);
+    const progressPercent = isFreeDelivery ? 100 : Math.min(100, Math.round((count / 6) * 100));
 
     // 1. Drawer Elements
     const freeMsgEl = document.getElementById('drawerFreeDeliveryMsg');
@@ -97,7 +97,7 @@ function updateFreeDeliveryProgress(totalItems) {
         if (isFreeDelivery) {
             deliveryNoteEl.innerHTML = '<span class="text-emerald-700 font-bold">🎉 FREE Nationwide Delivery Applied!</span>';
         } else {
-            deliveryNoteEl.innerHTML = '<span class="text-gray-500">Flat ৳150 Nationwide Delivery • <strong>Free on 4+ jars</strong></span>';
+            deliveryNoteEl.innerHTML = '<span class="text-gray-500">Flat ৳150 Nationwide Delivery • <strong>Free on 6+ jars</strong></span>';
         }
     }
 
@@ -112,7 +112,7 @@ function updateFreeDeliveryProgress(totalItems) {
         if (isFreeDelivery) {
             pageFreeBanner.className = "p-3.5 rounded-2xl border transition-all bg-emerald-50 border-emerald-200 text-emerald-950";
             if (pageFreeIcon) pageFreeIcon.innerText = "🎉";
-            if (pageFreeText) pageFreeText.innerHTML = "<strong>FREE Delivery Unlocked!</strong> (4+ jars offer)";
+            if (pageFreeText) pageFreeText.innerHTML = "<strong>FREE Delivery Unlocked!</strong> (6+ jars offer)";
             if (pageFreeProgress) {
                 pageFreeProgress.className = "h-2 rounded-full transition-all duration-500 bg-emerald-600";
                 pageFreeProgress.style.width = "100%";
@@ -126,7 +126,7 @@ function updateFreeDeliveryProgress(totalItems) {
                 pageFreeProgress.className = "h-2 rounded-full transition-all duration-500 bg-amber-500";
                 pageFreeProgress.style.width = `${progressPercent}%`;
             }
-            if (pageFreeSubtext) pageFreeSubtext.innerText = "Order 4 or more items to get 100% free delivery nationwide!";
+            if (pageFreeSubtext) pageFreeSubtext.innerText = "Order 6 or more items to get 100% free delivery nationwide!";
         }
     }
 }
@@ -307,13 +307,13 @@ async function ajaxUpdateCart(productId, action) {
             const pageSub = document.getElementById('pageCartSubtotal');
             if (pageSub) pageSub.innerText = parseFloat(data.cart_subtotal).toFixed(2);
 
-            const deliveryFee = data.delivery_fee !== undefined ? parseFloat(data.delivery_fee) : (data.cart_total_items >= 4 ? 0.00 : 150.00);
+            const deliveryFee = data.delivery_fee !== undefined ? parseFloat(data.delivery_fee) : (data.cart_total_items >= 6 ? 0.00 : 150.00);
             const pageDelivery = document.getElementById('pageCartDeliveryFee');
             const pageOldFee = document.getElementById('pageCartOldFee');
             const pageDeliveryNote = document.getElementById('pageCartDeliveryNote');
 
             if (pageDelivery) {
-                if (deliveryFee === 0 || data.cart_total_items >= 4) {
+                if (deliveryFee === 0 || data.cart_total_items >= 6) {
                     if (pageOldFee) pageOldFee.classList.remove('hidden');
                     pageDelivery.className = "font-black text-emerald-700 bg-emerald-100 text-xs px-2 py-0.5 rounded-md";
                     pageDelivery.innerText = "FREE (৳0.00)";
@@ -322,7 +322,7 @@ async function ajaxUpdateCart(productId, action) {
                     if (pageOldFee) pageOldFee.classList.add('hidden');
                     pageDelivery.className = "font-bold text-emerald-800";
                     pageDelivery.innerText = `৳${deliveryFee.toFixed(2)}`;
-                    if (pageDeliveryNote) pageDeliveryNote.innerText = "Flat ৳150 nationwide delivery across Bangladesh (Free on 4+ jars).";
+                    if (pageDeliveryNote) pageDeliveryNote.innerText = "Flat ৳150 nationwide delivery across Bangladesh (Free on 6+ jars).";
                 }
             }
 

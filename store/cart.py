@@ -126,10 +126,10 @@ class Cart:
         return max(1, math.ceil(total_g / 1000.0))
 
     def is_free_delivery(self):
-        return len(self) >= 4
+        return len(self) >= 6
 
     def items_needed_for_free_delivery(self):
-        return max(0, 4 - len(self))
+        return max(0, 6 - len(self))
 
     def get_delivery_fee(self, zone='INSIDE_DHAKA'):
         return calculate_pathao_delivery_fee(self.get_total_weight_grams(), zone, total_items=len(self))

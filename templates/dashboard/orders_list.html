@@ -872,7 +872,7 @@
                 <div>
                     <div class="flex items-center justify-between mb-1">
                         <label class="font-bold text-gray-700">Delivery Fee (৳)</label>
-                        <span id="manualFreeDeliveryBadge" class="hidden text-[10px] font-extrabold text-emerald-700 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md">🎉 FREE (4+ Jars)</span>
+                        <span id="manualFreeDeliveryBadge" class="hidden text-[10px] font-extrabold text-emerald-700 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md">🎉 FREE (6+ Jars)</span>
                     </div>
                     <input type="number" step="1" min="0" name="delivery_fee" id="manualDeliveryFeeInput" value="150" oninput="calculateManualOrderTotal(true)" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
                 </div>
@@ -1439,18 +1439,18 @@ function calculateManualOrderTotal(isManualFeeChange = false) {
     }
 
     if (!manualDeliveryFeeUserOverridden && deliveryInput) {
-        if (totalJars >= 4) {
+        if (totalJars >= 6) {
             deliveryInput.value = 0;
         } else {
             deliveryInput.value = 150;
         }
     }
 
-    let deliveryFee = deliveryInput ? (parseFloat(deliveryInput.value) || 0) : (totalJars >= 4 ? 0 : 150);
+    let deliveryFee = deliveryInput ? (parseFloat(deliveryInput.value) || 0) : (totalJars >= 6 ? 0 : 150);
     if (deliveryFee < 0) deliveryFee = 0;
 
     if (freeBadge) {
-        if (totalJars >= 4 || deliveryFee === 0) {
+        if (totalJars >= 6 || deliveryFee === 0) {
             freeBadge.classList.remove('hidden');
         } else {
             freeBadge.classList.add('hidden');
@@ -1467,7 +1467,7 @@ function calculateManualOrderTotal(isManualFeeChange = false) {
     if (countEl) countEl.textContent = totalJars;
     if (subtotalEl) subtotalEl.textContent = '৳' + subtotal.toFixed(0);
     if (deliveryEl) {
-        if (deliveryFee === 0 || totalJars >= 4) {
+        if (deliveryFee === 0 || totalJars >= 6) {
             deliveryEl.innerHTML = '<span class="text-emerald-700 font-black">FREE (৳0)</span>';
         } else {
             deliveryEl.textContent = '৳' + deliveryFee.toFixed(0);

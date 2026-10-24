@@ -542,6 +542,13 @@ def about_story(request):
     return render(request, 'store/about_faq.html')
 
 
+def policies_view(request):
+    """
+    Renders customer satisfaction, damage replacement, delivery and problem resolution policy.
+    """
+    return render(request, 'store/policies.html')
+
+
 def sitemap_xml(request):
     """
     Dynamically generates a standard XML Sitemap for search engines like Google, Bing, etc.
@@ -564,6 +571,12 @@ def sitemap_xml(request):
         },
         {
             'loc': domain + reverse('store:about_story'),
+            'changefreq': 'monthly',
+            'priority': '0.7',
+            'lastmod': timezone.now().strftime('%Y-%m-%d'),
+        },
+        {
+            'loc': domain + reverse('store:policies'),
             'changefreq': 'monthly',
             'priority': '0.7',
             'lastmod': timezone.now().strftime('%Y-%m-%d'),

@@ -1,5 +1,41 @@
+import re
+# pyrefly: ignore[missing-import]
 from django import forms
 from .models import Order, Review
+
+
+def clean_and_validate_bd_phone(phone_str):
+    """
+    Validates and standardizes a Bangladeshi mobile number.
+    Valid operators: 013, 014, 015, 016, 017, 018, 019.
+    Accepts formats:
+      - 01XXXXXXXXX (11 digits)
+      - +8801XXXXXXXXX / 8801XXXXXXXXX
+      - Numbers with spaces or hyphens e.g. 01712-345678, 01712 345 678
+    Returns:
+      (cleaned_phone, error_message)
+    """
+    if not phone_str:
+        return None, "Mobile number is required."
+    
+    # Remove whitespace, hyphens, parentheses, dots
+    cleaned = re.sub(r'[\s\-\(\)\.]', '', str(phone_str).strip())
+    
+    # Standardize +88 / 88 prefix to local 11-digit format
+    if cleaned.startswith('+880'):
+        cleaned = cleaned[3:]
+    elif cleaned.startswith('880'):
+        cleaned = cleaned[2:]
+    elif cleaned.startswith('+88'):
+        cleaned = cleaned[3:]
+    elif cleaned.startswith('88') and len(cleaned) == 13:
+        cleaned = cleaned[2:]
+        
+    # Must be exactly 11 digits starting with valid BD mobile operator (013 - 019)
+    if not re.match(r'^01[3-9]\d{8}$', cleaned):
+        return None, "Please enter a valid 11-digit Bangladeshi mobile number (e.g. 017XXXXXXXX or 018XXXXXXXX)."
+        
+    return cleaned, None
 
 
 class CheckoutForm(forms.ModelForm):
@@ -29,7 +65,10 @@ class CheckoutForm(forms.ModelForm):
                 'placeholder': '01XXXXXXXXX',
                 'required': True,
                 'id': 'customer_phone',
-                'type': 'tel'
+                'type': 'tel',
+                'maxlength': '15',
+                'pattern': r'(?:\+?88)?01[3-9]\d{8}',
+                'title': 'Please enter a valid 11-digit Bangladeshi mobile number (e.g. 017XXXXXXXX)'
             }),
             'customer_email': forms.EmailInput(attrs={
                 'class': 'form-input',
@@ -59,8 +98,10 @@ class CheckoutForm(forms.ModelForm):
             }),
             'payment_sender_number': forms.TextInput(attrs={
                 'class': 'form-input',
-                'placeholder': 'bKash number used to send money',
-                'id': 'payment_sender_number'
+                'placeholder': 'bKash number used to send money (01XXXXXXXXX)',
+                'id': 'payment_sender_number',
+                'type': 'tel',
+                'maxlength': '15'
             }),
             'payment_trx_id': forms.TextInput(attrs={
                 'class': 'form-input',
@@ -69,31 +110,35 @@ class CheckoutForm(forms.ModelForm):
             }),
             'customer_notes': forms.Textarea(attrs={
                 'class': 'form-input',
-                'rows': 2,
-                'placeholder': 'Any special delivery instructions or requests? (Optional)',
+                'rows': 3,
+                'placeholder': 'Special requests for our kitchen or packaging team (e.g. gift note for a friend, extra safe bubble wrap, or specific packaging instructions)...',
                 'id': 'customer_notes'
             }),
         }
 
+    def clean_customer_phone(self):
+        raw_phone = self.cleaned_data.get('customer_phone')
+        cleaned_phone, error = clean_and_validate_bd_phone(raw_phone)
+        if error:
+            raise forms.ValidationError(error)
+        return cleaned_phone
+
     def clean(self):
         cleaned_data = super().clean()
-        customer_phone = (cleaned_data.get('customer_phone') or '').strip()
         payment_method = cleaned_data.get('payment_method')
         sender_number = (cleaned_data.get('payment_sender_number') or '').strip()
         trx_id = (cleaned_data.get('payment_trx_id') or '').strip()
 
-        # Validate main customer phone
-        if customer_phone:
-            if len(customer_phone) < 11 or not customer_phone.replace('+', '').isdigit():
-                self.add_error('customer_phone', 'Mobile number is not valid.')
-
         # Validate MFS payment details
         if payment_method == 'BKASH':
-            if not sender_number or len(sender_number) < 11 or not sender_number.replace('+', '').isdigit():
-                self.add_error('payment_sender_number', 'Mobile number is not valid.')
+            cleaned_sender, sender_err = clean_and_validate_bd_phone(sender_number)
+            if sender_err:
+                self.add_error('payment_sender_number', sender_err)
+            else:
+                cleaned_data['payment_sender_number'] = cleaned_sender
                 
             if not trx_id or len(trx_id) < 6:
-                self.add_error('payment_trx_id', 'Transaction ID is not valid.')
+                self.add_error('payment_trx_id', 'Please enter a valid bKash Transaction ID (TrxID).')
 
         return cleaned_data
 
