@@ -77,52 +77,54 @@
 
         <!-- Mobile Top Bar with Drawer Toggle -->
         <div
-            class="md:hidden relative bg-brand-900 text-white px-3 sm:px-4 py-3.5 flex items-center justify-between sticky top-0 z-40 border-b border-brand-800 shadow-md">
-            <div class="flex items-center gap-2.5 min-w-0">
+            class="md:hidden relative bg-brand-900 text-white px-2.5 sm:px-4 py-3 flex items-center justify-between sticky top-0 z-40 border-b border-brand-800 shadow-md">
+            <!-- Left: Toggle & Brand Logo with Permanent Name Visibility -->
+            <div class="flex items-center gap-2 sm:gap-2.5 shrink-0">
                 <button type="button" onclick="toggleSidebar()"
-                    class="p-2 rounded-xl text-gray-300 hover:text-white hover:bg-brand-800 focus:outline-none transition shrink-0">
-                    <i class="fa-solid fa-bars text-lg"></i>
+                    class="p-2 rounded-xl text-gray-300 hover:text-white hover:bg-brand-800 focus:outline-none transition shrink-0"
+                    aria-label="Toggle Menu">
+                    <i class="fa-solid fa-bars text-base"></i>
                 </button>
-                <a href="{% url 'dashboard:index' %}" class="flex items-center gap-2 min-w-0 truncate">
+                <a href="{% url 'dashboard:index' %}" class="flex items-center gap-2 shrink-0">
                     <img src="{% static 'images/logo.png' %}" alt="Pickpickles Logo"
-                        class="w-8 h-8 rounded-full object-cover border border-brand-400/40 shrink-0">
-                    <div class="leading-none min-w-0 truncate">
+                        class="w-8 h-8 rounded-full object-cover border border-brand-400/40 shrink-0 shadow-xs">
+                    <div class="leading-none shrink-0">
                         <span
-                            class="font-display font-extrabold text-base sm:text-lg tracking-tight text-white truncate block">PICK<span
+                            class="font-display font-extrabold text-sm sm:text-base tracking-tight text-white whitespace-nowrap block">PICK<span
                                 class="text-brand-accent">PICKLES</span></span>
-                        <span class="block text-[8px] sm:text-[9px] font-bold uppercase text-brand-accent tracking-wider mt-0.5">Homemade Product</span>
+                        <span class="block text-[7.5px] sm:text-[8.5px] font-bold uppercase text-brand-accent tracking-wider mt-0.5 whitespace-nowrap">Homemade Product</span>
                     </div>
                 </a>
             </div>
 
-            <!-- Mobile Notification & Sound Icons -->
-            <div class="flex items-center gap-1 shrink-0">
+            <!-- Right: Mobile Action Buttons (Optimized Compact Grid) -->
+            <div class="flex items-center gap-1 shrink-0 ml-auto pl-1">
                 <!-- Sound Toggle Mobile -->
                 <button type="button" onclick="toggleNotificationSound()" id="mobileSoundToggleBtn"
                     title="Toggle Sound Alert"
-                    class="w-10 h-10 rounded-xl text-brand-accent hover:bg-brand-800 flex items-center justify-center text-sm transition active:scale-95">
+                    class="w-8 h-8 rounded-lg text-brand-accent hover:bg-brand-800 flex items-center justify-center text-xs transition active:scale-95">
                     <i id="mobileSoundIcon" class="fa-solid fa-volume-high"></i>
                 </button>
 
                 <!-- Notifications Bell Mobile -->
                 <button type="button" onclick="toggleNotificationDropdown('mobileNotificationDropdown')"
-                    class="w-10 h-10 rounded-xl text-gray-300 hover:text-white hover:bg-brand-800 flex items-center justify-center transition relative active:scale-95"
+                    class="w-8 h-8 rounded-lg text-gray-300 hover:text-white hover:bg-brand-800 flex items-center justify-center transition relative active:scale-95"
                     aria-label="View notifications">
-                    <i class="fa-solid fa-bell text-base"></i>
+                    <i class="fa-solid fa-bell text-sm"></i>
                     <span id="mobileNotificationBadge"
-                        class="hidden absolute top-1 right-1 min-w-[16px] h-4 px-1 bg-rose-500 text-[9px] font-black text-white rounded-full flex items-center justify-center animate-pulse shadow-xs">0</span>
+                        class="hidden absolute top-0.5 right-0.5 min-w-[14px] h-3.5 px-0.5 bg-rose-500 text-[8px] font-black text-white rounded-full flex items-center justify-center animate-pulse shadow-xs">0</span>
                 </button>
 
                 <!-- Mobile PWA / Push Alerts Link -->
                 <a href="{% url 'dashboard:push_notifications' %}" title="Mobile Alerts & App"
-                    class="w-10 h-10 rounded-xl text-emerald-400 hover:text-white hover:bg-brand-800 flex items-center justify-center transition active:scale-95">
-                    <i class="fa-solid fa-mobile-screen-button text-base"></i>
+                    class="w-8 h-8 rounded-lg text-emerald-400 hover:text-white hover:bg-brand-800 flex items-center justify-center transition active:scale-95">
+                    <i class="fa-solid fa-mobile-screen-button text-sm"></i>
                 </a>
 
-                <a href="{% url 'dashboard:logout' %}"
-                    class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-rose-900/60 hover:bg-rose-800 text-rose-200 text-xs font-bold transition shrink-0 ml-1">
+                <!-- Log Out Button (Compact Icon on Mobile) -->
+                <a href="{% url 'dashboard:logout' %}" title="Log Out"
+                    class="w-8 h-8 rounded-lg bg-rose-900/60 hover:bg-rose-800 text-rose-200 flex items-center justify-center text-xs font-bold transition active:scale-95 ml-0.5">
                     <i class="fa-solid fa-right-from-bracket"></i>
-                    <span>Log Out</span>
                 </a>
             </div>
 
