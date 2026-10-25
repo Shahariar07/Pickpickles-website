@@ -6,8 +6,12 @@ from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.static import serve
+from django.views.generic import TemplateView
 
 urlpatterns = [
+    path('manifest.json', TemplateView.as_view(template_name='manifest.json', content_type='application/manifest+json'), name='manifest'),
+    path('service-worker.js', TemplateView.as_view(template_name='webpush_serviceworker.js', content_type='application/javascript'), name='root_service_worker'),
+    path('webpush/', include('webpush.urls')),
     path('admin/', admin.site.urls),
     path('dashboard/', include('dashboard.urls')),
     path('', include('store.urls')),

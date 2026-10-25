@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'store.apps.StoreConfig',
     'dashboard.apps.DashboardConfig',
+    'webpush',
 ]
 
 MIDDLEWARE = [
@@ -274,3 +275,22 @@ if not DEBUG and not is_runserver:
 else:
     SESSION_COOKIE_SECURE = False
     CSRF_COOKIE_SECURE = False
+
+
+# ==============================================================================
+# 9. Web Push Notifications (django-webpush)
+# ==============================================================================
+WEBPUSH_SETTINGS = {
+    'VAPID_PUBLIC_KEY': os.environ.get(
+        'VAPID_PUBLIC_KEY',
+        'BFLU9cNWBHfD9hHCv4NjER6mqySn91BkXe4-UgJ7Yf3mz04MGqKvOWPxYt8ShsVhk3lrzJe-sixDDPP8KAoxC5s'
+    ),
+    'VAPID_PRIVATE_KEY': os.environ.get(
+        'VAPID_PRIVATE_KEY',
+        'UBUbOjQ4Lh4zjO2mvSUW2FCuJqss0UgYrMZKm7twalE'
+    ),
+    'VAPID_ADMIN_EMAIL': os.environ.get(
+        'VAPID_ADMIN_EMAIL',
+        'admin@pickpickles.com'
+    )
+}

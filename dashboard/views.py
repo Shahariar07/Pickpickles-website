@@ -5469,6 +5469,49 @@ def toggle_blacklist_ajax(request):
     return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
 
 
+@login_required(login_url='dashboard:login')
+def push_notifications_manager(request):
+    """
+    Dedicated view for Staff and Admin to manage PWA Installation & Push Notification Subscriptions.
+    """
+    subscriptions_count = 0
+    if hasattr(request.user, 'webpush_info'):
+        subscriptions_count = request.user.webpush_info.count()
+        
+    context = {
+        'page_title': 'PWA & Push Notifications',
+        'subscriptions_count': subscriptions_count,
+    }
+    return render(request, 'dashboard/push_notifications.html', context)
+
+
+@login_required(login_url='dashboard:login')
+def send_test_push_api(request):
+    """
+    AJAX endpoint to trigger an instant test push notification to verify sound, vibration & popup.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+
+    from webpush import send_user_notification
+    payload = {
+        "head": "🔔 Pickpickles Test Alert",
+        "body": f"Real-time notifications are active on your device! ({timezone.now().strftime('%I:%M %p')})",
+        "icon": "/static/images/icon-192.png",
+        "badge": "/static/images/favicon.png",
+        "url": "/dashboard/orders/"
+    }
+
+    try:
+        send_user_notification(user=request.user, payload=payload, ttl=60)
+        return JsonResponse({
+            'success': True,
+            'message': 'Test notification sent! Check your phone notification shade.'
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
 
 
 

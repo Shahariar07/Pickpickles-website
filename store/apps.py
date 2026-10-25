@@ -21,4 +21,5 @@ class StoreConfig(AppConfig):
 
     def ready(self):
         connection_created.connect(configure_sqlite_pragmas)
+        import store.signals  # noqa: F401
 

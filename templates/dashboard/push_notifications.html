@@ -1,0 +1,178 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% load static webpush_notifications %}
+
+{% block title %}PWA & Mobile Push Notifications | Pickpickles Admin{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6 pb-12">
+
+    <!-- Header Banner -->
+    <div class="bg-gradient-to-r from-brand-900 via-brand-800 to-emerald-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden border border-brand-700/50">
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div class="space-y-2">
+                <div class="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/20 text-emerald-300 rounded-full text-xs font-bold border border-emerald-400/30">
+                    <i class="fa-solid fa-mobile-screen-button"></i> Android PWA & Web Push
+                </div>
+                <h1 class="font-display text-2xl sm:text-3xl font-black tracking-tight">Real-Time Mobile Order Alerts</h1>
+                <p class="text-sm text-gray-300 max-w-xl">
+                    Install Pickpickles Order Dashboard on your phone like a native Android app and get instant push notifications with sound & vibration every time a new order arrives!
+                </p>
+            </div>
+            <div class="shrink-0 flex items-center justify-center w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-inner">
+                <i class="fa-solid fa-bell-ring text-4xl text-amber-400 animate-bounce"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Push Subscription & Controls Card -->
+    <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-200/80 space-y-6">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+            <div>
+                <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <i class="fa-solid fa-satellite-dish text-brand-600"></i>
+                    Push Notification Subscription
+                </h2>
+                <p class="text-xs text-gray-500 mt-0.5">Manage web push alerts for user: <strong class="text-gray-800">{{ request.user.username }}</strong></p>
+            </div>
+            <span id="pwaStatusBadge" class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                Checking Status...
+            </span>
+        </div>
+
+        <!-- Subscription Action Area -->
+        <div class="p-6 rounded-2xl bg-gray-50 border border-gray-200 space-y-4">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="space-y-1 text-center sm:text-left">
+                    <h3 class="font-bold text-gray-900 text-sm">One-Click Device Subscription</h3>
+                    <p class="text-xs text-gray-500">
+                        Click the button below and tap <strong class="text-emerald-700">"Allow"</strong> when your browser asks for notification permission.
+                    </p>
+                </div>
+                <div class="shrink-0 flex flex-col items-center gap-2">
+                    {% webpush_button with_class="px-6 py-3 bg-brand-600 hover:bg-brand-500 text-white font-extrabold text-sm rounded-xl transition shadow-md shadow-brand-600/30 flex items-center gap-2 cursor-pointer" %}
+                </div>
+            </div>
+
+            <div id="webpush-message" class="text-xs font-semibold p-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-center" style="display: none;"></div>
+        </div>
+
+        <!-- Test Notification Button -->
+        <div class="flex flex-col sm:flex-row items-center justify-between p-5 rounded-2xl bg-amber-50/70 border border-amber-200 gap-4">
+            <div class="space-y-1">
+                <h4 class="font-bold text-amber-950 text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-vial-circle-check text-amber-600"></i>
+                    Verify Notification Delivery
+                </h4>
+                <p class="text-xs text-amber-800">
+                    Send an immediate simulated test order alert to your registered mobile device.
+                </p>
+            </div>
+            <button type="button" onclick="sendTestPushAlert()" id="testPushBtn"
+                class="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-brand-950 font-black text-xs rounded-xl transition shadow-sm flex items-center gap-2 shrink-0">
+                <i class="fa-solid fa-paper-plane"></i>
+                <span>Send Test Alert</span>
+            </button>
+        </div>
+
+        <div id="testResultMsg" class="hidden text-xs font-bold p-3 rounded-xl"></div>
+    </div>
+
+    <!-- Android Installation Guide -->
+    <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-200/80 space-y-6">
+        <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <i class="fa-brands fa-android text-emerald-600 text-xl"></i>
+            How to Install the PWA on Android Phone
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="p-5 rounded-2xl bg-gray-50 border border-gray-200 space-y-2">
+                <div class="w-8 h-8 rounded-full bg-brand-600 text-white font-black text-xs flex items-center justify-center">1</div>
+                <h3 class="font-bold text-sm text-gray-900">Open in Chrome</h3>
+                <p class="text-xs text-gray-600 leading-relaxed">
+                    Open your Android phone's Google Chrome browser and navigate to:
+                    <code class="block mt-1 p-1 bg-white rounded border border-gray-200 text-[11px] text-brand-700 font-bold select-all">/dashboard/</code>
+                </p>
+            </div>
+
+            <div class="p-5 rounded-2xl bg-gray-50 border border-gray-200 space-y-2">
+                <div class="w-8 h-8 rounded-full bg-brand-600 text-white font-black text-xs flex items-center justify-center">2</div>
+                <h3 class="font-bold text-sm text-gray-900">Install to Home Screen</h3>
+                <p class="text-xs text-gray-600 leading-relaxed">
+                    Tap the Chrome menu (the <strong>3 vertical dots ⋮</strong> in the top right) and select <strong class="text-brand-700">"Install app"</strong> or <strong class="text-brand-700">"Add to Home screen"</strong>.
+                </p>
+            </div>
+
+            <div class="p-5 rounded-2xl bg-gray-50 border border-gray-200 space-y-2">
+                <div class="w-8 h-8 rounded-full bg-brand-600 text-white font-black text-xs flex items-center justify-center">3</div>
+                <h3 class="font-bold text-sm text-gray-900">Tap Subscribe</h3>
+                <p class="text-xs text-gray-600 leading-relaxed">
+                    Open the installed app icon from your phone home screen, come to this page, and tap <strong class="text-emerald-700">"Subscribe to Push Messaging"</strong>.
+                </p>
+            </div>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-brand-50 border border-brand-200 text-xs text-brand-900 flex items-start gap-3">
+            <i class="fa-solid fa-circle-info text-brand-600 text-base mt-0.5"></i>
+            <div>
+                <strong>Pro-Tip for Android:</strong> Make sure Chrome notifications are enabled under your phone's <em>Settings ➔ Apps ➔ Chrome ➔ Notifications</em>, and Battery Optimization is set to <em>Unrestricted</em> so alerts wake your screen instantly.
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const badge = document.getElementById('pwaStatusBadge');
+        if (!('Notification' in window)) {
+            badge.textContent = 'Push Not Supported';
+            badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200';
+        } else if (Notification.permission === 'granted') {
+            badge.textContent = '● Notifications Allowed';
+            badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200';
+        } else if (Notification.permission === 'denied') {
+            badge.textContent = '✕ Notifications Blocked';
+            badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200';
+        } else {
+            badge.textContent = '○ Permission Pending';
+            badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200';
+        }
+    });
+
+    function sendTestPushAlert() {
+        const btn = document.getElementById('testPushBtn');
+        const msg = document.getElementById('testResultMsg');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
+        msg.classList.add('hidden');
+
+        fetch("{% url 'dashboard:api_send_test_push' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> <span>Send Test Alert</span>';
+            msg.classList.remove('hidden');
+            if (data.success) {
+                msg.className = 'text-xs font-bold p-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200';
+                msg.innerHTML = '<i class="fa-solid fa-check-circle text-emerald-600 mr-1"></i> ' + data.message;
+            } else {
+                msg.className = 'text-xs font-bold p-3 rounded-xl bg-rose-50 text-rose-800 border border-rose-200';
+                msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-rose-600 mr-1"></i> ' + (data.error || 'Failed to dispatch test notification.');
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> <span>Send Test Alert</span>';
+            msg.classList.remove('hidden');
+            msg.className = 'text-xs font-bold p-3 rounded-xl bg-rose-50 text-rose-800 border border-rose-200';
+            msg.textContent = 'Error triggering test alert: ' + err;
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "admin/base_site.html" %}
+{% load static webpush_notifications %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <link rel="manifest" href="{% url 'manifest' %}">
+    <meta name="theme-color" content="#1b4965">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="{% static 'images/icon-192.png' %}">
+    {% webpush_header %}
+    <style>
+        #webpush-subscribe-button {
+            background-color: #2d6a4f;
+            color: #ffffff;
+            border: 1px solid #1b4332;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-right: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            vertical-align: middle;
+            transition: all 0.2s ease;
+        }
+        #webpush-subscribe-button:hover {
+            background-color: #1b4332;
+        }
+        #webpush-message {
+            display: inline-block;
+            font-size: 10px;
+            color: #d1fae5;
+            margin-right: 8px;
+        }
+    </style>
+{% endblock %}
+
+{% block userlinks %}
+    {% if user.is_authenticated and user.is_staff %}
+        <span style="vertical-align: middle; margin-right: 8px;">
+            {% webpush_button %}
+        </span>
+    {% endif %}
+    {{ block.super }}
+{% endblock %}

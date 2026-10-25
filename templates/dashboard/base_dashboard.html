@@ -1,4 +1,4 @@
-{% load static %}
+{% load static webpush_notifications %}
 <!DOCTYPE html>
 <html lang="en" class="h-full">
 
@@ -6,6 +6,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Pickpickles Merchant Dashboard{% endblock %}</title>
+
+    <!-- PWA Manifest & Android Mobile Meta -->
+    <link rel="manifest" href="{% url 'manifest' %}">
+    <meta name="theme-color" content="#1b4965">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Pickpickles">
+    <link rel="apple-touch-icon" href="{% static 'images/icon-192.png' %}">
+
+    <!-- WebPush Notifications Header -->
+    {% webpush_header %}
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -100,6 +112,12 @@
                     <span id="mobileNotificationBadge"
                         class="hidden absolute top-1 right-1 min-w-[16px] h-4 px-1 bg-rose-500 text-[9px] font-black text-white rounded-full flex items-center justify-center animate-pulse shadow-xs">0</span>
                 </button>
+
+                <!-- Mobile PWA / Push Alerts Link -->
+                <a href="{% url 'dashboard:push_notifications' %}" title="Mobile Alerts & App"
+                    class="w-10 h-10 rounded-xl text-emerald-400 hover:text-white hover:bg-brand-800 flex items-center justify-center transition active:scale-95">
+                    <i class="fa-solid fa-mobile-screen-button text-base"></i>
+                </a>
 
                 <a href="{% url 'dashboard:logout' %}"
                     class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-rose-900/60 hover:bg-rose-800 text-rose-200 text-xs font-bold transition shrink-0 ml-1">
@@ -335,6 +353,14 @@
                             </a>
                             {% endif %}
 
+                            <!-- PWA & Mobile Push Notifications -->
+                            <a href="{% url 'dashboard:push_notifications' %}"
+                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'push_notifications' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-emerald-200/90 hover:text-white hover:bg-brand-800{% endif %}">
+                                <i class="fa-solid fa-bell text-emerald-400 text-sm w-4 text-center"></i>
+                                <span>PWA & Mobile Alerts</span>
+                                <span class="ml-auto px-1.5 py-0.2 text-[9px] font-black bg-emerald-500/20 text-emerald-300 rounded border border-emerald-400/30">App</span>
+                            </a>
+
                             <!-- Storefront Link -->
                             <a href="{% url 'store:index' %}" target="_blank"
                                 class="px-3.5 py-2 rounded-2xl text-gray-300 hover:text-white hover:bg-brand-800 transition flex items-center gap-3 pt-2">
@@ -423,6 +449,13 @@
                         <i class="fa-solid fa-play text-[10px] text-brand-600"></i>
                         <span>Test Chime</span>
                     </button>
+
+                    <!-- PWA & Mobile Push Setup Link -->
+                    <a href="{% url 'dashboard:push_notifications' %}" title="Configure Mobile Push Notifications & Install App"
+                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold transition shadow-2xs">
+                        <i class="fa-solid fa-mobile-screen-button text-emerald-600"></i>
+                        <span>Mobile App & Alerts</span>
+                    </a>
 
                     <!-- Notification Bell Dropdown (Desktop) -->
                     <div class="relative">

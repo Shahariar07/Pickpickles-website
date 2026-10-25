@@ -50,6 +50,8 @@ urlpatterns = [
     path('api/fraud-check/', views.steadfast_fraud_check_api, name='api_fraud_check'),
     path('blacklist/', views.blacklist_manager, name='blacklist_manager'),
     path('api/toggle-blacklist/', views.toggle_blacklist_ajax, name='api_toggle_blacklist'),
+    path('push-notifications/', views.push_notifications_manager, name='push_notifications'),
+    path('api/send-test-push/', views.send_test_push_api, name='api_send_test_push'),
 ]
 
 
