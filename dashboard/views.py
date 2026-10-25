@@ -5474,13 +5474,16 @@ def push_notifications_manager(request):
     """
     Dedicated view for Staff and Admin to manage PWA Installation & Push Notification Subscriptions.
     """
+    from django.conf import settings
     subscriptions_count = 0
     if hasattr(request.user, 'webpush_info'):
         subscriptions_count = request.user.webpush_info.count()
         
+    vapid_key = getattr(settings, 'WEBPUSH_SETTINGS', {}).get('VAPID_PUBLIC_KEY', '')
     context = {
         'page_title': 'PWA & Push Notifications',
         'subscriptions_count': subscriptions_count,
+        'vapid_public_key': vapid_key,
     }
     return render(request, 'dashboard/push_notifications.html', context)
 
@@ -5498,7 +5501,7 @@ def send_test_push_api(request):
         "head": "🔔 Pickpickles Test Alert",
         "body": f"Real-time notifications are active on your device! ({timezone.now().strftime('%I:%M %p')})",
         "icon": "/static/images/icon-192.png",
-        "badge": "/static/images/favicon.png",
+        "badge": "/static/images/badge-96.png",
         "url": "/dashboard/orders/"
     }
 

@@ -43,7 +43,7 @@ def order_created_webpush_notification(sender, instance, created, **kwargs):
             "head": f"🛒 New Order {order_num} Received!",
             "body": " • ".join(body_parts),
             "icon": "/static/images/icon-192.png",
-            "badge": "/static/images/favicon.png",
+            "badge": "/static/images/badge-96.png",
             "url": f"/dashboard/order/{order_num}/",
             "tag": f"order-{order_num}"
         }

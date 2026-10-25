@@ -1,5 +1,5 @@
 {% extends "dashboard/base_dashboard.html" %}
-{% load static webpush_notifications %}
+{% load static %}
 
 {% block title %}PWA & Mobile Push Notifications | Pickpickles Admin{% endblock %}
 
@@ -15,7 +15,7 @@
                 </div>
                 <h1 class="font-display text-2xl sm:text-3xl font-black tracking-tight">Real-Time Mobile Order Alerts</h1>
                 <p class="text-sm text-gray-300 max-w-xl">
-                    Install Pickpickles Order Dashboard on your phone like a native Android app and get instant push notifications with sound & vibration every time a new order arrives!
+                    Install Pickpickles Order Dashboard on your Android phone like an app and get instant push notifications with sound, vibration & status bar icon every time a customer places an order!
                 </p>
             </div>
             <div class="shrink-0 flex items-center justify-center w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-inner">
@@ -24,51 +24,90 @@
         </div>
     </div>
 
+    <!-- Insecure HTTP Warning Banner (Hidden if HTTPS or localhost) -->
+    <div id="httpsWarningBanner" class="hidden p-5 rounded-2xl bg-amber-500/10 border-2 border-amber-500 text-amber-950 space-y-2">
+        <div class="flex items-center gap-2 font-bold text-sm text-amber-800">
+            <i class="fa-solid fa-triangle-exclamation text-xl text-amber-600 shrink-0"></i>
+            <span>HTTPS Connection Required (ওয়েব পুশ নোটিফিকেশনের জন্য SSL/HTTPS বাধ্যতামূলক)</span>
+        </div>
+        <p class="text-xs text-amber-900 leading-relaxed">
+            ব্রাউজারের সিকিউরিটি নিয়মের কারণে <strong>Web Push Notifications</strong> এবং <strong>Service Worker</strong> শুধুমাত্র <strong>HTTPS (SSL)</strong> এ কাজ করে। আপনি বর্তমানে <code>http://</code> দিয়ে ব্রাউজ করছেন, যার কারণে ব্রাউজার পুশ নোটিফিকেশন ব্লক করেছে।
+        </p>
+        <div class="pt-1">
+            <a id="httpsRedirectBtn" href="#" class="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-sm transition">
+                <i class="fa-solid fa-lock"></i>
+                <span>Switch to Secure HTTPS (https://)</span>
+            </a>
+        </div>
+    </div>
+
     <!-- Push Subscription & Controls Card -->
     <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-200/80 space-y-6">
-        <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-4">
             <div>
                 <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
                     <i class="fa-solid fa-satellite-dish text-brand-600"></i>
                     Push Notification Subscription
                 </h2>
-                <p class="text-xs text-gray-500 mt-0.5">Manage web push alerts for user: <strong class="text-gray-800">{{ request.user.username }}</strong></p>
+                <p class="text-xs text-gray-500 mt-0.5">Active Admin User: <strong class="text-gray-800">{{ request.user.username }}</strong></p>
             </div>
-            <span id="pwaStatusBadge" class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                Checking Status...
-            </span>
+            <div class="flex items-center gap-2">
+                <span id="pwaStatusBadge" class="px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1.5">
+                    <i class="fa-solid fa-circle-notch fa-spin text-[10px]"></i>
+                    <span>Checking Status...</span>
+                </span>
+            </div>
+        </div>
+
+        <!-- Permission Denied Warning (shown only if blocked) -->
+        <div id="permissionBlockedNotice" class="hidden p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 space-y-2 text-xs">
+            <div class="font-bold text-rose-800 flex items-center gap-2">
+                <i class="fa-solid fa-circle-exclamation text-base text-rose-600 shrink-0"></i>
+                <span>ব্রাউজারে নোটিফিকেশন ব্লক করা আছে (Notification Permission Blocked)</span>
+            </div>
+            <p class="text-rose-700 leading-relaxed">
+                নোটিফিকেশন অন করতে ব্রাউজারের অ্যাড্রেস বারের বাম পাশে থাকা <strong>তালা (🔒) আইকন</strong> এ ক্লিক করুন ➔ <strong>Site Settings</strong> বা <strong>Permissions</strong> ➔ <strong>Notifications</strong> অপশনটি <strong>"Allow"</strong> করে পেজটি রিলোড দিন।
+            </p>
         </div>
 
         <!-- Subscription Action Area -->
-        <div class="p-6 rounded-2xl bg-gray-50 border border-gray-200 space-y-4">
-            <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div class="space-y-1 text-center sm:text-left">
-                    <h3 class="font-bold text-gray-900 text-sm">One-Click Device Subscription</h3>
-                    <p class="text-xs text-gray-500">
-                        Click the button below and tap <strong class="text-emerald-700">"Allow"</strong> when your browser asks for notification permission.
+        <div class="p-6 rounded-2xl bg-gray-50 border border-gray-200/90 space-y-4">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-5">
+                <div class="space-y-1.5 text-center sm:text-left">
+                    <h3 class="font-bold text-gray-900 text-sm flex items-center justify-center sm:justify-start gap-2">
+                        <i class="fa-solid fa-bell text-brand-600"></i>
+                        <span>One-Click Device Subscription</span>
+                    </h3>
+                    <p class="text-xs text-gray-600 max-w-md">
+                        নিচের বাটনে ক্লিক করে ব্রাউজারে <strong class="text-emerald-700">"Allow"</strong> পারমিশন দিন। নতুন কোনো অর্ডার আসার সাথে সাথে আপনার ফোনে ইনস্ট্যান্ট রিয়েল-টাইম সাউন্ড ও নোটিফিকেশন আসবে।
                     </p>
                 </div>
-                <div class="shrink-0 flex flex-col items-center gap-2">
-                    {% webpush_button with_class="px-6 py-3 bg-brand-600 hover:bg-brand-500 text-white font-extrabold text-sm rounded-xl transition shadow-md shadow-brand-600/30 flex items-center gap-2 cursor-pointer" %}
+                <div class="shrink-0 flex flex-col items-center gap-2 w-full sm:w-auto">
+                    <button type="button" id="customPushToggleBtn" onclick="handlePushSubscriptionToggle()"
+                        class="w-full sm:w-auto px-6 py-3.5 bg-brand-600 hover:bg-brand-500 text-white font-black text-sm rounded-xl transition shadow-lg shadow-brand-600/30 flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-bell text-amber-300"></i>
+                        <span id="pushBtnLabel">Subscribe to Push Messaging</span>
+                    </button>
                 </div>
             </div>
 
-            <div id="webpush-message" class="text-xs font-semibold p-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-center" style="display: none;"></div>
+            <!-- Dynamic Feedback Alert -->
+            <div id="pushFeedbackBox" class="hidden text-xs font-semibold p-4 rounded-xl text-center transition"></div>
         </div>
 
         <!-- Test Notification Button -->
-        <div class="flex flex-col sm:flex-row items-center justify-between p-5 rounded-2xl bg-amber-50/70 border border-amber-200 gap-4">
-            <div class="space-y-1">
-                <h4 class="font-bold text-amber-950 text-sm flex items-center gap-2">
+        <div class="flex flex-col sm:flex-row items-center justify-between p-5 rounded-2xl bg-amber-50/80 border border-amber-200/90 gap-4">
+            <div class="space-y-1 text-center sm:text-left">
+                <h4 class="font-bold text-amber-950 text-sm flex items-center justify-center sm:justify-start gap-2">
                     <i class="fa-solid fa-vial-circle-check text-amber-600"></i>
-                    Verify Notification Delivery
+                    <span>Verify Notification Delivery (টেস্ট নোটিফিকেশন পাঠান)</span>
                 </h4>
                 <p class="text-xs text-amber-800">
-                    Send an immediate simulated test order alert to your registered mobile device.
+                    আপনার মোবাইলের স্ট্যাটাস বার আইকন, সাউন্ড ও ভাইব্রেশন ঠিকমতো কাজ করছে কিনা তা দেখতে একটি টেস্ট নোটিফিকেশন পাঠান।
                 </p>
             </div>
             <button type="button" onclick="sendTestPushAlert()" id="testPushBtn"
-                class="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-brand-950 font-black text-xs rounded-xl transition shadow-sm flex items-center gap-2 shrink-0">
+                class="w-full sm:w-auto px-5 py-3 bg-amber-500 hover:bg-amber-600 text-brand-950 font-black text-xs rounded-xl transition shadow-sm flex items-center justify-center gap-2 shrink-0 cursor-pointer">
                 <i class="fa-solid fa-paper-plane"></i>
                 <span>Send Test Alert</span>
             </button>
@@ -112,33 +151,256 @@
         </div>
 
         <div class="p-4 rounded-2xl bg-brand-50 border border-brand-200 text-xs text-brand-900 flex items-start gap-3">
-            <i class="fa-solid fa-circle-info text-brand-600 text-base mt-0.5"></i>
-            <div>
-                <strong>Pro-Tip for Android:</strong> Make sure Chrome notifications are enabled under your phone's <em>Settings ➔ Apps ➔ Chrome ➔ Notifications</em>, and Battery Optimization is set to <em>Unrestricted</em> so alerts wake your screen instantly.
+            <i class="fa-solid fa-circle-info text-brand-600 text-base mt-0.5 shrink-0"></i>
+            <div class="leading-relaxed">
+                <strong>Pro-Tip for Android:</strong> Make sure Chrome notifications are enabled under your phone's <em>Settings ➔ Apps ➔ Chrome ➔ Notifications</em>, and Battery Optimization is set to <em>Unrestricted</em> so alerts wake your screen instantly even when the phone is locked.
             </div>
         </div>
     </div>
 
 </div>
 
+<!-- Pass VAPID Public Key securely -->
+<meta id="server-vapid-key" content="{{ vapid_public_key }}">
+
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const badge = document.getElementById('pwaStatusBadge');
-        if (!('Notification' in window)) {
-            badge.textContent = 'Push Not Supported';
-            badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200';
-        } else if (Notification.permission === 'granted') {
-            badge.textContent = '● Notifications Allowed';
-            badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200';
-        } else if (Notification.permission === 'denied') {
-            badge.textContent = '✕ Notifications Blocked';
-            badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200';
+    const VAPID_PUBLIC_KEY = "{{ vapid_public_key }}";
+    let isSubscribed = false;
+    let swRegistration = null;
+
+    // Helper: Convert URL-safe base64 to Uint8Array for PushManager
+    function urlB64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding)
+            .replace(/\-/g, '+')
+            .replace(/_/g, '/');
+
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    }
+
+    // Helper: Detect browser engine
+    function detectBrowser() {
+        const ua = navigator.userAgent.toLowerCase();
+        if (ua.indexOf('chrome') > -1) return 'chrome';
+        if (ua.indexOf('firefox') > -1) return 'firefox';
+        if (ua.indexOf('safari') > -1) return 'safari';
+        if (ua.indexOf('edge') > -1) return 'edge';
+        return 'chrome';
+    }
+
+    // Helper: Display UI feedback
+    function showFeedback(message, type = 'info') {
+        const box = document.getElementById('pushFeedbackBox');
+        if (!box) return;
+        box.classList.remove('hidden', 'bg-emerald-50', 'text-emerald-800', 'border-emerald-200', 'bg-rose-50', 'text-rose-800', 'border-rose-200', 'bg-amber-50', 'text-amber-800', 'border-amber-200');
+
+        if (type === 'success') {
+            box.classList.add('bg-emerald-50', 'text-emerald-800', 'border', 'border-emerald-200');
+            box.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-600 mr-1.5"></i> ' + message;
+        } else if (type === 'error') {
+            box.classList.add('bg-rose-50', 'text-rose-800', 'border', 'border-rose-200');
+            box.innerHTML = '<i class="fa-solid fa-circle-exclamation text-rose-600 mr-1.5"></i> ' + message;
         } else {
-            badge.textContent = '○ Permission Pending';
-            badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200';
+            box.classList.add('bg-amber-50', 'text-amber-800', 'border', 'border-amber-200');
+            box.innerHTML = '<i class="fa-solid fa-circle-info text-amber-600 mr-1.5"></i> ' + message;
+        }
+        box.classList.remove('hidden');
+    }
+
+    // Update Status Badge and Action Button based on current state
+    function updateSubscriptionUI(active) {
+        isSubscribed = active;
+        const badge = document.getElementById('pwaStatusBadge');
+        const btn = document.getElementById('customPushToggleBtn');
+        const label = document.getElementById('pushBtnLabel');
+
+        if (active) {
+            badge.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500 text-xs"></i> <span>Active & Subscribed</span>';
+            badge.className = 'px-3.5 py-1.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1.5';
+            
+            btn.className = 'w-full sm:w-auto px-6 py-3.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-sm rounded-xl transition shadow-lg shadow-rose-600/30 flex items-center justify-center gap-2.5 cursor-pointer';
+            btn.innerHTML = '<i class="fa-solid fa-bell-slash"></i> <span id="pushBtnLabel">Unsubscribe from Push Messaging</span>';
+        } else {
+            if (Notification.permission === 'denied') {
+                badge.innerHTML = '<i class="fa-solid fa-ban text-rose-500 text-xs"></i> <span>Permission Blocked</span>';
+                badge.className = 'px-3.5 py-1.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1.5';
+            } else {
+                badge.innerHTML = '<i class="fa-solid fa-circle-dot text-amber-500 text-xs"></i> <span>Not Subscribed</span>';
+                badge.className = 'px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1.5';
+            }
+
+            btn.className = 'w-full sm:w-auto px-6 py-3.5 bg-brand-600 hover:bg-brand-500 text-white font-black text-sm rounded-xl transition shadow-lg shadow-brand-600/30 flex items-center justify-center gap-2.5 cursor-pointer';
+            btn.innerHTML = '<i class="fa-solid fa-bell text-amber-300"></i> <span id="pushBtnLabel">Subscribe to Push Messaging</span>';
+        }
+    }
+
+    // Initial check on page load
+    document.addEventListener('DOMContentLoaded', async function() {
+        // 1. Check Secure Context (HTTPS or localhost)
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        if (window.location.protocol !== 'https:' && !isLocalhost) {
+            const banner = document.getElementById('httpsWarningBanner');
+            const redirectBtn = document.getElementById('httpsRedirectBtn');
+            banner.classList.remove('hidden');
+            redirectBtn.href = 'https://' + window.location.host + window.location.pathname;
+        }
+
+        // 2. Check if Service Worker & Push is supported
+        if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+            const badge = document.getElementById('pwaStatusBadge');
+            badge.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-rose-500 text-xs"></i> <span>Push Not Supported</span>';
+            badge.className = 'px-3.5 py-1.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1.5';
+            showFeedback('Your current browser does not support Service Worker or Push Notifications. Please use Google Chrome on Android.', 'error');
+            return;
+        }
+
+        // 3. Check Notification permission
+        if (Notification.permission === 'denied') {
+            document.getElementById('permissionBlockedNotice').classList.remove('hidden');
+        }
+
+        try {
+            // Register service worker with root scope
+            swRegistration = await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
+            await navigator.serviceWorker.ready;
+
+            // Check if already subscribed in browser
+            const existingSub = await swRegistration.pushManager.getSubscription();
+            if (existingSub) {
+                // Sync with server in background to ensure database has this device
+                syncSubscriptionWithServer('subscribe', existingSub);
+                updateSubscriptionUI(true);
+            } else {
+                updateSubscriptionUI(false);
+            }
+        } catch (err) {
+            console.error('Service worker registration or check error:', err);
+            updateSubscriptionUI(false);
         }
     });
 
+    // Handle Subscribe / Unsubscribe Toggle Click
+    async function handlePushSubscriptionToggle() {
+        const btn = document.getElementById('customPushToggleBtn');
+        btn.disabled = true;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Processing...</span>';
+
+        try {
+            // 1. Insecure check
+            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            if (window.location.protocol !== 'https:' && !isLocalhost) {
+                showFeedback('পুশ নোটিফিকেশন চালু করার জন্য সাইটটি HTTPS (SSL) দিয়ে খুলুন। (Please visit via https://)', 'error');
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+                return;
+            }
+
+            // 2. Register Service Worker if needed
+            if (!swRegistration) {
+                swRegistration = await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
+                await navigator.serviceWorker.ready;
+            }
+
+            // If already subscribed -> Unsubscribe
+            if (isSubscribed) {
+                const sub = await swRegistration.pushManager.getSubscription();
+                if (sub) {
+                    await syncSubscriptionWithServer('unsubscribe', sub);
+                    await sub.unsubscribe();
+                }
+                updateSubscriptionUI(false);
+                showFeedback('Push notifications successfully disabled on this device.', 'info');
+                btn.disabled = false;
+                return;
+            }
+
+            // 3. Request Notification Permission
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                if (permission === 'denied') {
+                    document.getElementById('permissionBlockedNotice').classList.remove('hidden');
+                    showFeedback('Notification permission was denied. Please allow notifications from your browser site settings.', 'error');
+                } else {
+                    showFeedback('Notification permission was dismissed.', 'error');
+                }
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+                updateSubscriptionUI(false);
+                return;
+            }
+
+            document.getElementById('permissionBlockedNotice').classList.add('hidden');
+
+            // 4. Create Push Subscription
+            if (!VAPID_PUBLIC_KEY) {
+                showFeedback('VAPID public key not configured on server.', 'error');
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+                return;
+            }
+
+            const appServerKey = urlB64ToUint8Array(VAPID_PUBLIC_KEY);
+            const newSubscription = await swRegistration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: appServerKey
+            });
+
+            // 5. Send to Django backend
+            const serverSuccess = await syncSubscriptionWithServer('subscribe', newSubscription);
+            if (serverSuccess) {
+                updateSubscriptionUI(true);
+                showFeedback('🎉 Push notifications activated successfully! You will now receive instant alerts whenever a new order is placed.', 'success');
+            } else {
+                showFeedback('Device subscribed in browser, but failed to save to server. Please try again.', 'error');
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+
+        } catch (err) {
+            console.error('Subscription error:', err);
+            showFeedback('Subscription error: ' + (err.message || err), 'error');
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    // Send subscription payload to Django /webpush/save_information
+    async function syncSubscriptionWithServer(statusType, subscription) {
+        try {
+            const payload = {
+                status_type: statusType,
+                subscription: subscription.toJSON(),
+                browser: detectBrowser(),
+                user_agent: navigator.userAgent
+            };
+
+            const response = await fetch('/webpush/save_information', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify(payload),
+                credentials: 'include'
+            });
+
+            return response.status === 201 || response.status === 200 || response.status === 202;
+        } catch (e) {
+            console.error('Error saving subscription to server:', e);
+            return false;
+        }
+    }
+
+    // Trigger Test Alert
     function sendTestPushAlert() {
         const btn = document.getElementById('testPushBtn');
         const msg = document.getElementById('testResultMsg');
@@ -159,18 +421,18 @@
             btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> <span>Send Test Alert</span>';
             msg.classList.remove('hidden');
             if (data.success) {
-                msg.className = 'text-xs font-bold p-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200';
-                msg.innerHTML = '<i class="fa-solid fa-check-circle text-emerald-600 mr-1"></i> ' + data.message;
+                msg.className = 'text-xs font-bold p-3.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200';
+                msg.innerHTML = '<i class="fa-solid fa-check-circle text-emerald-600 mr-1.5"></i> ' + data.message;
             } else {
-                msg.className = 'text-xs font-bold p-3 rounded-xl bg-rose-50 text-rose-800 border border-rose-200';
-                msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-rose-600 mr-1"></i> ' + (data.error || 'Failed to dispatch test notification.');
+                msg.className = 'text-xs font-bold p-3.5 rounded-xl bg-rose-50 text-rose-800 border border-rose-200';
+                msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-rose-600 mr-1.5"></i> ' + (data.error || 'Failed to dispatch test notification.');
             }
         })
         .catch(err => {
             btn.disabled = false;
             btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> <span>Send Test Alert</span>';
             msg.classList.remove('hidden');
-            msg.className = 'text-xs font-bold p-3 rounded-xl bg-rose-50 text-rose-800 border border-rose-200';
+            msg.className = 'text-xs font-bold p-3.5 rounded-xl bg-rose-50 text-rose-800 border border-rose-200';
             msg.textContent = 'Error triggering test alert: ' + err;
         });
     }

@@ -30,16 +30,24 @@ self.addEventListener('push', function(event) {
     }
   }
 
+  const baseUrl = self.location.origin;
+  const iconUrl = (data.icon && data.icon.startsWith('http')) 
+    ? data.icon 
+    : new URL(data.icon || '/static/images/icon-192.png', baseUrl).href;
+  const badgeUrl = (data.badge && data.badge.startsWith('http')) 
+    ? data.badge 
+    : new URL('/static/images/badge-96.png', baseUrl).href;
+
   const notificationOptions = {
     body: data.body,
-    icon: data.icon || "/static/images/icon-192.png",
-    badge: "/static/images/favicon.png",
+    icon: iconUrl,
+    badge: badgeUrl,
     vibrate: [200, 100, 200, 100, 200],
-    tag: 'pickpickles-order-' + Date.now(),
+    tag: data.tag || ('pickpickles-order-' + Date.now()),
     renotify: true,
     requireInteraction: true,
     data: {
-      url: data.url || "/dashboard/orders/"
+      url: data.url || '/dashboard/orders/'
     }
   };
 
