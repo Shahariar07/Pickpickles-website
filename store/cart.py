@@ -24,6 +24,9 @@ class Cart:
                 'image': product.primary_image_url,
                 'slug': product.slug,
             }
+        else:
+            # Always ensure price is synced to latest active product price
+            self.cart[product_id]['price'] = str(product.price_bdt)
 
         if override_quantity:
             self.cart[product_id]['quantity'] = quantity
@@ -57,26 +60,51 @@ class Cart:
         products = Product.objects.filter(id__in=product_ids)
         product_map = {str(p.id): p for p in products}
 
+        needs_save = False
         for product_id, item_data in self.cart.items():
             if product_id in product_map:
                 prod = product_map[product_id]
                 item = item_data.copy()
                 item['product'] = prod
-                item['price'] = Decimal(str(item_data['price']))
-                item['total_price'] = item['price'] * item['quantity']
+                # Always use current live price from database
+                live_price = prod.price_bdt
+                item['price'] = live_price
+                item['total_price'] = live_price * item['quantity']
                 item['weight'] = prod.jar_weight_grams or 600
                 item['net_weight'] = prod.jar_weight_grams or 600
                 item['gross_weight'] = getattr(prod, 'gross_weight_grams', 850) or 850
                 item['total_weight_grams'] = item['gross_weight'] * item['quantity']
                 item['total_net_weight_grams'] = item['net_weight'] * item['quantity']
                 item['total_gross_weight_grams'] = item['gross_weight'] * item['quantity']
+                
+                # Sync session if price in session was old
+                if str(item_data.get('price')) != str(live_price):
+                    self.cart[product_id]['price'] = str(live_price)
+                    needs_save = True
+
                 yield item
+
+        if needs_save:
+            self.save()
 
     def __len__(self):
         return sum(int(item.get('quantity', 0)) for item in self.cart.values())
 
     def get_subtotal(self):
-        return sum(Decimal(str(item.get('price', '0'))) * int(item.get('quantity', 0)) for item in self.cart.values())
+        product_ids = [k for k in self.cart.keys()]
+        products = Product.objects.filter(id__in=product_ids)
+        product_map = {str(p.id): p for p in products}
+        total = Decimal('0')
+        for product_id, item in self.cart.items():
+            qty = int(item.get('quantity', 0))
+            if qty <= 0:
+                continue
+            if product_id in product_map:
+                price = product_map[product_id].price_bdt
+            else:
+                price = Decimal(str(item.get('price', '0')))
+            total += price * qty
+        return total
 
     def get_total_net_weight_grams(self):
         product_ids = [k for k in self.cart.keys()]

@@ -250,14 +250,6 @@
 
                 <!-- Action Controls: Cart & Dashboard link -->
                 <div class="flex items-center gap-2 sm:gap-4">
-
-                    <!-- Track Order Pill (Mobile friendly) -->
-                    <a href="{% url 'store:order_track' %}"
-                        class="hidden sm:inline-flex items-center gap-1.5 bg-gray-50 hover:bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 transition-all">
-                        <i class="fa-solid fa-magnifying-glass text-brand-600"></i> Track
-                    </a>
-
-
                     <!-- Cart Trigger Button -->
                     <button id="cartDrawerBtn" onclick="toggleCartDrawer(true)"
                         class="relative flex items-center gap-2 bg-brand-600 hover:bg-brand-700 active:scale-95 text-white px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl font-bold text-sm shadow-md shadow-brand-600/20 transition-all">
@@ -567,9 +559,8 @@
                 <div class="w-20 h-20 bg-brand-50 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
                     🥒
                 </div>
-                <h4 class="font-display font-bold text-gray-800 text-lg">Your jar bag is empty!</h4>
-                <p class="text-xs text-gray-500 mt-1 mb-6">Choose your favorite homemade pickle jars and add them here.
-                </p>
+                <h4 class="font-display font-extrabold text-gray-900 text-lg">Your cart is empty.</h4>
+                <p class="text-xs sm:text-sm font-semibold text-brand-600 mt-1 mb-6">Pick some crunch first! 🌿</p>
                 <a href="{% url 'store:index' %}#pickle-menu" onclick="toggleCartDrawer(false)"
                     class="inline-block bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-sm transition">
                     Explore Flavors
@@ -579,7 +570,7 @@
         </div>
 
         <!-- Drawer Footer with Subtotal & Checkout Button -->
-        <div class="p-4 sm:p-5 border-t border-gray-100 bg-white space-y-3">
+        <div id="cartDrawerFooter" class="p-4 sm:p-5 border-t border-gray-100 bg-white space-y-3 {% if cart|length == 0 %}hidden{% endif %}">
             <div class="flex items-center justify-between text-sm">
                 <span class="text-gray-500 font-medium">Subtotal</span>
                 <span class="font-display font-extrabold text-lg text-gray-900">৳<span id="drawerSubtotal">{{ cart_subtotal }}</span></span>

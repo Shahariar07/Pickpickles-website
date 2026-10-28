@@ -139,20 +139,24 @@ function renderCartDrawer(items, subtotal) {
     const totalItems = items ? items.reduce((sum, itm) => sum + (itm.quantity || 0), 0) : 0;
     updateFreeDeliveryProgress(totalItems);
 
+    const drawerFooter = document.getElementById('cartDrawerFooter');
+
     if (!items || items.length === 0) {
+        if (drawerFooter) drawerFooter.classList.add('hidden');
         drawerItems.innerHTML = `
             <div class="text-center py-12 px-4" id="emptyCartMessage">
-                <div class="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+                <div class="w-20 h-20 bg-brand-50 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
                     🥒
                 </div>
-                <h4 class="font-display font-bold text-gray-800 text-lg">Your jar bag is empty!</h4>
-                <p class="text-xs text-gray-500 mt-1 mb-6">Choose your favorite homemade pickle jars and add them here.</p>
-                <a href="/#pickle-menu" onclick="toggleCartDrawer(false)" class="inline-block bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-sm transition">
+                <h4 class="font-display font-extrabold text-gray-900 text-lg">Your cart is empty.</h4>
+                <p class="text-xs sm:text-sm font-semibold text-brand-600 mt-1 mb-6">Pick some crunch first! 🌿</p>
+                <a href="/#pickle-menu" onclick="toggleCartDrawer(false)" class="inline-block bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-sm transition">
                     Explore Flavors
                 </a>
             </div>
         `;
     } else {
+        if (drawerFooter) drawerFooter.classList.remove('hidden');
         drawerItems.innerHTML = items.map(item => `
             <div class="flex gap-3.5 p-3 rounded-2xl bg-gray-50/80 border border-gray-100 relative group" id="drawer-item-${item.product_id}">
                 <img src="${item.image_url}" alt="${item.name}" class="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-xl border border-gray-200 bg-white flex-shrink-0">

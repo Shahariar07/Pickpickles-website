@@ -1492,13 +1492,18 @@ def stock_manager(request):
                 
                 price_val = request.POST.get('price_bdt')
                 if price_val and str(price_val).strip():
-                    product.price_bdt = float(price_val)
+                    product.price_bdt = Decimal(str(price_val).strip())
                 
                 orig_price_val = request.POST.get('original_price_bdt')
                 if orig_price_val and str(orig_price_val).strip():
-                    product.original_price_bdt = float(orig_price_val)
+                    product.original_price_bdt = Decimal(str(orig_price_val).strip())
                 else:
                     product.original_price_bdt = None
+
+                price_reason = request.POST.get('price_change_reason', '').strip()
+                if price_reason:
+                    product._price_change_reason = price_reason
+                product._price_changed_by = request.user if request.user.is_authenticated else None
                 
                 stock_val = request.POST.get('stock_count')
                 if stock_val is not None and str(stock_val).strip() != '':
@@ -1515,8 +1520,7 @@ def stock_manager(request):
                 
                 if 'image' in request.FILES and request.FILES['image']:
                     product.image = request.FILES['image']
-                    product.save()
-                    if product.image and product.image.name:
+                    if product.image and hasattr(product.image, 'name') and product.image.name:
                         clean_name = product.image.name.lstrip('/\\').replace('\\', '/')
                         product.image_url = f"/media/{clean_name}"
                 else:
@@ -1536,12 +1540,23 @@ def stock_manager(request):
                 if shelf_life_val is not None:
                     product.shelf_life = shelf_life_val.strip()
 
-                price_reason = request.POST.get('price_change_reason', '').strip()
-                if price_reason:
-                    product._price_change_reason = price_reason
-                product._price_changed_by = request.user if request.user.is_authenticated else None
-
                 product.save()
+
+                # Robust audit sync: ensure latest PriceHistory matches current price
+                last_ph = PriceHistory.objects.filter(product=product).order_by('-created_at', '-id').first()
+                if last_ph and last_ph.new_price != product.price_bdt:
+                    PriceHistory.objects.create(
+                        product=product,
+                        old_price=last_ph.new_price,
+                        new_price=product.price_bdt,
+                        old_original_price=product.original_price_bdt,
+                        new_original_price=product.original_price_bdt,
+                        change_type='INCREASE' if product.price_bdt > last_ph.new_price else 'DECREASE',
+                        reason=price_reason or 'Price revised in Inventory',
+                        notes='Synchronized with current active catalog price',
+                        changed_by=request.user if request.user.is_authenticated else None
+                    )
+
                 messages.success(request, f'Product "{product.name}" has been successfully updated.')
             except Exception as e:
                 messages.error(request, f'Failed to update product: {str(e)}')
@@ -1656,8 +1671,8 @@ def stock_manager(request):
                 new_target_str = request.POST.get('target_stock_level')
                 new_min_str = request.POST.get('min_stock_threshold')
                 note = request.POST.get('stock_note', '').strip()
-                if new_price:
-                    product.price_bdt = float(new_price)
+                if new_price and str(new_price).strip():
+                    product.price_bdt = Decimal(str(new_price).strip())
                 if new_target_str:
                     product.target_stock_level = int(new_target_str)
                 if new_min_str:
@@ -1688,8 +1703,24 @@ def stock_manager(request):
                     product._price_change_reason = price_reason
                 product._price_changed_by = request.user if request.user.is_authenticated else None
                 product.save()
+
+                # Robust audit sync: ensure latest PriceHistory record matches product.price_bdt
+                last_ph = PriceHistory.objects.filter(product=product).order_by('-created_at', '-id').first()
+                if last_ph and last_ph.new_price != product.price_bdt:
+                    PriceHistory.objects.create(
+                        product=product,
+                        old_price=last_ph.new_price,
+                        new_price=product.price_bdt,
+                        old_original_price=product.original_price_bdt,
+                        new_original_price=product.original_price_bdt,
+                        change_type='INCREASE' if product.price_bdt > last_ph.new_price else 'DECREASE',
+                        reason=price_reason or 'Price revised in Inventory',
+                        notes='Synchronized with current active catalog price',
+                        changed_by=request.user if request.user.is_authenticated else None
+                    )
+
                 messages.success(request, f'Updated price & inventory for "{product.name}".')
-            except ValueError:
+            except (ValueError, TypeError) as e:
                 messages.error(request, 'Invalid price or stock count format.')
             return redirect('dashboard:stock_manager')
 
@@ -1882,12 +1913,30 @@ def stock_manager(request):
                 pass
     suggested_batch_ref = f"Batch #{next_batch_num}"
 
-    # Map latest price changes for products
-    latest_price_changes_map = {}
-    for ph in PriceHistory.objects.filter(change_type__in=['INCREASE', 'DECREASE']).order_by('created_at'):
-        latest_price_changes_map[ph.product_id] = ph
+    # Map comprehensive price history analytics for products (আগে কত ছিল, এখন কত আছে, কয়বার বাড়ছে)
+    all_price_histories = list(PriceHistory.objects.select_related('changed_by').order_by('created_at', 'id'))
+    ph_by_product = {}
+    for ph in all_price_histories:
+        ph_by_product.setdefault(ph.product_id, []).append(ph)
+
     for p in products:
-        p.latest_price_change = latest_price_changes_map.get(p.id)
+        p_history = ph_by_product.get(p.id, [])
+        first_rec = p_history[0] if p_history else None
+        p.first_price = first_rec.old_price if first_rec else p.price_bdt
+
+        inc_records = [ph for ph in p_history if ph.change_type == 'INCREASE']
+        dec_records = [ph for ph in p_history if ph.change_type == 'DECREASE']
+        p.increase_count = len(inc_records)
+        p.decrease_count = len(dec_records)
+        p.total_increase_bdt = max(Decimal('0'), Decimal(str(p.price_bdt)) - Decimal(str(p.first_price)))
+
+        change_records = [ph for ph in p_history if ph.change_type in ['INCREASE', 'DECREASE']]
+        if change_records:
+            p.latest_price_change = change_records[-1]
+            p.prev_price = p.latest_price_change.old_price
+        else:
+            p.latest_price_change = None
+            p.prev_price = p.first_price
 
     recent_price_logs = PriceHistory.objects.select_related('product', 'changed_by').all().order_by('-created_at')[:6]
 

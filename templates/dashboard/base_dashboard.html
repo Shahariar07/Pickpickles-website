@@ -170,32 +170,30 @@
 
         <!-- Left Sidebar Navigation -->
         <aside id="sidebarNav"
-            class="fixed inset-y-0 left-0 z-50 w-64 bg-brand-900 text-white flex flex-col justify-between border-r border-brand-800 shadow-2xl transform -translate-x-full md:translate-x-0 md:static md:inset-auto md:shadow-none transition-transform duration-300 ease-in-out">
+            class="fixed inset-y-0 left-0 z-50 w-64 bg-brand-900 text-white flex flex-col justify-between border-r border-brand-800 shadow-2xl transform -translate-x-full md:translate-x-0 md:sticky md:top-0 md:h-screen md:shadow-none transition-transform duration-300 ease-in-out">
 
-            <!-- Top Section: Brand & Nav Links -->
-            <div class="flex flex-col flex-1 overflow-y-auto">
-                <!-- Brand Header -->
-                <div class="p-5 border-b border-brand-800 flex items-center justify-between">
-                    <a href="{% url 'dashboard:index' %}" class="flex items-center gap-3">
-                        <img src="{% static 'images/logo.png' %}" alt="Pickpickles Logo"
-                            class="w-10 h-10 rounded-full object-cover border-2 border-brand-400/40 shadow-sm">
-                        <div class="leading-none">
-                            <span class="font-display font-extrabold text-xl tracking-tight text-white">PICK<span
-                                    class="text-brand-accent">PICKLES</span></span>
-                            <span
-                                class="block text-[10px] font-bold uppercase text-brand-accent tracking-wider mt-1">Homemade Product</span>
-                        </div>
-                    </a>
-                    <button type="button" onclick="toggleSidebar()"
-                        class="md:hidden text-gray-400 hover:text-white p-1">
-                        <i class="fa-solid fa-xmark text-lg"></i>
-                    </button>
-                </div>
+            <!-- Brand Header (Fixed at top of sidebar) -->
+            <div class="p-4 sm:p-5 border-b border-brand-800 flex items-center justify-between shrink-0">
+                <a href="{% url 'dashboard:index' %}" class="flex items-center gap-3">
+                    <img src="{% static 'images/logo.png' %}" alt="Pickpickles Logo"
+                        class="w-10 h-10 rounded-full object-cover border-2 border-brand-400/40 shadow-sm">
+                    <div class="leading-none">
+                        <span class="font-display font-extrabold text-xl tracking-tight text-white">PICK<span
+                                class="text-brand-accent">PICKLES</span></span>
+                        <span
+                            class="block text-[10px] font-bold uppercase text-brand-accent tracking-wider mt-1">Homemade Product</span>
+                    </div>
+                </a>
+                <button type="button" onclick="toggleSidebar()"
+                    class="md:hidden text-gray-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
 
-                <!-- Navigation Menu (Priority-based: Main Operations -> Records & History -> Admin Management) -->
-                <div class="p-4 space-y-4">
-                    <!-- SECTION 1: MAIN OPERATIONS (Core Daily Workflow) -->
-                    <div class="space-y-1">
+            <!-- Middle Nav Links: Cleanly scrollable WITHOUT any visible scrollbar -->
+            <div class="flex-1 overflow-y-auto p-3.5 space-y-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                <!-- SECTION 1: MAIN OPERATIONS (Core Daily Workflow) -->
+                <div class="space-y-1">
                         <div class="text-[10px] font-extrabold text-brand-accent uppercase tracking-widest px-3 mb-2 flex items-center justify-between">
                             <span>Main Operations</span>
                             <i class="fa-solid fa-layer-group text-[10px] text-brand-accent/60"></i>
@@ -383,36 +381,29 @@
                         </nav>
                     </div>
                 </div>
-            </div>
 
             <!-- Bottom User Profile Card & Logout -->
-            <div class="p-3.5 border-t border-brand-800 bg-brand-950/60 space-y-2">
-                <div
-                    class="flex items-center justify-between gap-2.5 px-3 py-2 bg-brand-800/40 rounded-xl border border-brand-700/50">
-                    <div class="flex items-center gap-2.5 overflow-hidden">
-                        <div
-                            class="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center font-black text-xs text-brand-accent shrink-0">
+            <div class="p-3 border-t border-brand-800 bg-brand-950/70">
+                <div class="flex items-center justify-between gap-2 px-2.5 py-2 bg-brand-800/40 rounded-xl border border-brand-700/50">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-8 h-8 rounded-xl bg-brand-700 flex items-center justify-center font-black text-xs text-brand-accent shrink-0 border border-brand-600/50">
                             {{ user.username|slice:":1"|upper|default:"A" }}
                         </div>
-                        <div class="truncate">
-                            <span class="block text-xs font-bold text-white truncate">{{ user.username|default:"Admin" }}</span>
+                        <div class="min-w-0 truncate">
+                            <span class="block text-xs font-bold text-white truncate leading-tight">{{ user.username|default:"Admin" }}</span>
                             {% if is_view_only %}
-                            <span class="inline-flex items-center gap-1 text-[9px] font-black text-amber-300 bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-600/50 mt-0.5">
-                                <i class="fa-solid fa-eye text-[8px]"></i> View-Only
-                            </span>
+                            <span class="text-[9px] font-black text-amber-300">View-Only</span>
                             {% else %}
-                            <span class="block text-[10px] text-emerald-400 font-medium">● Logged In</span>
+                            <span class="text-[10px] text-emerald-400 font-medium">● Online</span>
                             {% endif %}
                         </div>
                     </div>
+                    <a href="{% url 'dashboard:logout' %}" title="Log Out"
+                        class="px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white transition text-xs font-bold flex items-center gap-1.5 shadow-xs shrink-0 active:scale-95">
+                        <i class="fa-solid fa-right-from-bracket text-[11px]"></i>
+                        <span>Log Out</span>
+                    </a>
                 </div>
-
-                <!-- Prominent Logout Button with Name / Text -->
-                <a href="{% url 'dashboard:logout' %}" title="Log Out"
-                    class="w-full py-2 px-3 rounded-xl bg-rose-900/50 hover:bg-rose-700 text-rose-100 hover:text-white transition text-xs font-bold flex items-center justify-center gap-2 border border-rose-800/60 hover:border-rose-500 shadow-xs group">
-                    <i class="fa-solid fa-right-from-bracket text-sm text-rose-300 group-hover:text-white transition"></i>
-                    <span>Log Out</span>
-                </a>
             </div>
 
         </aside>

@@ -392,7 +392,7 @@ def checkout(request):
     cart = Cart(request)
     if len(cart) == 0:
         messages.warning(request, 'Your cart is empty. Pick some crunch first!')
-        return redirect('store:index')
+        return redirect('store:cart_view')
 
     total_weight_grams = cart.get_total_weight_grams()
     total_weight_kg = cart.get_total_weight_kg()
@@ -438,15 +438,16 @@ def checkout(request):
             for item in cart:
                 product = item['product']
                 qty = item['quantity']
+                current_unit_price = product.price_bdt
 
                 OrderItem.objects.create(
                     order=order,
                     product=product,
                     product_name=product.name,
                     jar_weight_grams=product.jar_weight_grams,
-                    unit_price=item['price'],
+                    unit_price=current_unit_price,
                     quantity=qty,
-                    total_price=item['total_price']
+                    total_price=current_unit_price * qty
                 )
 
             # Record order attempt for rate limiting

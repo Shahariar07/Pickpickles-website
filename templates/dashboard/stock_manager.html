@@ -155,20 +155,33 @@
                     </div>
                 </div>
 
-                <!-- Price -->
+                <!-- Price & Increase History -->
                 <div class="text-right shrink-0">
                     <span class="font-display font-black text-base text-gray-900 block leading-tight">৳{{ product.price_bdt|floatformat:0 }}</span>
                     {% if product.original_price_bdt and product.original_price_bdt > product.price_bdt %}
                     <span class="text-[10px] text-gray-400 line-through block">৳{{ product.original_price_bdt|floatformat:0 }}</span>
                     {% endif %}
-                    {% if product.latest_price_change %}
-                    <div class="mt-0.5">
-                        <a href="{% url 'dashboard:product_price_history' product.id %}" class="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded {% if product.latest_price_change.change_type == 'INCREASE' %}bg-emerald-50 text-emerald-800 border border-emerald-200{% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}" title="Previous price was ৳{{ product.latest_price_change.old_price|floatformat:0 }}">
-                            <span>আগে ৳{{ product.latest_price_change.old_price|floatformat:0 }}</span>
-                            <span>({% if product.latest_price_change.price_delta > 0 %}+{% endif %}৳{{ product.latest_price_change.price_delta|floatformat:0 }})</span>
+                    
+                    <div class="mt-1 flex flex-col items-end gap-0.5">
+                        {% if product.prev_price != product.price_bdt %}
+                        <span class="text-[10px] text-gray-500 font-semibold block">আগে: <strong class="text-gray-700">৳{{ product.prev_price|floatformat:0 }}</strong></span>
+                        {% else %}
+                        <span class="text-[9.5px] text-gray-400 font-medium block">শুরু থেকেই: ৳{{ product.first_price|floatformat:0 }}</span>
+                        {% endif %}
+
+                        <a href="{% url 'dashboard:product_price_history' product.id %}" class="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded {% if product.increase_count > 0 %}bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100{% else %}bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100{% endif %} transition shadow-2xs" title="প্রারম্ভিক মূল্য ৳{{ product.first_price|floatformat:0 }}। ক্লিক করে মূল্য খতিয়ান দেখুন">
+                            {% if product.increase_count > 0 %}
+                            <i class="fa-solid fa-arrow-trend-up text-emerald-600 text-[8px]"></i>
+                            <span>{{ product.increase_count }} বার বাড়ছে</span>
+                            {% if product.total_increase_bdt > 0 %}
+                            <span class="text-emerald-700 font-extrabold">(+৳{{ product.total_increase_bdt|floatformat:0 }})</span>
+                            {% endif %}
+                            {% else %}
+                            <i class="fa-solid fa-minus text-gray-400 text-[8px]"></i>
+                            <span>দাম বাড়েনি</span>
+                            {% endif %}
                         </a>
                     </div>
-                    {% endif %}
                 </div>
             </div>
 
@@ -361,21 +374,40 @@
                             </div>
                         </td>
 
-                        <!-- Col 2: Selling Price -->
+                        <!-- Col 2: Selling Price & Increase History -->
                         <td class="py-3 px-4 align-middle whitespace-nowrap">
                             <div>
-                                <span class="font-display font-black text-sm text-gray-900">৳{{ product.price_bdt|floatformat:0 }}</span>
-                                {% if product.original_price_bdt and product.original_price_bdt > product.price_bdt %}
-                                <span class="text-[10px] text-gray-400 line-through block">৳{{ product.original_price_bdt|floatformat:0 }}</span>
-                                {% endif %}
-                                {% if product.latest_price_change %}
-                                <div class="mt-0.5">
-                                    <a href="{% url 'dashboard:product_price_history' product.id %}" class="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded {% if product.latest_price_change.change_type == 'INCREASE' %}bg-emerald-50 text-emerald-800 border border-emerald-200{% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %} hover:underline" title="Previous price was ৳{{ product.latest_price_change.old_price|floatformat:0 }}">
-                                        <span>আগে ৳{{ product.latest_price_change.old_price|floatformat:0 }}</span>
-                                        <span>({% if product.latest_price_change.price_delta > 0 %}+{% endif %}৳{{ product.latest_price_change.price_delta|floatformat:0 }})</span>
-                                    </a>
+                                <div class="flex items-baseline gap-1.5">
+                                    <span class="font-display font-black text-sm text-gray-900">৳{{ product.price_bdt|floatformat:0 }}</span>
+                                    {% if product.original_price_bdt and product.original_price_bdt > product.price_bdt %}
+                                    <span class="text-[10px] text-gray-400 line-through">৳{{ product.original_price_bdt|floatformat:0 }}</span>
+                                    {% endif %}
                                 </div>
-                                {% endif %}
+
+                                <div class="mt-0.5 space-y-0.5">
+                                    <div class="text-[10px] text-gray-500 font-medium flex items-center gap-1">
+                                        {% if product.prev_price != product.price_bdt %}
+                                        <span>আগে ছিল: <strong class="text-gray-700 font-bold">৳{{ product.prev_price|floatformat:0 }}</strong></span>
+                                        {% else %}
+                                        <span class="text-gray-400">শুরুর মূল্য: <strong>৳{{ product.first_price|floatformat:0 }}</strong></span>
+                                        {% endif %}
+                                    </div>
+
+                                    <div>
+                                        <a href="{% url 'dashboard:product_price_history' product.id %}" class="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded {% if product.increase_count > 0 %}bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 hover:underline{% else %}bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100{% endif %} transition shadow-2xs" title="প্রারম্ভিক মূল্য ৳{{ product.first_price|floatformat:0 }}। ক্লিক করে মূল্য পরিবর্তনের খতিয়ান দেখুন">
+                                            {% if product.increase_count > 0 %}
+                                            <i class="fa-solid fa-arrow-trend-up text-emerald-600 text-[8px]"></i>
+                                            <span>{{ product.increase_count }} বার বাড়ছে</span>
+                                            {% if product.total_increase_bdt > 0 %}
+                                            <span class="font-extrabold text-emerald-700">(+৳{{ product.total_increase_bdt|floatformat:0 }})</span>
+                                            {% endif %}
+                                            {% else %}
+                                            <i class="fa-solid fa-minus text-gray-400 text-[8px]"></i>
+                                            <span>দাম বাড়েনি</span>
+                                            {% endif %}
+                                        </a>
+                                    </div>
+                                </div>
                             </div>
                         </td>
 
