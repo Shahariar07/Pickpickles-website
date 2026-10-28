@@ -61,6 +61,7 @@ class Product(models.Model):
     
     is_featured = models.BooleanField(default=False, db_index=True)
     is_in_stock = models.BooleanField(default=True, db_index=True)
+    custom_badge = models.CharField(max_length=80, blank=True, default='', help_text="Promotional or urgency badge (e.g. '🥭 Final Season Batch!', '🔥 Limited Stock!')")
     stock_count = models.PositiveIntegerField(default=50, db_index=True)
     min_stock_threshold = models.PositiveIntegerField(default=15, help_text="Alert if stock falls below this number")
     target_stock_level = models.PositiveIntegerField(default=50, help_text="Ideal target inventory quantity")

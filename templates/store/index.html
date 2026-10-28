@@ -3,6 +3,42 @@
 
 {% block title %}Pickpickles | Homemade Fresh Pickles in Bangladesh{% endblock %}
 
+{% block extra_head %}
+<style>
+@keyframes seasonalGlow {
+    0%, 100% {
+        box-shadow: 0 4px 18px -2px rgba(245, 158, 11, 0.28), 0 0 0 1px rgba(245, 158, 11, 0.45);
+    }
+    50% {
+        box-shadow: 0 8px 28px 2px rgba(245, 158, 11, 0.55), 0 0 0 3px rgba(251, 191, 36, 0.8);
+    }
+}
+@keyframes shimmerLight {
+    0% { transform: translateX(-120%); }
+    60%, 100% { transform: translateX(220%); }
+}
+.seasonal-card-glow {
+    animation: seasonalGlow 3s ease-in-out infinite;
+}
+.shimmer-ribbon {
+    position: relative;
+    overflow: hidden;
+}
+.shimmer-ribbon::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+    transform: translateX(-120%);
+    animation: shimmerLight 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    pointer-events: none;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <!-- Hero Section (Rich High-Contrast Dark Forest Theme) -->
 <section class="relative overflow-hidden text-white py-12 sm:py-20 px-4 sm:px-6 lg:px-8 border-b-4 border-amber-500" style="background-color: #04170c; background-image: radial-gradient(#166534 1.5px, transparent 1.5px), linear-gradient(180deg, #02130a 0%, #092d18 50%, #04170c 100%); background-size: 24px 24px, 100% 100%;">
@@ -67,7 +103,7 @@
                         <button type="button" 
                                 onclick="switchHeroPickle({{ forloop.counter0 }})" 
                                 id="hero-pill-{{ forloop.counter0 }}" 
-                                class="hero-pill-btn flex-1 py-2 px-2 rounded-xl text-center transition-all cursor-pointer flex items-center justify-center gap-1.5 {% if forloop.first %}bg-amber-400 text-slate-950 font-black shadow-md ring-1 ring-amber-300{% else %}text-emerald-200/90 hover:text-white hover:bg-white/10 font-bold{% endif %}">
+                                class="hero-pill-btn relative overflow-hidden flex-1 py-2 px-2 rounded-xl text-center transition-all duration-300 cursor-pointer flex items-center justify-center gap-1.5 {% if forloop.first %}bg-amber-400 text-slate-950 font-black shadow-md ring-2 ring-amber-300 scale-[1.02]{% else %}text-emerald-200/90 hover:text-white hover:bg-white/10 font-bold{% endif %}">
                             <span class="text-xs sm:text-sm">{% if forloop.counter == 1 %}🥇{% elif forloop.counter == 2 %}🥈{% else %}🥉{% endif %}</span>
                             <span class="text-xs font-black tracking-wide whitespace-nowrap">
                                 {% if forloop.counter == 1 %}
@@ -78,6 +114,7 @@
                                     #3 <span class="hidden sm:inline">Ranking</span><span class="sm:hidden">Rank</span>
                                 {% endif %}
                             </span>
+                            <span class="hero-pill-progress-line absolute bottom-0 left-0 h-[2.5px] bg-slate-950/70 rounded-full w-0 transition-none pointer-events-none"></span>
                         </button>
                         {% endfor %}
                     </div>
@@ -253,38 +290,49 @@
     <!-- Products Grid (2 columns on mobile, 3 columns on desktop) -->
     <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 lg:gap-8">
         {% for product in all_products %}
-        <div class="product-card rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col justify-between group transition-all duration-300">
+        <div class="product-card rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col justify-between group transition-all duration-300 {% if product.custom_badge %}border-2 border-amber-400/90 shadow-md ring-2 ring-amber-300/30 seasonal-card-glow{% endif %}">
             
             <!-- Card Image Box -->
             <div class="relative aspect-square overflow-hidden bg-slate-100 border-b border-slate-200">
                 <a href="{% url 'store:product_detail' product.slug %}">
                     <img src="{{ product.primary_image_url }}" alt="{{ product.name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" decoding="async" width="1024" height="1024">
                 </a>
+
+                {% if product.custom_badge %}
+                <!-- Special Seasonal Marking Ribbon Across Top Edge -->
+                <div class="shimmer-ribbon absolute top-0 inset-x-0 bg-amber-400 text-slate-950 font-black text-[10px] sm:text-xs py-1 px-2.5 text-center shadow-xs flex items-center justify-center gap-1.5 z-20 border-b border-amber-500/50 tracking-tight">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-600 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-600"></span>
+                    </span>
+                    <span class="relative z-10">{{ product.custom_badge }}</span>
+                </div>
+                {% endif %}
                 
                 <!-- Best Seller / Spice Level Badge -->
                 {% if top_best_sellers.0 and product.id == top_best_sellers.0.id %}
-                <div class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-amber-400 text-slate-950 text-[10px] sm:text-xs font-black px-2 sm:px-3 py-0.5 sm:py-1 rounded-full shadow-lg border border-amber-300 flex items-center gap-1 sm:gap-1.5 ring-2 ring-amber-400/40 z-10">
+                <div class="absolute {% if product.custom_badge %}top-8 sm:top-9{% else %}top-2 left-2 sm:top-3 sm:left-3{% endif %} left-2 sm:left-3 bg-amber-400 text-slate-950 text-[10px] sm:text-xs font-black px-2 sm:px-3 py-0.5 sm:py-1 rounded-full shadow-lg border border-amber-300 flex items-center gap-1 sm:gap-1.5 ring-2 ring-amber-400/40 z-10">
                     <i class="fa-solid fa-crown text-amber-950"></i>
                     <span>#1 Best Seller</span>
                 </div>
                 {% elif top_best_sellers.1 and product.id == top_best_sellers.1.id %}
-                <div class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-amber-200 text-slate-950 text-[10px] sm:text-xs font-black px-2 sm:px-3 py-0.5 sm:py-1 rounded-full shadow-lg border border-amber-300 flex items-center gap-1 sm:gap-1.5 ring-2 ring-amber-300/40 z-10">
+                <div class="absolute {% if product.custom_badge %}top-8 sm:top-9{% else %}top-2 left-2 sm:top-3 sm:left-3{% endif %} left-2 sm:left-3 bg-amber-200 text-slate-950 text-[10px] sm:text-xs font-black px-2 sm:px-3 py-0.5 sm:py-1 rounded-full shadow-lg border border-amber-300 flex items-center gap-1 sm:gap-1.5 ring-2 ring-amber-300/40 z-10">
                     <i class="fa-solid fa-medal text-amber-800"></i>
                     <span>#2 Best Seller</span>
                 </div>
                 {% elif top_best_sellers.2 and product.id == top_best_sellers.2.id %}
-                <div class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-emerald-200 text-emerald-950 text-[10px] sm:text-xs font-black px-2 sm:px-3 py-0.5 sm:py-1 rounded-full shadow-lg border border-emerald-300 flex items-center gap-1 sm:gap-1.5 ring-2 ring-emerald-400/40 z-10">
+                <div class="absolute {% if product.custom_badge %}top-8 sm:top-9{% else %}top-2 left-2 sm:top-3 sm:left-3{% endif %} left-2 sm:left-3 bg-emerald-200 text-emerald-950 text-[10px] sm:text-xs font-black px-2 sm:px-3 py-0.5 sm:py-1 rounded-full shadow-lg border border-emerald-300 flex items-center gap-1 sm:gap-1.5 ring-2 ring-emerald-400/40 z-10">
                     <i class="fa-solid fa-star text-emerald-800"></i>
                     <span>#3 Best Seller</span>
                 </div>
                 {% else %}
-                <div class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-white/95 backdrop-blur-md px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-black text-slate-900 shadow-md border border-slate-300 flex items-center gap-1 z-10">
+                <div class="absolute {% if product.custom_badge %}top-8 sm:top-9{% else %}top-2 left-2 sm:top-3 sm:left-3{% endif %} left-2 sm:left-3 bg-white/95 backdrop-blur-md px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-black text-slate-900 shadow-md border border-slate-300 flex items-center gap-1 z-10">
                     {{ product.get_spice_level_display }}
                 </div>
                 {% endif %}
 
                 <!-- Weight badge -->
-                <div class="absolute top-2 right-2 sm:top-3 sm:right-3 bg-slate-900/90 backdrop-blur-md text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-black shadow-md border border-slate-700 z-10">
+                <div class="absolute {% if product.custom_badge %}top-8 sm:top-9{% else %}top-2 right-2 sm:top-3 sm:right-3{% endif %} right-2 sm:right-3 bg-slate-900/90 backdrop-blur-md text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-black shadow-md border border-slate-700 z-10">
                     {{ product.jar_weight_grams }}g<span class="hidden sm:inline"> Jar</span>
                 </div>
 
@@ -308,6 +356,15 @@
                         <span class="text-amber-600 shrink-0">⭐ {{ product.crunch_rating }}/5</span>
                         {% endif %}
                     </div>
+
+                    {% if product.custom_badge %}
+                    <div class="mb-1">
+                        <span class="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-rose-700 bg-rose-50 border border-rose-200/90 px-2 py-0.5 rounded-md">
+                            <i class="fa-solid fa-fire text-rose-500 text-[9px]"></i>
+                            <span>Season Ended • Final {{ product.stock_count }} Jars</span>
+                        </span>
+                    </div>
+                    {% endif %}
 
                     <!-- Product Name (Bold & clear on all screens) -->
                     <h3 class="font-display font-black text-sm sm:text-lg lg:text-xl text-slate-950 group-hover:text-emerald-700 transition leading-tight line-clamp-2">
@@ -664,27 +721,112 @@ document.addEventListener('DOMContentLoaded', function() {
 
 {% block extra_js %}
 <script>
-// Switch Hero Best 3 Pickles
-function switchHeroPickle(index) {
+// Switch Hero Best 3 Pickles with Auto-Cycling Timer & Animations
+let heroPickleTimer = null;
+let currentHeroPickleIndex = 0;
+const totalHeroPickles = {{ top_best_sellers|length|default:3 }};
+const HERO_CYCLE_DURATION = 3600; // ms
+
+function animatePillProgress(pillIndex) {
+    const allProgressBars = document.querySelectorAll('.hero-pill-progress-line');
+    allProgressBars.forEach((bar, idx) => {
+        bar.style.transition = 'none';
+        bar.style.width = '0%';
+        if (idx === pillIndex) {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    bar.style.transition = `width ${HERO_CYCLE_DURATION}ms linear`;
+                    bar.style.width = '100%';
+                });
+            });
+        }
+    });
+}
+
+function switchHeroPickle(index, isUserClick = true) {
+    if (totalHeroPickles <= 1) return;
+    currentHeroPickleIndex = (index + totalHeroPickles) % totalHeroPickles;
+
     const allPills = document.querySelectorAll('.hero-pill-btn');
     allPills.forEach((btn, idx) => {
-        if (idx === index) {
-            btn.classList.add('bg-amber-400', 'text-slate-950', 'font-black', 'shadow-md', 'ring-1', 'ring-amber-300');
+        if (idx === currentHeroPickleIndex) {
+            btn.classList.add('bg-amber-400', 'text-slate-950', 'font-black', 'shadow-md', 'ring-2', 'ring-amber-300', 'scale-[1.02]');
             btn.classList.remove('text-emerald-200/90', 'hover:text-white', 'hover:bg-white/10', 'font-bold');
         } else {
-            btn.classList.remove('bg-amber-400', 'text-slate-950', 'font-black', 'shadow-md', 'ring-1', 'ring-amber-300');
+            btn.classList.remove('bg-amber-400', 'text-slate-950', 'font-black', 'shadow-md', 'ring-2', 'ring-amber-300', 'scale-[1.02]');
             btn.classList.add('text-emerald-200/90', 'hover:text-white', 'hover:bg-white/10', 'font-bold');
         }
     });
 
+    animatePillProgress(currentHeroPickleIndex);
+
     const allCards = document.querySelectorAll('.hero-pickle-card');
     allCards.forEach((card, idx) => {
-        if (idx === index) {
+        if (idx === currentHeroPickleIndex) {
             card.classList.remove('hidden');
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(10px) scale(0.98)';
+            card.style.filter = 'blur(2px)';
+            requestAnimationFrame(() => {
+                card.style.transition = 'opacity 380ms cubic-bezier(0.16, 1, 0.3, 1), transform 380ms cubic-bezier(0.16, 1, 0.3, 1), filter 380ms cubic-bezier(0.16, 1, 0.3, 1)';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0) scale(1)';
+                card.style.filter = 'blur(0)';
+            });
         } else {
             card.classList.add('hidden');
+            card.style.opacity = '0';
         }
     });
+
+    if (isUserClick) {
+        restartHeroAutoCycle();
+    }
+}
+
+function nextHeroPickle() {
+    switchHeroPickle(currentHeroPickleIndex + 1, false);
+}
+
+function startHeroAutoCycle() {
+    if (totalHeroPickles > 1 && !heroPickleTimer) {
+        animatePillProgress(currentHeroPickleIndex);
+        heroPickleTimer = setInterval(nextHeroPickle, HERO_CYCLE_DURATION);
+    }
+}
+
+function stopHeroAutoCycle() {
+    if (heroPickleTimer) {
+        clearInterval(heroPickleTimer);
+        heroPickleTimer = null;
+    }
+    const allProgressBars = document.querySelectorAll('.hero-pill-progress-line');
+    allProgressBars.forEach(bar => {
+        bar.style.transition = 'none';
+        bar.style.width = '0%';
+    });
+}
+
+function restartHeroAutoCycle() {
+    stopHeroAutoCycle();
+    startHeroAutoCycle();
+}
+
+// Start auto cycle immediately & pause on mouse hover
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initHeroAutoCycle);
+} else {
+    initHeroAutoCycle();
+}
+
+function initHeroAutoCycle() {
+    startHeroAutoCycle();
+    const heroBox = document.querySelector('#hero-pickle-card-0')?.closest('.relative');
+    if (heroBox) {
+        heroBox.addEventListener('mouseenter', stopHeroAutoCycle);
+        heroBox.addEventListener('mouseleave', startHeroAutoCycle);
+        heroBox.addEventListener('touchstart', stopHeroAutoCycle, { passive: true });
+    }
 }
 
 function openHomeReviewLightbox(url, reviewer, product) {

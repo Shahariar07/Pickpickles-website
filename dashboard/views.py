@@ -1517,6 +1517,9 @@ def stock_manager(request):
                 
                 product.is_in_stock = request.POST.get('is_in_stock') in ['on', 'true', '1', True]
                 product.is_featured = request.POST.get('is_featured') in ['on', 'true', '1', True]
+                custom_badge_val = request.POST.get('custom_badge')
+                if custom_badge_val is not None:
+                    product.custom_badge = custom_badge_val.strip()
                 
                 if 'image' in request.FILES and request.FILES['image']:
                     product.image = request.FILES['image']
@@ -1603,6 +1606,7 @@ def stock_manager(request):
                 is_in_stock = request.POST.get('is_in_stock') in ['on', 'true', '1', True]
                 is_featured = request.POST.get('is_featured') in ['on', 'true', '1', True]
                 
+                custom_badge = request.POST.get('custom_badge', '').strip()
                 image_url = request.POST.get('image_url', '').strip()
                 ingredients = request.POST.get('ingredients', '').strip()
                 flavor_profile = request.POST.get('flavor_profile', '').strip()
@@ -1626,6 +1630,7 @@ def stock_manager(request):
                     target_stock_level=target_stock_level,
                     is_in_stock=is_in_stock,
                     is_featured=is_featured,
+                    custom_badge=custom_badge,
                     image_url=image_url if (image_url and not image_url.endswith('pickle_default.png')) else '',
                     ingredients=ingredients or "Fresh Local Cucumbers, Pure Cane Vinegar, Himalayan Pink Salt, Garlic, Spices.",
                     flavor_profile=flavor_profile or "Crisp, Tangy, Garlic & Whole Spices",

@@ -303,7 +303,8 @@
                             ingredients: '{{ product.ingredients|escapejs }}',
                             flavorProfile: '{{ product.flavor_profile|escapejs }}',
                             pairingSuggestions: '{{ product.pairing_suggestions|escapejs }}',
-                            shelfLife: '{{ product.shelf_life|escapejs }}'
+                            shelfLife: '{{ product.shelf_life|escapejs }}',
+                            customBadge: '{{ product.custom_badge|default:''|escapejs }}'
                         })"
                         class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:text-brand-800 transition cursor-pointer" title="Edit Product Details">
                         <i class="fa-solid fa-pen-to-square"></i>
@@ -546,7 +547,8 @@
                                         ingredients: '{{ product.ingredients|escapejs }}',
                                         flavorProfile: '{{ product.flavor_profile|escapejs }}',
                                         pairingSuggestions: '{{ product.pairing_suggestions|escapejs }}',
-                                        shelfLife: '{{ product.shelf_life|escapejs }}'
+                                        shelfLife: '{{ product.shelf_life|escapejs }}',
+                                        customBadge: '{{ product.custom_badge|default:''|escapejs }}'
                                     })"
                                     class="p-1.5 rounded-lg bg-gray-100 hover:bg-brand-50 text-gray-500 hover:text-brand-800 transition cursor-pointer" title="Edit Product Details">
                                     <i class="fa-solid fa-pen-to-square"></i>
@@ -630,6 +632,16 @@
                 <div class="sm:col-span-2">
                     <label class="font-bold text-gray-700 block mb-1">Tagline</label>
                     <input type="text" id="edit_tagline" name="tagline" placeholder="e.g. Sharp snap infused with fresh sliced garlic and whole mustard seeds" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
+                </div>
+
+                <!-- Custom Promotional / Seasonal Urgency Badge -->
+                <div class="sm:col-span-2 bg-gradient-to-r from-amber-50 to-orange-50/50 p-3 rounded-xl border border-amber-200">
+                    <label class="font-bold text-amber-950 flex items-center gap-1.5 mb-1">
+                        <i class="fa-solid fa-certificate text-amber-600"></i>
+                        <span>Promotional / Seasonal Urgency Badge (Optional)</span>
+                    </label>
+                    <input type="text" id="edit_custom_badge" name="custom_badge" placeholder="e.g. 🥭 Final Season Batch — Last Jars! or 🔥 Limited Stock!" class="w-full bg-white border border-amber-300 rounded-lg px-3 py-1.5 text-xs text-gray-900 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    <span class="text-[10px] text-amber-700 block mt-1">Leave empty if no special badge is needed. When set, an eye-catching animated badge will show on the product card!</span>
                 </div>
 
                 <div>
@@ -826,6 +838,16 @@
                 <div class="sm:col-span-2">
                     <label class="font-bold text-gray-700 block mb-1">Tagline</label>
                     <input type="text" name="tagline" placeholder="e.g. Sharp snap infused with fresh sliced peppers" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
+                </div>
+
+                <!-- Custom Promotional / Seasonal Urgency Badge -->
+                <div class="sm:col-span-2 bg-gradient-to-r from-amber-50 to-orange-50/50 p-3 rounded-xl border border-amber-200">
+                    <label class="font-bold text-amber-950 flex items-center gap-1.5 mb-1">
+                        <i class="fa-solid fa-certificate text-amber-600"></i>
+                        <span>Promotional / Seasonal Urgency Badge (Optional)</span>
+                    </label>
+                    <input type="text" name="custom_badge" placeholder="e.g. 🥭 Final Season Batch — Last Jars! or 🔥 Limited Stock!" class="w-full bg-white border border-amber-300 rounded-lg px-3 py-1.5 text-xs text-gray-900 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500">
+                    <span class="text-[10px] text-amber-700 block mt-1">Leave empty if no special badge is needed. When set, an eye-catching animated badge will show on the product card!</span>
                 </div>
 
                 <div>
@@ -1283,6 +1305,7 @@ function openEditModal(prod) {
     setVal('edit_product_id', prod.id);
     setVal('edit_name', prod.name);
     setVal('edit_tagline', prod.tagline);
+    setVal('edit_custom_badge', prod.customBadge);
     setVal('edit_description', prod.description);
     setVal('edit_category_id', prod.categoryId);
     setVal('edit_cut_style', prod.cutStyle || 'SPEARS');
