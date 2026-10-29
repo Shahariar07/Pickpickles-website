@@ -22,7 +22,12 @@
             </p>
         </div>
 
-        <div class="flex items-center gap-2.5">
+        <div class="flex items-center gap-2.5 flex-wrap">
+            <a href="?category={{ category_filter }}&sub_category={{ sub_category_filter }}&q={{ search_query }}&export=csv"
+                class="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs px-3.5 py-2.5 rounded-xl border border-emerald-200 shadow-2xs flex items-center gap-1.5 transition" title="Download filtered expenses as Excel/CSV">
+                <i class="fa-solid fa-file-csv text-emerald-600"></i>
+                <span>Export CSV</span>
+            </a>
             <a href="{% url 'dashboard:expense_categories' %}"
                 class="bg-white hover:bg-gray-50 text-gray-700 font-bold text-xs px-3.5 py-2.5 rounded-xl border border-gray-200/90 shadow-2xs flex items-center gap-1.5 transition">
                 <i class="fa-solid fa-shapes text-brand-600"></i>

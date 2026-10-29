@@ -11,10 +11,23 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load environment variables from .env if present
+# Load environment variables from .env directly (works with or without python-dotenv)
+_env_path = BASE_DIR / '.env'
+if _env_path.exists():
+    try:
+        with open(_env_path, 'r', encoding='utf-8') as _f:
+            for _line in _f:
+                _line = _line.strip()
+                if not _line or _line.startswith('#') or '=' not in _line:
+                    continue
+                _k, _v = _line.split('=', 1)
+                os.environ[_k.strip()] = _v.strip().strip('"').strip("'")
+    except Exception:
+        pass
+
 try:
     from dotenv import load_dotenv
-    load_dotenv(BASE_DIR / '.env')
+    load_dotenv(_env_path, override=True)
 except ImportError:
     pass
 
@@ -230,10 +243,10 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # 7. Third-party Tracking & Couriers (Strictly from .env)
 # ==============================================================================
 # Analytics (Strictly loaded from .env)
-META_PIXEL_ID = os.environ.get('META_PIXEL_ID', '').strip()
+META_PIXEL_ID = os.environ.get('META_PIXEL_ID', '2165451210680943').strip() or '2165451210680943'
 META_CONVERSIONS_API_TOKEN = os.environ.get('META_CONVERSIONS_API_TOKEN', '').strip()
 META_TEST_EVENT_CODE = os.environ.get('META_TEST_EVENT_CODE', '').strip()
-GOOGLE_ANALYTICS_ID = os.environ.get('GOOGLE_ANALYTICS_ID', '')
+GOOGLE_ANALYTICS_ID = os.environ.get('GOOGLE_ANALYTICS_ID', 'G-WBKEST4M2S')
 
 # Pathao Courier API
 PATHAO_BASE_URL = os.environ.get('PATHAO_BASE_URL', 'https://api-hermes.pathao.com')
@@ -242,12 +255,14 @@ PATHAO_CLIENT_SECRET = os.environ.get('PATHAO_CLIENT_SECRET', '')
 PATHAO_USERNAME = os.environ.get('PATHAO_USERNAME', '')
 PATHAO_PASSWORD = os.environ.get('PATHAO_PASSWORD', '')
 PATHAO_STORE_ID = os.environ.get('PATHAO_STORE_ID', '')
+PATHAO_WEBHOOK_SECRET = os.environ.get('PATHAO_WEBHOOK_SECRET', '').strip()
 
 # Steadfast Courier API
 _raw_sf_url = os.environ.get('STEADFAST_BASE_URL', 'https://portal.packzy.com/api/v1')
 STEADFAST_BASE_URL = _raw_sf_url.replace('portal.steadfast.com.bd', 'portal.packzy.com') if _raw_sf_url else 'https://portal.packzy.com/api/v1'
 STEADFAST_API_KEY = os.environ.get('STEADFAST_API_KEY', '')
 STEADFAST_SECRET_KEY = os.environ.get('STEADFAST_SECRET_KEY', '')
+STEADFAST_WEBHOOK_SECRET = os.environ.get('STEADFAST_WEBHOOK_SECRET', '').strip()
 
 # Cloudflare Turnstile Smart Bot Protection (Free & Optional)
 CLOUDFLARE_TURNSTILE_SITE_KEY = os.environ.get('CLOUDFLARE_TURNSTILE_SITE_KEY', '')
@@ -260,6 +275,16 @@ CLOUDFLARE_TURNSTILE_SECRET_KEY = os.environ.get('CLOUDFLARE_TURNSTILE_SECRET_KE
 import sys
 is_runserver = any('runserver' in arg for arg in sys.argv)
 
+# Always-on baseline security headers, cookie protections & DoS payload limits
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+X_FRAME_OPTIONS = 'SAMEORIGIN'
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB max request payload
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB max in-memory upload
+
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 if is_runserver or DEBUG:
     SECURE_SSL_REDIRECT = False
@@ -269,11 +294,6 @@ else:
 if not DEBUG and not is_runserver:
     SESSION_COOKIE_SECURE = os.environ.get('DJANGO_SESSION_COOKIE_SECURE', 'False').lower() in ('true', '1', 't')
     CSRF_COOKIE_SECURE = os.environ.get('DJANGO_CSRF_COOKIE_SECURE', 'False').lower() in ('true', '1', 't')
-    SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SAMESITE = 'Lax'
-    CSRF_COOKIE_SAMESITE = 'Lax'
-    SECURE_CONTENT_TYPE_NOSNIFF = True
-    X_FRAME_OPTIONS = 'SAMEORIGIN'
 
     if SECURE_SSL_REDIRECT or os.environ.get('DJANGO_ENABLE_HSTS', 'False').lower() in ('true', '1', 't'):
         SECURE_HSTS_SECONDS = 31536000

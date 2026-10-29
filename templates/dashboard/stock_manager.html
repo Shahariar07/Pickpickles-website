@@ -7,63 +7,88 @@
 <div class="space-y-5">
 
     <!-- Top Minimal Header & Quick KPI Metrics -->
-    <div class="bg-white p-4 sm:p-5 rounded-3xl border border-gray-200/90 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="bg-white p-4 sm:p-5 rounded-3xl border border-gray-200/90 shadow-2xs space-y-4">
         
-        <!-- Left Title & Summary -->
-        <div class="min-w-0">
-            <div class="flex items-center gap-2 flex-wrap">
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-800 shadow-2xs">
-                    <i class="fa-solid fa-boxes-stacked"></i>
-                    Jar Stock Control
-                </span>
-                <span class="text-xs text-gray-400 font-semibold">• {{ total_products_count }} active flavors</span>
-            </div>
-            <h1 class="font-display font-black text-xl sm:text-2xl text-gray-900 mt-1 break-words">
-                Pickle Inventory & Kitchen Stock
-            </h1>
-        </div>
-
-        <!-- KPI Stat Badges + Top Action Buttons -->
-        <div class="flex flex-col sm:flex-row sm:items-center gap-2.5 w-full md:w-auto">
-            
-            <!-- Quick Mini KPI Chips (Visible on Mobile and Desktop) -->
-            <div class="grid grid-cols-3 gap-1.5 w-full sm:w-auto sm:flex sm:items-center bg-gray-50 px-2.5 py-1.5 rounded-2xl border border-gray-200/80 text-xs font-bold">
-                <div class="text-center sm:pr-2.5 sm:border-r border-gray-200">
-                    <span class="text-[9px] text-gray-400 uppercase block font-extrabold leading-tight">মজুত বয়াম</span>
-                    <span class="font-black text-gray-900 text-sm leading-tight">{{ total_current_inventory }} <span class="text-[9px] font-bold text-gray-400">pcs</span></span>
+        <!-- Row 1: Left Title & Right Action Buttons (Perfectly Aligned) -->
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3.5">
+            <!-- Left Title & Summary -->
+            <div class="min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-800 shadow-2xs">
+                        <i class="fa-solid fa-boxes-stacked"></i>
+                        <span>Jar Stock Control</span>
+                    </span>
+                    <span class="text-xs text-gray-400 font-semibold">• {{ total_products_count }} active flavors</span>
                 </div>
-                <div class="text-center px-1 sm:px-2.5 sm:border-r border-gray-200 bg-emerald-50/60 sm:bg-transparent rounded-xl py-0.5 sm:py-0">
-                    <span class="text-[9px] text-emerald-700 uppercase block font-extrabold leading-tight">পর্যাপ্ত স্টক</span>
-                    <span class="font-black text-emerald-700 text-sm leading-tight">{{ in_stock_count }}</span>
-                </div>
-                <div class="text-center sm:pl-2 bg-rose-50/60 sm:bg-transparent rounded-xl py-0.5 sm:py-0">
-                    <span class="text-[9px] text-rose-600 uppercase block font-extrabold leading-tight">মোট লাগবে</span>
-                    <span class="font-black text-rose-700 text-sm leading-tight">{% if total_needed_jars > 0 %}+{{ total_needed_jars }} pcs{% else %}0{% endif %}</span>
-                </div>
+                <h1 class="font-display font-black text-xl sm:text-2xl text-gray-900 mt-1 leading-tight">
+                    Pickle Inventory & Kitchen Stock
+                </h1>
             </div>
 
-            <!-- Action Buttons -->
-            <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                <a href="{% url 'dashboard:price_history' %}" class="bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-xs px-2.5 sm:px-3 py-2 rounded-xl border border-amber-300 flex items-center gap-1.5 transition active:scale-95 shadow-2xs" title="Price Increase / Decrease History (মূল্য খতিয়ান)">
+            <!-- Right Action Buttons (Uniform Height & Alignment) -->
+            <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
+                <a href="{% url 'dashboard:price_history' %}" class="h-9 px-3 sm:px-3.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-xs border border-amber-300 inline-flex items-center justify-center gap-1.5 whitespace-nowrap transition active:scale-95 shadow-2xs" title="Price Increase / Decrease History (মূল্য খতিয়ান)">
                     <i class="fa-solid fa-tags text-amber-700"></i>
                     <span>Price History</span>
                 </a>
-                <a href="{% url 'dashboard:stock_ledger' %}" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-bold text-xs px-2.5 sm:px-3 py-2 rounded-xl border border-indigo-200 flex items-center gap-1.5 transition active:scale-95" title="Audit Log">
+                <a href="{% url 'dashboard:stock_ledger' %}" class="h-9 px-3 sm:px-3.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-bold text-xs border border-indigo-200 inline-flex items-center justify-center gap-1.5 whitespace-nowrap transition active:scale-95 shadow-2xs" title="Audit Log">
                     <i class="fa-solid fa-clock-rotate-left text-indigo-600"></i>
                     <span>Ledger</span>
                 </a>
                 {% if can_edit %}
-                <button type="button" onclick="openRestockModal()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-3 sm:px-3.5 py-2 rounded-xl shadow-2xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
+                <button type="button" onclick="openRestockModal()" class="h-9 px-3.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-2xs inline-flex items-center justify-center gap-1.5 whitespace-nowrap transition active:scale-95 cursor-pointer">
                     <i class="fa-solid fa-plus-circle text-emerald-200"></i>
                     <span>Add Batch</span>
                 </button>
-                <button type="button" onclick="openAddModal()" class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs px-3 sm:px-3.5 py-2 rounded-xl shadow-sm flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
+                <button type="button" onclick="openAddModal()" class="h-9 px-3.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs shadow-sm inline-flex items-center justify-center gap-1.5 whitespace-nowrap transition active:scale-95 cursor-pointer">
                     <i class="fa-solid fa-circle-plus text-brand-accent"></i>
                     <span>+ New Pickle</span>
                 </button>
                 {% endif %}
             </div>
+        </div>
 
+        <!-- Row 2: 4 Aligned Equal KPI Stat Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 pt-3.5 border-t border-gray-100">
+            <div class="flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-gray-50/90 border border-gray-200/80">
+                <div>
+                    <span class="text-[10px] text-gray-500 uppercase block font-extrabold leading-tight">মজুত বয়াম</span>
+                    <span class="font-display font-black text-gray-900 text-base sm:text-lg leading-tight mt-0.5 block">{{ total_current_inventory }} <span class="text-[10px] font-bold text-gray-400">pcs</span></span>
+                </div>
+                <span class="w-8 h-8 rounded-xl bg-white border border-gray-200 text-gray-700 flex items-center justify-center text-xs shrink-0 shadow-2xs">
+                    <i class="fa-solid fa-jar"></i>
+                </span>
+            </div>
+
+            <div class="flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-brand-50/60 border border-brand-200/80">
+                <div>
+                    <span class="text-[10px] text-brand-700 uppercase block font-extrabold leading-tight">মজুত পণ্যের মূল্য</span>
+                    <span class="font-display font-black text-brand-900 text-base sm:text-lg leading-tight mt-0.5 block">৳{{ total_inventory_value|floatformat:0|default:"0" }}</span>
+                </div>
+                <span class="w-8 h-8 rounded-xl bg-white border border-brand-200 text-brand-700 flex items-center justify-center text-xs shrink-0 shadow-2xs">
+                    <i class="fa-solid fa-sack-dollar"></i>
+                </span>
+            </div>
+
+            <div class="flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/80">
+                <div>
+                    <span class="text-[10px] text-emerald-700 uppercase block font-extrabold leading-tight">পর্যাপ্ত স্টক</span>
+                    <span class="font-display font-black text-emerald-800 text-base sm:text-lg leading-tight mt-0.5 block">{{ in_stock_count }} <span class="text-[10px] font-bold text-emerald-600">টি পণ্য</span></span>
+                </div>
+                <span class="w-8 h-8 rounded-xl bg-white border border-emerald-200 text-emerald-700 flex items-center justify-center text-xs shrink-0 shadow-2xs">
+                    <i class="fa-solid fa-circle-check"></i>
+                </span>
+            </div>
+
+            <div class="flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-rose-50/60 border border-rose-200/80">
+                <div>
+                    <span class="text-[10px] text-rose-600 uppercase block font-extrabold leading-tight">মোট লাগবে</span>
+                    <span class="font-display font-black text-rose-700 text-base sm:text-lg leading-tight mt-0.5 block">{% if total_needed_jars > 0 %}+{{ total_needed_jars }} <span class="text-[10px] font-bold">pcs</span>{% else %}0 <span class="text-[10px] font-bold text-rose-400">pcs</span>{% endif %}</span>
+                </div>
+                <span class="w-8 h-8 rounded-xl bg-white border border-rose-200 text-rose-600 flex items-center justify-center text-xs shrink-0 shadow-2xs">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </span>
+            </div>
         </div>
 
     </div>
@@ -79,25 +104,25 @@
                 <input type="hidden" name="status" value="{{ status_filter|default:'ALL' }}">
                 <div class="relative flex items-center">
                     <i class="fa-solid fa-magnifying-glass absolute left-3 text-gray-400 text-xs"></i>
-                    <input type="text" name="q" value="{{ search_query|default:'' }}" placeholder="Search flavor, ingredient, spice..." class="w-full bg-gray-50 pl-8 pr-16 py-2 rounded-xl border border-gray-200 text-xs font-medium focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none">
-                    <button type="submit" class="absolute right-1 bg-brand-700 text-white font-bold text-[10px] px-2.5 py-1.2 rounded-lg hover:bg-brand-800 transition">
+                    <input type="text" name="q" value="{{ search_query|default:'' }}" placeholder="Search flavor, ingredient, spice..." class="w-full h-9 bg-gray-50 pl-8 pr-16 rounded-xl border border-gray-200 text-xs font-medium focus:bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    <button type="submit" class="absolute right-1 h-7 bg-brand-700 text-white font-bold text-[10px] px-2.5 rounded-lg hover:bg-brand-800 transition inline-flex items-center justify-center">
                         Find
                     </button>
                 </div>
             </form>
 
             <!-- Status Filter Pills -->
-            <div class="flex items-center gap-1 text-xs font-semibold overflow-x-auto pb-0.5 scrollbar-none">
-                <a href="?category={{ selected_cat|default:'' }}&status=ALL&q={{ search_query|urlencode }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition {% if status_filter == 'ALL' or not status_filter %}bg-gray-900 text-white font-bold{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+            <div class="flex items-center gap-1.5 text-xs font-semibold overflow-x-auto pb-0.5 scrollbar-none">
+                <a href="?category={{ selected_cat|default:'' }}&status=ALL&q={{ search_query|urlencode }}" class="h-9 px-3 rounded-xl inline-flex items-center justify-center whitespace-nowrap transition {% if status_filter == 'ALL' or not status_filter %}bg-gray-900 text-white font-bold{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
                     All ({{ total_products_count }})
                 </a>
-                <a href="?category={{ selected_cat|default:'' }}&status=IN_STOCK&q={{ search_query|urlencode }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition {% if status_filter == 'IN_STOCK' %}bg-emerald-700 text-white font-bold{% else %}bg-emerald-50 text-emerald-800 hover:bg-emerald-100{% endif %}">
+                <a href="?category={{ selected_cat|default:'' }}&status=IN_STOCK&q={{ search_query|urlencode }}" class="h-9 px-3 rounded-xl inline-flex items-center justify-center whitespace-nowrap transition {% if status_filter == 'IN_STOCK' %}bg-emerald-700 text-white font-bold{% else %}bg-emerald-50 text-emerald-800 hover:bg-emerald-100{% endif %}">
                     In Stock ({{ in_stock_count }})
                 </a>
-                <a href="?category={{ selected_cat|default:'' }}&status=SHORTAGE&q={{ search_query|urlencode }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition {% if status_filter == 'SHORTAGE' %}bg-rose-700 text-white font-bold{% else %}bg-rose-50 text-rose-800 hover:bg-rose-100{% endif %}">
+                <a href="?category={{ selected_cat|default:'' }}&status=SHORTAGE&q={{ search_query|urlencode }}" class="h-9 px-3 rounded-xl inline-flex items-center justify-center whitespace-nowrap transition {% if status_filter == 'SHORTAGE' %}bg-rose-700 text-white font-bold{% else %}bg-rose-50 text-rose-800 hover:bg-rose-100{% endif %}">
                     Shortage / ঘাটতি ({{ low_stock_count }})
                 </a>
-                <a href="?category={{ selected_cat|default:'' }}&status=OUT_OF_STOCK&q={{ search_query|urlencode }}" class="px-3 py-1.5 rounded-xl whitespace-nowrap transition {% if status_filter == 'OUT_OF_STOCK' %}bg-gray-700 text-white font-bold{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+                <a href="?category={{ selected_cat|default:'' }}&status=OUT_OF_STOCK&q={{ search_query|urlencode }}" class="h-9 px-3 rounded-xl inline-flex items-center justify-center whitespace-nowrap transition {% if status_filter == 'OUT_OF_STOCK' %}bg-gray-700 text-white font-bold{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
                     0 Stock
                 </a>
             </div>
@@ -105,18 +130,18 @@
         </div>
 
         <!-- Category Chips -->
-        <div class="flex items-center gap-1.5 overflow-x-auto pt-2 border-t border-gray-100 text-xs font-bold scrollbar-none">
+        <div class="flex items-center gap-1.5 overflow-x-auto pt-2.5 border-t border-gray-100 text-xs font-bold scrollbar-none">
             <span class="text-gray-400 font-bold mr-1 text-[10px] uppercase shrink-0">Category:</span>
-            <a href="{% url 'dashboard:stock_manager' %}?status={{ status_filter }}&q={{ search_query|urlencode }}" class="px-2.5 py-1 rounded-lg transition whitespace-nowrap flex items-center gap-1 {% if not selected_cat %}bg-brand-700 text-white{% else %}bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200{% endif %}">
+            <a href="{% url 'dashboard:stock_manager' %}?status={{ status_filter }}&q={{ search_query|urlencode }}" class="h-7 px-2.5 rounded-lg transition whitespace-nowrap inline-flex items-center gap-1 {% if not selected_cat %}bg-brand-700 text-white{% else %}bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200{% endif %}">
                 <span>All</span>
             </a>
             {% for cat in categories %}
-            <a href="{% url 'dashboard:stock_manager' %}?category={{ cat.slug }}&status={{ status_filter }}&q={{ search_query|urlencode }}" class="px-2.5 py-1 rounded-lg transition whitespace-nowrap flex items-center gap-1 {% if selected_cat == cat.slug %}bg-brand-700 text-white{% else %}bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200{% endif %}">
+            <a href="{% url 'dashboard:stock_manager' %}?category={{ cat.slug }}&status={{ status_filter }}&q={{ search_query|urlencode }}" class="h-7 px-2.5 rounded-lg transition whitespace-nowrap inline-flex items-center gap-1 {% if selected_cat == cat.slug %}bg-brand-700 text-white{% else %}bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200{% endif %}">
                 <span>{{ cat.name }}</span>
                 <span class="text-[9px] opacity-75">({{ cat.product_count }})</span>
             </a>
             {% endfor %}
-            <a href="{% url 'dashboard:pickle_categories' %}" class="ml-auto text-gray-400 hover:text-gray-700 text-[11px] font-bold shrink-0 flex items-center gap-1">
+            <a href="{% url 'dashboard:pickle_categories' %}" class="ml-auto h-7 px-2 text-gray-500 hover:text-gray-800 text-[11px] font-bold shrink-0 inline-flex items-center gap-1 whitespace-nowrap">
                 <i class="fa-solid fa-tags text-gray-400"></i>
                 <span>Manage Categories</span>
             </a>
@@ -194,6 +219,7 @@
                         <span class="font-display font-black text-base {% if product.stock_count == 0 %}text-rose-600{% elif product.needed_stock > 0 %}text-amber-700{% else %}text-emerald-700{% endif %}">
                             {{ product.stock_count }} <span class="text-[10px] font-bold text-gray-400">pcs</span>
                         </span>
+                        <span class="text-[10px] font-bold text-brand-700 block leading-tight">মূল্য: ৳{{ product.stock_value|floatformat:0 }}</span>
                     </div>
 
                     <!-- Touch Stepper -->
@@ -335,14 +361,14 @@
         <div class="overflow-x-auto">
             <table class="w-full text-left text-xs border-collapse">
                 
-                <thead class="bg-gray-50/80 text-gray-400 font-extrabold uppercase text-[10px] border-b border-gray-200 tracking-wider">
+                <thead class="bg-gray-50/90 text-gray-500 font-extrabold uppercase text-[10px] border-b border-gray-200 tracking-wider">
                     <tr>
-                        <th class="py-3 px-4 sm:px-5">Pickle Product</th>
-                        <th class="py-3 px-4">Price</th>
-                        <th class="py-3 px-4 text-center">Physical Stock (মজুত বয়াম)</th>
-                        <th class="py-3 px-4">Orders & Deficit (লাগবে)</th>
-                        <th class="py-3 px-4">Quick Adjust</th>
-                        <th class="py-3 px-4 sm:pr-5 text-right">Actions</th>
+                        <th class="py-3.5 px-4 sm:px-5 text-left align-middle whitespace-nowrap">Pickle Product</th>
+                        <th class="py-3.5 px-4 text-left align-middle whitespace-nowrap">Price</th>
+                        <th class="py-3.5 px-4 text-center align-middle whitespace-nowrap">Physical Stock (মজুত বয়াম)</th>
+                        <th class="py-3.5 px-4 text-center align-middle whitespace-nowrap">Orders & Deficit (লাগবে)</th>
+                        <th class="py-3.5 px-4 text-center align-middle whitespace-nowrap">Quick Adjust</th>
+                        <th class="py-3.5 px-4 sm:pr-5 text-right align-middle whitespace-nowrap">Actions</th>
                     </tr>
                 </thead>
 
@@ -443,10 +469,15 @@
                                 </form>
 
                             </div>
+                            <div class="mt-1">
+                                <span class="text-[10px] font-extrabold text-brand-800 bg-brand-50/80 px-2 py-0.5 rounded-md border border-brand-200/70">
+                                    মূল্য: ৳{{ product.stock_value|floatformat:0 }}
+                                </span>
+                            </div>
                         </td>
 
                         <!-- Col 4: Active Demand & Deficit -->
-                        <td class="py-3 px-4 align-middle whitespace-nowrap">
+                        <td class="py-3 px-4 align-middle text-center whitespace-nowrap">
                             <div class="space-y-1">
                                 <div class="text-[11px] text-gray-500">
                                     <span>Orders demand:</span> <strong class="text-gray-900">{{ product.ordered_demand_count }} pcs</strong>
@@ -470,24 +501,24 @@
                         </td>
 
                         <!-- Col 5: Quick Price & Stock Edit Inputs -->
-                        <td class="py-3 px-4 align-middle">
+                        <td class="py-3 px-4 align-middle text-center">
                             {% if can_edit %}
-                            <form method="POST" class="flex items-center gap-1.5">
+                            <form method="POST" class="inline-flex items-center justify-center gap-1.5">
                                 {% csrf_token %}
                                 <input type="hidden" name="action" value="update_pricing">
                                 <input type="hidden" name="product_id" value="{{ product.id }}">
                                 <div>
-                                    <input type="number" step="0.01" name="price_bdt" value="{{ product.price_bdt }}" title="Selling Price" class="w-16 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 text-xs font-bold text-gray-900 focus:bg-white focus:outline-none" placeholder="৳ Price">
+                                    <input type="number" step="0.01" name="price_bdt" value="{{ product.price_bdt }}" title="Selling Price" class="w-16 h-8 bg-gray-50 border border-gray-200 rounded-lg px-2 text-xs font-bold text-gray-900 focus:bg-white focus:outline-none text-center" placeholder="৳ Price">
                                 </div>
                                 <div>
-                                    <input type="number" name="stock_count" value="{{ product.stock_count }}" title="Stock Count" class="w-14 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 text-xs font-bold text-gray-900 focus:bg-white focus:outline-none" placeholder="Stock">
+                                    <input type="number" name="stock_count" value="{{ product.stock_count }}" title="Stock Count" class="w-14 h-8 bg-gray-50 border border-gray-200 rounded-lg px-2 text-xs font-bold text-gray-900 focus:bg-white focus:outline-none text-center" placeholder="Stock">
                                 </div>
-                                <button type="submit" class="bg-gray-100 hover:bg-brand-700 hover:text-white text-gray-600 font-bold p-1.5 rounded-lg text-xs transition cursor-pointer" title="Save Quick Update">
+                                <button type="submit" class="w-8 h-8 inline-flex items-center justify-center bg-gray-100 hover:bg-brand-700 hover:text-white text-gray-600 font-bold rounded-lg text-xs transition cursor-pointer" title="Save Quick Update">
                                     <i class="fa-solid fa-check"></i>
                                 </button>
                             </form>
                             {% else %}
-                            <div class="flex items-center gap-2 text-xs font-bold text-gray-700">
+                            <div class="inline-flex items-center justify-center gap-2 text-xs font-bold text-gray-700">
                                 <span class="text-indigo-950 font-black">৳{{ product.price_bdt|floatformat:0 }}</span>
                                 <span class="text-gray-300">•</span>
                                 <span class="{% if product.stock_count > 0 %}text-emerald-700{% else %}text-rose-600{% endif %} font-black">{{ product.stock_count }} pcs</span>

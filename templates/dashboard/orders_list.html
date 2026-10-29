@@ -25,6 +25,10 @@
         </div>
         
         <div class="flex items-center gap-2 flex-wrap">
+            <a href="?status={{ status_filter }}&period={{ period_filter }}&zone={{ zone_filter }}&payment={{ payment_filter }}&q={{ search_query }}&export=csv" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold px-3 py-2 rounded-xl shadow-2xs flex items-center gap-1.5 transition" title="Export filtered orders to Excel/CSV">
+                <i class="fa-solid fa-file-csv text-emerald-600"></i>
+                <span>Export CSV</span>
+            </a>
             <a href="{% url 'dashboard:sync_all_courier_orders' %}" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold px-3 py-2 rounded-xl shadow-2xs flex items-center gap-1.5 transition" title="Sync live status for all active Pathao and Steadfast orders">
                 <i class="fa-solid fa-rotate text-indigo-600"></i>
                 <span>Sync All Couriers</span>
@@ -263,10 +267,10 @@
                                 class="order-select-checkbox w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300 cursor-pointer"
                                 value="{{ order.order_number }}"
                                 data-order-number="{{ order.order_number }}"
-                                data-customer-name="{{ order.customer_name|escapejs }}"
+                                data-customer-name="{{ order.customer_name }}"
                                 data-phone="{{ order.customer_phone }}"
                                 data-status="{{ order.order_status }}"
-                                data-wa-url="{{ order.whatsapp_shipping_instruction_url|escapejs }}"
+                                data-wa-url="{{ order.whatsapp_shipping_instruction_url }}"
                                 onchange="updateSelectedOrdersBar()"
                             >
                         </td>
@@ -468,10 +472,10 @@
                             class="order-select-checkbox w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300 cursor-pointer shrink-0"
                             value="{{ order.order_number }}"
                             data-order-number="{{ order.order_number }}"
-                            data-customer-name="{{ order.customer_name|escapejs }}"
+                            data-customer-name="{{ order.customer_name }}"
                             data-phone="{{ order.customer_phone }}"
                             data-status="{{ order.order_status }}"
-                            data-wa-url="{{ order.whatsapp_shipping_instruction_url|escapejs }}"
+                            data-wa-url="{{ order.whatsapp_shipping_instruction_url }}"
                             onchange="updateSelectedOrdersBar()"
                         >
                         <a href="{% url 'dashboard:order_detail' order.order_number %}" class="font-display font-black text-xs text-brand-900 bg-brand-50 hover:bg-brand-100 px-2 py-0.5 rounded-md border border-brand-200/80 transition shrink-0">
@@ -636,6 +640,23 @@
                 <button type="button" onclick="selectOnlyShippedOrders()" class="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 hover:underline cursor-pointer pl-1">
                     Select Shipped ({{ out_for_delivery_count }})
                 </button>
+                {% if can_edit %}
+                <form method="POST" action="{% url 'dashboard:orders' %}" id="bulkStatusForm" class="inline-flex items-center gap-1.5 ml-1" onsubmit="return submitBulkStatusChange(event)">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="bulk_update_status">
+                    <input type="hidden" name="order_numbers" id="bulkStatusOrderNumbers" value="">
+                    <select name="new_status" id="bulkStatusSelect" class="bg-gray-800 border border-gray-600 text-white text-xs font-bold rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer">
+                        <option value="">Bulk Status...</option>
+                        {% for code, label in status_choices %}
+                        <option value="{{ code }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold px-2.5 py-1.5 rounded-xl shadow-md transition cursor-pointer active:scale-95">
+                        Apply
+                    </button>
+                </form>
+                {% endif %}<button type="button" class="hidden">
+                </button>
             </div>
             <div class="flex items-center gap-2">
                 <button 
@@ -644,7 +665,7 @@
                     class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer active:scale-95"
                 >
                     <i class="fa-brands fa-whatsapp text-sm"></i>
-                    <span>Send WhatsApp Bulk</span>
+                    <span>WhatsApp Queue (1-by-1)</span>
                 </button>
                 <button 
                     type="button" 
@@ -1285,8 +1306,8 @@
                     <i class="fa-brands fa-whatsapp"></i>
                 </div>
                 <div>
-                    <h3 class="font-display font-black text-base text-gray-900">Bulk WhatsApp Shipping Messages</h3>
-                    <p class="text-[11px] text-gray-500 font-medium">Send pickle storage & delivery instructions to selected customers</p>
+                    <h3 class="font-display font-black text-base text-gray-900">WhatsApp Step-by-Step Queue (1-by-1)</h3>
+                    <p class="text-[11px] text-gray-500 font-medium">WhatsApp does not allow sending multiple chats simultaneously — click "Send & Next" to message each customer one by one</p>
                 </div>
             </div>
             <button type="button" onclick="closeBulkWhatsAppModal()" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 flex items-center justify-center transition cursor-pointer">
@@ -1305,7 +1326,7 @@
                     <button type="button" onclick="copyAllSelectedPhones()" class="text-[11px] font-bold text-emerald-800 bg-white hover:bg-emerald-100/60 border border-emerald-300 px-2.5 py-1 rounded-lg shadow-2xs transition inline-flex items-center gap-1 cursor-pointer">
                         <i class="fa-solid fa-copy text-[10px]"></i> <span>Copy Numbers</span>
                     </button>
-                    <button type="button" onclick="openAllWhatsAppBatch()" class="text-[11px] font-bold text-white bg-emerald-700 hover:bg-emerald-800 px-3 py-1 rounded-lg shadow-2xs transition inline-flex items-center gap-1 cursor-pointer active:scale-95">
+                    <button type="button" onclick="openAllWhatsAppBatch()" class="hidden">
                         <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> <span>Open All Tabs</span>
                     </button>
                 </div>
@@ -2029,6 +2050,50 @@ document.addEventListener('DOMContentLoaded', function() {
    ======================================================== */
 let bulkSelectedOrdersQueue = [];
 
+document.addEventListener('change', function(e) {
+    if (e.target && e.target.classList.contains('order-select-checkbox')) {
+        const orderNum = e.target.dataset.orderNumber;
+        const isChecked = e.target.checked;
+        if (orderNum) {
+            document.querySelectorAll(`.order-select-checkbox[data-order-number="${orderNum}"]`).forEach(cb => {
+                cb.checked = isChecked;
+            });
+        }
+        updateSelectedOrdersBar();
+    }
+});
+
+function getUniqueSelectedOrderCheckboxes() {
+    const seen = new Set();
+    const unique = [];
+    document.querySelectorAll('.order-select-checkbox:checked').forEach(cb => {
+        const orderNum = cb.dataset.orderNumber || cb.value;
+        if (orderNum && !seen.has(orderNum)) {
+            seen.add(orderNum);
+            unique.push(cb);
+        }
+    });
+    return unique;
+}
+
+function submitBulkStatusChange(e) {
+    const select = document.getElementById('bulkStatusSelect');
+    const hiddenInput = document.getElementById('bulkStatusOrderNumbers');
+    if (!select || !select.value) {
+        e.preventDefault();
+        alert('Please select a target status from the dropdown first.');
+        return false;
+    }
+    const uniqueChecked = getUniqueSelectedOrderCheckboxes();
+    if (uniqueChecked.length === 0) {
+        e.preventDefault();
+        alert('Please select at least one order.');
+        return false;
+    }
+    hiddenInput.value = uniqueChecked.map(cb => cb.dataset.orderNumber || cb.value).join(',');
+    return true;
+}
+
 function toggleSelectAllOrders(masterCheckbox) {
     const isChecked = masterCheckbox.checked;
     document.querySelectorAll('.select-all-orders-toggle').forEach(el => {
@@ -2071,7 +2136,7 @@ function clearOrderSelection() {
 }
 
 function updateSelectedOrdersBar() {
-    const checkboxes = document.querySelectorAll('.order-select-checkbox:checked');
+    const checkboxes = getUniqueSelectedOrderCheckboxes();
     const bar = document.getElementById('bulkActionBar');
     const countSpan = document.getElementById('bulkBarCount');
     const count = checkboxes.length;
@@ -2096,7 +2161,7 @@ function updateSelectedOrdersBar() {
 }
 
 function openBulkWhatsAppModal() {
-    const checkedBoxes = Array.from(document.querySelectorAll('.order-select-checkbox:checked'));
+    const checkedBoxes = getUniqueSelectedOrderCheckboxes();
     if (checkedBoxes.length === 0) {
         alert('Please select at least one order to send WhatsApp message.');
         return;

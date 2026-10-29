@@ -38,46 +38,126 @@
 }
 
 /* ==========================================================================
-   Hero Best Seller Modern Fluid Slider (Buttery-smooth horizontal carousel)
+   Eye-Catching 3D Stacked Fan / Coverflow Spotlight Deck Showcase
    ========================================================================== */
-.hero-slider-viewport {
-    width: 100%;
-    overflow: hidden;
+@keyframes heroFloatChipA {
+    0%, 100% { transform: translateY(0px) rotate(-2deg); }
+    50% { transform: translateY(-7px) rotate(1deg); }
+}
+@keyframes heroFloatChipB {
+    0%, 100% { transform: translateY(0px) rotate(2deg); }
+    50% { transform: translateY(-6px) rotate(-1.5deg); }
+}
+@keyframes heroAmbientOrbit {
+    0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.65; }
+    50% { transform: scale(1.08) rotate(4deg); opacity: 0.9; }
+}
+.hero-ambient-orbit {
+    animation: heroAmbientOrbit 5s ease-in-out infinite;
+}
+.hero-float-chip-a {
+    animation: heroFloatChipA 3.8s ease-in-out infinite;
+}
+.hero-float-chip-b {
+    animation: heroFloatChipB 4.4s ease-in-out infinite;
+}
+.hero-fan-deck {
     position: relative;
-    border-radius: 1.25rem;
-}
-.hero-slider-track {
+    width: 100%;
+    aspect-ratio: 1 / 0.88;
+    perspective: 1200px;
     display: flex;
-    width: 100%;
-    transition: transform 550ms cubic-bezier(0.22, 1, 0.36, 1);
-    will-change: transform;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.75rem;
 }
-.hero-slider-slide {
-    width: 100%;
-    min-width: 100%;
-    flex-shrink: 0;
-}
-.hero-pill-btn {
-    transition: all 300ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-.hero-pill-progress-line {
+.hero-fan-card {
     position: absolute;
-    bottom: 0;
-    left: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #f59e0b, #fbbf24);
-    box-shadow: 0 0 10px rgba(245, 158, 11, 0.9);
-    border-radius: 9999px;
-    width: 0%;
-    transition: none;
+    width: 78%;
+    aspect-ratio: 1 / 1;
+    border-radius: 1.35rem;
+    overflow: hidden;
+    background: #0f172a;
+    transition:
+        transform 620ms cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 520ms cubic-bezier(0.22, 1, 0.36, 1),
+        filter 520ms cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 520ms cubic-bezier(0.22, 1, 0.36, 1),
+        border-color 420ms ease;
+    will-change: transform, opacity, filter;
+    user-select: none;
+}
+.hero-fan-card.is-center {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+    opacity: 1;
+    z-index: 30;
+    filter: brightness(1.02) saturate(1.05);
+    border: 2.5px solid rgba(251, 191, 36, 0.9);
+    box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.8), 0 0 28px rgba(245, 158, 11, 0.32);
+}
+.hero-fan-card.is-left {
+    transform: translate3d(-24%, 8px, -95px) scale(0.82) rotate(-8deg);
+    opacity: 0.65;
+    z-index: 15;
+    filter: brightness(0.65) saturate(0.85);
+    border: 2px solid rgba(16, 185, 129, 0.45);
+    box-shadow: 0 14px 28px -8px rgba(0, 0, 0, 0.65);
+    cursor: pointer;
+}
+.hero-fan-card.is-left:hover {
+    transform: translate3d(-26%, 4px, -70px) scale(0.85) rotate(-6deg);
+    opacity: 0.88;
+    filter: brightness(0.85);
+}
+.hero-fan-card.is-right {
+    transform: translate3d(24%, 8px, -95px) scale(0.82) rotate(8deg);
+    opacity: 0.65;
+    z-index: 15;
+    filter: brightness(0.65) saturate(0.85);
+    border: 2px solid rgba(16, 185, 129, 0.45);
+    box-shadow: 0 14px 28px -8px rgba(0, 0, 0, 0.65);
+    cursor: pointer;
+}
+.hero-fan-card.is-right:hover {
+    transform: translate3d(26%, 4px, -70px) scale(0.85) rotate(6deg);
+    opacity: 0.88;
+    filter: brightness(0.85);
+}
+.hero-fan-card.is-hidden {
+    transform: translate3d(0, 12px, -160px) scale(0.7);
+    opacity: 0;
+    z-index: 5;
     pointer-events: none;
 }
-@keyframes heroAuraPulse {
-    0%, 100% { opacity: 0.45; transform: scale(1); }
-    50% { opacity: 0.75; transform: scale(1.04); }
+.hero-fan-card .hero-card-badge {
+    transition: opacity 320ms ease, transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.hero-aura-pulse {
-    animation: heroAuraPulse 4.5s ease-in-out infinite;
+.hero-fan-card:not(.is-center) .hero-card-badge {
+    opacity: 0;
+    transform: scale(0.8);
+}
+.hero-fan-card:not(.is-center) a {
+    pointer-events: none;
+}
+.hero-info-slide {
+    display: none;
+}
+.hero-info-slide.is-active {
+    display: block;
+    animation: heroInfoPop 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes heroInfoPop {
+    0% {
+        opacity: 0;
+        transform: translateY(10px) scale(0.98);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+.hero-pill-btn {
+    transition: all 280ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 </style>
 {% endblock %}
@@ -106,13 +186,13 @@
 
                 <!-- Value Props Pills -->
                 <div class="flex flex-wrap items-center justify-center lg:justify-start gap-2 sm:gap-2.5 pt-2">
-                    <span class="inline-flex items-center gap-1.5 bg-[#082816] px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black text-emerald-200 border-2 border-emerald-600/60 shadow-md">
+                    <span class="inline-flex items-center gap-1.5 bg-[#082816] px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black text-emerald-200 border-2 border-emerald-600/60 shadow-md hover:-translate-y-0.5 transition-transform">
                         <i class="fa-solid fa-bolt text-amber-400"></i> Maximum Crunch
                     </span>
-                    <span class="inline-flex items-center gap-1.5 bg-[#082816] px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black text-emerald-200 border-2 border-emerald-600/60 shadow-md">
+                    <span class="inline-flex items-center gap-1.5 bg-[#082816] px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black text-emerald-200 border-2 border-emerald-600/60 shadow-md hover:-translate-y-0.5 transition-transform">
                         <i class="fa-solid fa-seedling text-amber-400"></i> 100% Real Herbs & Spices
                     </span>
-                    <span class="inline-flex items-center gap-1.5 bg-[#082816] px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black text-emerald-200 border-2 border-emerald-600/60 shadow-md">
+                    <span class="inline-flex items-center gap-1.5 bg-[#082816] px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black text-emerald-200 border-2 border-emerald-600/60 shadow-md hover:-translate-y-0.5 transition-transform">
                         <i class="fa-solid fa-burger text-amber-400"></i> Perfect for Burgers & Sandwiches
                     </span>
                 </div>
@@ -136,20 +216,32 @@
                 </div>
             </div>
 
-            <!-- Right Hero Visual Card (Auto Best 3 Pickles Switcher) -->
+            <!-- Right Hero Visual Card (Interactive 3D Stacked Fan / Coverflow Showcase) -->
             <div class="lg:col-span-5 relative flex justify-center">
-                <!-- Background Ambient Backlight Glow -->
-                <div class="absolute -inset-2 bg-gradient-to-r from-emerald-600/30 via-amber-500/20 to-emerald-500/30 rounded-3xl blur-2xl opacity-75 pointer-events-none hero-aura-pulse"></div>
+                <!-- Background Ambient Spotlight Glow -->
+                <div class="hero-ambient-orbit absolute -inset-3 bg-gradient-to-tr from-emerald-500/35 via-amber-400/25 to-emerald-500/35 rounded-3xl blur-2xl pointer-events-none"></div>
 
-                <div class="relative w-full max-w-sm sm:max-w-md p-4 sm:p-6 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] border-2 border-emerald-400/80 backdrop-blur-xl bg-[#082816]/95" id="heroShowcaseContainer">
+                <!-- Floating Decorative Badge Top-Right -->
+                <div class="hero-float-chip-a hidden sm:flex absolute -top-3.5 -right-2 z-40 items-center gap-1.5 bg-slate-950/90 backdrop-blur-md text-amber-300 text-[11px] font-black px-3 py-1.5 rounded-full border border-amber-400/60 shadow-xl pointer-events-none">
+                    <span>🔥</span>
+                    <span>Fresh Batch Ready</span>
+                </div>
+
+                <!-- Floating Decorative Badge Bottom-Left -->
+                <div class="hero-float-chip-b hidden sm:flex absolute -bottom-3 -left-2 z-40 items-center gap-1.5 bg-slate-950/90 backdrop-blur-md text-emerald-300 text-[11px] font-black px-3 py-1.5 rounded-full border border-emerald-400/60 shadow-xl pointer-events-none">
+                    <span>🥒</span>
+                    <span>Zero Oil • Cold Brined</span>
+                </div>
+
+                <div class="relative w-full max-w-sm sm:max-w-md p-4 sm:p-5 rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.65)] border-2 border-emerald-400/80 backdrop-blur-xl bg-[#082816]/95" id="heroShowcaseContainer">
                     
                     <!-- Segmented Best 3 Switcher Pills -->
-                    <div class="flex items-center justify-between gap-1.5 p-1.5 bg-black/60 backdrop-blur-md rounded-2xl border border-emerald-500/40 mb-3 sm:mb-4 text-xs shadow-inner">
+                    <div class="flex items-center justify-between gap-1.5 p-1.5 bg-black/60 backdrop-blur-md rounded-2xl border border-emerald-500/40 mb-3 text-xs shadow-inner">
                         {% for hero_pickle in top_best_sellers %}
                         <button type="button" 
                                 onclick="switchHeroPickle({{ forloop.counter0 }})" 
                                 id="hero-pill-{{ forloop.counter0 }}" 
-                                class="hero-pill-btn relative overflow-hidden flex-1 py-2 px-2.5 rounded-xl text-center cursor-pointer flex items-center justify-center gap-1.5 {% if forloop.first %}bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 font-black shadow-lg shadow-amber-400/25 ring-2 ring-amber-300/80 scale-[1.03]{% else %}text-emerald-200/85 hover:text-white hover:bg-white/10 font-bold{% endif %}">
+                                class="hero-pill-btn relative overflow-hidden flex-1 py-2 px-2.5 rounded-xl text-center cursor-pointer flex items-center justify-center gap-1.5 {% if forloop.first %}bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 font-black shadow-lg shadow-amber-400/25 ring-2 ring-amber-300/80 scale-[1.02]{% else %}text-emerald-200/85 hover:text-white hover:bg-white/10 font-bold{% endif %}">
                             <span class="text-xs sm:text-sm">{% if forloop.counter == 1 %}🥇{% elif forloop.counter == 2 %}🥈{% else %}🥉{% endif %}</span>
                             <span class="text-xs font-black tracking-wide whitespace-nowrap">
                                 {% if forloop.counter == 1 %}
@@ -160,88 +252,84 @@
                                     #3 <span class="hidden sm:inline">Fan Favorite</span><span class="sm:hidden">Fav</span>
                                 {% endif %}
                             </span>
-                            <span class="hero-pill-progress-line"></span>
                         </button>
                         {% endfor %}
                     </div>
 
-                    <!-- Pickle Showcase Carousel (Full edge-to-edge images & smooth slide) -->
-                    <div class="hero-slider-viewport">
-                        <div id="heroSliderTrack" class="hero-slider-track">
-                            {% for hero_pickle in top_best_sellers %}
-                            <div class="hero-slider-slide space-y-2.5 sm:space-y-3">
-                                <!-- Featured Jar showcase image: Full Edge-to-Edge Crystal Clear Image -->
-                                <div class="relative w-full aspect-square rounded-2xl overflow-hidden border-2 border-emerald-500/50 mb-3 sm:mb-4 shadow-2xl group bg-slate-900">
-                                    <a href="{% url 'store:product_detail' hero_pickle.slug %}" class="w-full h-full block relative z-10 overflow-hidden">
-                                        <img src="{{ hero_pickle.primary_image_url }}" 
-                                             alt="{{ hero_pickle.name }}" 
-                                             class="w-full h-full object-cover object-center transform group-hover:scale-108 transition-transform duration-700 ease-out" 
-                                             loading="eager" 
-                                             fetchpriority="high" 
-                                             decoding="async">
-                                    </a>
-                                    
-                                    {% if forloop.counter == 1 %}
-                                    <div class="absolute top-3 left-3 z-20 bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 text-xs font-black px-3.5 py-1.5 rounded-full uppercase tracking-wider shadow-xl flex items-center gap-1.5 ring-2 ring-amber-400/60 shimmer-ribbon">
-                                        <i class="fa-solid fa-crown text-amber-950"></i>
-                                        <span>#1 Best Seller</span>
-                                    </div>
-                                    {% elif forloop.counter == 2 %}
-                                    <div class="absolute top-3 left-3 z-20 bg-gradient-to-r from-amber-200 to-amber-100 text-slate-950 text-xs font-black px-3.5 py-1.5 rounded-full uppercase tracking-wider shadow-xl flex items-center gap-1.5 ring-2 ring-amber-300/50 shimmer-ribbon">
-                                        <i class="fa-solid fa-medal text-amber-800"></i>
-                                        <span>#2 Popular Pick</span>
-                                    </div>
-                                    {% else %}
-                                    <div class="absolute top-3 left-3 z-20 bg-gradient-to-r from-emerald-200 to-emerald-100 text-emerald-950 text-xs font-black px-3.5 py-1.5 rounded-full uppercase tracking-wider shadow-xl flex items-center gap-1.5 ring-2 ring-emerald-400/50 shimmer-ribbon">
-                                        <i class="fa-solid fa-star text-emerald-800"></i>
-                                        <span>#3 Fan Favorite</span>
-                                    </div>
-                                    {% endif %}
+                    <!-- 3D Stacked Fan Jar Deck (All 3 Jars Visible in 3D Depth) -->
+                    <div class="hero-fan-deck" id="heroFanDeck">
+                        {% for hero_pickle in top_best_sellers %}
+                        <div class="hero-fan-card group {% if forloop.counter0 == 0 %}is-center{% elif forloop.counter0 == 1 %}is-right{% elif forloop.counter0 == 2 %}is-left{% else %}is-hidden{% endif %}"
+                             data-slide-idx="{{ forloop.counter0 }}"
+                             onclick="handleFanCardClick({{ forloop.counter0 }}, event)">
+                            <a href="{% url 'store:product_detail' hero_pickle.slug %}" class="w-full h-full block relative z-10 overflow-hidden">
+                                <img src="{{ hero_pickle.primary_image_url }}" 
+                                     alt="{{ hero_pickle.name }}" 
+                                     class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500" 
+                                     loading="eager" 
+                                     fetchpriority="high" 
+                                     decoding="async">
+                            </a>
 
-                                    <div class="absolute bottom-3 right-3 z-20 bg-black/85 backdrop-blur-md text-white text-xs font-black px-3 py-1.5 rounded-xl border border-white/25 flex items-center gap-1 shadow-lg">
-                                        {% if hero_pickle.reviews_count > 0 %}
-                                        <span class="text-amber-300">⭐</span> <span>{{ hero_pickle.average_rating }}/5 ({{ hero_pickle.reviews_count }})</span>
-                                        {% else %}
-                                        <span class="text-amber-300">⭐</span> <span>{{ hero_pickle.crunch_rating|default:5 }}/5 Crunch</span>
-                                        {% endif %}
-                                    </div>
-                                </div>
-
-                                <div class="text-center space-y-1.5">
-                                    <h3 class="font-display font-black text-xl sm:text-2xl text-white">
-                                        <a href="{% url 'store:product_detail' hero_pickle.slug %}" class="hover:text-amber-300 transition-colors">
-                                            {{ hero_pickle.name }}
-                                        </a>
-                                    </h3>
-                                    <p class="text-[11px] text-amber-200 font-bold sm:hidden">Taste: {{ hero_pickle.flavor_profile }}</p>
-                                    <p class="text-xs text-emerald-100/90 font-semibold line-clamp-1 hidden sm:block">{{ hero_pickle.tagline }}</p>
-                                    <div class="flex items-center justify-center gap-3 pt-1">
-                                        <span class="font-display font-black text-2xl sm:text-3xl text-amber-300 drop-shadow-sm">৳{{ hero_pickle.price_bdt|floatformat:0 }}</span>
-                                        {% if hero_pickle.original_price_bdt and hero_pickle.original_price_bdt > hero_pickle.price_bdt %}
-                                        <span class="text-sm line-through text-emerald-300/60 font-bold">৳{{ hero_pickle.original_price_bdt|floatformat:0 }}</span>
-                                        {% endif %}
-                                    </div>
-                                    <div class="pt-2 flex items-center justify-center gap-2">
-                                        <a href="{% url 'store:product_detail' hero_pickle.slug %}" class="w-full bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 hover:from-amber-300 hover:to-amber-200 text-slate-950 text-xs font-black py-3 px-4 rounded-xl shadow-lg shadow-amber-400/20 transition-all hover:shadow-amber-400/35 active:scale-95 text-center flex items-center justify-center gap-1.5 border border-amber-200">
-                                            <span>Order Best Seller Jar</span>
-                                            <i class="fa-solid fa-arrow-right text-[10px]"></i>
-                                        </a>
-                                    </div>
-                                </div>
+                            {% if forloop.counter == 1 %}
+                            <div class="hero-card-badge absolute top-3 left-3 z-20 bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 text-[11px] sm:text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-xl flex items-center gap-1.5 ring-2 ring-amber-400/60">
+                                <i class="fa-solid fa-crown text-amber-950"></i>
+                                <span>#1 Best Seller</span>
                             </div>
-                            {% endfor %}
+                            {% elif forloop.counter == 2 %}
+                            <div class="hero-card-badge absolute top-3 left-3 z-20 bg-gradient-to-r from-amber-200 to-amber-100 text-slate-950 text-[11px] sm:text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-xl flex items-center gap-1.5 ring-2 ring-amber-300/50">
+                                <i class="fa-solid fa-medal text-amber-800"></i>
+                                <span>#2 Popular Pick</span>
+                            </div>
+                            {% else %}
+                            <div class="hero-card-badge absolute top-3 left-3 z-20 bg-gradient-to-r from-emerald-200 to-emerald-100 text-emerald-950 text-[11px] sm:text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-xl flex items-center gap-1.5 ring-2 ring-emerald-400/50">
+                                <i class="fa-solid fa-star text-emerald-800"></i>
+                                <span>#3 Fan Favorite</span>
+                            </div>
+                            {% endif %}
+
+                            <div class="hero-card-badge absolute bottom-3 right-3 z-20 bg-black/85 backdrop-blur-md text-white text-xs font-black px-2.5 py-1 rounded-xl border border-white/25 flex items-center gap-1 shadow-lg">
+                                {% if hero_pickle.reviews_count > 0 %}
+                                <span class="text-amber-300">⭐</span> <span>{{ hero_pickle.average_rating }}/5 ({{ hero_pickle.reviews_count }})</span>
+                                {% else %}
+                                <span class="text-amber-300">⭐</span> <span>{{ hero_pickle.crunch_rating|default:5 }}/5 Crunch</span>
+                                {% endif %}
+                            </div>
                         </div>
+                        {% endfor %}
                     </div>
 
-                    <!-- Left / Right Quick Navigation Controls -->
-                    <div class="flex items-center justify-between pt-3 text-emerald-400/70 text-xs px-1">
-                        <button type="button" onclick="prevHeroPickle()" aria-label="Previous Best Seller" class="py-1 px-2.5 rounded-lg hover:bg-white/10 hover:text-white transition cursor-pointer flex items-center gap-1 text-[11px] font-bold">
-                            <i class="fa-solid fa-chevron-left text-[10px]"></i> Prev
-                        </button>
-                        <span class="text-[10px] uppercase tracking-wider text-emerald-300/60 font-black">• Auto Rotating •</span>
-                        <button type="button" onclick="nextHeroPickle()" aria-label="Next Best Seller" class="py-1 px-2.5 rounded-lg hover:bg-white/10 hover:text-white transition cursor-pointer flex items-center gap-1 text-[11px] font-bold">
-                            Next <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                        </button>
+                    <!-- Active Pickle Details & CTA Panel -->
+                    <div id="heroInfoContainer" class="pt-1">
+                        {% for hero_pickle in top_best_sellers %}
+                        <div class="hero-info-slide {% if forloop.first %}is-active{% endif %} text-center space-y-1.5">
+                            <h3 class="font-display font-black text-xl sm:text-2xl text-white">
+                                <a href="{% url 'store:product_detail' hero_pickle.slug %}" class="hover:text-amber-300 transition-colors">
+                                    {{ hero_pickle.name }}
+                                </a>
+                            </h3>
+                            <p class="text-[11px] text-amber-200 font-bold sm:hidden">Taste: {{ hero_pickle.flavor_profile }}</p>
+                            <p class="text-xs text-emerald-100/90 font-semibold line-clamp-1 hidden sm:block">{{ hero_pickle.tagline }}</p>
+                            <div class="flex items-center justify-center gap-3 pt-0.5">
+                                <span class="font-display font-black text-2xl sm:text-3xl text-amber-300 drop-shadow-sm">৳{{ hero_pickle.price_bdt|floatformat:0 }}</span>
+                                {% if hero_pickle.original_price_bdt and hero_pickle.original_price_bdt > hero_pickle.price_bdt %}
+                                <span class="text-sm line-through text-emerald-300/60 font-bold">৳{{ hero_pickle.original_price_bdt|floatformat:0 }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="pt-2 flex items-center justify-center gap-2">
+                                <button type="button" onclick="prevHeroPickle()" aria-label="Previous Best Seller" class="w-10 h-10 rounded-xl bg-black/40 hover:bg-black/70 border border-emerald-500/40 text-emerald-200 hover:text-amber-300 flex items-center justify-center transition cursor-pointer shrink-0">
+                                    <i class="fa-solid fa-chevron-left text-xs"></i>
+                                </button>
+                                <a href="{% url 'store:product_detail' hero_pickle.slug %}" class="flex-1 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 hover:from-amber-300 hover:to-amber-200 text-slate-950 text-xs font-black py-3 px-4 rounded-xl shadow-lg shadow-amber-400/25 transition-all hover:shadow-amber-400/40 active:scale-95 text-center flex items-center justify-center gap-1.5 border border-amber-200">
+                                    <span>Order Best Seller Jar</span>
+                                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                </a>
+                                <button type="button" onclick="nextHeroPickle(true)" aria-label="Next Best Seller" class="w-10 h-10 rounded-xl bg-black/40 hover:bg-black/70 border border-emerald-500/40 text-emerald-200 hover:text-amber-300 flex items-center justify-center transition cursor-pointer shrink-0">
+                                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
 
                 </div>
@@ -786,9 +874,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
 {% block extra_js %}
 <script>
-// Switch Hero Best 3 Pickles with Smooth Slide Carousel
+// Switch Hero Best 3 Pickles with Smooth Animated Carousel
 let heroPickleTimer = null;
 let currentHeroPickleIndex = 0;
+let isHeroHovered = false;
 const totalHeroPickles = {{ top_best_sellers|length|default:3 }};
 const HERO_CYCLE_DURATION = 5000; // 5.0 seconds showcase time
 
@@ -797,15 +886,19 @@ function animatePillProgress(pillIndex) {
     allProgressBars.forEach((bar, idx) => {
         bar.style.transition = 'none';
         bar.style.width = '0%';
-        if (idx === pillIndex) {
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    bar.style.transition = `width ${HERO_CYCLE_DURATION}ms linear`;
-                    bar.style.width = '100%';
-                });
-            });
+        void bar.offsetWidth; // Force reflow so 0% is committed before transition starts
+        if (idx === pillIndex && !isHeroHovered) {
+            bar.style.transition = `width ${HERO_CYCLE_DURATION}ms linear`;
+            bar.style.width = '100%';
         }
     });
+}
+
+function handleFanCardClick(idx, event) {
+    if (idx !== currentHeroPickleIndex) {
+        if (event) event.preventDefault();
+        switchHeroPickle(idx, true);
+    }
 }
 
 function switchHeroPickle(index, isUserClick = true) {
@@ -816,22 +909,44 @@ function switchHeroPickle(index, isUserClick = true) {
     const allPills = document.querySelectorAll('.hero-pill-btn');
     allPills.forEach((btn, idx) => {
         if (idx === currentHeroPickleIndex) {
-            btn.className = 'hero-pill-btn relative overflow-hidden flex-1 py-2 px-2.5 rounded-xl text-center cursor-pointer flex items-center justify-center gap-1.5 bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 font-black shadow-lg shadow-amber-400/25 ring-2 ring-amber-300/80 scale-[1.03]';
+            btn.className = 'hero-pill-btn relative overflow-hidden flex-1 py-2 px-2.5 rounded-xl text-center cursor-pointer flex items-center justify-center gap-1.5 bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 font-black shadow-lg shadow-amber-400/25 ring-2 ring-amber-300/80 scale-[1.02]';
         } else {
             btn.className = 'hero-pill-btn relative overflow-hidden flex-1 py-2 px-2.5 rounded-xl text-center cursor-pointer flex items-center justify-center gap-1.5 text-emerald-200/85 hover:text-white hover:bg-white/10 font-bold';
         }
     });
 
-    animatePillProgress(currentHeroPickleIndex);
+    // 2. Rotate 3D Stacked Fan Jar Deck
+    const fanCards = document.querySelectorAll('#heroFanDeck .hero-fan-card');
+    const rightIdx = (currentHeroPickleIndex + 1) % totalHeroPickles;
+    const leftIdx = (currentHeroPickleIndex - 1 + totalHeroPickles) % totalHeroPickles;
 
-    // 2. Slide the Carousel Track smoothly with zero blur or jitter
-    const track = document.getElementById('heroSliderTrack');
-    if (track) {
-        track.style.transform = `translateX(-${currentHeroPickleIndex * 100}%)`;
-    }
+    fanCards.forEach((card, idx) => {
+        card.classList.remove('is-center', 'is-left', 'is-right', 'is-hidden');
+        if (idx === currentHeroPickleIndex) {
+            card.classList.add('is-center');
+        } else if (idx === rightIdx) {
+            card.classList.add('is-right');
+        } else if (idx === leftIdx) {
+            card.classList.add('is-left');
+        } else {
+            card.classList.add('is-hidden');
+        }
+    });
+
+    // 3. Update Active Info Slide
+    const infoSlides = document.querySelectorAll('#heroInfoContainer .hero-info-slide');
+    infoSlides.forEach((slide, idx) => {
+        if (idx === currentHeroPickleIndex) {
+            slide.classList.add('is-active');
+        } else {
+            slide.classList.remove('is-active');
+        }
+    });
 
     if (isUserClick) {
         restartHeroAutoCycle();
+    } else {
+        animatePillProgress(currentHeroPickleIndex);
     }
 }
 
@@ -844,7 +959,7 @@ function nextHeroPickle(isUserClick = false) {
 }
 
 function startHeroAutoCycle() {
-    if (totalHeroPickles > 1 && !heroPickleTimer) {
+    if (totalHeroPickles > 1 && !heroPickleTimer && !isHeroHovered) {
         animatePillProgress(currentHeroPickleIndex);
         heroPickleTimer = setInterval(() => nextHeroPickle(false), HERO_CYCLE_DURATION);
     }
@@ -864,7 +979,9 @@ function stopHeroAutoCycle() {
 
 function restartHeroAutoCycle() {
     stopHeroAutoCycle();
-    startHeroAutoCycle();
+    if (!isHeroHovered) {
+        startHeroAutoCycle();
+    }
 }
 
 // Start auto cycle immediately & pause on mouse hover / touch
@@ -878,8 +995,14 @@ function initHeroAutoCycle() {
     startHeroAutoCycle();
     const heroBox = document.getElementById('heroShowcaseContainer');
     if (heroBox) {
-        heroBox.addEventListener('mouseenter', stopHeroAutoCycle);
-        heroBox.addEventListener('mouseleave', startHeroAutoCycle);
+        heroBox.addEventListener('mouseenter', () => {
+            isHeroHovered = true;
+            stopHeroAutoCycle();
+        });
+        heroBox.addEventListener('mouseleave', () => {
+            isHeroHovered = false;
+            startHeroAutoCycle();
+        });
 
         // Mobile touch swipe gesture
         let touchStartX = 0;

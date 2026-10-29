@@ -207,6 +207,7 @@
                 if (customerEmail) localStorage.setItem('pickpickles_customer_email', customerEmail);
                 if (rawPhone) localStorage.setItem('pickpickles_customer_phone', rawPhone);
                 if (rawName) localStorage.setItem('pickpickles_customer_name', rawName);
+                if (deliveryCity) localStorage.setItem('pickpickles_customer_city', deliveryCity);
             } catch(e) {}
 
             fbq('init', '{{ META_PIXEL_ID }}', advancedMatchingData);

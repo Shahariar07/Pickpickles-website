@@ -147,6 +147,11 @@ class Product(models.Model):
             logging.getLogger(__name__).warning(f"Failed to record PriceHistory: {e}")
 
     @property
+    def stock_value(self):
+        """Total monetary value (BDT) of current physical stock for this product."""
+        return (self.stock_count or 0) * (self.price_bdt or 0)
+
+    @property
     def is_available_in_stock(self):
         """True if the item is physically in stock and ready to pack immediately."""
         return self.is_in_stock and self.stock_count > 0
@@ -501,6 +506,9 @@ class Order(models.Model):
             self.admin_notes = clean_cust_notes
         elif clean_admin_notes and not clean_cust_notes:
             self.customer_notes = clean_admin_notes
+        elif not clean_cust_notes and not clean_admin_notes:
+            self.customer_notes = ''
+            self.admin_notes = ''
         elif clean_cust_notes:
             self.customer_notes = clean_cust_notes
             self.admin_notes = clean_cust_notes
@@ -911,7 +919,10 @@ class Order(models.Model):
         if not digits:
             return ''
         # If explicitly formatted with country code starting with + or 00
-        if raw.startswith('+') or raw.startswith('00'):
+        if digits.startswith('00'): digits = digits[2:]
+        if digits.startswith('88001') and len(digits) == 14: return '880' + digits[4:]
+        if digits.startswith('01') and len(digits) == 11: return f"88{digits}"
+        if (raw.startswith('+') or raw.startswith('00')) and not digits.startswith('0'):
             return digits
         # Bangladesh number starting with 880
         if digits.startswith('880'):
@@ -975,8 +986,8 @@ Warm regards,
         if not phone:
             return ''
         text = self.get_whatsapp_order_confirmation_message()
-        encoded_text = urllib.parse.quote(text)
-        return f"https://api.whatsapp.com/send?phone={phone}&text={encoded_text}"
+        encoded_text = urllib.parse.quote(text, safe='')
+        return f"https://wa.me/{phone}?text={encoded_text}"
 
     def get_whatsapp_shipping_instruction_message(self):
         """
@@ -1028,8 +1039,8 @@ Warm regards,
         if not phone:
             return ''
         text = self.get_whatsapp_shipping_instruction_message()
-        encoded_text = urllib.parse.quote(text)
-        return f"https://api.whatsapp.com/send?phone={phone}&text={encoded_text}"
+        encoded_text = urllib.parse.quote(text, safe='')
+        return f"https://wa.me/{phone}?text={encoded_text}"
 
     def get_whatsapp_feedback_message(self):
         """
@@ -1065,8 +1076,8 @@ With gratitude,
         if not phone:
             return ''
         text = self.get_whatsapp_feedback_message()
-        encoded_text = urllib.parse.quote(text)
-        return f"https://api.whatsapp.com/send?phone={phone}&text={encoded_text}"
+        encoded_text = urllib.parse.quote(text, safe='')
+        return f"https://wa.me/{phone}?text={encoded_text}"
 
     def get_whatsapp_1month_review_request_message(self):
         """
@@ -1104,8 +1115,8 @@ Warm regards,
         if not phone:
             return ''
         text = self.get_whatsapp_1month_review_request_message()
-        encoded_text = urllib.parse.quote(text)
-        return f"https://api.whatsapp.com/send?phone={phone}&text={encoded_text}"
+        encoded_text = urllib.parse.quote(text, safe='')
+        return f"https://wa.me/{phone}?text={encoded_text}"
 
 
     def sync_pathao_status(self):

@@ -1,8 +1,10 @@
 import json
+from datetime import timedelta
 import urllib.parse
 import urllib.request
 from django.conf import settings
 from django.core.cache import cache
+from django.utils import timezone
 from dashboard.models import BlacklistedCustomer
 
 
@@ -25,42 +27,67 @@ def get_client_ip(request):
 def check_rate_limit_and_blacklist(request, phone):
     """
     Multi-layered security verification before accepting an order:
-    1. Blacklist database check (Phone & IP)
-    2. Honeypot automated bot check
-    3. Hourly rate limiting per IP and per Phone Number
+    1. Honeypot automated bot check
+    2. Blacklist database check (Phone & IP)
+    3. Database-level duplicate cooldown (5 min) & active PENDING order cap (max 2)
+    4. Repeat order-refuser COD protection (2+ cancelled orders with 0 delivered)
+    5. Hourly rate limiting per IP and per Phone Number
     
     Returns: (is_allowed: bool, error_message: str | None)
     """
     # 1. Honeypot Bot Check
     honeypot_value = request.POST.get('website_security_token', '').strip()
     if honeypot_value:
-        # Automated bots fill hidden form fields
         return False, "Automated submission detected. If you are a customer, please reload and place your order."
 
     # 2. Clean phone number
     clean_digits = ''.join(c for c in str(phone or '') if c.isdigit())
     last_10 = clean_digits[-10:] if len(clean_digits) >= 10 else clean_digits
     client_ip = get_client_ip(request)
+    payment_method = (request.POST.get('payment_method') or 'COD').strip().upper()
 
     # 3. Check Blacklist Database
     if last_10 and BlacklistedCustomer.is_phone_blocked(last_10):
-        return False, "এই ফোন নম্বরটি থেকে ক্যাশ অন ডেলিভারিতে অর্ডার সাময়িকভাবে স্থগিত করা হয়েছে। অর্ডারের জন্য অনুগ্রহ করে সরাসরি আমাদের হোয়াটসঅ্যাপে যোগাযোগ করুন।"
+        return False, "Cash on Delivery orders are currently restricted for this mobile number. Please contact us directly on WhatsApp to place your order."
 
     if client_ip and BlacklistedCustomer.objects.filter(is_active=True, ip_address=client_ip).exists():
-        return False, "আপনার ডিভাইস/নেটওয়ার্ক থেকে অর্ডার সাময়িকভাবে স্থগিত রাখা হয়েছে। অনুগ্রহ করে হোয়াটসঅ্যাপে যোগাযোগ করুন।"
+        return False, "Orders from your network/device are temporarily restricted. Please contact our support team on WhatsApp."
 
-    # 4. Rate Limiting (Max 3 orders / hour per phone, Max 5 orders / hour per IP)
+    # 4. Database-Level Duplicate Order Cooldown & Repeat-Refuser Protection
+    if last_10:
+        from store.models import Order
+        now = timezone.now()
+        recent_cutoff = now - timedelta(minutes=5)
+
+        customer_orders = Order.objects.filter(customer_phone__icontains=last_10)
+
+        # 4a. Block rapid duplicate submissions within 5 minutes
+        if customer_orders.filter(created_at__gte=recent_cutoff).exclude(order_status='CANCELLED').exists():
+            return False, "We just received an order from this mobile number a few minutes ago! Please wait 5 minutes or message us on WhatsApp if you need to modify your order."
+
+        # 4b. Block if customer already has 2 or more unconfirmed PENDING orders in queue
+        if customer_orders.filter(order_status='PENDING').count() >= 2:
+            return False, "You already have 2 pending orders awaiting confirmation. Our team will call you shortly to confirm them, or reach us on WhatsApp."
+
+        # 4c. Auto-protect against repeat COD order refusers (2+ cancelled orders & 0 delivered orders)
+        if payment_method == 'COD':
+            delivered_cnt = customer_orders.filter(order_status='DELIVERED').count()
+            cancelled_cnt = customer_orders.filter(order_status='CANCELLED').count()
+            if delivered_cnt == 0 and cancelled_cnt >= 2:
+                return False, "Due to multiple previously cancelled Cash on Delivery orders on this number, please select bKash Advance Payment or contact us on WhatsApp to confirm your order."
+
+    # 5. Cache Rate Limiting (Max 3 orders / hour per phone, Max 5 orders / hour per IP)
     if last_10:
         phone_cache_key = f"rate_limit_phone_{last_10}"
         phone_orders = cache.get(phone_cache_key, 0)
-        if phone_orders >= 4:
-            return False, "অল্প সময়ের মধ্যে এই নম্বর থেকে একাধিক অর্ডার গ্রহণ করা হয়েছে। পূর্বের অর্ডারটি কনফার্ম করতে অনুগ্রহ করে আমাদের হোয়াটসঅ্যাপে মেসেজ দিন।"
+        if phone_orders >= 3:
+            return False, "Multiple orders have been placed from this number recently. Please contact us on WhatsApp to confirm your existing order."
 
     if client_ip:
         ip_cache_key = f"rate_limit_ip_{client_ip}"
         ip_orders = cache.get(ip_cache_key, 0)
-        if ip_orders >= 6:
-            return False, "আপনার আইপি থেকে অল্প সময়ে অতিরিক্ত অর্ডার চেষ্টা করা হয়েছে। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।"
+        if ip_orders >= 5:
+            return False, "Too many order attempts from your connection in a short period. Please try again after a while."
 
     return True, None
 
@@ -82,6 +109,34 @@ def record_successful_order_rate(request, phone):
         ip_cache_key = f"rate_limit_ip_{client_ip}"
         current = cache.get(ip_cache_key, 0)
         cache.set(ip_cache_key, current + 1, timeout=3600)  # 1 hour window
+
+
+def check_review_rate_limit(request):
+    """
+    Prevents automated spam bots from flooding public reviews (Max 3 reviews per hour per IP).
+    """
+    honeypot_value = request.POST.get('website_security_token', '').strip()
+    if honeypot_value:
+        return False, "Automated submission detected."
+
+    client_ip = get_client_ip(request)
+    if client_ip:
+        review_cache_key = f"rate_limit_review_ip_{client_ip}"
+        submitted_count = cache.get(review_cache_key, 0)
+        if submitted_count >= 3:
+            return False, "You have submitted multiple reviews recently. Please wait a while before submitting another review."
+    return True, None
+
+
+def record_review_submission(request):
+    """
+    Records a public review submission per IP for rate limiting (1 hour window).
+    """
+    client_ip = get_client_ip(request)
+    if client_ip:
+        review_cache_key = f"rate_limit_review_ip_{client_ip}"
+        current = cache.get(review_cache_key, 0)
+        cache.set(review_cache_key, current + 1, timeout=3600)
 
 
 def verify_cloudflare_turnstile(request, expected_action="checkout"):
@@ -135,7 +190,6 @@ def verify_cloudflare_turnstile(request, expected_action="checkout"):
 
             return True, None
 
-    except Exception as err:
+    except Exception:
         # If Cloudflare verification endpoint is momentarily unreachable, do not block legitimate customers
         return True, None
-

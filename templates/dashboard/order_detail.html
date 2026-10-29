@@ -198,7 +198,7 @@
                 </button>
             </form>
             {% endif %}
-            <a href="https://wa.me/880{{ order.customer_phone|slice:'-10:' }}?text=Hello%20{{ order.customer_name|urlencode }},%20from%20Pickpickles%20regarding%20order%20#{{ order.order_number }}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-2xs flex items-center gap-1.5 transition">
+            <a href="https://wa.me/{{ order.whatsapp_phone_international }}?text=Hello%20{{ order.customer_name|urlencode }},%20from%20Pickpickles%20regarding%20order%20%23{{ order.order_number|urlencode }}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-2xs flex items-center gap-1.5 transition">
                 <i class="fa-brands fa-whatsapp text-sm"></i>
                 <span>WhatsApp</span>
             </a>
@@ -373,7 +373,7 @@
                             <span class="text-[10px] text-gray-400 font-normal">One-click templates</span>
                         </div>
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                            <a href="https://wa.me/{{ order.whatsapp_phone_international }}?text=Hello%20{{ order.customer_name|urlencode }},%20from%20Pickpickles%20regarding%20order%20#{{ order.order_number }}" target="_blank"
+                            <a href="https://wa.me/{{ order.whatsapp_phone_international }}?text=Hello%20{{ order.customer_name|urlencode }},%20from%20Pickpickles%20regarding%20order%20%23{{ order.order_number|urlencode }}" target="_blank"
                                 class="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 rounded-xl px-2 py-2 text-center text-[11px] font-bold flex items-center justify-center gap-1.5 transition shadow-2xs" title="Open Direct WhatsApp Chat">
                                 <i class="fa-solid fa-comment-dots text-[11px] text-emerald-600"></i>
                                 <span>Chat</span>

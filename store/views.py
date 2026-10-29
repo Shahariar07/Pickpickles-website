@@ -93,6 +93,7 @@ def index(request):
 
 
 def product_detail(request, slug):
+    product = get_object_or_404(Product, slug=slug)
     has_sale_badge = Case(
         When(Q(custom_badge__isnull=False) & ~Q(custom_badge=''), then=Value(1)),
         default=Value(0),
@@ -148,8 +149,14 @@ def reviews_view(request):
     review_form = ReviewForm(initial=initial_data)
 
     if request.method == 'POST':
-        # Cloudflare Turnstile Bot Protection
-        from store.security import verify_cloudflare_turnstile
+        # 1. Rate Limiting & Honeypot Bot Protection for Public Reviews
+        from store.security import verify_cloudflare_turnstile, check_review_rate_limit, record_review_submission
+        is_rev_allowed, rev_err = check_review_rate_limit(request)
+        if not is_rev_allowed:
+            messages.error(request, rev_err)
+            return redirect('store:reviews')
+
+        # 2. Cloudflare Turnstile Bot Protection
         is_turnstile_valid, cf_err = verify_cloudflare_turnstile(request, expected_action="review")
         if not is_turnstile_valid:
             messages.error(request, cf_err or "Please complete the Cloudflare security verification.")
@@ -161,6 +168,7 @@ def reviews_view(request):
             # Moderation Protection: New public reviews require admin approval before going live
             new_rev.is_approved = False
             new_rev.save()
+            record_review_submission(request)
             messages.success(request, 'Thank you! Your review has been submitted and will appear on the Wall of Love upon verification. 🥒✨')
             return redirect('store:reviews')
         else:
@@ -224,10 +232,15 @@ def cart_view(request):
 
 @require_POST
 def cart_add(request, product_id):
+    from django.utils.http import url_has_allowed_host_and_scheme
     cart = Cart(request)
     product = get_object_or_404(Product, id=product_id)
     
-    quantity = int(request.POST.get('quantity', 1))
+    try:
+        raw_qty = int(request.POST.get('quantity', 1))
+    except (ValueError, TypeError):
+        raw_qty = 1
+    quantity = max(1, min(raw_qty, 100))
     override = request.POST.get('override', 'false') == 'true'
     
     cart.add(product=product, quantity=quantity, override_quantity=override)
@@ -273,8 +286,12 @@ def cart_add(request, product_id):
         
     flash_msg = f'Added "{product.name}" to your jar cart!'
     messages.success(request, flash_msg)
-    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'store:cart_view'
-    return redirect(next_url)
+    if request.POST.get('buy_now') == '1':
+        return redirect('store:checkout')
+    raw_next = request.POST.get('next') or request.META.get('HTTP_REFERER') or ''
+    if raw_next and url_has_allowed_host_and_scheme(raw_next, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        return redirect(raw_next)
+    return redirect('store:cart_view')
 
 
 @require_POST
@@ -329,7 +346,8 @@ def cart_update_ajax(request):
         current_qty = cart.cart.get(str(product_id), {}).get('quantity', 0)
         
         if action == 'increase':
-            cart.add(product=product, quantity=1, override_quantity=False)
+            if current_qty < 100:
+                cart.add(product=product, quantity=1, override_quantity=False)
         elif action == 'decrease':
             if current_qty > 1:
                 cart.add(product=product, quantity=current_qty - 1, override_quantity=True)
@@ -468,6 +486,24 @@ def checkout(request):
             # Record order attempt for rate limiting
             record_successful_order_rate(request, order.customer_phone)
 
+            # Authorize current session to view full receipt for this order
+            request.session['last_placed_order_number'] = order.order_number
+
+            # Store normalized customer data in session for Meta Pixel Manual Advanced Matching
+            raw_ph = ''.join(c for c in (order.customer_phone or '') if c.isdigit())
+            if raw_ph.startswith('01') and len(raw_ph) == 11:
+                raw_ph = '88' + raw_ph
+            name_parts = (order.customer_name or '').strip().split()
+            request.session['meta_advanced_matching'] = {
+                'em': (order.customer_email or '').strip().lower(),
+                'ph': raw_ph,
+                'fn': name_parts[0].lower() if name_parts else '',
+                'ln': ' '.join(name_parts[1:]).lower() if len(name_parts) > 1 else '',
+                'ct': (order.delivery_city or 'dhaka').strip().lower(),
+                'country': 'bd',
+                'external_id': order.order_number,
+            }
+
             # Clear cart session
             cart.clear()
             
@@ -507,40 +543,78 @@ def checkout(request):
 
 def order_success(request, order_number):
     order = get_object_or_404(Order, order_number=order_number)
+    # Prevent strangers from enumerating /order/success/PKP-00001/ to view unmasked customer PII
+    is_owner_session = (request.session.get('last_placed_order_number') == order.order_number)
+    is_staff = request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser)
+    if not is_owner_session and not is_staff:
+        return redirect(f"{reverse('store:order_track')}?q={order.order_number}")
     return render(request, 'store/order_success.html', {'order': order})
+
+
+def _mask_customer_name(name: str) -> str:
+    """Masks customer name for public order tracking privacy (e.g. 'Tanvir Ahmed' -> 'Tan*** A***')."""
+    raw = (name or '').strip()
+    if not raw:
+        return 'Valued Customer'
+    parts = raw.split()
+    masked_parts = []
+    for idx, part in enumerate(parts):
+        if idx == 0:
+            visible = part[:3] if len(part) > 3 else part[:1]
+            masked_parts.append(f"{visible}***")
+        else:
+            masked_parts.append(f"{part[:1]}***")
+    return ' '.join(masked_parts)
+
+
+def _mask_delivery_address(address: str, city: str) -> str:
+    """Masks street/house address on public tracking page while preserving city."""
+    raw_addr = (address or '').strip()
+    raw_city = (city or '').strip()
+    if not raw_addr:
+        return raw_city or 'Bangladesh'
+    visible_prefix = raw_addr[:4] if len(raw_addr) > 4 else raw_addr[:2]
+    if raw_city:
+        return f"{visible_prefix}••••••, {raw_city}"
+    return f"{visible_prefix}••••••"
 
 
 def order_track(request):
     order = None
     query = request.GET.get('q', '').strip()
+    masked_name = ''
+    masked_address = ''
     
     if query:
         import re
         clean_q = query.lstrip('#').strip()
-        num_match = re.search(r'(\d+)', clean_q)
-        q_filter = (
-            Q(order_number__iexact=query) |
-            Q(order_number__iexact=clean_q) |
-            Q(order_number__icontains=clean_q) |
-            Q(customer_phone__icontains=query) |
-            Q(steadfast_tracking_code__iexact=query) |
-            Q(steadfast_tracking_code__iexact=clean_q) |
-            Q(steadfast_consignment_id__iexact=query) |
-            Q(steadfast_consignment_id__iexact=clean_q) |
-            Q(pathao_tracking_code__iexact=query) |
-            Q(pathao_tracking_code__iexact=clean_q) |
-            Q(pathao_consignment_id__iexact=query) |
-            Q(pathao_consignment_id__iexact=clean_q)
-        )
-        if num_match:
-            try:
-                num_val = int(num_match.group(1))
-                q_filter |= Q(order_number__iexact=f"PKP-{num_val:05d}")
-                q_filter |= Q(order_number__iexact=f"PKP-{num_val:04d}")
-            except Exception:
-                pass
+        digits_only = ''.join(c for c in clean_q if c.isdigit())
 
-        order = Order.objects.filter(q_filter).first()
+        # Match exact Order ID (e.g. PKP-00001) or exact Courier Consignment/Tracking Code
+        is_exact_order_id = bool(re.match(r'^PKP-\d{4,6}$', clean_q, re.IGNORECASE))
+        # Match full Bangladeshi phone number (10 or 11 digits)
+        is_valid_full_phone = len(digits_only) >= 10 and clean_q.replace('+', '').replace('-', '').replace(' ', '').isdigit()
+        # Match courier tracking / consignment code (minimum 5 alphanumeric chars, not just 1-3 digits)
+        is_tracking_code = len(clean_q) >= 5 and not is_valid_full_phone and not is_exact_order_id
+
+        if is_exact_order_id:
+            order = Order.objects.filter(order_number__iexact=clean_q).first()
+        elif is_valid_full_phone:
+            last_10 = digits_only[-10:]
+            order = Order.objects.filter(customer_phone__endswith=last_10).order_by('-created_at').first()
+        elif is_tracking_code:
+            order = Order.objects.filter(
+                Q(steadfast_tracking_code__iexact=clean_q) |
+                Q(steadfast_consignment_id__iexact=clean_q) |
+                Q(pathao_tracking_code__iexact=clean_q) |
+                Q(pathao_consignment_id__iexact=clean_q)
+            ).first()
+        else:
+            messages.error(
+                request,
+                'Please enter a complete Order ID (e.g. PKP-00001), full 11-digit mobile number, or Courier Tracking Code.'
+            )
+            return render(request, 'store/order_track.html', {'order': None, 'query': query})
         
         if order:
             try:
@@ -548,10 +622,17 @@ def order_track(request):
                 order.refresh_from_db()
             except Exception:
                 pass
+            masked_name = _mask_customer_name(order.customer_name)
+            masked_address = _mask_delivery_address(order.delivery_address, order.delivery_city)
         else:
-            messages.error(request, f'No order found matching "{query}". Please verify your Order ID (e.g. PKP-00001), Phone number, or Courier Tracking Code.')
+            messages.error(request, f'No order found matching "{query}". Please verify your full Order ID (e.g. PKP-00001), 11-digit Phone number, or Courier Tracking Code.')
 
-    return render(request, 'store/order_track.html', {'order': order, 'query': query})
+    return render(request, 'store/order_track.html', {
+        'order': order,
+        'query': query,
+        'masked_name': masked_name,
+        'masked_address': masked_address,
+    })
 
 
 def about_story(request):
@@ -716,10 +797,22 @@ def pathao_webhook(request):
     """
     Pathao Courier Webhook Endpoint.
     Receives instant parcel status updates from Pathao.
-    Automatically marks orders as DELIVERED and payment as PAID upon delivery.
+    Protected by webhook secret verification, consignment ID matching, and live API verification.
     """
+    import hmac
     if request.method != 'POST':
         return JsonResponse({'status': 'error', 'message': 'Only POST method is accepted'}, status=405)
+
+    # 1. Verify Webhook Secret if configured in settings/.env
+    webhook_secret = getattr(settings, 'PATHAO_WEBHOOK_SECRET', '').strip()
+    if webhook_secret:
+        provided_secret = (
+            request.headers.get('X-PATHAO-Signature') or
+            request.headers.get('X-Webhook-Secret') or
+            request.headers.get('Authorization', '').replace('Bearer ', '')
+        ).strip()
+        if not provided_secret or not hmac.compare_digest(provided_secret, webhook_secret):
+            return JsonResponse({'status': 'error', 'message': 'Unauthorized webhook signature'}, status=403)
     
     try:
         data = json.loads(request.body.decode('utf-8'))
@@ -730,21 +823,28 @@ def pathao_webhook(request):
     merchant_order_id = str(data.get('merchant_order_id') or '').strip()
     raw_status = str(data.get('order_status') or data.get('delivery_status') or data.get('event') or '').strip()
 
-    if not consignment_id and not merchant_order_id:
-        return JsonResponse({'status': 'error', 'message': 'consignment_id or merchant_order_id required'}, status=400)
+    # 2. Require consignment_id (prevent spoofing by guessing sequential PKP-00001 order numbers)
+    if not consignment_id:
+        return JsonResponse({'status': 'error', 'message': 'Valid consignment_id is required'}, status=400)
 
-    order = None
-    if merchant_order_id:
-        order = Order.all_objects.filter(order_number=merchant_order_id).first()
-    if not order and consignment_id:
-        order = Order.all_objects.filter(pathao_consignment_id=consignment_id).first()
+    order = Order.all_objects.filter(pathao_consignment_id=consignment_id).first()
+    if not order and merchant_order_id:
+        # Only match by merchant_order_id if its pathao_consignment_id matches
+        order = Order.all_objects.filter(
+            order_number=merchant_order_id,
+            pathao_consignment_id=consignment_id
+        ).first()
 
     if not order:
-        return JsonResponse({'status': 'error', 'message': 'Order not found in database'}, status=404)
+        return JsonResponse({'status': 'error', 'message': 'Matching dispatched order not found'}, status=404)
 
-    if raw_status:
-        order.pathao_order_status = raw_status
-        clean = raw_status.lower().replace('-', '_').replace(' ', '_')
+    # 3. Cross-verify status directly with Pathao API when configured, fallback to verified consignment payload
+    verified_status = order.sync_pathao_status()
+    effective_raw_status = verified_status or raw_status
+
+    if effective_raw_status:
+        order.pathao_order_status = effective_raw_status
+        clean = effective_raw_status.lower().replace('-', '_').replace(' ', '_')
         
         status_map = {
             'pending': 'PENDING',
@@ -789,10 +889,23 @@ def steadfast_webhook(request):
     """
     Steadfast Courier Webhook / Callback Endpoint.
     Receives instant parcel status updates from Steadfast Courier.
+    Protected by webhook secret verification, consignment/tracking matching, and live API verification.
     Endpoint: POST /api/steadfast/webhook/
     """
+    import hmac
     if request.method != 'POST':
         return JsonResponse({'status': 'error', 'message': 'Only POST method is accepted'}, status=405)
+
+    # 1. Verify Webhook Secret if configured in settings/.env
+    webhook_secret = getattr(settings, 'STEADFAST_WEBHOOK_SECRET', '').strip()
+    if webhook_secret:
+        provided_secret = (
+            request.headers.get('X-Steadfast-Signature') or
+            request.headers.get('X-Webhook-Secret') or
+            request.headers.get('Authorization', '').replace('Bearer ', '')
+        ).strip()
+        if not provided_secret or not hmac.compare_digest(provided_secret, webhook_secret):
+            return JsonResponse({'status': 'error', 'message': 'Unauthorized webhook signature'}, status=403)
 
     try:
         data = json.loads(request.body.decode('utf-8'))
@@ -804,21 +917,26 @@ def steadfast_webhook(request):
     tracking_code = str(data.get('tracking_code') or '').strip()
     raw_status = str(data.get('status') or data.get('delivery_status') or data.get('event') or '').strip()
 
-    if not consignment_id and not invoice and not tracking_code:
-        return JsonResponse({'status': 'error', 'message': 'consignment_id, invoice, or tracking_code required'}, status=400)
+    # 2. Require unguessable consignment_id or tracking_code (do not allow invoice-only spoofing)
+    if not consignment_id and not tracking_code:
+        return JsonResponse({'status': 'error', 'message': 'consignment_id or tracking_code required'}, status=400)
 
     order = None
-    if invoice:
-        order = Order.all_objects.filter(order_number=invoice).first()
-    if not order and consignment_id:
+    if consignment_id:
         order = Order.all_objects.filter(steadfast_consignment_id=consignment_id).first()
     if not order and tracking_code:
         order = Order.all_objects.filter(steadfast_tracking_code=tracking_code).first()
 
     if not order:
-        return JsonResponse({'status': 'error', 'message': 'Order not found in database'}, status=404)
+        return JsonResponse({'status': 'error', 'message': 'Matching dispatched order not found'}, status=404)
 
-    if raw_status:
+    # Verify invoice matches if provided
+    if invoice and order.order_number.lower() != invoice.lower():
+        return JsonResponse({'status': 'error', 'message': 'Order invoice mismatch'}, status=400)
+
+    # 3. Cross-verify status with Steadfast API if configured, otherwise save status from verified consignment
+    verified_status = order.sync_steadfast_status()
+    if not verified_status and raw_status:
         order.steadfast_order_status = raw_status
         order.save(update_fields=['steadfast_order_status'])
 
@@ -865,10 +983,9 @@ def courier_live_status_ajax(request, order_number):
         'raw_status': order.active_courier_status or 'in_review',
         'status_display': order.active_courier_status_display,
         'status_badge_class': order.active_courier_status_badge_class,
-        'customer_name': order.customer_name,
-        'destination': f"{order.delivery_address}, {order.delivery_city}".strip(', '),
+        'customer_name': _mask_customer_name(order.customer_name),
+        'destination': _mask_delivery_address(order.delivery_address, order.delivery_city),
         'total_amount': str(order.total_amount),
         'payment_status': order.get_payment_status_display(),
         'active_tracking_url': order.active_tracking_url or 'https://steadfast.com.bd/tracking',
     })
-

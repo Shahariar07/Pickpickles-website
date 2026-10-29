@@ -3,8 +3,42 @@
 
 {% block title %}{{ product.name }} | Pickpickles Bangladesh{% endblock %}
 {% block meta_description %}{{ product.tagline }} - Handcrafted American style pickles in Dhaka, Bangladesh.{% endblock %}
+{% block og_type %}product{% endblock %}
+{% block og_title %}{{ product.name }} — ৳{{ product.price_bdt|floatformat:0 }} | Pickpickles Bangladesh{% endblock %}
+{% block og_description %}{{ product.tagline }} ({{ product.jar_weight_grams }}g Jar). 100% Fresh, super crunchy artisanal pickles in Bangladesh.{% endblock %}
+{% block og_image %}{{ request.scheme }}://{{ request.get_host }}{{ product.primary_image_url }}{% endblock %}
 
 {% block extra_head %}
+<!-- Google Rich Snippet Product Schema (JSON-LD) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org/",
+  "@type": "Product",
+  "name": "{{ product.name|escapejs }}",
+  "image": [
+    "{{ request.scheme }}://{{ request.get_host }}{{ product.primary_image_url }}"
+  ],
+  "description": "{{ product.description|escapejs }}",
+  "brand": {
+    "@type": "Brand",
+    "name": "Pickpickles Bangladesh"
+  },
+  "offers": {
+    "@type": "Offer",
+    "url": "{{ request.build_absolute_uri }}",
+    "priceCurrency": "BDT",
+    "price": "{{ product.price_bdt|floatformat:0 }}",
+    "availability": "{% if product.in_stock %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}",
+    "itemCondition": "https://schema.org/NewCondition"
+  }{% if reviews|length > 0 %},
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": "{{ product.average_rating }}",
+    "reviewCount": "{{ reviews|length }}"
+  }{% endif %}
+}
+</script>
+
 <style>
 @keyframes shimmerLight {
     0% { transform: translateX(-120%); }
@@ -146,7 +180,7 @@
             {% endif %}
 
             <!-- Price Box -->
-            <div class="bg-emerald-50 p-4 sm:p-5 rounded-2xl border-2 border-emerald-300 flex items-center justify-between">
+            <div class="bg-emerald-50 p-4 sm:p-5 rounded-2xl border-2 border-emerald-300 flex items-center justify-between flex-wrap gap-3">
                 <div>
                     <span class="text-xs text-slate-700 font-bold block mb-1">Price in Bangladeshi Taka</span>
                     <div class="flex items-baseline gap-2.5 flex-wrap">
@@ -159,21 +193,34 @@
                         {% endif %}
                     </div>
                 </div>
+                <div class="text-right">
+                    <span class="inline-flex items-center gap-1.5 text-[11px] font-black bg-amber-400/90 text-slate-950 px-3 py-1.5 rounded-xl border border-amber-500/40 shadow-2xs">
+                        <i class="fa-solid fa-truck-fast"></i>
+                        <span>FREE Delivery on 6+ Jars</span>
+                    </span>
+                </div>
             </div>
 
-            <!-- Add to Cart Form -->
-            <form action="{% url 'store:cart_add' product.id %}" method="POST" class="space-y-4">
+            <!-- Add to Cart & 1-Click Direct Order Form -->
+            <form action="{% url 'store:cart_add' product.id %}" method="POST" class="space-y-3">
                 {% csrf_token %}
-                <div class="flex items-center gap-4">
-                    <div class="flex items-center border-2 border-slate-300 rounded-2xl bg-white overflow-hidden p-1 shadow-xs">
+                <div class="flex flex-wrap sm:flex-nowrap items-center gap-3">
+                    <div class="flex items-center border-2 border-slate-300 rounded-2xl bg-white overflow-hidden p-1 shadow-xs shrink-0">
                         <button type="button" onclick="adjustProductQty(-1)" class="w-10 h-10 flex items-center justify-center text-lg font-black text-slate-800 hover:bg-slate-100 active:bg-slate-200 rounded-xl transition">-</button>
                         <input type="number" name="quantity" id="productQtyInput" value="1" min="1" max="20" class="w-12 text-center font-display font-black text-base border-0 focus:ring-0 text-slate-950">
                         <button type="button" onclick="adjustProductQty(1)" class="w-10 h-10 flex items-center justify-center text-lg font-black text-slate-800 hover:bg-slate-100 active:bg-slate-200 rounded-xl transition">+</button>
                     </div>
 
-                    <button type="submit" class="flex-1 bg-[#15803d] hover:bg-[#166534] active:scale-[0.99] text-white font-display font-black text-base py-4 px-6 rounded-2xl shadow-xl shadow-emerald-700/30 flex items-center justify-center gap-2 transition-all">
-                        <i class="fa-solid fa-basket-shopping"></i>
+                    <!-- Add to Cart Button -->
+                    <button type="submit" name="buy_now" value="0" class="flex-1 bg-white hover:bg-emerald-50 active:scale-[0.99] text-emerald-900 border-2 border-emerald-700 font-display font-black text-sm sm:text-base py-3.5 px-5 rounded-2xl shadow-xs flex items-center justify-center gap-2 transition-all">
+                        <i class="fa-solid fa-basket-shopping text-emerald-700"></i>
                         <span>Add to Cart</span>
+                    </button>
+
+                    <!-- 1-Click Order Now Button (Direct to Checkout) -->
+                    <button type="submit" name="buy_now" value="1" class="w-full sm:flex-1 bg-gradient-to-r from-[#15803d] to-[#0f4826] hover:from-[#166534] hover:to-[#092d18] active:scale-[0.99] text-white font-display font-black text-sm sm:text-base py-4 px-6 rounded-2xl shadow-xl shadow-emerald-800/25 flex items-center justify-center gap-2 transition-all">
+                        <i class="fa-solid fa-bolt text-amber-300"></i>
+                        <span>Order Now</span>
                     </button>
                 </div>
             </form>
@@ -225,6 +272,49 @@
         </div>
 
     </div>
+
+    {% if related_products %}
+    <!-- Related Flavors Section (Cross-Sell towards 6-Jar Free Delivery) -->
+    <div class="mt-16 pt-12 border-t border-gray-200">
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-6">
+            <div>
+                <span class="text-xs font-black text-emerald-700 uppercase tracking-widest block mb-1">Mix & Match Flavors</span>
+                <h3 class="font-display font-black text-2xl md:text-3xl text-gray-900">
+                    More Crunchy Jars You'll Love
+                </h3>
+            </div>
+            <span class="inline-flex items-center gap-1.5 text-xs font-extrabold text-amber-900 bg-amber-100 border border-amber-300 px-3.5 py-1.5 rounded-full self-start sm:self-auto">
+                🚚 Mix any 6 jars for FREE Nationwide Delivery!
+            </span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            {% for rel in related_products %}
+            <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs hover:shadow-md transition flex flex-col justify-between p-4">
+                <div>
+                    <a href="{% url 'store:product_detail' rel.slug %}" class="block relative aspect-square rounded-xl overflow-hidden bg-gray-50 mb-3 border border-gray-100">
+                        <img src="{{ rel.primary_image_url }}" alt="{{ rel.name }}" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300" loading="lazy">
+                        <span class="absolute top-2.5 right-2.5 bg-slate-950/85 text-white text-[10px] font-black px-2.5 py-1 rounded-full">
+                            {{ rel.jar_weight_grams }}g
+                        </span>
+                    </a>
+                    <a href="{% url 'store:product_detail' rel.slug %}" class="font-display font-black text-base text-slate-900 hover:text-brand-700 transition line-clamp-1">
+                        {{ rel.name }}
+                    </a>
+                    <p class="text-xs text-slate-500 mt-0.5 line-clamp-1">{{ rel.tagline }}</p>
+                </div>
+                <div class="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
+                    <span class="font-display font-black text-lg text-emerald-900">৳{{ rel.price_bdt|floatformat:0 }}</span>
+                    <button type="button" onclick="quickAddToCart({{ rel.id }}, 1, this)" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-extrabold px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow-2xs cursor-pointer">
+                        <i class="fa-solid fa-plus text-[10px]"></i>
+                        <span>Add Jar</span>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Customer Reviews & Wall of Love Link -->
     <div class="mt-16 pt-12 border-t border-gray-200">

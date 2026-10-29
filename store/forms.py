@@ -4,14 +4,30 @@ from django import forms
 from .models import Order, Review
 
 
+FAKE_PHONE_SUBSTRINGS = (
+    '1234567',
+    '2345678',
+    '3456789',
+    '4567890',
+    '9876543',
+    '8765432',
+    '7654321',
+    '6543210',
+    '0123456',
+)
+
+FAKE_NAME_EXACT = {
+    'test', 'testing', 'tester', 'asdf', 'asdfg', 'qwerty', 'fake',
+    'abc', 'abcd', 'xyz', 'none', 'null', 'admin', 'user', 'unknown',
+    'na', 'n/a', 'xxx', 'zzz', 'aaa', 'bbb'
+}
+
+
 def clean_and_validate_bd_phone(phone_str):
     """
     Validates and standardizes a Bangladeshi mobile number.
     Valid operators: 013, 014, 015, 016, 017, 018, 019.
-    Accepts formats:
-      - 01XXXXXXXXX (11 digits)
-      - +8801XXXXXXXXX / 8801XXXXXXXXX
-      - Numbers with spaces or hyphens e.g. 01712-345678, 01712 345 678
+    Also rejects obvious dummy/fake phone patterns (e.g. 01700000000, 01712345678).
     Returns:
       (cleaned_phone, error_message)
     """
@@ -34,6 +50,20 @@ def clean_and_validate_bd_phone(phone_str):
     # Must be exactly 11 digits starting with valid BD mobile operator (013 - 019)
     if not re.match(r'^01[3-9]\d{8}$', cleaned):
         return None, "Please enter a valid 11-digit Bangladeshi mobile number (e.g. 017XXXXXXXX or 018XXXXXXXX)."
+
+    # Check the subscriber 8 digits (after 01X) for fake/dummy patterns
+    subscriber_part = cleaned[3:]
+    # Reject 6 or more identical consecutive digits (e.g. 01700000000, 01711111111, 01899999999)
+    if re.search(r'(\d)\1{5,}', cleaned):
+        return None, "Please enter a real active mobile number (repeated dummy digits are not allowed)."
+
+    # Reject sequential dummy numbers (e.g. 01712345678, 01787654321)
+    if any(seq in subscriber_part for seq in FAKE_PHONE_SUBSTRINGS):
+        return None, "Please enter your real active mobile number so our delivery rider can reach you."
+
+    # Reject if subscriber part has only 1 or 2 unique digits (e.g. 01712121212)
+    if len(set(subscriber_part)) <= 2:
+        return None, "Please enter a valid active mobile number."
         
     return cleaned, None
 
@@ -116,6 +146,18 @@ class CheckoutForm(forms.ModelForm):
             }),
         }
 
+    def clean_customer_name(self):
+        name = (self.cleaned_data.get('customer_name') or '').strip()
+        if len(name) < 3:
+            raise forms.ValidationError("Please enter your full name (at least 3 characters).")
+        # Must contain at least 2 alphabetic characters (English or Bengali)
+        alpha_count = sum(1 for ch in name if ch.isalpha())
+        if alpha_count < 2:
+            raise forms.ValidationError("Please enter a valid name using letters.")
+        if name.lower() in FAKE_NAME_EXACT or re.search(r'(.)\1{4,}', name.lower()):
+            raise forms.ValidationError("Please enter your real full name for delivery.")
+        return name
+
     def clean_customer_phone(self):
         raw_phone = self.cleaned_data.get('customer_phone')
         cleaned_phone, error = clean_and_validate_bd_phone(raw_phone)
@@ -123,11 +165,20 @@ class CheckoutForm(forms.ModelForm):
             raise forms.ValidationError(error)
         return cleaned_phone
 
+    def clean_delivery_address(self):
+        addr = (self.cleaned_data.get('delivery_address') or '').strip()
+        if len(addr) < 8:
+            raise forms.ValidationError("Please enter your complete delivery address (House/Road/Area, at least 8 characters).")
+        alpha_count = sum(1 for ch in addr if ch.isalpha())
+        if alpha_count < 3 or addr.lower() in FAKE_NAME_EXACT or re.search(r'(.)\1{5,}', addr.lower()):
+            raise forms.ValidationError("Please provide a valid, detailed street/area address so the courier can deliver your parcel.")
+        return addr
+
     def clean(self):
         cleaned_data = super().clean()
         payment_method = cleaned_data.get('payment_method')
         sender_number = (cleaned_data.get('payment_sender_number') or '').strip()
-        trx_id = (cleaned_data.get('payment_trx_id') or '').strip()
+        trx_id = (cleaned_data.get('payment_trx_id') or '').strip().upper()
 
         # Validate MFS payment details
         if payment_method == 'BKASH':
@@ -137,11 +188,16 @@ class CheckoutForm(forms.ModelForm):
             else:
                 cleaned_data['payment_sender_number'] = cleaned_sender
                 
-            if not trx_id or len(trx_id) < 6:
+            if not trx_id or len(trx_id) < 6 or len(trx_id) > 25:
                 self.add_error('payment_trx_id', 'Please enter a valid bKash Transaction ID (TrxID).')
+            elif not re.match(r'^[A-Z0-9]+$', trx_id) or len(set(trx_id)) <= 2 or trx_id in ('123456', '1234567', '12345678', 'ABCDEF'):
+                self.add_error('payment_trx_id', 'Invalid bKash Transaction ID format. Please check your bKash SMS/App.')
+            elif Order.all_objects.filter(payment_trx_id__iexact=trx_id).exists():
+                self.add_error('payment_trx_id', 'This bKash Transaction ID (TrxID) has already been used for another order.')
+            else:
+                cleaned_data['payment_trx_id'] = trx_id
 
         return cleaned_data
-
 
 
 class ReviewForm(forms.ModelForm):
@@ -183,4 +239,3 @@ class ReviewForm(forms.ModelForm):
         if 'product' in self.fields:
             self.fields['product'].required = False
             self.fields['product'].empty_label = "🥒 Pickpickles (General Pickle Experience)"
-

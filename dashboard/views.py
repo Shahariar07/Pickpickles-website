@@ -151,8 +151,17 @@ def dashboard_login(request):
         return redirect('dashboard:index')
 
     if request.method == 'POST':
-        # Cloudflare Turnstile Bot Protection
-        from store.security import verify_cloudflare_turnstile
+        from django.utils.http import url_has_allowed_host_and_scheme
+        from store.security import verify_cloudflare_turnstile, get_client_ip
+
+        # 1. Brute-Force Login Rate Limiting (Max 5 failed attempts per 15 minutes per IP)
+        client_ip = get_client_ip(request)
+        login_fail_key = f"dashboard_login_fail_{client_ip}" if client_ip else None
+        if login_fail_key and cache.get(login_fail_key, 0) >= 5:
+            messages.error(request, "Too many failed login attempts. Please wait 15 minutes before trying again.")
+            return render(request, 'dashboard/login.html')
+
+        # 2. Cloudflare Turnstile Bot Protection
         is_turnstile_valid, cf_err = verify_cloudflare_turnstile(request, expected_action="login")
         if not is_turnstile_valid:
             messages.error(request, cf_err or "Please complete the Cloudflare security check.")
@@ -163,11 +172,18 @@ def dashboard_login(request):
         user = authenticate(request, username=username, password=password)
         
         if user is not None and (user.is_staff or user.is_superuser):
+            if login_fail_key:
+                cache.delete(login_fail_key)
             login(request, user)
             messages.success(request, f'Welcome back, {user.username}!')
-            next_url = request.GET.get('next') or 'dashboard:index'
-            return redirect(next_url)
+            raw_next = request.GET.get('next') or ''
+            if raw_next and url_has_allowed_host_and_scheme(raw_next, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+                return redirect(raw_next)
+            return redirect('dashboard:index')
         else:
+            if login_fail_key:
+                current_fails = cache.get(login_fail_key, 0)
+                cache.set(login_fail_key, current_fails + 1, timeout=900)  # 15 minutes lockout window
             messages.error(request, 'Invalid credentials or non-staff account.')
 
     return render(request, 'dashboard/login.html')
@@ -647,6 +663,40 @@ def dashboard_index(request):
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def orders_list(request):
+    if request.method == 'POST' and request.POST.get('action') == 'bulk_update_status':
+        if not can_user_edit(request.user):
+            messages.error(request, 'Permission Denied: অর্ডার স্ট্যাটাস পরিবর্তন করার অনুমতি নেই। (Status editing restricted.)')
+            return redirect(request.META.get('HTTP_REFERER') or 'dashboard:orders')
+
+        new_status = request.POST.get('new_status', '').strip()
+        raw_orders = request.POST.get('order_numbers', '')
+        order_numbers = [o.strip() for o in raw_orders.split(',') if o.strip()]
+
+        if new_status in dict(Order.ORDER_STATUS_CHOICES) and order_numbers:
+            target_orders = Order.objects.prefetch_related('items__product').filter(order_number__in=order_numbers)
+            updated_count = 0
+            for order in target_orders:
+                if order.order_status != new_status:
+                    adjust_inventory_for_order_status_change(order, order.order_status, new_status, user=request.user)
+                    order.order_status = new_status
+                    if new_status == 'DELIVERED' and order.payment_status == 'UNPAID':
+                        order.payment_status = 'PAID'
+                    if new_status == 'CONFIRMED':
+                        try:
+                            from store.meta_capi import send_meta_purchase_event_on_accept
+                            send_meta_purchase_event_on_accept(order)
+                        except Exception:
+                            pass
+                    order.save()
+                    updated_count += 1
+            status_label = dict(Order.ORDER_STATUS_CHOICES).get(new_status, new_status)
+            if updated_count > 0:
+                wa_hint = " (Tip: Select Shipped orders and use the WhatsApp Queue to send messages one by one.)" if new_status == 'OUT_FOR_DELIVERY' else ""
+                messages.success(request, f"Updated {updated_count} order(s) to '{status_label}'{wa_hint}")
+            else:
+                messages.info(request, f"Selected orders are already in '{status_label}' status.")
+        return redirect(request.META.get('HTTP_REFERER') or 'dashboard:orders')
+
     # High-performance single aggregation query for order status counts
     status_counts = dict(
         Order.objects.values('order_status').annotate(cnt=Count('id')).values_list('order_status', 'cnt')
@@ -721,6 +771,41 @@ def orders_list(request):
             except Exception:
                 pass
         orders = orders.filter(s_filter)
+
+    # CSV Export for Orders (respects current filters)
+    if request.GET.get('export') == 'csv':
+        response = HttpResponse(content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = f'attachment; filename="pickpickles_orders_{today.strftime("%Y%m%d")}.csv"'
+        response.write('\ufeff'.encode('utf8'))
+        writer = csv.writer(response)
+        writer.writerow([
+            'Order #', 'Date & Time', 'Customer Name', 'Phone', 'City', 'Zone', 'Delivery Address',
+            'Items Ordered', 'Total Jars', 'Subtotal (BDT)', 'Delivery Fee (BDT)', 'Total Amount (BDT)',
+            'Payment Method', 'Payment Status', 'bKash TrxID', 'Order Status', 'Courier', 'Consignment ID'
+        ])
+        for o in orders:
+            items_summary = ", ".join(f"{itm.product_name} (x{itm.quantity})" for itm in o.items.all())
+            writer.writerow([
+                o.order_number,
+                timezone.localtime(o.created_at).strftime('%Y-%m-%d %I:%M %p'),
+                o.customer_name,
+                o.customer_phone,
+                o.delivery_city,
+                o.get_delivery_zone_display(),
+                o.delivery_address,
+                items_summary,
+                o.total_items_count,
+                o.subtotal,
+                o.delivery_fee,
+                o.total_amount,
+                o.get_payment_method_display(),
+                o.payment_status,
+                o.payment_trx_id or '',
+                o.get_order_status_display(),
+                o.active_courier_name or '',
+                o.active_consignment_id or '',
+            ])
+        return response
 
     # Pagination configuration (Default 10 items per page)
     page_number = request.GET.get('page', 1)
@@ -915,11 +1000,12 @@ def order_detail(request, order_number):
         if request.POST.get('payment_method'):
             order.payment_method = request.POST.get('payment_method')
 
-        # Unified customer & delivery instruction
-        instruction = request.POST.get('customer_notes') or request.POST.get('admin_notes')
-        if instruction is not None:
-            order.customer_notes = instruction.strip()
-            order.admin_notes = instruction.strip()
+        # Unified customer & delivery instruction (supports clearing to blank)
+        if 'customer_notes' in request.POST or 'admin_notes' in request.POST:
+            raw_inst = request.POST.get('customer_notes') if 'customer_notes' in request.POST else request.POST.get('admin_notes', '')
+            clean_inst = (raw_inst or '').strip()
+            order.customer_notes = clean_inst
+            order.admin_notes = clean_inst
             
         order.save()
         messages.success(request, f'Order #{order.order_number} details successfully updated.')
@@ -1223,8 +1309,10 @@ def create_manual_order(request):
             customer_name = request.POST.get('customer_name', '').strip()
             customer_phone = request.POST.get('customer_phone', '').strip()
             delivery_address = request.POST.get('delivery_address', '').strip()
-            delivery_city = request.POST.get('delivery_city', 'Faridpur').strip()
-            delivery_zone = request.POST.get('delivery_zone', 'INSIDE_FARIDPUR')
+            delivery_city = request.POST.get('delivery_city', 'Dhaka').strip() or 'Dhaka'
+            delivery_zone = request.POST.get('delivery_zone', 'INSIDE_DHAKA')
+            if delivery_zone not in dict(Order.ZONE_CHOICES):
+                delivery_zone = 'INSIDE_DHAKA'
             payment_method = request.POST.get('payment_method', 'COD')
             payment_status = request.POST.get('payment_status', 'UNPAID')
             payment_trx_id = request.POST.get('payment_trx_id', '').strip()
@@ -1747,6 +1835,9 @@ def stock_manager(request):
 
         # 5B. MULTI-ITEM PRODUCTION BATCH & RESTOCK ADD
         elif action in ['restock_batch', 'multi_item_batch'] or 'restock_batch' in request.POST or 'multi_item_batch' in request.POST:
+            if not can_user_edit(request.user):
+                messages.error(request, 'Permission Denied: নতুন প্রোডাকশন ব্যাচ বা স্টক যোগ করার অনুমতি নেই। (Stock modification restricted.)')
+                return redirect('dashboard:stock_manager')
             batch_ref = request.POST.get('batch_reference', '').strip() or 'Production Batch'
             notes = request.POST.get('notes', '').strip()
             prod_date_str = request.POST.get('production_date', '').strip()
@@ -1849,6 +1940,11 @@ def stock_manager(request):
 
         # 5C. QUICK STEPPER (+1 / -1 jars)
         elif action == 'quick_step_stock':
+            if not can_user_edit(request.user):
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': 'Permission Denied: স্টক পরিবর্তনের অনুমতি নেই।'}, status=403)
+                messages.error(request, 'Permission Denied: স্টক পরিবর্তনের অনুমতি নেই। (Stock modification restricted.)')
+                return redirect(request.META.get('HTTP_REFERER') or 'dashboard:stock_manager')
             product = get_object_or_404(Product, id=product_id)
             try:
                 delta = int(request.POST.get('delta', 1))
@@ -1891,6 +1987,9 @@ def stock_manager(request):
 
         # 6. CREATE CATEGORY
         elif action == 'create_category' or 'create_category' in request.POST:
+            if not can_user_edit(request.user):
+                messages.error(request, 'Permission Denied: নতুন ক্যাটাগরি তৈরি করার অনুমতি নেই। (Category creation restricted.)')
+                return redirect('dashboard:stock_manager')
             cat_name = request.POST.get('category_name', '').strip()
             cat_desc = request.POST.get('category_description', '').strip()
             cat_icon = request.POST.get('category_icon', 'fa-jar').strip()
@@ -1920,6 +2019,7 @@ def stock_manager(request):
     total_needed_jars = sum(p.needed_stock for p in all_products)
     total_current_inventory = sum(p.stock_count for p in all_products)
     total_target_inventory = sum(p.target_stock_level for p in all_products)
+    total_inventory_value = sum((p.stock_count or 0) * (p.price_bdt or 0) for p in all_products)
 
     # Suggest next batch reference number
     last_batch_log = StockLog.objects.filter(reference__icontains='Batch').order_by('-id').first()
@@ -1982,6 +2082,7 @@ def stock_manager(request):
         'total_needed_jars': total_needed_jars,
         'total_current_inventory': total_current_inventory,
         'total_target_inventory': total_target_inventory,
+        'total_inventory_value': total_inventory_value,
     }
     return render(request, 'dashboard/stock_manager.html', context)
 
@@ -3373,6 +3474,9 @@ def reviews_manager(request):
 
         # 3. Add Manual Review
         elif action == 'create_review':
+            if not can_user_edit(request.user):
+                messages.error(request, 'Permission Denied: রিভিউ যুক্ত করার অনুমতি আপনার নেই। (Review creation restricted.)')
+                return redirect('dashboard:reviews')
             prod_id = request.POST.get('product_id', '').strip()
             product = None
             if prod_id and prod_id != '0' and prod_id.lower() != 'all':
@@ -3846,6 +3950,28 @@ def expense_manager(request):
     # Order expenses consistently
     expenses_ordered = expenses.order_by('-expense_date', '-created_at')
 
+    # CSV Export for Expenses
+    if request.GET.get('export') == 'csv':
+        response = HttpResponse(content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = f'attachment; filename="pickpickles_expenses_{today.strftime("%Y%m%d")}.csv"'
+        response.write('\ufeff'.encode('utf8'))
+        writer = csv.writer(response)
+        writer.writerow(['Date', 'Title', 'Main Category', 'Sub-Category', 'Quantity', 'Unit', 'Amount (BDT)', 'Payment Method', 'Receipt / Ref #', 'Notes'])
+        for exp in expenses_ordered:
+            writer.writerow([
+                exp.expense_date.strftime('%Y-%m-%d') if exp.expense_date else '',
+                exp.title,
+                exp.category_display_name,
+                exp.sub_category or '',
+                exp.quantity if exp.quantity is not None else '',
+                exp.unit or '',
+                exp.amount,
+                exp.get_payment_method_display(),
+                exp.receipt_reference or '',
+                exp.notes or '',
+            ])
+        return response
+
     # Pagination (Default: 10 per page)
     page_number = request.GET.get('page', 1)
     per_page = request.GET.get('per_page', 10)
@@ -4261,24 +4387,43 @@ def business_profitability(request):
         payment_status='PAID'
     )
 
+    # Shipping Out & Packing orders (already deducted from physical stock)
+    packed_in_transit_orders = Order.objects.filter(
+        is_deleted=False,
+        order_status__in=['PACKING', 'OUT_FOR_DELIVERY']
+    ).exclude(
+        payment_status='PAID'
+    )
+
     jars_delivered = OrderItem.objects.filter(order__in=delivered_paid_orders).aggregate(Sum('quantity'))['quantity__sum'] or 0
     shipping_jars = OrderItem.objects.filter(order__in=shipping_out_orders).aggregate(Sum('quantity'))['quantity__sum'] or 0
+    packed_in_transit_jars = OrderItem.objects.filter(order__in=packed_in_transit_orders).aggregate(Sum('quantity'))['quantity__sum'] or 0
     pipeline_jars = OrderItem.objects.filter(order__in=unshipped_queue_orders).aggregate(Sum('quantity'))['quantity__sum'] or 0
+
+    # Realized & Pipeline Revenue
+    realized_revenue = float(delivered_paid_orders.aggregate(Sum('total_amount'))['total_amount__sum'] or 0)
+    realized_product_sales = float(delivered_paid_orders.aggregate(Sum('subtotal'))['subtotal__sum'] or 0)
+    realized_delivery_fees = float(delivered_paid_orders.aggregate(Sum('delivery_fee'))['delivery_fee__sum'] or 0)
+    shipping_revenue = float(shipping_out_orders.aggregate(Sum('total_amount'))['total_amount__sum'] or 0)
+    pipeline_revenue = float(unshipped_queue_orders.aggregate(Sum('total_amount'))['total_amount__sum'] or 0)
+    delivered_orders_count = delivered_paid_orders.count()
 
     # Total Sold Jars is strictly Delivered Jars (delivered howar por e dekhao)
     jars_sold_total = jars_delivered
 
     # Current Catalog & Physical Stock
-    all_products = list(Product.objects.all().order_by('name'))
+    all_products = list(Product.objects.select_related('category').all().order_by('name'))
     total_physical_stock = sum(p.stock_count for p in all_products)
     catalog_product_count = len(all_products)
 
-    # Average selling price in store
+    # Average, Min & Max selling price in store
     valid_prices = [float(p.price_bdt) for p in all_products if p.price_bdt and p.price_bdt > 0]
     avg_store_price = round(sum(valid_prices) / len(valid_prices), 2) if valid_prices else 400.0
+    min_store_price = round(min(valid_prices), 0) if valid_prices else 0
+    max_store_price = round(max(valid_prices), 0) if valid_prices else 0
 
-    # Total Accounted Production Batch Volume (Physical Stock + Strictly Delivered Jars)
-    batch_volume = total_physical_stock + jars_delivered
+    # Total Accounted Production Batch Volume (Physical Stock + Packed/In-Transit + Delivered Jars)
+    batch_volume = total_physical_stock + packed_in_transit_jars + jars_delivered
     effective_volume = max(1, batch_volume)
 
     # 2. Expenses Breakdown
@@ -4322,15 +4467,19 @@ def business_profitability(request):
         else:
             other_expense += amt
 
-    # Direct Production Cost (COGS)
+    # Direct Production Cost (COGS) & Detailed Overhead Heads
     direct_cogs = packaging_expense + raw_material_expense + spices_brine_expense
-    indirect_overhead = logistics_expense + marketing_expense + utilities_rent_expense + other_expense
+    utilities_other_expense = utilities_rent_expense + other_expense
+    indirect_overhead = logistics_expense + marketing_expense + utilities_other_expense
 
     # Per Jar Unit Economics (Batch-allocated)
     cogs_per_jar = round(direct_cogs / effective_volume, 2)
     packaging_per_jar = round(packaging_expense / effective_volume, 2)
     raw_produce_per_jar = round(raw_material_expense / effective_volume, 2)
     spices_per_jar = round(spices_brine_expense / effective_volume, 2)
+    logistics_per_jar = round(logistics_expense / effective_volume, 2)
+    marketing_per_jar = round(marketing_expense / effective_volume, 2)
+    utilities_other_per_jar = round(utilities_other_expense / effective_volume, 2)
     overhead_per_jar = round(indirect_overhead / effective_volume, 2)
     
     total_cost_per_jar = round(total_expenses / effective_volume, 2) if effective_volume > 0 else 0.0
@@ -4373,8 +4522,89 @@ def business_profitability(request):
     jars_remaining_to_breakeven = max(0, break_even_jars - jars_sold_total)
     breakeven_progress_pct = min(100, round((jars_sold_total / break_even_jars) * 100, 1)) if break_even_jars > 0 else 100
 
-    # Potential Batch Revenue & Profit when full batch (stock + sold) is sold out:
-    batch_projected_revenue = round(effective_volume * avg_store_price, 2)
+    # Per-product Delivered Sales & Active Queue Demand
+    delivered_by_prod = {}
+    for row in OrderItem.objects.filter(order__in=delivered_paid_orders).values('product_id', 'product_name').annotate(
+        sold_qty=Sum('quantity'),
+        sold_revenue=Sum('total_price')
+    ):
+        pid = row['product_id']
+        if pid:
+            delivered_by_prod[pid] = {
+                'qty': row['sold_qty'] or 0,
+                'revenue': float(row['sold_revenue'] or 0),
+            }
+
+    active_queue_by_prod = {}
+    for row in OrderItem.objects.filter(
+        order__is_deleted=False,
+        order__order_status__in=['PENDING', 'CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY']
+    ).exclude(order__payment_status='PAID').values('product_id').annotate(q_qty=Sum('quantity')):
+        if row['product_id']:
+            active_queue_by_prod[row['product_id']] = row['q_qty'] or 0
+
+    # Price History mapping per product
+    all_ph = list(PriceHistory.objects.order_by('created_at', 'id'))
+    ph_map = {}
+    for ph in all_ph:
+        ph_map.setdefault(ph.product_id, []).append(ph)
+
+    # Product-wise profitability mapping
+    product_profit_list = []
+    total_stock_value = 0.0
+    total_stock_profit_potential = 0.0
+    total_realized_unit_profit = 0.0
+
+    for prod in all_products:
+        p_price = float(prod.price_bdt or 0)
+        p_profit = round(p_price - total_cost_per_jar, 2)
+        p_margin = round((p_profit / p_price) * 100, 1) if p_price > 0 else 0
+        s_val = round(p_price * prod.stock_count, 2)
+        s_prof = round(p_profit * prod.stock_count, 2)
+
+        sold_stat = delivered_by_prod.get(prod.id, {'qty': 0, 'revenue': 0.0})
+        sold_qty = sold_stat['qty']
+        sold_rev = round(sold_stat['revenue'], 2)
+        realized_prod_profit = round(sold_rev - (sold_qty * total_cost_per_jar), 2)
+        queue_qty = active_queue_by_prod.get(prod.id, 0)
+
+        p_hist = ph_map.get(prod.id, [])
+        first_price = float(p_hist[0].old_price) if p_hist else p_price
+        inc_count = sum(1 for h in p_hist if h.change_type == 'INCREASE')
+
+        total_stock_value += s_val
+        total_stock_profit_potential += s_prof
+        total_realized_unit_profit += realized_prod_profit
+
+        product_profit_list.append({
+            'product': prod,
+            'price': p_price,
+            'first_price': first_price,
+            'increase_count': inc_count,
+            'cost': total_cost_per_jar,
+            'cogs': cogs_per_jar,
+            'overhead': overhead_per_jar,
+            'profit': p_profit,
+            'margin': p_margin,
+            'sold_qty': sold_qty,
+            'sold_revenue': sold_rev,
+            'realized_profit': realized_prod_profit,
+            'queue_qty': queue_qty,
+            'stock': prod.stock_count,
+            'stock_value': s_val,
+            'stock_profit_potential': s_prof,
+        })
+
+    total_stock_value = round(total_stock_value, 2)
+    total_stock_profit_potential = round(total_stock_profit_potential, 2)
+    total_realized_unit_profit = round(total_realized_unit_profit, 2)
+    realized_net_profit = round(realized_revenue - total_expenses, 2)
+    realized_recovery_pct = min(100, round((realized_revenue / total_expenses) * 100, 1)) if total_expenses > 0 else 100
+
+    # Potential Batch Revenue & Profit when full batch (realized + in-transit + current stock) is sold out:
+    batch_projected_revenue = round(realized_revenue + shipping_revenue + total_stock_value, 2)
+    if batch_projected_revenue <= 0:
+        batch_projected_revenue = round(effective_volume * avg_store_price, 2)
     batch_projected_profit = round(batch_projected_revenue - total_expenses, 2)
 
     # Cost percentages
@@ -4382,32 +4612,31 @@ def business_profitability(request):
         'packaging': round((packaging_expense / total_expenses * 100), 1) if total_expenses > 0 else 0,
         'raw_material': round((raw_material_expense / total_expenses * 100), 1) if total_expenses > 0 else 0,
         'spices_brine': round((spices_brine_expense / total_expenses * 100), 1) if total_expenses > 0 else 0,
+        'logistics': round((logistics_expense / total_expenses * 100), 1) if total_expenses > 0 else 0,
+        'marketing': round((marketing_expense / total_expenses * 100), 1) if total_expenses > 0 else 0,
+        'utilities_other': round((utilities_other_expense / total_expenses * 100), 1) if total_expenses > 0 else 0,
         'overhead': round((indirect_overhead / total_expenses * 100), 1) if total_expenses > 0 else 0,
+        'direct_cogs_pct': round((direct_cogs / total_expenses * 100), 1) if total_expenses > 0 else 0,
     }
-
-    # Product-wise profitability mapping
-    product_profit_list = []
-    for prod in all_products:
-        p_price = float(prod.price_bdt or 0)
-        p_profit = round(p_price - total_cost_per_jar, 2)
-        p_margin = round((p_profit / p_price) * 100, 1) if p_price > 0 else 0
-        product_profit_list.append({
-            'product': prod,
-            'price': p_price,
-            'cost': total_cost_per_jar,
-            'profit': p_profit,
-            'margin': p_margin,
-            'stock': prod.stock_count,
-            'stock_value': round(p_price * prod.stock_count, 2),
-            'stock_profit_potential': round(p_profit * prod.stock_count, 2),
-        })
 
     context = {
         'total_jars_sold': jars_sold_total,
         'jars_delivered': jars_delivered,
+        'delivered_orders_count': delivered_orders_count,
         'shipping_jars': shipping_jars,
+        'packed_in_transit_jars': packed_in_transit_jars,
         'pipeline_jars': pipeline_jars,
+        'realized_revenue': realized_revenue,
+        'realized_product_sales': realized_product_sales,
+        'realized_delivery_fees': realized_delivery_fees,
+        'shipping_revenue': shipping_revenue,
+        'pipeline_revenue': pipeline_revenue,
+        'realized_net_profit': realized_net_profit,
+        'realized_recovery_pct': realized_recovery_pct,
         'total_physical_stock': total_physical_stock,
+        'total_stock_value': total_stock_value,
+        'total_stock_profit_potential': total_stock_profit_potential,
+        'total_realized_unit_profit': total_realized_unit_profit,
         'batch_volume': batch_volume,
         'total_expenses': total_expenses,
         'direct_cogs': direct_cogs,
@@ -4417,13 +4646,21 @@ def business_profitability(request):
         'packaging_per_jar': packaging_per_jar,
         'raw_produce_per_jar': raw_produce_per_jar,
         'spices_per_jar': spices_per_jar,
+        'logistics_per_jar': logistics_per_jar,
+        'marketing_per_jar': marketing_per_jar,
+        'utilities_other_per_jar': utilities_other_per_jar,
         'overhead_per_jar': overhead_per_jar,
         'packaging_expense': packaging_expense,
         'raw_material_expense': raw_material_expense,
         'spices_brine_expense': spices_brine_expense,
+        'logistics_expense': logistics_expense,
+        'marketing_expense': marketing_expense,
+        'utilities_other_expense': utilities_other_expense,
         'indirect_overhead_expense': indirect_overhead,
         'cost_percentages': cost_percentages,
         'avg_store_price': avg_store_price,
+        'min_store_price': min_store_price,
+        'max_store_price': max_store_price,
         'current_profit_per_jar': current_profit_per_jar,
         'current_margin_pct': current_margin_pct,
         'pricing_matrix': pricing_matrix,
@@ -5111,8 +5348,10 @@ def order_notifications_api(request):
     latest_order = Order.objects.order_by('-id').first()
     latest_id = latest_order.id if latest_order else 0
 
+    from .context_processors import get_pending_feedback_reminders_count
     pending_count = Order.objects.filter(order_status='PENDING').count()
     pending_reviews_count = Review.objects.filter(is_approved=False).count()
+    feedback_reminders_count = get_pending_feedback_reminders_count(min_days=30)
 
     # New orders that came strictly after last_id
     new_orders_data = []
@@ -5151,6 +5390,7 @@ def order_notifications_api(request):
         'new_orders': new_orders_data,
         'pending_count': pending_count,
         'pending_reviews_count': pending_reviews_count,
+        'feedback_reminders_count': feedback_reminders_count,
         'recent_pending': recent_pending_data,
     })
 
@@ -5539,7 +5779,7 @@ def toggle_blacklist_ajax(request):
     return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
 
 
-@login_required(login_url='dashboard:login')
+@user_passes_test(is_staff_user, login_url='dashboard:login')
 def push_notifications_manager(request):
     """
     Dedicated view for Staff and Admin to manage PWA Installation & Push Notification Subscriptions.
@@ -5558,7 +5798,7 @@ def push_notifications_manager(request):
     return render(request, 'dashboard/push_notifications.html', context)
 
 
-@login_required(login_url='dashboard:login')
+@user_passes_test(is_staff_user, login_url='dashboard:login')
 def send_test_push_api(request):
     """
     AJAX endpoint to trigger an instant test push notification to verify sound, vibration & popup.

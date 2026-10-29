@@ -98,8 +98,11 @@ def _execute_meta_purchase(order):
         # 1. Customer User Data (Hashed with SHA-256 as required by Meta CAPI)
         user_data = {
             'country': [_sha256('bd')],
-            'external_id': [_sha256(order.order_number)]
+            'external_id': [_sha256(order.order_number)],
+            'client_user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
         }
+        if getattr(order, 'ip_address', None):
+            user_data['client_ip_address'] = str(order.ip_address).strip()
 
         # Email
         if order.customer_email:

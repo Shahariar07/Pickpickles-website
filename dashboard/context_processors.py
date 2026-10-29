@@ -68,9 +68,42 @@ def _safe_can_dispatch(user):
         pass
     return True
 
+def get_pending_feedback_reminders_count(min_days=30):
+    """
+    Returns the number of orders placed >= min_days ago that are not cancelled/deleted,
+    have not had a feedback reminder sent yet, and whose customer has not submitted a review.
+    """
+    try:
+        from datetime import timedelta
+        from django.utils import timezone
+        from store.models import Order, Review
+
+        cutoff_date = timezone.now() - timedelta(days=min_days)
+        reviewed_names = {
+            r.strip().lower()
+            for r in Review.objects.values_list('reviewer_name', flat=True)
+            if r and r.strip()
+        }
+        candidate_names = Order.objects.filter(
+            created_at__lte=cutoff_date,
+            feedback_request_sent_at__isnull=True,
+            is_deleted=False,
+        ).exclude(
+            order_status__in=['CANCELLED']
+        ).values_list('customer_name', flat=True)
+
+        return sum(
+            1 for name in candidate_names
+            if (name or '').strip().lower() not in reviewed_names
+        )
+    except Exception:
+        return 0
+
+
 def dashboard_permissions(request):
     """
-    Context processor to provide unified permission flags across all dashboard templates.
+    Context processor to provide unified permission flags and live sidebar notification counts
+    across all dashboard templates.
     Ensures View-Only users (such as 'mitu') have accurate flags without manual view injections.
     Guaranteed never to crash or throw 500 error.
     """
@@ -80,6 +113,8 @@ def dashboard_permissions(request):
         'can_dispatch': False,
         'is_view_only': False,
         'is_readonly_user': False,
+        'pending_reviews_count': 0,
+        'pending_feedback_reminders_count': 0,
     }
     try:
         user = getattr(request, 'user', None)
@@ -99,12 +134,23 @@ def dashboard_permissions(request):
             can_delete = _safe_can_delete(user)
             can_dispatch = _safe_can_dispatch(user)
 
+        pending_reviews_count = 0
+        try:
+            from store.models import Review
+            pending_reviews_count = Review.objects.filter(is_approved=False).count()
+        except Exception:
+            pending_reviews_count = 0
+
+        pending_feedback_reminders_count = get_pending_feedback_reminders_count(min_days=30)
+
         return {
             'can_edit': can_edit,
             'can_delete': can_delete,
             'can_dispatch': can_dispatch,
             'is_view_only': view_only,
             'is_readonly_user': view_only,
+            'pending_reviews_count': pending_reviews_count,
+            'pending_feedback_reminders_count': pending_feedback_reminders_count,
         }
     except Exception:
         return default_perms

@@ -469,6 +469,14 @@
 
         const row = document.getElementById(`row-${orderNumber}`);
         const card = document.getElementById(`card-${orderNumber}`);
+        const targetState = isDone ? 'done' : 'pending';
+        if ((row && row.dataset.uiState === targetState) || (card && card.dataset.uiState === targetState)) {
+            return;
+        }
+        if (row) row.dataset.uiState = targetState;
+        if (card) card.dataset.uiState = targetState;
+
+        const sBadge = document.getElementById('sidebarFeedbackRemindersBadge');
 
         if (isDone) {
             // If on 'pending' tab, smoothly remove row from table
@@ -486,7 +494,8 @@
                 const pBadge = document.getElementById('pendingCountBadge');
                 const dBadge = document.getElementById('doneCountBadge');
                 if (pBadge) {
-                    pBadge.textContent = Math.max(0, parseInt(pBadge.textContent.trim() || '0', 10) - 1);
+                    const nextPending = Math.max(0, parseInt(pBadge.textContent.trim() || '0', 10) - 1);
+                    pBadge.textContent = nextPending;
                 }
                 if (dBadge) {
                     dBadge.textContent = parseInt(dBadge.textContent.trim() || '0', 10) + 1;
@@ -504,6 +513,15 @@
                             Undo
                         </button>
                     `;
+                }
+            }
+            if (sBadge) {
+                const nextSidebar = Math.max(0, parseInt(sBadge.textContent.trim() || '0', 10) - 1);
+                sBadge.textContent = nextSidebar;
+                if (nextSidebar > 0) {
+                    sBadge.className = 'ml-auto min-w-[20px] h-5 px-1.5 text-[10px] font-black bg-amber-500 text-slate-950 rounded-full flex items-center justify-center shadow-xs';
+                } else {
+                    sBadge.className = 'ml-auto min-w-[20px] h-5 px-1.5 text-[10px] font-black bg-brand-800 text-gray-300 rounded-full flex items-center justify-center';
                 }
             }
         } else {
@@ -526,6 +544,11 @@
                 if (dBadge) {
                     dBadge.textContent = Math.max(0, parseInt(dBadge.textContent.trim() || '0', 10) - 1);
                 }
+            }
+            if (sBadge) {
+                const nextSidebar = parseInt(sBadge.textContent.trim() || '0', 10) + 1;
+                sBadge.textContent = nextSidebar;
+                sBadge.className = 'ml-auto min-w-[20px] h-5 px-1.5 text-[10px] font-black bg-amber-500 text-slate-950 rounded-full flex items-center justify-center shadow-xs';
             }
         }
     }

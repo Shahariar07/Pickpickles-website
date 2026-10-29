@@ -14,7 +14,7 @@
             Track Your Pickle Delivery
         </h1>
         <p class="text-xs sm:text-sm text-gray-500 mt-1">
-            Enter your Order ID (e.g. PKP-00073), mobile number, or Courier Tracking Code.
+            Enter your Order ID (e.g. PKP-00073), 11-digit mobile number, or Courier Tracking Code.
         </p>
     </div>
 
@@ -23,7 +23,7 @@
         <div class="flex flex-col sm:flex-row gap-2 max-w-lg mx-auto bg-white p-2 rounded-2xl sm:rounded-full border-2 border-gray-200 shadow-md focus-within:border-brand-500 transition">
             <div class="flex-1 flex items-center px-3">
                 <i class="fa-solid fa-magnifying-glass text-gray-400 text-sm mr-2"></i>
-                <input type="text" name="q" value="{{ query }}" placeholder="Order ID (PKP-00073), Phone, or Tracking Code (SFR...)" required class="w-full text-xs sm:text-sm font-semibold border-0 focus:ring-0 text-gray-900 placeholder-gray-400">
+                <input type="text" name="q" value="{{ query }}" placeholder="Order ID (PKP-00073), 11-digit Phone, or Tracking Code" required class="w-full bg-transparent text-xs sm:text-sm font-semibold border-0 outline-none focus:outline-none focus:ring-0 text-gray-900 placeholder-gray-400">
             </div>
             <button type="submit" class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs sm:text-sm px-6 py-3 rounded-xl sm:rounded-full shadow-md transition">
                 Track Order
@@ -133,12 +133,12 @@
         </div>
         {% endif %}
 
-        <!-- Details Summary -->
+        <!-- Details Summary (Masked for Customer Privacy) -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs border-t border-gray-100 pt-4">
             <div>
                 <span class="text-gray-400 font-bold block mb-1">Delivery Destination</span>
-                <p class="font-bold text-gray-900">{{ order.customer_name }}</p>
-                <p class="text-gray-600">{{ order.delivery_address }}, {{ order.delivery_city }}</p>
+                <p class="font-bold text-gray-900">{{ masked_name }}</p>
+                <p class="text-gray-600">{{ masked_address }}</p>
             </div>
             <div>
                 <span class="text-gray-400 font-bold block mb-1">Payment & Total</span>
@@ -224,12 +224,12 @@
 
                         <div class="flex items-center justify-between pb-2 border-b border-gray-200/60">
                             <span class="text-gray-500 font-medium">Recipient Customer</span>
-                            <strong id="modalCustomerName" class="text-gray-900">{{ order.customer_name }}</strong>
+                            <strong id="modalCustomerName" class="text-gray-900">{{ masked_name }}</strong>
                         </div>
 
                         <div class="flex items-start justify-between pb-2 border-b border-gray-200/60 gap-2">
                             <span class="text-gray-500 font-medium shrink-0">Destination</span>
-                            <span id="modalDestination" class="font-semibold text-gray-800 text-right">{{ order.delivery_address }}, {{ order.delivery_city }}</span>
+                            <span id="modalDestination" class="font-semibold text-gray-800 text-right">{{ masked_address }}</span>
                         </div>
 
                         <div class="flex items-center justify-between">
