@@ -897,6 +897,14 @@ def order_detail(request, order_number):
                 request.session['auto_whatsapp_url'] = order.whatsapp_shipping_instruction_url
                 request.session['auto_whatsapp_order_number'] = order.order_number
 
+            # Trigger Meta Conversions API (CAPI) Purchase STRICTLY and ONLY when status is 'CONFIRMED' ('Order Confirmed & In Queue')
+            if new_status == 'CONFIRMED':
+                try:
+                    from store.meta_capi import send_meta_purchase_event_on_accept
+                    send_meta_purchase_event_on_accept(order)
+                except Exception as _e:
+                    logger.warning(f"Failed to dispatch Meta CAPI Purchase: {_e}")
+
         if new_payment_status:
             order.payment_status = new_payment_status
             
@@ -943,6 +951,14 @@ def update_order_status_quick(request, order_number):
             if new_status == 'OUT_FOR_DELIVERY' and order.customer_phone:
                 request.session['auto_whatsapp_url'] = order.whatsapp_shipping_instruction_url
                 request.session['auto_whatsapp_order_number'] = order.order_number
+
+            # Trigger Meta Conversions API (CAPI) Purchase STRICTLY and ONLY when status is 'CONFIRMED' ('Order Confirmed & In Queue')
+            if new_status == 'CONFIRMED':
+                try:
+                    from store.meta_capi import send_meta_purchase_event_on_accept
+                    send_meta_purchase_event_on_accept(order)
+                except Exception as _e:
+                    logger.warning(f"Failed to dispatch Meta CAPI Purchase: {_e}")
 
             order.save()
             messages.success(request, f'Order #{order.order_number} status changed to {order.get_order_status_display()}')

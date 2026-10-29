@@ -64,7 +64,8 @@
     <!-- Main Custom CSS with Auto Versioning (Cache Busting) -->
     <link rel="stylesheet" href="{% static 'css/style.css' %}?v={{ STATIC_VERSION }}">
 
-    <!-- Meta Pixel Code -->
+    <!-- Meta Pixel Code with Manual Advanced Matching (Driven by .env) -->
+    {% if META_PIXEL_ID %}
     <script>
     !function(f,b,e,v,n,t,s)
     {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -74,12 +75,39 @@
     t.src=v;s=b.getElementsByTagName(e)[0];
     s.parentNode.insertBefore(t,s)}(window, document,'script',
     'https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', '{{ META_PIXEL_ID|default:"2165451210680943" }}');
+
+    // Manual Advanced Matching Data Structure (as required by Meta)
+    var metaAdvancedMatching = {
+        country: 'bd'
+    };
+    {% if request.user.is_authenticated and request.user.email %}
+    metaAdvancedMatching.em = '{{ request.user.email|lower|escapejs }}';
+    {% if request.user.first_name %}metaAdvancedMatching.fn = '{{ request.user.first_name|lower|escapejs }}';{% endif %}
+    {% if request.user.last_name %}metaAdvancedMatching.ln = '{{ request.user.last_name|lower|escapejs }}';{% endif %}
+    {% endif %}
+
+    // Check if returning customer data is stored in browser
+    try {
+        var storedEmail = localStorage.getItem('pickpickles_customer_email');
+        var storedPhone = localStorage.getItem('pickpickles_customer_phone');
+        var storedName = localStorage.getItem('pickpickles_customer_name');
+        if (storedEmail && !metaAdvancedMatching.em) metaAdvancedMatching.em = storedEmail.toLowerCase().trim();
+        if (storedPhone && !metaAdvancedMatching.ph) metaAdvancedMatching.ph = storedPhone.replace(/\D/g, '');
+        if (storedName && !metaAdvancedMatching.fn) {
+            var parts = storedName.trim().split(/\s+/);
+            if (parts[0]) metaAdvancedMatching.fn = parts[0].toLowerCase();
+            if (parts.length > 1) metaAdvancedMatching.ln = parts.slice(1).join(' ').toLowerCase();
+        }
+    } catch(e) {}
+
+    // Initialize Meta Pixel with Manual Advanced Matching (3rd parameter)
+    fbq('init', '{{ META_PIXEL_ID }}', metaAdvancedMatching);
     fbq('track', 'PageView');
     </script>
     <noscript><img height="1" width="1" style="display:none"
-    src="https://www.facebook.com/tr?id={{ META_PIXEL_ID|default:'2165451210680943' }}&ev=PageView&noscript=1"
+    src="https://www.facebook.com/tr?id={{ META_PIXEL_ID }}&ev=PageView&noscript=1"
     /></noscript>
+    {% endif %}
     <!-- End Meta Pixel Code -->
 
     <!-- Google Analytics 4 (GA4) -->

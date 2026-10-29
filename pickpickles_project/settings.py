@@ -64,8 +64,13 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'store.apps.StoreConfig',
     'dashboard.apps.DashboardConfig',
-    'webpush',
 ]
+
+try:
+    import webpush  # noqa: F401
+    INSTALLED_APPS.append('webpush')
+except ImportError:
+    pass
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -224,8 +229,10 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # ==============================================================================
 # 7. Third-party Tracking & Couriers (Strictly from .env)
 # ==============================================================================
-# Analytics
-META_PIXEL_ID = os.environ.get('META_PIXEL_ID', '2165451210680943')
+# Analytics (Strictly loaded from .env)
+META_PIXEL_ID = os.environ.get('META_PIXEL_ID', '').strip()
+META_CONVERSIONS_API_TOKEN = os.environ.get('META_CONVERSIONS_API_TOKEN', '').strip()
+META_TEST_EVENT_CODE = os.environ.get('META_TEST_EVENT_CODE', '').strip()
 GOOGLE_ANALYTICS_ID = os.environ.get('GOOGLE_ANALYTICS_ID', '')
 
 # Pathao Courier API

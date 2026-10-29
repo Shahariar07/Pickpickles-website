@@ -11,13 +11,18 @@ from django.views.generic import TemplateView
 urlpatterns = [
     path('manifest.json', TemplateView.as_view(template_name='manifest.json', content_type='application/manifest+json'), name='manifest'),
     path('service-worker.js', TemplateView.as_view(template_name='webpush_serviceworker.js', content_type='application/javascript'), name='root_service_worker'),
-    path('webpush/', include('webpush.urls')),
     path('admin/', admin.site.urls),
     path('dashboard/', include('dashboard.urls')),
     path('', include('store.urls')),
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATICFILES_DIRS[0] if settings.STATICFILES_DIRS else settings.STATIC_ROOT}),
 ]
+
+try:
+    import webpush  # noqa: F401
+    urlpatterns.insert(2, path('webpush/', include('webpush.urls')))
+except ImportError:
+    pass
 
 # Custom Error Handlers
 handler404 = 'store.views.custom_404_view'

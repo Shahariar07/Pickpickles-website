@@ -178,27 +178,50 @@
 (function() {
     function fireMetaPurchase() {
         if (typeof fbq === 'function') {
+            // Meta Advanced Matching: Match customer with Facebook Profile
+            var customerEmail = "{{ order.customer_email|default:''|escapejs }}".trim().toLowerCase();
+            var rawPhone = "{{ order.customer_phone|default:''|escapejs }}".replace(/\D/g, '');
+            if (rawPhone.startsWith('01') && rawPhone.length === 11) {
+                rawPhone = '88' + rawPhone;
+            }
+            var rawName = "{{ order.customer_name|default:''|escapejs }}".trim();
+            var nameParts = rawName.split(/\s+/);
+            var firstName = nameParts[0] ? nameParts[0].toLowerCase() : '';
+            var lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ').toLowerCase() : '';
+            var deliveryCity = "{{ order.delivery_city|default:'dhaka'|escapejs }}".trim().toLowerCase();
+            var orderNum = "{{ order.order_number|escapejs }}";
+
+            // Initialize / Update Advanced Matching Parameters
+            var advancedMatchingData = {
+                country: 'bd',
+                external_id: orderNum
+            };
+            if (customerEmail) advancedMatchingData.em = customerEmail;
+            if (rawPhone) advancedMatchingData.ph = rawPhone;
+            if (firstName) advancedMatchingData.fn = firstName;
+            if (lastName) advancedMatchingData.ln = lastName;
+            if (deliveryCity) advancedMatchingData.ct = deliveryCity;
+
+            // Store customer info in browser for continuous session advanced matching
+            try {
+                if (customerEmail) localStorage.setItem('pickpickles_customer_email', customerEmail);
+                if (rawPhone) localStorage.setItem('pickpickles_customer_phone', rawPhone);
+                if (rawName) localStorage.setItem('pickpickles_customer_name', rawName);
+            } catch(e) {}
+
+            fbq('init', '{{ META_PIXEL_ID }}', advancedMatchingData);
+
+            // Note: Official Meta 'Purchase' event is dispatched via Meta Conversions API (CAPI)
+            // only when the admin accepts/confirms the order in dashboard to filter out fake/unconfirmed COD orders.
             var orderTotal = parseFloat("{{ order.total_amount|stringformat:'.2f' }}") || 0;
             var orderItemsCount = parseInt("{{ order.items.count|default:1 }}", 10) || 1;
-            fbq('track', 'Purchase', {
-                content_type: 'product',
-                content_ids: [{% for item in order.items.all %}'{{ item.product.id|default:item.product_name|escapejs }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
-                contents: [
-                    {% for item in order.items.all %}
-                    {
-                        id: '{{ item.product.id|default:item.product_name|escapejs }}',
-                        name: '{{ item.product_name|escapejs }}',
-                        quantity: parseInt("{{ item.quantity }}", 10) || 1,
-                        item_price: parseFloat("{{ item.unit_price|stringformat:'.2f' }}") || 0
-                    }{% if not forloop.last %},{% endif %}
-                    {% endfor %}
-                ],
+            fbq('trackCustom', 'OrderPlaced', {
                 value: orderTotal,
                 currency: 'BDT',
-                order_id: '{{ order.order_number|escapejs }}',
+                order_id: orderNum,
                 num_items: orderItemsCount
             });
-            console.log("✅ [Meta Pixel] Purchase event tracked for Order: {{ order.order_number }} | Total: ৳{{ order.total_amount }}");
+            console.log("✅ [Meta Pixel] Customer Advanced Matching initialized for Order: " + orderNum);
         } else {
             console.warn("⚠️ [Meta Pixel] fbq function not found on page.");
         }

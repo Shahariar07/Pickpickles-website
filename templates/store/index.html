@@ -36,6 +36,49 @@
     animation: shimmerLight 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
     pointer-events: none;
 }
+
+/* ==========================================================================
+   Hero Best Seller Modern Fluid Slider (Buttery-smooth horizontal carousel)
+   ========================================================================== */
+.hero-slider-viewport {
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    border-radius: 1.25rem;
+}
+.hero-slider-track {
+    display: flex;
+    width: 100%;
+    transition: transform 550ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+}
+.hero-slider-slide {
+    width: 100%;
+    min-width: 100%;
+    flex-shrink: 0;
+}
+.hero-pill-btn {
+    transition: all 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.hero-pill-progress-line {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.9);
+    border-radius: 9999px;
+    width: 0%;
+    transition: none;
+    pointer-events: none;
+}
+@keyframes heroAuraPulse {
+    0%, 100% { opacity: 0.45; transform: scale(1); }
+    50% { opacity: 0.75; transform: scale(1.04); }
+}
+.hero-aura-pulse {
+    animation: heroAuraPulse 4.5s ease-in-out infinite;
+}
 </style>
 {% endblock %}
 
@@ -95,89 +138,111 @@
 
             <!-- Right Hero Visual Card (Auto Best 3 Pickles Switcher) -->
             <div class="lg:col-span-5 relative flex justify-center">
-                <div class="relative w-full max-w-sm sm:max-w-md p-4 sm:p-6 rounded-3xl shadow-2xl border-2 border-emerald-400" style="background-color: #082816;">
+                <!-- Background Ambient Backlight Glow -->
+                <div class="absolute -inset-2 bg-gradient-to-r from-emerald-600/30 via-amber-500/20 to-emerald-500/30 rounded-3xl blur-2xl opacity-75 pointer-events-none hero-aura-pulse"></div>
+
+                <div class="relative w-full max-w-sm sm:max-w-md p-4 sm:p-6 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] border-2 border-emerald-400/80 backdrop-blur-xl bg-[#082816]/95" id="heroShowcaseContainer">
                     
                     <!-- Segmented Best 3 Switcher Pills -->
-                    <div class="flex items-center justify-between gap-1.5 p-1 bg-black/50 backdrop-blur-md rounded-2xl border border-emerald-500/40 mb-3 sm:mb-4 text-xs">
+                    <div class="flex items-center justify-between gap-1.5 p-1.5 bg-black/60 backdrop-blur-md rounded-2xl border border-emerald-500/40 mb-3 sm:mb-4 text-xs shadow-inner">
                         {% for hero_pickle in top_best_sellers %}
                         <button type="button" 
                                 onclick="switchHeroPickle({{ forloop.counter0 }})" 
                                 id="hero-pill-{{ forloop.counter0 }}" 
-                                class="hero-pill-btn relative overflow-hidden flex-1 py-2 px-2 rounded-xl text-center transition-all duration-300 cursor-pointer flex items-center justify-center gap-1.5 {% if forloop.first %}bg-amber-400 text-slate-950 font-black shadow-md ring-2 ring-amber-300 scale-[1.02]{% else %}text-emerald-200/90 hover:text-white hover:bg-white/10 font-bold{% endif %}">
+                                class="hero-pill-btn relative overflow-hidden flex-1 py-2 px-2.5 rounded-xl text-center cursor-pointer flex items-center justify-center gap-1.5 {% if forloop.first %}bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 font-black shadow-lg shadow-amber-400/25 ring-2 ring-amber-300/80 scale-[1.03]{% else %}text-emerald-200/85 hover:text-white hover:bg-white/10 font-bold{% endif %}">
                             <span class="text-xs sm:text-sm">{% if forloop.counter == 1 %}🥇{% elif forloop.counter == 2 %}🥈{% else %}🥉{% endif %}</span>
                             <span class="text-xs font-black tracking-wide whitespace-nowrap">
                                 {% if forloop.counter == 1 %}
                                     #1 <span class="hidden sm:inline">Best Seller</span><span class="sm:hidden">Best</span>
                                 {% elif forloop.counter == 2 %}
-                                    #2 <span class="hidden sm:inline">Ranking</span><span class="sm:hidden">Rank</span>
+                                    #2 <span class="hidden sm:inline">Top Pick</span><span class="sm:hidden">Top</span>
                                 {% else %}
-                                    #3 <span class="hidden sm:inline">Ranking</span><span class="sm:hidden">Rank</span>
+                                    #3 <span class="hidden sm:inline">Fan Favorite</span><span class="sm:hidden">Fav</span>
                                 {% endif %}
                             </span>
-                            <span class="hero-pill-progress-line absolute bottom-0 left-0 h-[2.5px] bg-slate-950/70 rounded-full w-0 transition-none pointer-events-none"></span>
+                            <span class="hero-pill-progress-line"></span>
                         </button>
                         {% endfor %}
                     </div>
 
-                    <!-- Pickle Showcase Panes -->
-                    {% for hero_pickle in top_best_sellers %}
-                    <div id="hero-pickle-card-{{ forloop.counter0 }}" class="hero-pickle-card space-y-2.5 sm:space-y-3 transition-opacity duration-300 {% if not forloop.first %}hidden{% endif %}">
-                        <!-- Featured Jar showcase image -->
-                        <div class="relative aspect-square rounded-2xl overflow-hidden bg-black/60 border border-emerald-500/40 mb-3 sm:mb-4 flex items-center justify-center group">
-                            <a href="{% url 'store:product_detail' hero_pickle.slug %}" class="w-full h-full block">
-                                <img src="{{ hero_pickle.primary_image_url }}" alt="{{ hero_pickle.name }}" class="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500" loading="eager" fetchpriority="high" decoding="async" width="500" height="500">
-                            </a>
-                            
-                            {% if forloop.counter == 1 %}
-                            <div class="absolute top-3 left-3 bg-amber-400 text-slate-950 text-xs font-black px-3.5 py-1.5 rounded-full uppercase tracking-wider shadow-lg flex items-center gap-1.5 ring-2 ring-amber-400/40">
-                                <i class="fa-solid fa-crown text-amber-950"></i>
-                                <span>#1 Best Seller</span>
-                            </div>
-                            {% elif forloop.counter == 2 %}
-                            <div class="absolute top-3 left-3 bg-amber-200 text-slate-950 text-xs font-black px-3.5 py-1.5 rounded-full uppercase tracking-wider shadow-lg flex items-center gap-1.5 ring-2 ring-amber-300/40">
-                                <i class="fa-solid fa-medal text-amber-800"></i>
-                                <span>#2 Popular Pick</span>
-                            </div>
-                            {% else %}
-                            <div class="absolute top-3 left-3 bg-emerald-200 text-emerald-950 text-xs font-black px-3.5 py-1.5 rounded-full uppercase tracking-wider shadow-lg flex items-center gap-1.5 ring-2 ring-emerald-400/40">
-                                <i class="fa-solid fa-star text-emerald-800"></i>
-                                <span>#3 Fan Favorite</span>
-                            </div>
-                            {% endif %}
+                    <!-- Pickle Showcase Carousel (Full edge-to-edge images & smooth slide) -->
+                    <div class="hero-slider-viewport">
+                        <div id="heroSliderTrack" class="hero-slider-track">
+                            {% for hero_pickle in top_best_sellers %}
+                            <div class="hero-slider-slide space-y-2.5 sm:space-y-3">
+                                <!-- Featured Jar showcase image: Full Edge-to-Edge Crystal Clear Image -->
+                                <div class="relative w-full aspect-square rounded-2xl overflow-hidden border-2 border-emerald-500/50 mb-3 sm:mb-4 shadow-2xl group bg-slate-900">
+                                    <a href="{% url 'store:product_detail' hero_pickle.slug %}" class="w-full h-full block relative z-10 overflow-hidden">
+                                        <img src="{{ hero_pickle.primary_image_url }}" 
+                                             alt="{{ hero_pickle.name }}" 
+                                             class="w-full h-full object-cover object-center transform group-hover:scale-108 transition-transform duration-700 ease-out" 
+                                             loading="eager" 
+                                             fetchpriority="high" 
+                                             decoding="async">
+                                    </a>
+                                    
+                                    {% if forloop.counter == 1 %}
+                                    <div class="absolute top-3 left-3 z-20 bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 text-xs font-black px-3.5 py-1.5 rounded-full uppercase tracking-wider shadow-xl flex items-center gap-1.5 ring-2 ring-amber-400/60 shimmer-ribbon">
+                                        <i class="fa-solid fa-crown text-amber-950"></i>
+                                        <span>#1 Best Seller</span>
+                                    </div>
+                                    {% elif forloop.counter == 2 %}
+                                    <div class="absolute top-3 left-3 z-20 bg-gradient-to-r from-amber-200 to-amber-100 text-slate-950 text-xs font-black px-3.5 py-1.5 rounded-full uppercase tracking-wider shadow-xl flex items-center gap-1.5 ring-2 ring-amber-300/50 shimmer-ribbon">
+                                        <i class="fa-solid fa-medal text-amber-800"></i>
+                                        <span>#2 Popular Pick</span>
+                                    </div>
+                                    {% else %}
+                                    <div class="absolute top-3 left-3 z-20 bg-gradient-to-r from-emerald-200 to-emerald-100 text-emerald-950 text-xs font-black px-3.5 py-1.5 rounded-full uppercase tracking-wider shadow-xl flex items-center gap-1.5 ring-2 ring-emerald-400/50 shimmer-ribbon">
+                                        <i class="fa-solid fa-star text-emerald-800"></i>
+                                        <span>#3 Fan Favorite</span>
+                                    </div>
+                                    {% endif %}
 
-                            <div class="absolute bottom-3 right-3 bg-slate-950/90 text-white text-xs font-black px-3 py-1.5 rounded-xl border border-white/30 flex items-center gap-1">
-                                {% if hero_pickle.reviews_count > 0 %}
-                                <span>⭐ {{ hero_pickle.average_rating }}/5 ({{ hero_pickle.reviews_count }})</span>
-                                {% else %}
-                                <span>⭐ {{ hero_pickle.crunch_rating|default:5 }}/5 Crunch Rating</span>
-                                {% endif %}
-                            </div>
-                        </div>
+                                    <div class="absolute bottom-3 right-3 z-20 bg-black/85 backdrop-blur-md text-white text-xs font-black px-3 py-1.5 rounded-xl border border-white/25 flex items-center gap-1 shadow-lg">
+                                        {% if hero_pickle.reviews_count > 0 %}
+                                        <span class="text-amber-300">⭐</span> <span>{{ hero_pickle.average_rating }}/5 ({{ hero_pickle.reviews_count }})</span>
+                                        {% else %}
+                                        <span class="text-amber-300">⭐</span> <span>{{ hero_pickle.crunch_rating|default:5 }}/5 Crunch</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
 
-                        <div class="text-center space-y-1.5">
-                            <h3 class="font-display font-black text-xl sm:text-2xl text-white">
-                                <a href="{% url 'store:product_detail' hero_pickle.slug %}" class="hover:text-amber-300 transition">
-                                    {{ hero_pickle.name }}
-                                </a>
-                            </h3>
-                            <!-- Taste on mobile, Tagline on desktop -->
-                            <p class="text-[11px] text-amber-200 font-bold sm:hidden">Taste: {{ hero_pickle.flavor_profile }}</p>
-                            <p class="text-xs text-emerald-100 font-semibold line-clamp-1 hidden sm:block">{{ hero_pickle.tagline }}</p>
-                            <div class="flex items-center justify-center gap-3 pt-1">
-                                <span class="font-display font-black text-2xl sm:text-3xl text-amber-300">৳{{ hero_pickle.price_bdt|floatformat:0 }}</span>
-                                {% if hero_pickle.original_price_bdt and hero_pickle.original_price_bdt > hero_pickle.price_bdt %}
-                                <span class="text-sm line-through text-emerald-300/60 font-bold">৳{{ hero_pickle.original_price_bdt|floatformat:0 }}</span>
-                                {% endif %}
+                                <div class="text-center space-y-1.5">
+                                    <h3 class="font-display font-black text-xl sm:text-2xl text-white">
+                                        <a href="{% url 'store:product_detail' hero_pickle.slug %}" class="hover:text-amber-300 transition-colors">
+                                            {{ hero_pickle.name }}
+                                        </a>
+                                    </h3>
+                                    <p class="text-[11px] text-amber-200 font-bold sm:hidden">Taste: {{ hero_pickle.flavor_profile }}</p>
+                                    <p class="text-xs text-emerald-100/90 font-semibold line-clamp-1 hidden sm:block">{{ hero_pickle.tagline }}</p>
+                                    <div class="flex items-center justify-center gap-3 pt-1">
+                                        <span class="font-display font-black text-2xl sm:text-3xl text-amber-300 drop-shadow-sm">৳{{ hero_pickle.price_bdt|floatformat:0 }}</span>
+                                        {% if hero_pickle.original_price_bdt and hero_pickle.original_price_bdt > hero_pickle.price_bdt %}
+                                        <span class="text-sm line-through text-emerald-300/60 font-bold">৳{{ hero_pickle.original_price_bdt|floatformat:0 }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="pt-2 flex items-center justify-center gap-2">
+                                        <a href="{% url 'store:product_detail' hero_pickle.slug %}" class="w-full bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 hover:from-amber-300 hover:to-amber-200 text-slate-950 text-xs font-black py-3 px-4 rounded-xl shadow-lg shadow-amber-400/20 transition-all hover:shadow-amber-400/35 active:scale-95 text-center flex items-center justify-center gap-1.5 border border-amber-200">
+                                            <span>Order Best Seller Jar</span>
+                                            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                        </a>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="pt-2 flex items-center justify-center gap-2">
-                                <a href="{% url 'store:product_detail' hero_pickle.slug %}" class="w-full bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black py-2.5 px-4 rounded-xl shadow-md transition active:scale-95 text-center flex items-center justify-center gap-1.5">
-                                    <span>Order Best Seller Jar</span>
-                                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
-                                </a>
-                            </div>
+                            {% endfor %}
                         </div>
                     </div>
-                    {% endfor %}
+
+                    <!-- Left / Right Quick Navigation Controls -->
+                    <div class="flex items-center justify-between pt-3 text-emerald-400/70 text-xs px-1">
+                        <button type="button" onclick="prevHeroPickle()" aria-label="Previous Best Seller" class="py-1 px-2.5 rounded-lg hover:bg-white/10 hover:text-white transition cursor-pointer flex items-center gap-1 text-[11px] font-bold">
+                            <i class="fa-solid fa-chevron-left text-[10px]"></i> Prev
+                        </button>
+                        <span class="text-[10px] uppercase tracking-wider text-emerald-300/60 font-black">• Auto Rotating •</span>
+                        <button type="button" onclick="nextHeroPickle()" aria-label="Next Best Seller" class="py-1 px-2.5 rounded-lg hover:bg-white/10 hover:text-white transition cursor-pointer flex items-center gap-1 text-[11px] font-bold">
+                            Next <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                        </button>
+                    </div>
 
                 </div>
             </div>
@@ -721,11 +786,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
 {% block extra_js %}
 <script>
-// Switch Hero Best 3 Pickles with Auto-Cycling Timer & Animations
+// Switch Hero Best 3 Pickles with Smooth Slide Carousel
 let heroPickleTimer = null;
 let currentHeroPickleIndex = 0;
 const totalHeroPickles = {{ top_best_sellers|length|default:3 }};
-const HERO_CYCLE_DURATION = 3600; // ms
+const HERO_CYCLE_DURATION = 5000; // 5.0 seconds showcase time
 
 function animatePillProgress(pillIndex) {
     const allProgressBars = document.querySelectorAll('.hero-pill-progress-line');
@@ -747,51 +812,41 @@ function switchHeroPickle(index, isUserClick = true) {
     if (totalHeroPickles <= 1) return;
     currentHeroPickleIndex = (index + totalHeroPickles) % totalHeroPickles;
 
+    // 1. Update Pill buttons
     const allPills = document.querySelectorAll('.hero-pill-btn');
     allPills.forEach((btn, idx) => {
         if (idx === currentHeroPickleIndex) {
-            btn.classList.add('bg-amber-400', 'text-slate-950', 'font-black', 'shadow-md', 'ring-2', 'ring-amber-300', 'scale-[1.02]');
-            btn.classList.remove('text-emerald-200/90', 'hover:text-white', 'hover:bg-white/10', 'font-bold');
+            btn.className = 'hero-pill-btn relative overflow-hidden flex-1 py-2 px-2.5 rounded-xl text-center cursor-pointer flex items-center justify-center gap-1.5 bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 font-black shadow-lg shadow-amber-400/25 ring-2 ring-amber-300/80 scale-[1.03]';
         } else {
-            btn.classList.remove('bg-amber-400', 'text-slate-950', 'font-black', 'shadow-md', 'ring-2', 'ring-amber-300', 'scale-[1.02]');
-            btn.classList.add('text-emerald-200/90', 'hover:text-white', 'hover:bg-white/10', 'font-bold');
+            btn.className = 'hero-pill-btn relative overflow-hidden flex-1 py-2 px-2.5 rounded-xl text-center cursor-pointer flex items-center justify-center gap-1.5 text-emerald-200/85 hover:text-white hover:bg-white/10 font-bold';
         }
     });
 
     animatePillProgress(currentHeroPickleIndex);
 
-    const allCards = document.querySelectorAll('.hero-pickle-card');
-    allCards.forEach((card, idx) => {
-        if (idx === currentHeroPickleIndex) {
-            card.classList.remove('hidden');
-            card.style.opacity = '0';
-            card.style.transform = 'translateY(10px) scale(0.98)';
-            card.style.filter = 'blur(2px)';
-            requestAnimationFrame(() => {
-                card.style.transition = 'opacity 380ms cubic-bezier(0.16, 1, 0.3, 1), transform 380ms cubic-bezier(0.16, 1, 0.3, 1), filter 380ms cubic-bezier(0.16, 1, 0.3, 1)';
-                card.style.opacity = '1';
-                card.style.transform = 'translateY(0) scale(1)';
-                card.style.filter = 'blur(0)';
-            });
-        } else {
-            card.classList.add('hidden');
-            card.style.opacity = '0';
-        }
-    });
+    // 2. Slide the Carousel Track smoothly with zero blur or jitter
+    const track = document.getElementById('heroSliderTrack');
+    if (track) {
+        track.style.transform = `translateX(-${currentHeroPickleIndex * 100}%)`;
+    }
 
     if (isUserClick) {
         restartHeroAutoCycle();
     }
 }
 
-function nextHeroPickle() {
-    switchHeroPickle(currentHeroPickleIndex + 1, false);
+function prevHeroPickle() {
+    switchHeroPickle(currentHeroPickleIndex - 1, true);
+}
+
+function nextHeroPickle(isUserClick = false) {
+    switchHeroPickle(currentHeroPickleIndex + 1, isUserClick);
 }
 
 function startHeroAutoCycle() {
     if (totalHeroPickles > 1 && !heroPickleTimer) {
         animatePillProgress(currentHeroPickleIndex);
-        heroPickleTimer = setInterval(nextHeroPickle, HERO_CYCLE_DURATION);
+        heroPickleTimer = setInterval(() => nextHeroPickle(false), HERO_CYCLE_DURATION);
     }
 }
 
@@ -812,7 +867,7 @@ function restartHeroAutoCycle() {
     startHeroAutoCycle();
 }
 
-// Start auto cycle immediately & pause on mouse hover
+// Start auto cycle immediately & pause on mouse hover / touch
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initHeroAutoCycle);
 } else {
@@ -821,11 +876,28 @@ if (document.readyState === 'loading') {
 
 function initHeroAutoCycle() {
     startHeroAutoCycle();
-    const heroBox = document.querySelector('#hero-pickle-card-0')?.closest('.relative');
+    const heroBox = document.getElementById('heroShowcaseContainer');
     if (heroBox) {
         heroBox.addEventListener('mouseenter', stopHeroAutoCycle);
         heroBox.addEventListener('mouseleave', startHeroAutoCycle);
-        heroBox.addEventListener('touchstart', stopHeroAutoCycle, { passive: true });
+
+        // Mobile touch swipe gesture
+        let touchStartX = 0;
+        heroBox.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        heroBox.addEventListener('touchend', (e) => {
+            const touchEndX = e.changedTouches[0].screenX;
+            const diff = touchStartX - touchEndX;
+            if (Math.abs(diff) > 45) {
+                if (diff > 0) {
+                    nextHeroPickle(true);
+                } else {
+                    prevHeroPickle();
+                }
+            }
+        }, { passive: true });
     }
 }
 

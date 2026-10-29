@@ -3,7 +3,10 @@ from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from webpush import send_user_notification
+try:
+    from webpush import send_user_notification
+except ImportError:
+    send_user_notification = None
 from .models import Order
 
 logger = logging.getLogger(__name__)
@@ -16,7 +19,7 @@ def order_created_webpush_notification(sender, instance, created, **kwargs):
     Real-time Web Push notification signal dispatched whenever a new Order is placed.
     Safely notifies all staff and superuser accounts without risking order creation failure.
     """
-    if not created:
+    if not created or not send_user_notification:
         return
 
     try:

@@ -14,7 +14,7 @@ from .cart import Cart
 from .forms import CheckoutForm, ReviewForm
 
 
-from django.db.models import Count, Q, Sum, Value, IntegerField
+from django.db.models import Count, Q, Sum, Value, IntegerField, Case, When
 from django.db.models.functions import Coalesce
 
 
@@ -35,7 +35,10 @@ def index(request):
     if len(top_best_sellers) < 3:
         needed = 3 - len(top_best_sellers)
         existing_ids = [p.id for p in top_best_sellers]
-        fallback_products = list(Product.objects.exclude(id__in=existing_ids).order_by('-is_featured', 'id')[:needed])
+        fallback_products = list(
+            Product.objects.exclude(id__in=existing_ids)
+            .order_by('-is_featured', 'id')[:needed]
+        )
         top_best_sellers.extend(fallback_products)
 
     top_3_ids = []
@@ -44,6 +47,13 @@ def index(request):
         top_3_ids.append(p.id)
 
     best_seller = top_best_sellers[0] if top_best_sellers else None
+
+    # Products with active custom_badge (sale / promotional message) get top priority in product categories/grid
+    has_sale_badge = Case(
+        When(Q(custom_badge__isnull=False) & ~Q(custom_badge=''), then=Value(1)),
+        default=Value(0),
+        output_field=IntegerField()
+    )
 
     featured_products = Product.objects.filter(is_featured=True).order_by('id')
     all_products = Product.objects.annotate(
@@ -54,8 +64,9 @@ def index(request):
             )),
             Value(0),
             output_field=IntegerField()
-        )
-    ).order_by('id')
+        ),
+        has_sale_badge=has_sale_badge
+    ).order_by('-has_sale_badge', '-is_featured', '-total_sold', 'id')
     total_products_count = all_products.count()
     categories = Category.objects.annotate(
         product_count=Count('products')
@@ -82,8 +93,12 @@ def index(request):
 
 
 def product_detail(request, slug):
-    product = get_object_or_404(Product, slug=slug)
-    related_products = Product.objects.exclude(id=product.id)[:3]
+    has_sale_badge = Case(
+        When(Q(custom_badge__isnull=False) & ~Q(custom_badge=''), then=Value(1)),
+        default=Value(0),
+        output_field=IntegerField()
+    )
+    related_products = Product.objects.exclude(id=product.id).annotate(has_sale_badge=has_sale_badge).order_by('-has_sale_badge', '-is_featured', 'id')[:3]
     reviews = product.reviews.filter(is_approved=True).order_by('-created_at')
 
     best_seller = Product.objects.annotate(

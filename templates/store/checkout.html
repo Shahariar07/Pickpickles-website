@@ -741,7 +741,7 @@
         updateDeliveryFee();
     });
 
-    // Meta Pixel InitiateCheckout Tracking
+    // Meta Pixel InitiateCheckout Tracking & Advanced Matching Sync
     {% if META_PIXEL_ID %}
     if (typeof fbq === 'function') {
         var cartSub = parseFloat("{{ cart_subtotal|default:0|stringformat:'.2f' }}") || 0;
@@ -753,6 +753,39 @@
                 num_items: cartCount,
                 content_type: 'product'
             });
+        }
+
+        // On email/phone blur or checkout submit, sync Advanced Matching parameters with Meta Pixel
+        function syncCheckoutUserData() {
+            var emailVal = (document.getElementById('customer_email') ? document.getElementById('customer_email').value : '').trim().toLowerCase();
+            var phoneVal = (document.getElementById('customer_phone') ? document.getElementById('customer_phone').value : '').replace(/\D/g, '');
+            if (phoneVal.startsWith('01') && phoneVal.length === 11) phoneVal = '88' + phoneVal;
+            var nameVal = (document.getElementById('customer_name') ? document.getElementById('customer_name').value : '').trim();
+            var nameParts = nameVal.split(/\s+/);
+            var fn = nameParts[0] ? nameParts[0].toLowerCase() : '';
+            var ln = nameParts.length > 1 ? nameParts.slice(1).join(' ').toLowerCase() : '';
+            var cityVal = (document.getElementById('delivery_city') ? document.getElementById('delivery_city').value : '').trim().toLowerCase();
+
+            var uData = { country: 'bd' };
+            if (emailVal) uData.em = emailVal;
+            if (phoneVal) uData.ph = phoneVal;
+            if (fn) uData.fn = fn;
+            if (ln) uData.ln = ln;
+            if (cityVal) uData.ct = cityVal;
+
+            if (emailVal || phoneVal) {
+                fbq('init', '{{ META_PIXEL_ID }}', uData);
+            }
+        }
+
+        ['customer_email', 'customer_phone', 'customer_name'].forEach(function(fieldId) {
+            var el = document.getElementById(fieldId);
+            if (el) {
+                el.addEventListener('blur', syncCheckoutUserData);
+            }
+        });
+        if (checkoutForm) {
+            checkoutForm.addEventListener('submit', syncCheckoutUserData);
         }
     }
     {% endif %}
