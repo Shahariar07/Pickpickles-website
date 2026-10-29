@@ -95,13 +95,13 @@
             return d;
         }
 
-        var em = "{% if order and order.customer_email %}{{ order.customer_email|lower|escapejs }}{% elif request.session.meta_advanced_matching.em %}{{ request.session.meta_advanced_matching.em|lower|escapejs }}{% elif request.user.is_authenticated and request.user.email %}{{ request.user.email|lower|escapejs }}{% endif %}".trim().toLowerCase();
-        var ph = normalizeBdPhone("{% if order and order.customer_phone %}{{ order.customer_phone|escapejs }}{% elif request.session.meta_advanced_matching.ph %}{{ request.session.meta_advanced_matching.ph|escapejs }}{% endif %}");
+        var em = "{% if order and order.customer_email %}{{ order.customer_email|lower|escapejs }}{% elif meta_adv.em %}{{ meta_adv.em|lower|escapejs }}{% elif request.user.is_authenticated and request.user.email %}{{ request.user.email|lower|escapejs }}{% endif %}".trim().toLowerCase();
+        var ph = normalizeBdPhone("{% if order and order.customer_phone %}{{ order.customer_phone|escapejs }}{% elif meta_adv.ph %}{{ meta_adv.ph|escapejs }}{% endif %}");
         var rawFullName = "{% if order and order.customer_name %}{{ order.customer_name|escapejs }}{% endif %}".trim();
-        var fn = "{% if request.session.meta_advanced_matching.fn %}{{ request.session.meta_advanced_matching.fn|lower|escapejs }}{% elif request.user.is_authenticated and request.user.first_name %}{{ request.user.first_name|lower|escapejs }}{% endif %}".trim().toLowerCase();
-        var ln = "{% if request.session.meta_advanced_matching.ln %}{{ request.session.meta_advanced_matching.ln|lower|escapejs }}{% elif request.user.is_authenticated and request.user.last_name %}{{ request.user.last_name|lower|escapejs }}{% endif %}".trim().toLowerCase();
-        var ct = "{% if order and order.delivery_city %}{{ order.delivery_city|lower|escapejs }}{% elif request.session.meta_advanced_matching.ct %}{{ request.session.meta_advanced_matching.ct|lower|escapejs }}{% endif %}".trim().toLowerCase();
-        var extId = "{% if order and order.order_number %}{{ order.order_number|escapejs }}{% elif request.session.meta_advanced_matching.external_id %}{{ request.session.meta_advanced_matching.external_id|escapejs }}{% elif request.user.is_authenticated %}user_{{ request.user.id }}{% endif %}".trim();
+        var fn = "{% if meta_adv.fn %}{{ meta_adv.fn|lower|escapejs }}{% elif request.user.is_authenticated and request.user.first_name %}{{ request.user.first_name|lower|escapejs }}{% endif %}".trim().toLowerCase();
+        var ln = "{% if meta_adv.ln %}{{ meta_adv.ln|lower|escapejs }}{% elif request.user.is_authenticated and request.user.last_name %}{{ request.user.last_name|lower|escapejs }}{% endif %}".trim().toLowerCase();
+        var ct = "{% if order and order.delivery_city %}{{ order.delivery_city|lower|escapejs }}{% elif meta_adv.ct %}{{ meta_adv.ct|lower|escapejs }}{% else %}dhaka{% endif %}".trim().toLowerCase() || 'dhaka';
+        var extId = "{% if order and order.order_number %}{{ order.order_number|escapejs }}{% elif meta_adv.external_id %}{{ meta_adv.external_id|escapejs }}{% elif request.user.is_authenticated %}user_{{ request.user.id }}{% endif %}".trim();
 
         if (rawFullName && !fn) {
             var nParts = rawFullName.split(/\s+/);
@@ -116,24 +116,36 @@
             var storedPhone = localStorage.getItem('pickpickles_customer_phone') || (prof && prof.phone) || '';
             var storedName = localStorage.getItem('pickpickles_customer_name') || (prof && prof.name) || '';
             var storedCity = localStorage.getItem('pickpickles_customer_city') || (prof && prof.city) || '';
+            var storedVisitorId = localStorage.getItem('pickpickles_visitor_id') || '';
 
             if (!em && storedEmail) em = String(storedEmail).trim().toLowerCase();
             if (!ph && storedPhone) ph = normalizeBdPhone(storedPhone);
-            if (!ct && storedCity) ct = String(storedCity).trim().toLowerCase();
+            if (storedCity) ct = String(storedCity).trim().toLowerCase();
             if (!fn && storedName) {
                 var parts = String(storedName).trim().split(/\s+/);
                 if (parts[0]) fn = parts[0].toLowerCase();
                 if (parts.length > 1) ln = parts.slice(1).join(' ').toLowerCase();
             }
+            if (!extId) {
+                if (!storedVisitorId) {
+                    storedVisitorId = 'pkp_' + Math.random().toString(36).substring(2, 12) + Date.now().toString(36);
+                    localStorage.setItem('pickpickles_visitor_id', storedVisitorId);
+                }
+                extId = storedVisitorId;
+            }
         } catch (e) {}
 
-        var advancedMatching = { country: 'bd' };
+        var advancedMatching = {
+            ct: ct || 'dhaka',
+            st: ct || 'dhaka',
+            zp: '1200',
+            country: 'bd',
+            external_id: extId || 'pkp_guest'
+        };
         if (em) advancedMatching.em = em;
         if (ph) advancedMatching.ph = ph;
         if (fn) advancedMatching.fn = fn;
         if (ln) advancedMatching.ln = ln;
-        if (ct) advancedMatching.ct = ct;
-        if (extId) advancedMatching.external_id = extId;
 
         window.pickpicklesMetaAdvMatch = advancedMatching;
 

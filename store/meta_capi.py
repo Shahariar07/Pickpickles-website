@@ -77,11 +77,30 @@ def _format_bd_phone(raw_phone):
     return digits
 
 
+def _read_env_fallback():
+    env_vars = {}
+    try:
+        env_file = os.path.join(settings.BASE_DIR, '.env')
+        if os.path.exists(env_file):
+            with open(env_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#') and '=' in line:
+                        k, v = line.split('=', 1)
+                        env_vars[k.strip()] = v.strip().strip('"').strip("'")
+    except Exception:
+        pass
+    return env_vars
+
+
 def _execute_meta_purchase(order):
     """Internal function to send Purchase event to Meta Graph API."""
-    pixel_id = getattr(settings, 'META_PIXEL_ID', '').strip()
-    access_token = getattr(settings, 'META_CONVERSIONS_API_TOKEN', '').strip()
-    test_event_code = getattr(settings, 'META_TEST_EVENT_CODE', '').strip() or os.environ.get('META_TEST_EVENT_CODE', '').strip()
+    env_fallback = _read_env_fallback()
+    pixel_id = (getattr(settings, 'META_PIXEL_ID', '') or env_fallback.get('META_PIXEL_ID', '') or '2165451210680943').strip()
+    access_token = (getattr(settings, 'META_CONVERSIONS_API_TOKEN', '') or env_fallback.get('META_CONVERSIONS_API_TOKEN', '')).strip()
+    test_event_code = (getattr(settings, 'META_TEST_EVENT_CODE', '') or env_fallback.get('META_TEST_EVENT_CODE', '')).strip()
+    if test_event_code == 'TEST70348':
+        test_event_code = ''
 
     if not pixel_id or not access_token:
         logger.warning(f"[Meta CAPI] Skipping Purchase for #{order.order_number}: Missing META_PIXEL_ID or META_CONVERSIONS_API_TOKEN.")
