@@ -1,6 +1,7 @@
 import os
 import time
 import hashlib
+import json
 from django.conf import settings
 from .cart import Cart
 from .models import Category
@@ -68,6 +69,15 @@ def cart_context(request):
     if hasattr(request, 'session') and 'auto_whatsapp_url' in request.session:
         auto_whatsapp_url = request.session.pop('auto_whatsapp_url', None)
         auto_whatsapp_order_number = request.session.pop('auto_whatsapp_order_number', None)
+
+    meta_pixel_purchase_events_json = ''
+    if hasattr(request, 'session') and 'meta_pixel_purchase_events' in request.session:
+        try:
+            raw_ev = request.session.pop('meta_pixel_purchase_events', None)
+            if raw_ev:
+                meta_pixel_purchase_events_json = json.dumps(raw_ev)
+        except Exception:
+            meta_pixel_purchase_events_json = ''
 
     meta_adv = {'em': '', 'ph': '', 'fn': '', 'ln': '', 'ct': 'dhaka', 'country': 'bd', 'external_id': ''}
     try:
@@ -161,6 +171,7 @@ def cart_context(request):
         'pending_reviews_count': pending_reviews_count,
         'auto_whatsapp_url': auto_whatsapp_url,
         'auto_whatsapp_order_number': auto_whatsapp_order_number,
+        'meta_pixel_purchase_events_json': meta_pixel_purchase_events_json,
         'can_delete': can_delete,
         'can_edit': can_edit,
         'can_dispatch': can_dispatch,
@@ -198,4 +209,3 @@ def cart_context(request):
             'items_needed_for_free_delivery': 6,
             **base_context,
         }
-

@@ -681,12 +681,12 @@ def orders_list(request):
                     order.order_status = new_status
                     if new_status == 'DELIVERED' and order.payment_status == 'UNPAID':
                         order.payment_status = 'PAID'
-                    if new_status == 'CONFIRMED':
+                    if new_status == 'CONFIRMED' and order.order_status != 'CONFIRMED':
                         try:
                             from store.meta_capi import send_meta_purchase_event_on_accept
-                            send_meta_purchase_event_on_accept(order)
-                        except Exception:
-                            pass
+                            send_meta_purchase_event_on_accept(order, request=request)
+                        except Exception as _e:
+                            print(f"Failed to dispatch Meta CAPI Purchase: {_e}")
                     order.save()
                     updated_count += 1
             status_label = dict(Order.ORDER_STATUS_CHOICES).get(new_status, new_status)
@@ -982,13 +982,13 @@ def order_detail(request, order_number):
                 request.session['auto_whatsapp_url'] = order.whatsapp_shipping_instruction_url
                 request.session['auto_whatsapp_order_number'] = order.order_number
 
-            # Trigger Meta Conversions API (CAPI) Purchase STRICTLY and ONLY when status is 'CONFIRMED' ('Order Confirmed & In Queue')
-            if new_status == 'CONFIRMED':
+            # Trigger Meta Conversions API (CAPI) Purchase STRICTLY ONCE when moving to 'CONFIRMED'
+            if new_status == 'CONFIRMED' and order.order_status != 'CONFIRMED':
                 try:
                     from store.meta_capi import send_meta_purchase_event_on_accept
-                    send_meta_purchase_event_on_accept(order)
+                    send_meta_purchase_event_on_accept(order, request=request)
                 except Exception as _e:
-                    logger.warning(f"Failed to dispatch Meta CAPI Purchase: {_e}")
+                    print(f"Failed to dispatch Meta CAPI Purchase: {_e}")
 
         if new_payment_status:
             order.payment_status = new_payment_status
@@ -1038,13 +1038,13 @@ def update_order_status_quick(request, order_number):
                 request.session['auto_whatsapp_url'] = order.whatsapp_shipping_instruction_url
                 request.session['auto_whatsapp_order_number'] = order.order_number
 
-            # Trigger Meta Conversions API (CAPI) Purchase STRICTLY and ONLY when status is 'CONFIRMED' ('Order Confirmed & In Queue')
-            if new_status == 'CONFIRMED':
+            # Trigger Meta Conversions API (CAPI) Purchase STRICTLY ONCE when moving to 'CONFIRMED'
+            if new_status == 'CONFIRMED' and order.order_status != 'CONFIRMED':
                 try:
                     from store.meta_capi import send_meta_purchase_event_on_accept
-                    send_meta_purchase_event_on_accept(order)
+                    send_meta_purchase_event_on_accept(order, request=request)
                 except Exception as _e:
-                    logger.warning(f"Failed to dispatch Meta CAPI Purchase: {_e}")
+                    print(f"Failed to dispatch Meta CAPI Purchase: {_e}")
 
             order.save()
             messages.success(request, f'Order #{order.order_number} status changed to {order.get_order_status_display()}')

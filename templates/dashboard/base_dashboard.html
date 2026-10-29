@@ -1197,6 +1197,61 @@
         };
     </script>
 
+    {% if meta_pixel_purchase_events_json and META_PIXEL_ID %}
+    <script>
+        !function (f, b, e, v, n, t, s) {
+            if (f.fbq) return; n = f.fbq = function () {
+                n.callMethod ?
+                n.callMethod.apply(n, arguments) : n.queue.push(arguments)
+            };
+            if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0';
+            n.queue = []; t = b.createElement(e); t.async = !0;
+            t.src = v; s = b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t, s)
+        }(window, document, 'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+
+        (function() {
+            try {
+                const purchaseEvents = {{ meta_pixel_purchase_events_json|safe }};
+                if (Array.isArray(purchaseEvents) && purchaseEvents.length > 0) {
+                    purchaseEvents.forEach(function(ev) {
+                        const adv = ev.advanced_matching || { country: 'bd' };
+                        const cleanAdv = {};
+                        Object.keys(adv).forEach(function(k) {
+                            if (adv[k]) cleanAdv[k] = adv[k];
+                        });
+                        fbq('init', '{{ META_PIXEL_ID }}', cleanAdv);
+                        fbq('track', 'Purchase', {
+                            value: ev.value || 0,
+                            currency: ev.currency || 'BDT',
+                            order_id: ev.order_number,
+                            content_type: 'product',
+                            content_ids: ev.content_ids || [],
+                            contents: ev.contents || [],
+                            num_items: ev.num_items || 1
+                        }, {
+                            eventID: ev.order_number
+                        });
+                        console.log('🎯 [Meta Pixel + CAPI] Purchase fired on Order Confirm:', ev.order_number, cleanAdv);
+                        if (typeof window.showToast === 'function') {
+                            setTimeout(function() {
+                                window.showToast(
+                                    '🎯 Meta Purchase Event Sent for <strong>#' + ev.order_number + '</strong> (৳' + ev.value + ' • Server CAPI + Browser Pixel)',
+                                    'success',
+                                    5500
+                                );
+                            }, 350);
+                        }
+                    });
+                }
+            } catch (err) {
+                console.warn('[Meta Pixel] Error firing dashboard Purchase event:', err);
+            }
+        })();
+    </script>
+    {% endif %}
+
     {% block extra_js %}{% endblock %}
 </body>
 
