@@ -452,11 +452,11 @@
                 </a>
 
                 {% if product.custom_badge %}
-                <!-- Special Seasonal Marking Ribbon Across Top Edge -->
-                <div class="shimmer-ribbon absolute top-0 inset-x-0 bg-amber-400 text-slate-950 font-black text-[10px] sm:text-xs py-1 px-2.5 text-center shadow-xs flex items-center justify-center gap-1.5 z-20 border-b border-amber-500/50 tracking-tight">
+                <!-- Special Marking Ribbon Across Top Edge -->
+                <div class="shimmer-ribbon absolute top-0 inset-x-0 {% if 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower or 'launch' in product.custom_badge|lower or 'নতুন' in product.custom_badge %}bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-600 text-white{% else %}bg-amber-400 text-slate-950{% endif %} font-black text-[10px] sm:text-xs py-1 px-2.5 text-center shadow-xs flex items-center justify-center gap-1.5 z-20 border-b border-black/10 tracking-tight">
                     <span class="relative flex h-2 w-2">
-                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-600 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-600"></span>
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full {% if 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower %}bg-white{% else %}bg-rose-600{% endif %} opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 {% if 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower %}bg-white{% else %}bg-rose-600{% endif %}"></span>
                     </span>
                     <span class="relative z-10">{{ product.custom_badge }}</span>
                 </div>
@@ -500,29 +500,41 @@
             <!-- Card Body -->
             <div class="p-3 sm:p-5 lg:p-6 flex-1 flex flex-col justify-between space-y-2 sm:space-y-4">
                 <div>
-                    <!-- Desktop-only cut style & crunch rating -->
-                    <div class="hidden sm:flex items-center justify-between text-xs font-black mb-1.5 gap-1">
-                        <span class="text-emerald-800 uppercase tracking-wide truncate">{{ product.get_cut_style_display }}</span>
-                        {% if product.reviews_count > 0 %}
-                        <span class="text-amber-600 shrink-0">⭐ {{ product.average_rating }}/5 ({{ product.reviews_count }})</span>
-                        {% else %}
-                        <span class="text-amber-600 shrink-0">⭐ {{ product.crunch_rating }}/5</span>
-                        {% endif %}
-                    </div>
-
                     {% if product.custom_badge %}
-                    <div class="mb-1">
+                    <div class="mb-1.5">
+                        {% if 'season' in product.custom_badge|lower or 'ended' in product.custom_badge|lower or 'শেষ' in product.custom_badge %}
                         <span class="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-rose-700 bg-rose-50 border border-rose-200/90 px-2 py-0.5 rounded-md">
                             <i class="fa-solid fa-fire text-rose-500 text-[9px]"></i>
                             <span>Season Ended • Final {{ product.stock_count }} Jars</span>
                         </span>
+                        {% elif 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower or 'launch' in product.custom_badge|lower or 'নতুন' in product.custom_badge %}
+                        <span class="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-emerald-800 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded-md shadow-2xs">
+                            <i class="fa-solid fa-wand-magic-sparkles text-emerald-600 text-[9px]"></i>
+                            <span>{{ product.custom_badge }} • Fresh Batch</span>
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-amber-900 bg-amber-50 border border-amber-300 px-2 py-0.5 rounded-md shadow-2xs">
+                            <i class="fa-solid fa-certificate text-amber-600 text-[9px]"></i>
+                            <span>{{ product.custom_badge }}</span>
+                        </span>
+                        {% endif %}
                     </div>
                     {% endif %}
 
-                    <!-- Product Name (Bold & clear on all screens) -->
+                    <!-- Product Name (Bold & clear on all screens - at the top) -->
                     <h3 class="font-display font-black text-sm sm:text-lg lg:text-xl text-slate-950 group-hover:text-emerald-700 transition leading-tight line-clamp-2">
                         <a href="{% url 'store:product_detail' product.slug %}">{{ product.name }}</a>
                     </h3>
+
+                    <!-- Cut style & crunch rating (Placed under product name) -->
+                    <div class="flex items-center justify-between text-xs font-black mt-1.5 mb-1 gap-1 flex-wrap">
+                        <span class="text-emerald-800 text-[10px] sm:text-[11px] uppercase tracking-wide truncate font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60">{{ product.get_cut_style_display }}</span>
+                        {% if product.reviews_count > 0 %}
+                        <span class="text-amber-600 shrink-0 text-[11px] sm:text-xs">⭐ {{ product.average_rating }}/5 ({{ product.reviews_count }})</span>
+                        {% else %}
+                        <span class="text-amber-600 shrink-0 text-[11px] sm:text-xs">⭐ {{ product.crunch_rating }}/5</span>
+                        {% endif %}
+                    </div>
 
                     <!-- Taste / Flavor Profile (Compact taste note) -->
                     <div class="mt-1 sm:mt-2">

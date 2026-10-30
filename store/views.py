@@ -48,7 +48,20 @@ def index(request):
 
     best_seller = top_best_sellers[0] if top_best_sellers else None
 
-    # Products with active custom_badge (sale / promotional message) get top priority in product categories/grid
+    # Products with active promotional/featured badges (New Arrivals, Season Ending Mango, etc.) appear first at beginning
+    badge_featured_priority = Case(
+        When(
+            Q(custom_badge__icontains='new') |
+            Q(custom_badge__icontains='arrival') |
+            Q(custom_badge__icontains='launch') |
+            Q(custom_badge__icontains='নতুন'),
+            then=Value(2)
+        ),
+        When(Q(custom_badge__isnull=False) & ~Q(custom_badge=''), then=Value(1)),
+        default=Value(0),
+        output_field=IntegerField()
+    )
+
     has_sale_badge = Case(
         When(Q(custom_badge__isnull=False) & ~Q(custom_badge=''), then=Value(1)),
         default=Value(0),
@@ -65,8 +78,9 @@ def index(request):
             Value(0),
             output_field=IntegerField()
         ),
+        badge_featured_priority=badge_featured_priority,
         has_sale_badge=has_sale_badge
-    ).order_by('-has_sale_badge', '-is_featured', '-total_sold', 'id')
+    ).order_by('-badge_featured_priority', '-total_sold', '-is_featured', '-id')
     total_products_count = all_products.count()
     categories = Category.objects.annotate(
         product_count=Count('products')

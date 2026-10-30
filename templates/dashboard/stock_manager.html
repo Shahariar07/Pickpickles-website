@@ -26,7 +26,7 @@
             </div>
 
             <!-- Right Action Buttons (Uniform Height & Alignment) -->
-            <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
+            <div class="grid grid-cols-2 sm:flex sm:items-center gap-2 shrink-0 w-full sm:w-auto">
                 <a href="{% url 'dashboard:price_history' %}" class="h-9 px-3 sm:px-3.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-xs border border-amber-300 inline-flex items-center justify-center gap-1.5 whitespace-nowrap transition active:scale-95 shadow-2xs" title="Price Increase / Decrease History (মূল্য খতিয়ান)">
                     <i class="fa-solid fa-tags text-amber-700"></i>
                     <span>Price History</span>
@@ -154,75 +154,63 @@
     <!-- ========================================== -->
     <div class="block md:hidden space-y-3">
         {% for product in products %}
-        <div class="bg-white rounded-2xl border {% if product.stock_count == 0 %}border-rose-200 bg-rose-50/10{% elif product.needed_stock > 0 %}border-amber-200 bg-amber-50/10{% else %}border-gray-200/90{% endif %} shadow-2xs p-3.5 space-y-3">
+        <div class="bg-white rounded-2xl border {% if product.stock_count == 0 %}border-rose-200 bg-rose-50/15{% elif product.needed_stock > 0 %}border-amber-200 bg-amber-50/15{% else %}border-gray-200/90{% endif %} shadow-xs p-3.5 space-y-3">
             
-            <!-- Header: Image + Product Info + Price -->
-            <div class="flex items-start justify-between gap-3">
+            <!-- Top Row: Thumbnail + Product Name & Category + Big Price -->
+            <div class="flex items-start justify-between gap-2.5">
                 <div class="flex items-center gap-2.5 min-w-0">
-                    <img src="{{ product.primary_image_url }}" alt="{{ product.name }}" onerror="this.onerror=null;this.src='/static/images/pickle_default.png'" class="w-12 h-12 rounded-xl object-cover border border-gray-200 shrink-0 shadow-2xs">
+                    <div class="relative shrink-0">
+                        <img src="{{ product.primary_image_url }}" alt="{{ product.name }}" onerror="this.onerror=null;this.src='/static/images/pickle_default.png'" class="w-12 h-12 rounded-xl object-cover border border-gray-100 shadow-2xs">
+                        {% if product.stock_count == 0 %}
+                        <span class="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-rose-500 border-2 border-white ring-1 ring-rose-200" title="স্টক শেষ"></span>
+                        {% elif product.needed_stock > 0 %}
+                        <span class="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-amber-500 border-2 border-white ring-1 ring-amber-200" title="ঘাটতি"></span>
+                        {% else %}
+                        <span class="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white ring-1 ring-emerald-200" title="পর্যাপ্ত"></span>
+                        {% endif %}
+                    </div>
+                    
                     <div class="min-w-0">
                         <div class="flex items-center gap-1.5 flex-wrap">
                             <h4 class="font-bold text-gray-900 text-sm leading-snug break-words">{{ product.name }}</h4>
-                            {% if product.is_featured %}
-                            <span class="text-[9px] font-black bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded">★ Featured</span>
+                            {% if product.custom_badge %}
+                            <span class="text-[9px] font-black bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">{{ product.custom_badge }}</span>
+                            {% elif product.is_featured %}
+                            <span class="text-[9px] font-black bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">★ Featured</span>
                             {% endif %}
                             {% if not product.is_in_stock %}
-                            <span class="text-[9px] font-black bg-gray-100 text-gray-500 px-1.5 py-0.2 rounded border border-gray-200">Hidden</span>
+                            <span class="text-[9px] font-black bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded border border-gray-200">Hidden</span>
                             {% endif %}
                         </div>
                         <div class="flex items-center gap-1.5 text-[11px] text-gray-500 font-medium mt-0.5">
                             <span class="text-brand-800 font-bold">{{ product.category.name|default:"Artisan Pickles" }}</span>
                             <span>•</span>
                             <span class="font-bold text-gray-700">{{ product.jar_weight_grams }}g</span>
-                            <span>•</span>
-                            <span class="text-amber-700 font-bold">{{ product.get_spice_level_display }}</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Price & Increase History -->
+                <!-- Price -->
                 <div class="text-right shrink-0">
                     <span class="font-display font-black text-base text-gray-900 block leading-tight">৳{{ product.price_bdt|floatformat:0 }}</span>
                     {% if product.original_price_bdt and product.original_price_bdt > product.price_bdt %}
                     <span class="text-[10px] text-gray-400 line-through block">৳{{ product.original_price_bdt|floatformat:0 }}</span>
                     {% endif %}
-                    
-                    <div class="mt-1 flex flex-col items-end gap-0.5">
-                        {% if product.prev_price != product.price_bdt %}
-                        <span class="text-[10px] text-gray-500 font-semibold block">আগে: <strong class="text-gray-700">৳{{ product.prev_price|floatformat:0 }}</strong></span>
-                        {% else %}
-                        <span class="text-[9.5px] text-gray-400 font-medium block">শুরু থেকেই: ৳{{ product.first_price|floatformat:0 }}</span>
-                        {% endif %}
-
-                        <a href="{% url 'dashboard:product_price_history' product.id %}" class="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded {% if product.increase_count > 0 %}bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100{% else %}bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100{% endif %} transition shadow-2xs" title="প্রারম্ভিক মূল্য ৳{{ product.first_price|floatformat:0 }}। ক্লিক করে মূল্য খতিয়ান দেখুন">
-                            {% if product.increase_count > 0 %}
-                            <i class="fa-solid fa-arrow-trend-up text-emerald-600 text-[8px]"></i>
-                            <span>{{ product.increase_count }} বার বাড়ছে</span>
-                            {% if product.total_increase_bdt > 0 %}
-                            <span class="text-emerald-700 font-extrabold">(+৳{{ product.total_increase_bdt|floatformat:0 }})</span>
-                            {% endif %}
-                            {% else %}
-                            <i class="fa-solid fa-minus text-gray-400 text-[8px]"></i>
-                            <span>দাম বাড়েনি</span>
-                            {% endif %}
-                        </a>
-                    </div>
                 </div>
             </div>
 
-            <!-- Prominent Stock & Deficit Status Banner -->
-            <div class="bg-gray-50/90 rounded-xl p-2.5 border border-gray-200/70 flex items-center justify-between gap-2">
-                <!-- Left: Mojut Jar (মজুত বয়াম) with Stepper -->
+            <!-- Middle Row: Stock Count & Stepper + Status Badge -->
+            <div class="bg-gray-50/90 rounded-xl p-2.5 border border-gray-100 flex items-center justify-between gap-2">
+                <!-- Left: Stock count + Stepper -->
                 <div class="flex items-center gap-2">
-                    <div class="text-left">
-                        <span class="text-[9px] font-black uppercase tracking-wider block text-gray-400">মজুত বয়াম</span>
-                        <span class="font-display font-black text-base {% if product.stock_count == 0 %}text-rose-600{% elif product.needed_stock > 0 %}text-amber-700{% else %}text-emerald-700{% endif %}">
+                    <div>
+                        <span class="text-[9px] font-black uppercase tracking-wider text-gray-400 block leading-tight">মজুত বয়াম</span>
+                        <span class="font-display font-black text-base {% if product.stock_count == 0 %}text-rose-600{% elif product.needed_stock > 0 %}text-amber-700{% else %}text-emerald-700{% endif %} leading-none">
                             {{ product.stock_count }} <span class="text-[10px] font-bold text-gray-400">pcs</span>
                         </span>
-                        <span class="text-[10px] font-bold text-brand-700 block leading-tight">মূল্য: ৳{{ product.stock_value|floatformat:0 }}</span>
                     </div>
 
-                    <!-- Touch Stepper -->
+                    <!-- Touch Stepper (- / +) -->
                     <div class="inline-flex items-center bg-white rounded-xl p-0.5 border border-gray-200 shadow-2xs ml-1">
                         <form method="POST" action="{% url 'dashboard:stock_manager' %}" class="inline">
                             {% csrf_token %}
@@ -246,105 +234,83 @@
                     </div>
                 </div>
 
-                <!-- Right: Demand & Deficit (লাগবে) Badge -->
+                <!-- Right: Status Badge & Demand -->
                 <div class="text-right">
-                    <span class="text-[9px] font-black uppercase tracking-wider block text-gray-400">অর্ডার ডিমান্ড: {{ product.ordered_demand_count }}</span>
-                    <div>
-                        {% if product.needed_stock > 0 %}
-                        <span class="inline-flex items-center gap-1 font-black text-[11px] text-rose-700 bg-rose-100 px-2 py-0.5 rounded-md border border-rose-200">
-                            <i class="fa-solid fa-arrow-up text-[9px]"></i> +{{ product.needed_stock }} pcs লাগবে
-                        </span>
-                        {% elif product.stock_count == 0 %}
-                        <span class="inline-flex items-center gap-1 font-extrabold text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">
-                            0 Stock
-                        </span>
-                        {% else %}
-                        <span class="inline-flex items-center gap-1 font-bold text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                            <i class="fa-solid fa-check text-[9px]"></i> স্টক পর্যাপ্ত
-                        </span>
-                        {% endif %}
-                    </div>
+                    {% if product.needed_stock > 0 %}
+                    <span class="inline-flex items-center gap-1 font-black text-[11px] text-rose-700 bg-rose-100 px-2 py-0.5 rounded-md border border-rose-200">
+                        <i class="fa-solid fa-triangle-exclamation text-[9px]"></i> +{{ product.needed_stock }} pcs লাগবে
+                    </span>
+                    {% elif product.stock_count == 0 %}
+                    <span class="inline-flex items-center gap-1 font-bold text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">
+                        স্টক শেষ
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center gap-1 font-bold text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                        <i class="fa-solid fa-circle-check text-[9px]"></i> স্টক পর্যাপ্ত
+                    </span>
+                    {% endif %}
+                    <span class="text-[9.5px] text-gray-400 block mt-0.5 font-semibold">অর্ডারে: {{ product.ordered_demand_count }} pcs</span>
                 </div>
             </div>
 
-            <!-- Mobile Quick Adjust & Action Toolbar -->
-            <div class="flex items-center justify-between gap-2 pt-1 border-t border-gray-100">
-                <!-- Quick Price & Stock Edit Form -->
-                <form method="POST" class="flex items-center gap-1.5 flex-1 min-w-0">
+            <!-- Bottom Actions: Restock, Edit, Visibility, Price History -->
+            <div class="flex items-center gap-2 pt-0.5">
+                <!-- Restock Button -->
+                <button type="button" 
+                    onclick="openRestockModal('{{ product.id }}', '{{ product.name|escapejs }}', '{{ product.needed_stock }}', '{{ product.stock_count }}', '{{ product.target_stock_level }}')" 
+                    class="flex-1 h-8 rounded-xl {% if product.needed_stock > 0 %}bg-emerald-700 text-white shadow-2xs hover:bg-emerald-800{% else %}bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100{% endif %} text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-plus-circle text-[11px]"></i>
+                    <span>Restock</span>
+                </button>
+
+                <!-- Edit Button -->
+                <button type="button" 
+                    onclick="openEditModal({
+                        id: '{{ product.id }}',
+                        name: '{{ product.name|escapejs }}',
+                        tagline: '{{ product.tagline|escapejs }}',
+                        description: '{{ product.description|escapejs }}',
+                        categoryId: '{{ product.category.id|default:'' }}',
+                        cutStyle: '{{ product.cut_style }}',
+                        spiceLevel: '{{ product.spice_level }}',
+                        crunchRating: '{{ product.crunch_rating|default:5 }}',
+                        jarWeight: '{{ product.jar_weight_grams }}',
+                        grossWeight: '{{ product.gross_weight_grams|default:850 }}',
+                        price: '{{ product.price_bdt }}',
+                        origPrice: '{{ product.original_price_bdt|default:'' }}',
+                        stockCount: '{{ product.stock_count }}',
+                        minStockThreshold: '{{ product.min_stock_threshold|default:15 }}',
+                        targetStockLevel: '{{ product.target_stock_level|default:50 }}',
+                        neededStock: '{{ product.needed_stock }}',
+                        isInStock: {{ product.is_in_stock|yesno:'true,false' }},
+                        isFeatured: {{ product.is_featured|yesno:'true,false' }},
+                        imageUrl: '{{ product.image_url|escapejs }}',
+                        primaryImageUrl: '{{ product.primary_image_url|escapejs }}',
+                        ingredients: '{{ product.ingredients|escapejs }}',
+                        flavorProfile: '{{ product.flavor_profile|escapejs }}',
+                        pairingSuggestions: '{{ product.pairing_suggestions|escapejs }}',
+                        shelfLife: '{{ product.shelf_life|escapejs }}',
+                        customBadge: '{{ product.custom_badge|default:''|escapejs }}'
+                    })"
+                    class="flex-1 h-8 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-pen-to-square text-[11px]"></i>
+                    <span>Edit</span>
+                </button>
+
+                <!-- Visibility Toggle Button -->
+                <form method="POST" class="inline shrink-0">
                     {% csrf_token %}
-                    <input type="hidden" name="action" value="update_pricing">
+                    <input type="hidden" name="action" value="toggle_stock">
                     <input type="hidden" name="product_id" value="{{ product.id }}">
-                    <div class="relative flex-1">
-                        <span class="absolute left-1.5 top-1.5 text-[10px] text-gray-400 font-bold">৳</span>
-                        <input type="number" step="0.01" name="price_bdt" value="{{ product.price_bdt }}" title="Selling Price" class="w-full bg-gray-50 pl-4 pr-1 py-1.5 rounded-lg border border-gray-200 text-xs font-bold text-gray-900 focus:bg-white focus:outline-none" placeholder="Price">
-                    </div>
-                    <div class="relative flex-1">
-                        <input type="number" name="stock_count" value="{{ product.stock_count }}" title="Stock Count" class="w-full bg-gray-50 px-1.5 py-1.5 rounded-lg border border-gray-200 text-xs font-bold text-gray-900 focus:bg-white focus:outline-none text-center" placeholder="Stock">
-                    </div>
-                    <button type="submit" class="bg-gray-100 hover:bg-brand-700 hover:text-white text-gray-700 font-bold px-2.5 py-1.5 rounded-lg text-xs transition cursor-pointer shrink-0" title="Save Price & Stock">
-                        <i class="fa-solid fa-check"></i>
+                    <button type="submit" title="{% if product.is_in_stock %}Visible on store - Click to hide{% else %}Hidden from store - Click to show{% endif %}" class="w-8 h-8 rounded-xl transition cursor-pointer flex items-center justify-center {% if product.is_in_stock %}bg-gray-100 text-gray-500 hover:text-gray-900{% else %}bg-amber-100 text-amber-800 border border-amber-200{% endif %}">
+                        <i class="fa-solid {% if product.is_in_stock %}fa-eye{% else %}fa-eye-slash{% endif %} text-[11px]"></i>
                     </button>
                 </form>
 
-                <!-- Actions: Restock, Ledger, Edit, Visibility -->
-                <div class="flex items-center gap-1 shrink-0">
-                    <button type="button" 
-                        onclick="openRestockModal('{{ product.id }}', '{{ product.name|escapejs }}', '{{ product.needed_stock }}', '{{ product.stock_count }}', '{{ product.target_stock_level }}')" 
-                        class="py-1 px-2.5 rounded-lg {% if product.needed_stock > 0 %}bg-emerald-700 text-white shadow-2xs{% else %}bg-emerald-50 text-emerald-800 border border-emerald-200{% endif %} text-xs font-bold transition flex items-center gap-1 cursor-pointer"
-                        title="Add Production Batch">
-                        <i class="fa-solid fa-plus-circle text-[11px]"></i>
-                        <span>Restock</span>
-                    </button>
-
-                    <a href="{% url 'dashboard:product_price_history' product.id %}" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:text-amber-700 transition" title="View Price History">
-                        <i class="fa-solid fa-tags"></i>
-                    </a>
-
-                    <a href="{% url 'dashboard:product_stock_ledger' product.id %}" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:text-indigo-700 transition" title="View Stock Ledger History">
-                        <i class="fa-solid fa-clock-rotate-left"></i>
-                    </a>
-
-                    <button type="button" 
-                        onclick="openEditModal({
-                            id: '{{ product.id }}',
-                            name: '{{ product.name|escapejs }}',
-                            tagline: '{{ product.tagline|escapejs }}',
-                            description: '{{ product.description|escapejs }}',
-                            categoryId: '{{ product.category.id|default:'' }}',
-                            cutStyle: '{{ product.cut_style }}',
-                            spiceLevel: '{{ product.spice_level }}',
-                            crunchRating: '{{ product.crunch_rating|default:5 }}',
-                            jarWeight: '{{ product.jar_weight_grams }}',
-                            grossWeight: '{{ product.gross_weight_grams|default:850 }}',
-                            price: '{{ product.price_bdt }}',
-                            origPrice: '{{ product.original_price_bdt|default:'' }}',
-                            stockCount: '{{ product.stock_count }}',
-                            minStockThreshold: '{{ product.min_stock_threshold|default:15 }}',
-                            targetStockLevel: '{{ product.target_stock_level|default:50 }}',
-                            neededStock: '{{ product.needed_stock }}',
-                            isInStock: {{ product.is_in_stock|yesno:'true,false' }},
-                            isFeatured: {{ product.is_featured|yesno:'true,false' }},
-                            imageUrl: '{{ product.image_url|escapejs }}',
-                            primaryImageUrl: '{{ product.primary_image_url|escapejs }}',
-                            ingredients: '{{ product.ingredients|escapejs }}',
-                            flavorProfile: '{{ product.flavor_profile|escapejs }}',
-                            pairingSuggestions: '{{ product.pairing_suggestions|escapejs }}',
-                            shelfLife: '{{ product.shelf_life|escapejs }}',
-                            customBadge: '{{ product.custom_badge|default:''|escapejs }}'
-                        })"
-                        class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:text-brand-800 transition cursor-pointer" title="Edit Product Details">
-                        <i class="fa-solid fa-pen-to-square"></i>
-                    </button>
-
-                    <form method="POST" class="inline">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="toggle_stock">
-                        <input type="hidden" name="product_id" value="{{ product.id }}">
-                        <button type="submit" title="{% if product.is_in_stock %}Visible on store - Click to hide{% else %}Hidden from store - Click to show{% endif %}" class="p-1.5 rounded-lg transition cursor-pointer {% if product.is_in_stock %}bg-gray-100 text-gray-500 hover:bg-amber-50 hover:text-amber-700{% else %}bg-emerald-100 text-emerald-800{% endif %}">
-                            <i class="fa-solid {% if product.is_in_stock %}fa-eye{% else %}fa-eye-slash{% endif %}"></i>
-                        </button>
-                    </form>
-                </div>
+                <!-- Price History Link -->
+                <a href="{% url 'dashboard:product_price_history' product.id %}" class="w-8 h-8 rounded-xl bg-gray-100 hover:bg-amber-50 text-gray-500 hover:text-amber-800 transition flex items-center justify-center shrink-0" title="Price History">
+                    <i class="fa-solid fa-tags text-[11px]"></i>
+                </a>
             </div>
 
         </div>
@@ -356,7 +322,7 @@
         {% endfor %}
     </div>
 
-    <!-- Desktop View: Unified Minimal Product Rows Table (hidden md:block) -->
+<!-- Desktop View: Unified Minimal Product Rows Table (hidden md:block) -->
     <div class="hidden md:block bg-white rounded-3xl border border-gray-200 shadow-xs overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-left text-xs border-collapse">
@@ -666,13 +632,35 @@
                 </div>
 
                 <!-- Custom Promotional / Seasonal Urgency Badge -->
-                <div class="sm:col-span-2 bg-gradient-to-r from-amber-50 to-orange-50/50 p-3 rounded-xl border border-amber-200">
-                    <label class="font-bold text-amber-950 flex items-center gap-1.5 mb-1">
-                        <i class="fa-solid fa-certificate text-amber-600"></i>
-                        <span>Sale / Promotional Message Badge (হোমপেজে সবার প্রথমে দেখাবে)</span>
+                <div class="sm:col-span-2 bg-gradient-to-r from-amber-50 to-orange-50/50 p-3.5 rounded-2xl border border-amber-200">
+                    <label class="font-bold text-amber-950 flex items-center justify-between mb-1.5 flex-wrap gap-1">
+                        <span class="flex items-center gap-1.5">
+                            <i class="fa-solid fa-certificate text-amber-600"></i>
+                            <span>Storefront Promotion / Highlight Badge (হোমপেজে সবার প্রথমে দেখাবে)</span>
+                        </span>
+                        <span class="text-[10px] text-amber-700 font-normal">ঐচ্ছিক</span>
                     </label>
-                    <input type="text" id="edit_custom_badge" name="custom_badge" placeholder="e.g. 🥭 Flash Sale — 20% OFF! or 🔥 Limited Batch!" class="w-full bg-white border border-amber-300 rounded-lg px-3 py-1.5 text-xs text-gray-900 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500">
-                    <span class="text-[10px] text-amber-700 block mt-1">💡 এই ফিল্ডে কোনো Sale Message বা ব্যাজ দিলে প্রোডাক্টটি অটোমেটিক হোমপেজে সবার প্রথমে (First) প্রদর্শিত হবে!</span>
+                    <input type="text" id="edit_custom_badge" name="custom_badge" placeholder="e.g. ✨ NEW ARRIVAL / 🔥 FLASH SALE / 🍂 SEASON ENDED" class="w-full bg-white border border-amber-300 rounded-xl px-3 py-2 text-xs text-gray-900 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs">
+                    
+                    <!-- Quick 1-Click Preset Badges -->
+                    <div class="flex items-center gap-1.5 flex-wrap mt-2 pt-1 border-t border-amber-200/60">
+                        <span class="text-[10px] font-bold text-gray-500">Quick Presets:</span>
+                        <button type="button" onclick="document.getElementById('edit_custom_badge').value = '✨ NEW ARRIVAL'" class="px-2 py-0.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-900 text-[10px] font-black border border-emerald-300 transition cursor-pointer">
+                            ✨ New Arrival
+                        </button>
+                        <button type="button" onclick="document.getElementById('edit_custom_badge').value = '🔥 HOT LAUNCH'" class="px-2 py-0.5 rounded-lg bg-indigo-100 hover:bg-indigo-200 text-indigo-900 text-[10px] font-black border border-indigo-300 transition cursor-pointer">
+                            🔥 Hot Launch
+                        </button>
+                        <button type="button" onclick="document.getElementById('edit_custom_badge').value = '⚡ FLASH SALE'" class="px-2 py-0.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 text-[10px] font-black border border-amber-300 transition cursor-pointer">
+                            ⚡ Flash Sale
+                        </button>
+                        <button type="button" onclick="document.getElementById('edit_custom_badge').value = '🍂 SEASON ENDED'" class="px-2 py-0.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-900 text-[10px] font-black border border-rose-300 transition cursor-pointer">
+                            🍂 Season Ended
+                        </button>
+                        <button type="button" onclick="document.getElementById('edit_custom_badge').value = ''" class="px-1.5 py-0.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 text-[10px] font-bold border border-gray-300 ml-auto transition cursor-pointer" title="Clear Badge">
+                            ✕ Clear
+                        </button>
+                    </div>
                 </div>
 
                 <div>
@@ -735,15 +723,7 @@
                     <input type="number" step="0.01" id="edit_orig_price" name="original_price_bdt" placeholder="e.g. 420.00" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 font-bold text-gray-900 focus:bg-white">
                 </div>
 
-                <!-- Price Change Reason / Audit Note -->
-                <div class="sm:col-span-2 bg-amber-50/60 p-3 rounded-xl border border-amber-200">
-                    <label class="font-bold text-amber-900 block mb-1">
-                        <i class="fa-solid fa-tags text-amber-600 mr-1"></i>
-                        Price Change Reason / Note (মূল্য পরিবর্তনের কারণ - ঐচ্ছিক)
-                    </label>
-                    <input type="text" name="price_change_reason" placeholder="e.g. মশলার দাম বৃদ্ধি / ঈদ ধামাকা অফার / কাঁচামাল খরচ বৃদ্ধি" class="w-full bg-white border border-amber-300 rounded-lg px-3 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500">
-                    <span class="text-[10px] text-amber-700 block mt-1">দাম বাড়ালে বা কমালে এই কারণটি প্রাইস হিস্ট্রিতে স্বয়ংক্রিয়ভাবে রেকর্ড থাকবে।</span>
-                </div>
+
 
                 <!-- Section 3: Stock & Inventory Management -->
                 <div>

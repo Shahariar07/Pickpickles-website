@@ -85,10 +85,10 @@
                 
                 <!-- Custom Promotional Badge or Spice Badge -->
                 {% if product.custom_badge %}
-                <div class="shimmer-ribbon absolute top-4 left-4 bg-amber-400 text-slate-950 px-3.5 py-1.5 rounded-full text-xs font-black shadow-md border border-amber-300 flex items-center gap-1.5">
+                <div class="shimmer-ribbon absolute top-4 left-4 {% if 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower or 'launch' in product.custom_badge|lower or 'নতুন' in product.custom_badge %}bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-600 text-white border-emerald-400{% else %}bg-amber-400 text-slate-950 border-amber-300{% endif %} px-3.5 py-1.5 rounded-full text-xs font-black shadow-md border flex items-center gap-1.5">
                     <span class="relative flex h-2 w-2">
-                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-600 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-600"></span>
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full {% if 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower %}bg-white{% else %}bg-rose-600{% endif %} opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 {% if 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower %}bg-white{% else %}bg-rose-600{% endif %}"></span>
                     </span>
                     <span class="relative z-10">{{ product.custom_badge }}</span>
                 </div>
@@ -169,14 +169,33 @@
             </div>
 
             {% if product.custom_badge %}
+            {% if 'season' in product.custom_badge|lower or 'ended' in product.custom_badge|lower or 'শেষ' in product.custom_badge %}
             <!-- Seasonal Note -->
             <div class="bg-amber-50 border border-amber-200/90 rounded-2xl p-3 sm:p-3.5 flex items-center gap-3 text-xs">
-                <span class="text-xl shrink-0">🥭</span>
+                <span class="text-xl shrink-0">🍂</span>
                 <div class="min-w-0">
                     <span class="font-extrabold text-amber-950 block">{{ product.custom_badge }}</span>
-                    <span class="text-slate-600 font-medium text-[11px] block mt-0.5">Fresh mango season has ended. Strictly limited to remaining kitchen stock ({{ product.stock_count }} jars left).</span>
+                    <span class="text-slate-600 font-medium text-[11px] block mt-0.5">Seasonal batch ending soon. Strictly limited to remaining kitchen stock ({{ product.stock_count }} jars left).</span>
                 </div>
             </div>
+            {% elif 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower or 'launch' in product.custom_badge|lower or 'নতুন' in product.custom_badge %}
+            <!-- New Arrival Fresh Note -->
+            <div class="bg-emerald-50 border border-emerald-300 rounded-2xl p-3 sm:p-3.5 flex items-center gap-3 text-xs">
+                <span class="text-xl shrink-0">✨</span>
+                <div class="min-w-0">
+                    <span class="font-extrabold text-emerald-950 block">{{ product.custom_badge }}</span>
+                    <span class="text-emerald-700 font-medium text-[11px] block mt-0.5">Freshly crafted artisanal batch! Fresh jar stock ready for delivery.</span>
+                </div>
+            </div>
+            {% else %}
+            <!-- General Promotional Note -->
+            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3 sm:p-3.5 flex items-center gap-3 text-xs">
+                <span class="text-xl shrink-0">🏷️</span>
+                <div class="min-w-0">
+                    <span class="font-extrabold text-amber-950 block">{{ product.custom_badge }}</span>
+                </div>
+            </div>
+            {% endif %}
             {% endif %}
 
             <!-- Price Box -->

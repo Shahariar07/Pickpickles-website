@@ -34,9 +34,13 @@ class Product(models.Model):
     ]
 
     CUT_CHOICES = [
-        ('SPEARS', 'Spears / Quartered'),
-        ('CHIPS', 'Crinkle Cut Chips / Slices'),
+        ('CHUNKS', 'Juicy Chunks / Cubes'),
+        ('RINGS', 'Crisp Onion Rings'),
+        ('SLICES', 'Crisp Slices'),
+        ('CHIPS', 'Crinkle Cut Chips'),
+        ('SPEARS', 'Spears / Long Slices'),
         ('WHOLE', 'Whole Pickles'),
+        ('MEDLEY', 'Mixed Veggie Medley'),
         ('RELISH', 'Sweet & Savory Relish'),
     ]
 
