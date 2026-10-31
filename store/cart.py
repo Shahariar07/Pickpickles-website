@@ -12,41 +12,59 @@ class Cart:
             cart = self.session['pickpickles_cart'] = {}
         self.cart = cart
 
-    def add(self, product, quantity=1, override_quantity=False):
-        product_id = str(product.id)
-        if product_id not in self.cart:
-            self.cart[product_id] = {
+    def add(self, product, quantity=1, override_quantity=False, variant=None):
+        variant = (variant or '').strip()
+        cart_key = f"{product.id}_{variant}" if variant else str(product.id)
+        display_name = f"{product.name} ({variant})" if variant else product.name
+
+        if cart_key not in self.cart:
+            self.cart[cart_key] = {
+                'product_id': str(product.id),
                 'quantity': 0,
                 'price': str(product.price_bdt),
-                'name': product.name,
+                'name': display_name,
+                'variant': variant,
                 'weight': product.jar_weight_grams or 600,
                 'gross_weight': getattr(product, 'gross_weight_grams', 850) or 850,
                 'image': product.primary_image_url,
                 'slug': product.slug,
             }
         else:
-            # Always ensure price is synced to latest active product price
-            self.cart[product_id]['price'] = str(product.price_bdt)
+            # Sync price & naming
+            self.cart[cart_key]['price'] = str(product.price_bdt)
+            self.cart[cart_key]['name'] = display_name
+            self.cart[cart_key]['variant'] = variant
+            self.cart[cart_key]['product_id'] = str(product.id)
 
         if override_quantity:
-            self.cart[product_id]['quantity'] = quantity
+            self.cart[cart_key]['quantity'] = quantity
         else:
-            self.cart[product_id]['quantity'] += quantity
+            self.cart[cart_key]['quantity'] += quantity
 
         # Update weights in session if product weight updated
-        self.cart[product_id]['weight'] = product.jar_weight_grams or 600
-        self.cart[product_id]['gross_weight'] = getattr(product, 'gross_weight_grams', 850) or 850
+        self.cart[cart_key]['weight'] = product.jar_weight_grams or 600
+        self.cart[cart_key]['gross_weight'] = getattr(product, 'gross_weight_grams', 850) or 850
 
-        if self.cart[product_id]['quantity'] <= 0:
-            self.remove(product)
+        if self.cart[cart_key]['quantity'] <= 0:
+            self.remove(cart_key)
         else:
             self.save()
 
-    def remove(self, product):
-        product_id = str(product.id)
-        if product_id in self.cart:
-            del self.cart[product_id]
+    def remove(self, product_or_key):
+        if hasattr(product_or_key, 'id'):
+            key = str(product_or_key.id)
+        else:
+            key = str(product_or_key)
+
+        if key in self.cart:
+            del self.cart[key]
             self.save()
+        else:
+            keys_to_remove = [k for k, v in self.cart.items() if k == key or str(v.get('product_id')) == key]
+            if keys_to_remove:
+                for k in keys_to_remove:
+                    del self.cart[k]
+                self.save()
 
     def clear(self):
         del self.session['pickpickles_cart']
@@ -56,20 +74,23 @@ class Cart:
         self.session.modified = True
 
     def __iter__(self):
-        product_ids = [k for k in self.cart.keys()]
+        product_ids = list({str(item_data.get('product_id', k.split('_')[0])) for k, item_data in self.cart.items()})
         products = Product.objects.filter(id__in=product_ids)
         product_map = {str(p.id): p for p in products}
 
         needs_save = False
-        for product_id, item_data in self.cart.items():
-            if product_id in product_map:
-                prod = product_map[product_id]
+        for cart_key, item_data in list(self.cart.items()):
+            pid = str(item_data.get('product_id', cart_key.split('_')[0]))
+            if pid in product_map:
+                prod = product_map[pid]
                 item = item_data.copy()
+                item['key'] = cart_key
                 item['product'] = prod
-                # Always use current live price from database
                 live_price = prod.price_bdt
                 item['price'] = live_price
                 item['total_price'] = live_price * item['quantity']
+                item['variant'] = item_data.get('variant', '')
+                item['name'] = item_data.get('name') or (f"{prod.name} ({item['variant']})" if item['variant'] else prod.name)
                 item['weight'] = prod.jar_weight_grams or 600
                 item['net_weight'] = prod.jar_weight_grams or 600
                 item['gross_weight'] = getattr(prod, 'gross_weight_grams', 850) or 850
@@ -79,7 +100,7 @@ class Cart:
                 
                 # Sync session if price in session was old
                 if str(item_data.get('price')) != str(live_price):
-                    self.cart[product_id]['price'] = str(live_price)
+                    self.cart[cart_key]['price'] = str(live_price)
                     needs_save = True
 
                 yield item
@@ -91,50 +112,53 @@ class Cart:
         return sum(int(item.get('quantity', 0)) for item in self.cart.values())
 
     def get_subtotal(self):
-        product_ids = [k for k in self.cart.keys()]
+        product_ids = list({str(item_data.get('product_id', k.split('_')[0])) for k, item_data in self.cart.items()})
         products = Product.objects.filter(id__in=product_ids)
         product_map = {str(p.id): p for p in products}
         total = Decimal('0')
-        for product_id, item in self.cart.items():
+        for cart_key, item in self.cart.items():
             qty = int(item.get('quantity', 0))
             if qty <= 0:
                 continue
-            if product_id in product_map:
-                price = product_map[product_id].price_bdt
+            pid = str(item.get('product_id', cart_key.split('_')[0]))
+            if pid in product_map:
+                price = product_map[pid].price_bdt
             else:
                 price = Decimal(str(item.get('price', '0')))
             total += price * qty
         return total
 
     def get_total_net_weight_grams(self):
-        product_ids = [k for k in self.cart.keys()]
+        product_ids = list({str(item_data.get('product_id', k.split('_')[0])) for k, item_data in self.cart.items()})
         products = Product.objects.filter(id__in=product_ids)
         product_map = {str(p.id): p for p in products}
         
         total_grams = 0
-        for product_id, item in self.cart.items():
+        for cart_key, item in self.cart.items():
             qty = int(item.get('quantity', 0))
             if qty <= 0:
                 continue
-            if product_id in product_map:
-                w = product_map[product_id].jar_weight_grams or 600
+            pid = str(item.get('product_id', cart_key.split('_')[0]))
+            if pid in product_map:
+                w = product_map[pid].jar_weight_grams or 600
             else:
                 w = int(item.get('weight', 600))
             total_grams += w * qty
         return total_grams
 
     def get_total_gross_weight_grams(self):
-        product_ids = [k for k in self.cart.keys()]
+        product_ids = list({str(item_data.get('product_id', k.split('_')[0])) for k, item_data in self.cart.items()})
         products = Product.objects.filter(id__in=product_ids)
         product_map = {str(p.id): p for p in products}
         
         total_grams = 0
-        for product_id, item in self.cart.items():
+        for cart_key, item in self.cart.items():
             qty = int(item.get('quantity', 0))
             if qty <= 0:
                 continue
-            if product_id in product_map:
-                w = getattr(product_map[product_id], 'gross_weight_grams', 850) or 850
+            pid = str(item.get('product_id', cart_key.split('_')[0]))
+            if pid in product_map:
+                w = getattr(product_map[pid], 'gross_weight_grams', 850) or 850
             else:
                 w = int(item.get('gross_weight', 850))
             total_grams += w * qty

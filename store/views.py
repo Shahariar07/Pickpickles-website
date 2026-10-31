@@ -116,7 +116,7 @@ def product_detail(request, slug):
     related_products = Product.objects.exclude(id=product.id).annotate(has_sale_badge=has_sale_badge).order_by('-has_sale_badge', '-is_featured', 'id')[:3]
     reviews = product.reviews.filter(is_approved=True).order_by('-created_at')
 
-    best_seller = Product.objects.annotate(
+    top_best_sellers_qs = Product.objects.annotate(
         total_sold=Coalesce(
             Sum('order_items__quantity', filter=Q(order_items__order__is_deleted=False) & (
                 Q(order_items__order__order_status__in=['DELIVERED', 'OUT_FOR_DELIVERY']) |
@@ -125,13 +125,19 @@ def product_detail(request, slug):
             Value(0),
             output_field=IntegerField()
         )
-    ).order_by('-total_sold', '-is_featured', 'id').first()
+    ).order_by('-total_sold', '-is_featured', 'id')
+    top_3 = list(top_best_sellers_qs[:3])
 
-    is_best_seller = (best_seller and best_seller.id == product.id)
+    is_best_seller = (len(top_3) > 0 and top_3[0].id == product.id)
+    is_top_2 = (len(top_3) > 1 and top_3[1].id == product.id)
+    is_top_3 = (len(top_3) > 2 and top_3[2].id == product.id)
+    best_seller = top_3[0] if top_3 else None
 
     context = {
         'product': product,
         'is_best_seller': is_best_seller,
+        'is_top_2': is_top_2,
+        'is_top_3': is_top_3,
         'best_seller': best_seller,
         'related_products': related_products,
         'reviews': reviews,
@@ -256,15 +262,21 @@ def cart_add(request, product_id):
         raw_qty = 1
     quantity = max(1, min(raw_qty, 100))
     override = request.POST.get('override', 'false') == 'true'
+    variant = request.POST.get('variant', '').strip()
     
-    cart.add(product=product, quantity=quantity, override_quantity=override)
+    cart.add(product=product, quantity=quantity, override_quantity=override, variant=variant)
     is_preorder = False
+
+    variant_label = variant
+    item_display_name = f"{product.name} ({variant_label})" if variant_label else product.name
     
     if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('format') == 'json':
         items_data = [
             {
                 'product_id': item['product'].id,
-                'name': item['product'].name,
+                'item_key': item.get('key', str(item['product'].id)),
+                'name': item.get('name', item['product'].name),
+                'variant': item.get('variant', ''),
                 'price': float(item['price']),
                 'quantity': item['quantity'],
                 'total_price': float(item['total_price']),
@@ -275,7 +287,7 @@ def cart_add(request, product_id):
             }
             for item in cart
         ]
-        msg = f'Added {product.name} to your pickle jar bag!'
+        msg = f'Added {item_display_name} to your pickle jar bag!'
         return JsonResponse({
             'success': True,
             'message': msg,
@@ -291,14 +303,15 @@ def cart_add(request, product_id):
             'items': items_data,
             'added_product': {
                 'id': product.id,
-                'name': product.name,
+                'name': item_display_name,
                 'price': float(product.price_bdt),
                 'quantity': quantity,
+                'variant': variant_label,
                 'is_preorder': False,
             }
         })
         
-    flash_msg = f'Added "{product.name}" to your jar cart!'
+    flash_msg = f'Added "{item_display_name}" to your jar cart!'
     messages.success(request, flash_msg)
     if request.POST.get('buy_now') == '1':
         return redirect('store:checkout')
@@ -352,31 +365,49 @@ def cart_update_ajax(request):
     cart = Cart(request)
     try:
         data = json.loads(request.body)
-        product_id = data.get('product_id')
+        raw_key = str(data.get('item_key') or data.get('product_id'))
         action = data.get('action') # 'increase', 'decrease', 'remove'
         zone = data.get('zone', 'INSIDE_DHAKA')
         
-        product = get_object_or_404(Product, id=product_id)
-        current_qty = cart.cart.get(str(product_id), {}).get('quantity', 0)
+        # Check if raw_key exists directly in cart
+        if raw_key in cart.cart:
+            cart_key = raw_key
+            pid = cart.cart[cart_key].get('product_id', cart_key.split('_')[0])
+            variant = cart.cart[cart_key].get('variant', '')
+        else:
+            matching = [k for k, v in cart.cart.items() if k == raw_key or str(v.get('product_id')) == raw_key]
+            if matching:
+                cart_key = matching[0]
+                pid = cart.cart[cart_key].get('product_id', cart_key.split('_')[0])
+                variant = cart.cart[cart_key].get('variant', '')
+            else:
+                cart_key = raw_key
+                pid = raw_key
+                variant = None
+
+        product = get_object_or_404(Product, id=pid)
+        current_qty = cart.cart.get(cart_key, {}).get('quantity', 0)
         
         if action == 'increase':
             if current_qty < 100:
-                cart.add(product=product, quantity=1, override_quantity=False)
+                cart.add(product=product, quantity=1, override_quantity=False, variant=variant)
         elif action == 'decrease':
             if current_qty > 1:
-                cart.add(product=product, quantity=current_qty - 1, override_quantity=True)
+                cart.add(product=product, quantity=current_qty - 1, override_quantity=True, variant=variant)
             else:
-                cart.remove(product)
+                cart.remove(cart_key)
         elif action == 'remove':
-            cart.remove(product)
+            cart.remove(cart_key)
 
-        item_qty = cart.cart.get(str(product_id), {}).get('quantity', 0)
-        item_total = float(Decimal(cart.cart.get(str(product_id), {}).get('price', 0)) * item_qty) if str(product_id) in cart.cart else 0
+        item_qty = cart.cart.get(cart_key, {}).get('quantity', 0)
+        item_total = float(Decimal(cart.cart.get(cart_key, {}).get('price', 0)) * item_qty) if cart_key in cart.cart else 0
 
         items_data = [
             {
                 'product_id': item['product'].id,
-                'name': item['product'].name,
+                'item_key': item.get('key', str(item['product'].id)),
+                'name': item.get('name', item['product'].name),
+                'variant': item.get('variant', ''),
                 'price': float(item['price']),
                 'quantity': item['quantity'],
                 'total_price': float(item['total_price']),
@@ -405,6 +436,7 @@ def cart_update_ajax(request):
             'items_needed_for_free_delivery': cart.items_needed_for_free_delivery(),
             'item_quantity': item_qty,
             'item_total': item_total,
+            'item_key': cart_key,
             'items': items_data,
         })
     except Exception as e:
@@ -490,7 +522,7 @@ def checkout(request):
                 OrderItem.objects.create(
                     order=order,
                     product=product,
-                    product_name=product.name,
+                    product_name=item.get('name', product.name),
                     jar_weight_grams=product.jar_weight_grams,
                     unit_price=current_unit_price,
                     quantity=qty,

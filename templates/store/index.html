@@ -5,6 +5,42 @@
 
 {% block extra_head %}
 <style>
+@keyframes borderFlashGold {
+    0%, 100% {
+        box-shadow: 0 0 0 1.5px rgba(245, 158, 11, 0.45), 0 4px 14px -2px rgba(245, 158, 11, 0.25);
+    }
+    50% {
+        box-shadow: 0 0 0 3px rgba(251, 191, 36, 1), 0 0 28px 4px rgba(245, 158, 11, 0.65);
+    }
+}
+@keyframes borderFlashEmerald {
+    0%, 100% {
+        box-shadow: 0 0 0 1.5px rgba(16, 185, 129, 0.45), 0 4px 14px -2px rgba(16, 185, 129, 0.25);
+    }
+    50% {
+        box-shadow: 0 0 0 3px rgba(52, 211, 153, 1), 0 0 28px 4px rgba(16, 185, 129, 0.65);
+    }
+}
+@keyframes borderFlashRose {
+    0%, 100% {
+        box-shadow: 0 0 0 1.5px rgba(244, 63, 94, 0.45), 0 4px 14px -2px rgba(244, 63, 94, 0.25);
+    }
+    50% {
+        box-shadow: 0 0 0 3px rgba(251, 113, 133, 1), 0 0 28px 4px rgba(244, 63, 94, 0.65);
+    }
+}
+.card-flash-gold {
+    border-color: rgba(245, 158, 11, 0.9) !important;
+    animation: borderFlashGold 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+.card-flash-emerald {
+    border-color: rgba(16, 185, 129, 0.9) !important;
+    animation: borderFlashEmerald 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+.card-flash-rose {
+    border-color: rgba(244, 63, 94, 0.9) !important;
+    animation: borderFlashRose 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
 @keyframes seasonalGlow {
     0%, 100% {
         box-shadow: 0 4px 18px -2px rgba(245, 158, 11, 0.28), 0 0 0 1px rgba(245, 158, 11, 0.45);
@@ -440,139 +476,117 @@
         </div>
     </div>
 
-    <!-- Products Grid (2 columns on mobile, 3 columns on desktop) -->
-    <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 lg:gap-8">
+    <!-- Products Grid (2 columns on mobile, 3 columns on desktop - Mobile-Optimized) -->
+    <div class="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-6 lg:gap-8">
         {% for product in all_products %}
-        <div class="product-card rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col justify-between group transition-all duration-300 {% if product.custom_badge %}border-2 border-amber-400/90 shadow-md ring-2 ring-amber-300/30 seasonal-card-glow{% endif %}">
+        <div class="product-card bg-white rounded-2xl sm:rounded-3xl border transition-all duration-300 flex flex-col justify-between overflow-hidden group h-full relative {% if product.custom_badge %}{% if 'season' in product.custom_badge|lower or 'ended' in product.custom_badge|lower or 'শেষ' in product.custom_badge %}card-flash-rose border-rose-400/90{% elif 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower or 'launch' in product.custom_badge|lower or 'নতুন' in product.custom_badge %}card-flash-emerald border-emerald-400/90{% else %}card-flash-gold border-amber-400/90{% endif %}{% else %}border-slate-200/90 shadow-2xs hover:shadow-lg{% endif %}">
             
             <!-- Card Image Box -->
-            <div class="relative aspect-square overflow-hidden bg-slate-100 border-b border-slate-200">
-                <a href="{% url 'store:product_detail' product.slug %}">
-                    <img src="{{ product.primary_image_url }}" alt="{{ product.name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" decoding="async" width="1024" height="1024">
+            <div class="relative aspect-square overflow-hidden bg-slate-100 border-b border-slate-150">
+                <a href="{% url 'store:product_detail' product.slug %}" class="block w-full h-full" aria-label="{{ product.name }}">
+                    <img src="{{ product.primary_image_url }}" alt="{{ product.name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" loading="lazy" decoding="async" width="1024" height="1024">
                 </a>
 
-                {% if product.custom_badge %}
-                <!-- Special Marking Ribbon Across Top Edge -->
-                <div class="shimmer-ribbon absolute top-0 inset-x-0 {% if 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower or 'launch' in product.custom_badge|lower or 'নতুন' in product.custom_badge %}bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-600 text-white{% else %}bg-amber-400 text-slate-950{% endif %} font-black text-[10px] sm:text-xs py-1 px-2.5 text-center shadow-xs flex items-center justify-center gap-1.5 z-20 border-b border-black/10 tracking-tight">
-                    <span class="relative flex h-2 w-2">
-                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full {% if 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower %}bg-white{% else %}bg-rose-600{% endif %} opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-2 w-2 {% if 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower %}bg-white{% else %}bg-rose-600{% endif %}"></span>
-                    </span>
-                    <span class="relative z-10">{{ product.custom_badge }}</span>
-                </div>
-                {% endif %}
-                
-                <!-- Best Seller / Spice Level Badge -->
-                {% if top_best_sellers.0 and product.id == top_best_sellers.0.id %}
-                <div class="absolute {% if product.custom_badge %}top-8 sm:top-9{% else %}top-2 left-2 sm:top-3 sm:left-3{% endif %} left-2 sm:left-3 bg-amber-400 text-slate-950 text-[10px] sm:text-xs font-black px-2 sm:px-3 py-0.5 sm:py-1 rounded-full shadow-lg border border-amber-300 flex items-center gap-1 sm:gap-1.5 ring-2 ring-amber-400/40 z-10">
-                    <i class="fa-solid fa-crown text-amber-950"></i>
-                    <span>#1 Best Seller</span>
-                </div>
-                {% elif top_best_sellers.1 and product.id == top_best_sellers.1.id %}
-                <div class="absolute {% if product.custom_badge %}top-8 sm:top-9{% else %}top-2 left-2 sm:top-3 sm:left-3{% endif %} left-2 sm:left-3 bg-amber-200 text-slate-950 text-[10px] sm:text-xs font-black px-2 sm:px-3 py-0.5 sm:py-1 rounded-full shadow-lg border border-amber-300 flex items-center gap-1 sm:gap-1.5 ring-2 ring-amber-300/40 z-10">
-                    <i class="fa-solid fa-medal text-amber-800"></i>
-                    <span>#2 Best Seller</span>
-                </div>
-                {% elif top_best_sellers.2 and product.id == top_best_sellers.2.id %}
-                <div class="absolute {% if product.custom_badge %}top-8 sm:top-9{% else %}top-2 left-2 sm:top-3 sm:left-3{% endif %} left-2 sm:left-3 bg-emerald-200 text-emerald-950 text-[10px] sm:text-xs font-black px-2 sm:px-3 py-0.5 sm:py-1 rounded-full shadow-lg border border-emerald-300 flex items-center gap-1 sm:gap-1.5 ring-2 ring-emerald-400/40 z-10">
-                    <i class="fa-solid fa-star text-emerald-800"></i>
-                    <span>#3 Best Seller</span>
-                </div>
-                {% else %}
-                <div class="absolute {% if product.custom_badge %}top-8 sm:top-9{% else %}top-2 left-2 sm:top-3 sm:left-3{% endif %} left-2 sm:left-3 bg-white/95 backdrop-blur-md px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-black text-slate-900 shadow-md border border-slate-300 flex items-center gap-1 z-10">
-                    {{ product.get_spice_level_display }}
-                </div>
-                {% endif %}
-
-                <!-- Weight badge -->
-                <div class="absolute {% if product.custom_badge %}top-8 sm:top-9{% else %}top-2 right-2 sm:top-3 sm:right-3{% endif %} right-2 sm:right-3 bg-slate-900/90 backdrop-blur-md text-white px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-black shadow-md border border-slate-700 z-10">
-                    {{ product.jar_weight_grams }}g<span class="hidden sm:inline"> Jar</span>
-                </div>
-
-                <!-- Refrigerate Immediately Badge -->
-                <div class="absolute bottom-2 left-2 sm:bottom-3 sm:left-3 bg-slate-950/85 backdrop-blur-md text-cyan-200 text-[8px] sm:text-[10px] font-black px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full border border-cyan-400/30 flex items-center gap-1 shadow-sm max-w-[88%] truncate z-10">
-                    <i class="fa-solid fa-snowflake text-cyan-400 text-[8px] sm:text-[10px] shrink-0"></i>
-                    <span class="truncate">REFRIGERATE<span class="hidden sm:inline"> IMMEDIATELY</span></span>
-                </div>
-
-            </div>
-
-            <!-- Card Body -->
-            <div class="p-3 sm:p-5 lg:p-6 flex-1 flex flex-col justify-between space-y-2 sm:space-y-4">
-                <div>
+                <!-- Top Left Badge: Custom Badge or Best Seller Ranking -->
+                <div class="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 z-10 pointer-events-none flex flex-col gap-1 max-w-[85%]">
                     {% if product.custom_badge %}
-                    <div class="mb-1.5">
-                        {% if 'season' in product.custom_badge|lower or 'ended' in product.custom_badge|lower or 'শেষ' in product.custom_badge %}
-                        <span class="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-rose-700 bg-rose-50 border border-rose-200/90 px-2 py-0.5 rounded-md">
-                            <i class="fa-solid fa-fire text-rose-500 text-[9px]"></i>
-                            <span>Season Ended • Final {{ product.stock_count }} Jars</span>
+                        {% if 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower or 'launch' in product.custom_badge|lower or 'নতুন' in product.custom_badge %}
+                        <span class="shimmer-ribbon inline-flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 text-white font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md tracking-tight border border-emerald-400/50">
+                            <span class="relative flex h-1.5 w-1.5">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-80"></span>
+                                <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-white"></span>
+                            </span>
+                            <span>✨ New Arrival</span>
                         </span>
-                        {% elif 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower or 'launch' in product.custom_badge|lower or 'নতুন' in product.custom_badge %}
-                        <span class="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-emerald-800 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded-md shadow-2xs">
-                            <i class="fa-solid fa-wand-magic-sparkles text-emerald-600 text-[9px]"></i>
-                            <span>{{ product.custom_badge }} • Fresh Batch</span>
+                        {% elif 'season' in product.custom_badge|lower or 'ended' in product.custom_badge|lower or 'শেষ' in product.custom_badge %}
+                        <span class="inline-flex items-center gap-1.5 bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md tracking-tight border border-rose-400/50">
+                            <i class="fa-solid fa-hourglass-half text-[8px] sm:text-[9px]"></i>
+                            <span>🍂 Season Ending</span>
                         </span>
                         {% else %}
-                        <span class="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-amber-900 bg-amber-50 border border-amber-300 px-2 py-0.5 rounded-md shadow-2xs">
-                            <i class="fa-solid fa-certificate text-amber-600 text-[9px]"></i>
+                        <span class="inline-flex items-center gap-1 bg-amber-400 text-slate-950 font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md border border-amber-300 tracking-tight">
                             <span>{{ product.custom_badge }}</span>
                         </span>
                         {% endif %}
-                    </div>
+                    {% elif top_best_sellers.0 and product.id == top_best_sellers.0.id %}
+                        <span class="inline-flex items-center gap-1 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 text-slate-950 font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md border border-amber-300 tracking-tight">
+                            <i class="fa-solid fa-crown text-[8px] sm:text-[9px] text-amber-950"></i>
+                            <span>🔥 Best Seller</span>
+                        </span>
+                    {% elif top_best_sellers.1 and product.id == top_best_sellers.1.id %}
+                        <span class="inline-flex items-center gap-1 bg-gradient-to-r from-slate-950 to-slate-900 text-amber-300 font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md border border-slate-700 tracking-tight">
+                            <i class="fa-solid fa-fire text-[8px] sm:text-[9px] text-amber-400"></i>
+                            <span>⭐ Trending</span>
+                        </span>
+                    {% elif top_best_sellers.2 and product.id == top_best_sellers.2.id %}
+                        <span class="inline-flex items-center gap-1 bg-gradient-to-r from-slate-950 to-slate-900 text-emerald-300 font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md border border-slate-700 tracking-tight">
+                            <i class="fa-solid fa-star text-[8px] sm:text-[9px] text-emerald-300"></i>
+                            <span>✨ Popular</span>
+                        </span>
+                    {% else %}
+                        <span class="inline-flex items-center gap-1 bg-white/95 backdrop-blur-xs text-slate-800 font-black text-[8.5px] sm:text-[10px] px-2 py-0.5 rounded-full shadow-2xs border border-slate-200/80 tracking-tight">
+                            {% if product.spice_level == 'MILD' %}🌿 Mild
+                            {% elif product.spice_level == 'MEDIUM' %}🌶️ Medium
+                            {% elif product.spice_level == 'HOT' %}🔥 Hot
+                            {% elif product.spice_level == 'NAGA' %}💣 Naga
+                            {% else %}{{ product.get_spice_level_display }}
+                            {% endif %}
+                        </span>
                     {% endif %}
+                </div>
 
-                    <!-- Product Name (Bold & clear on all screens - at the top) -->
-                    <h3 class="font-display font-black text-sm sm:text-lg lg:text-xl text-slate-950 group-hover:text-emerald-700 transition leading-tight line-clamp-2">
+                <!-- Weight badge (Top Right) -->
+                <span class="absolute top-1.5 right-1.5 sm:top-3 sm:right-3 bg-slate-950/75 backdrop-blur-xs text-white text-[8.5px] sm:text-[10px] font-black px-1.5 sm:px-2 py-0.5 rounded-full shadow-xs pointer-events-none z-10 border border-white/20">
+                    {{ product.jar_weight_grams }}g
+                </span>
+
+                <!-- Refrigerate Immediately Badge (Bottom Left - Compact on Mobile) -->
+                <div class="absolute bottom-1.5 left-1.5 sm:bottom-2.5 sm:left-2.5 bg-slate-950/85 backdrop-blur-xs text-cyan-300 text-[7.5px] sm:text-[9px] font-black px-1.5 sm:px-2 py-0.5 rounded-full border border-cyan-400/25 flex items-center gap-1 shadow-xs pointer-events-none z-10">
+                    <i class="fa-solid fa-snowflake text-cyan-400 text-[7px] sm:text-[8px] shrink-0"></i>
+                    <span class="tracking-tight uppercase">Refrigerate</span><span class="hidden sm:inline uppercase"> Immediately</span>
+                </div>
+            </div>
+
+            <!-- Card Body (Clean, Balanced & Uniform) -->
+            <div class="p-2.5 sm:p-4 flex-1 flex flex-col justify-between gap-1.5 sm:gap-2.5">
+                <div class="space-y-1 sm:space-y-1.5">
+                    <!-- Product Name (Uniform 2-line height for aligned grid) -->
+                    <h3 class="font-display font-black text-xs sm:text-base lg:text-lg text-slate-950 group-hover:text-emerald-700 transition leading-snug line-clamp-2 min-h-[32px] sm:min-h-[44px]">
                         <a href="{% url 'store:product_detail' product.slug %}">{{ product.name }}</a>
                     </h3>
 
-                    <!-- Cut style & crunch rating (Placed under product name) -->
-                    <div class="flex items-center justify-between text-xs font-black mt-1.5 mb-1 gap-1 flex-wrap">
-                        <span class="text-emerald-800 text-[10px] sm:text-[11px] uppercase tracking-wide truncate font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60">{{ product.get_cut_style_display }}</span>
-                        {% if product.reviews_count > 0 %}
-                        <span class="text-amber-600 shrink-0 text-[11px] sm:text-xs">⭐ {{ product.average_rating }}/5 ({{ product.reviews_count }})</span>
-                        {% else %}
-                        <span class="text-amber-600 shrink-0 text-[11px] sm:text-xs">⭐ {{ product.crunch_rating }}/5</span>
+                    <!-- Cut style & Rating in one sleek, compact line -->
+                    <div class="flex items-center justify-between text-[10px] sm:text-xs text-slate-500 font-bold gap-1">
+                        <span class="text-emerald-900 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/80 text-[9px] sm:text-[10.5px] font-black truncate">
+                            🥒 {{ product.get_cut_style_display }}
+                        </span>
+                        <span class="text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200/80 flex items-center gap-1 text-[9px] sm:text-[10.5px] font-black shrink-0">
+                            <i class="fa-solid fa-star text-amber-400 text-[8px] sm:text-[9px]"></i>
+                            <span>{% if product.reviews_count > 0 %}{{ product.average_rating }}{% else %}{{ product.crunch_rating|default:5 }}{% endif %}/5</span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Price and Add to Bag Footer Row (Mobile Side-by-Side, Zero Clutter) -->
+                <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-1 mt-auto">
+                    <div class="min-w-0">
+                        <span class="font-display font-black text-sm sm:text-xl text-slate-950 block leading-tight">৳{{ product.price_bdt|floatformat:0 }}</span>
+                        {% if product.original_price_bdt and product.original_price_bdt > product.price_bdt %}
+                        <div class="flex items-center gap-1 mt-0.5">
+                            <span class="text-[10px] sm:text-xs text-slate-400 line-through font-bold leading-none">৳{{ product.original_price_bdt|floatformat:0 }}</span>
+                            <span class="text-[8px] sm:text-[9px] font-black text-rose-700 bg-rose-50 border border-rose-200 px-1 py-0.2 rounded leading-none">-৳{{ product.discount_amount|floatformat:0 }}</span>
+                        </div>
                         {% endif %}
                     </div>
 
-                    <!-- Taste / Flavor Profile (Compact taste note) -->
-                    <div class="mt-1 sm:mt-2">
-                        <span class="inline-flex items-center gap-1 text-[10px] sm:text-[11px] bg-emerald-50 text-emerald-900 font-extrabold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg border border-emerald-200/80 line-clamp-1 max-w-full" title="{{ product.flavor_profile }}">
-                            <span class="text-emerald-700 shrink-0">Taste:</span>
-                            <span class="truncate font-semibold">{{ product.flavor_profile }}</span>
-                        </span>
-                    </div>
-
-                    <!-- Tagline (Desktop only, hidden on mobile for clean look) -->
-                    <p class="hidden sm:block text-xs lg:text-sm text-slate-700 font-medium mt-2 line-clamp-2 leading-relaxed">
-                        {{ product.tagline }}
-                    </p>
-                </div>
-
-                <!-- Price and Add to Cart Row -->
-                <div class="pt-2 sm:pt-4 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
-                    <div>
-                        <div class="hidden sm:flex items-center gap-1.5 mb-0.5">
-                            <span class="text-[9px] sm:text-[11px] text-slate-600 font-bold uppercase">Price</span>
-                            {% if product.original_price_bdt and product.original_price_bdt > product.price_bdt %}
-                            <span class="text-[9px] sm:text-[10px] font-black bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded border border-rose-200">
-                                Save ৳{{ product.discount_amount|floatformat:0 }}
-                            </span>
-                            {% endif %}
-                        </div>
-                        <div class="flex items-baseline gap-1.5 flex-wrap">
-                            <span class="font-display font-black text-base sm:text-2xl text-slate-950">৳{{ product.price_bdt|floatformat:0 }}</span>
-                            {% if product.original_price_bdt and product.original_price_bdt > product.price_bdt %}
-                            <span class="text-xs sm:text-sm line-through text-slate-500 font-bold">৳{{ product.original_price_bdt|floatformat:0 }}</span>
-                            {% endif %}
-                        </div>
-                    </div>
-
                     <!-- Quick Add Button with AJAX -->
-                    <button onclick="ajaxAddToCart({{ product.id }}, 1, this)" class="w-full sm:w-auto bg-[#15803d] hover:bg-[#166534] active:scale-95 text-white font-extrabold text-[11px] sm:text-sm px-2.5 sm:px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl shadow-md flex items-center justify-center gap-1 sm:gap-1.5 transition-all">
-                        <i class="fa-solid fa-plus text-[10px] sm:text-xs"></i>
-                        <span>Add to Bag</span>
+                    <button type="button" 
+                            onclick="ajaxAddToCart({{ product.id }}, 1, this)" 
+                            class="h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl bg-[#15803d] hover:bg-[#166534] active:scale-95 text-white font-black text-[11px] sm:text-xs shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-1 cursor-pointer shrink-0 border border-emerald-600/30"
+                            aria-label="Add {{ product.name }} to bag">
+                        <i class="fa-solid fa-plus text-[9px] sm:text-[10px]"></i>
+                        <span class="inline sm:hidden">Add</span>
+                        <span class="hidden sm:inline">Add to Bag</span>
                     </button>
                 </div>
 
@@ -877,10 +891,18 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </section>
 
-<!-- Floating Toast Message Container for AJAX Cart Feedback -->
-<div id="toastNotification" class="fixed bottom-24 left-4 right-4 sm:left-auto sm:right-4 z-50 transform translate-y-20 opacity-0 pointer-events-none transition-all duration-300 max-w-sm bg-slate-950 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 border-2 border-emerald-500">
-    <img src="{% static 'images/logo.png' %}" alt="Logo" class="w-7 h-7 rounded-full object-cover">
-    <div class="flex-1 text-xs font-bold" id="toastMessage">Added to jar bag!</div>
+<!-- Floating Action Toast for AJAX Cart (Go to Cart Only) -->
+<div id="toastNotification" class="fixed bottom-20 sm:bottom-6 left-3 right-3 sm:left-auto sm:right-6 z-50 bg-slate-950/95 backdrop-blur-md text-white p-3.5 sm:p-4 rounded-2xl shadow-2xl flex items-center justify-between gap-3 border-2 border-emerald-500/80 transform transition-all duration-300 translate-y-20 opacity-0 pointer-events-none max-w-sm mx-auto sm:mx-0">
+    <div class="flex items-center gap-2.5 min-w-0">
+        <span class="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-base shrink-0">🥒</span>
+        <span id="toastMessage" class="text-xs sm:text-sm font-bold text-white leading-snug">Added to jar bag!</span>
+    </div>
+    <div class="shrink-0">
+        <a href="{% url 'store:cart_view' %}" class="text-xs font-black text-slate-950 bg-amber-400 hover:bg-amber-300 px-3.5 py-2 rounded-xl shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-basket-shopping text-[10px]"></i>
+            <span>View Cart</span>
+        </a>
+    </div>
 </div>
 {% endblock %}
 
