@@ -318,6 +318,33 @@
                     </div>
                     {% endif %}
                 </div>
+
+                <!-- Meta Pixel & CAPI Purchase Event Status -->
+                <div class="pt-3 border-t border-gray-100 flex items-center justify-between gap-2 flex-wrap">
+                    <div class="flex items-center gap-2">
+                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-lg {% if meta_sent_info %}bg-emerald-100 text-emerald-700{% else %}bg-slate-100 text-slate-500{% endif %}">
+                            <i class="fa-brands fa-facebook-f text-xs"></i>
+                        </span>
+                        <div>
+                            <span class="text-[10px] font-bold text-gray-400 block uppercase tracking-wider">Meta Purchase</span>
+                            {% if meta_sent_info %}
+                            <span class="text-[11px] font-black text-emerald-600 flex items-center gap-1">
+                                <i class="fa-solid fa-circle-check text-[10px]"></i> Sent ({{ meta_sent_info.sent_at }})
+                            </span>
+                            {% else %}
+                            <span class="text-[11px] font-bold text-amber-600 flex items-center gap-1">
+                                <i class="fa-solid fa-clock text-[10px]"></i> Not sent yet
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if can_edit %}
+                    <a href="{% url 'dashboard:resend_meta_purchase' order.order_number %}" onclick="return confirm('Meta Pixel & CAPI Purchase event পাঠাতে চান?');" class="text-[11px] font-bold px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition inline-flex items-center gap-1.5 shadow-2xs" title="Meta Graph API ও ব্রাউজার পিক্সেলের মাধ্যমে Purchase event পাঠান">
+                        <i class="fa-solid fa-paper-plane text-[10px]"></i>
+                        <span>{% if meta_sent_info %}Resend Event{% else %}Send Event Now{% endif %}</span>
+                    </a>
+                    {% endif %}
+                </div>
             </form>
 
             <!-- 2. Customer Profile & Fraud Check Card (MIDDLE) -->

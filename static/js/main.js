@@ -46,46 +46,61 @@ function toggleCartDrawer(open) {
     }
 }
 
-// Show Floating Toast Notification with Checkout & View Bag Actions
-function showToast(message) {
-    let toast = document.getElementById('toastNotification');
-    
-    if (!toast) {
-        toast = document.createElement('div');
-        toast.id = 'toastNotification';
-        document.body.appendChild(toast);
+let toastTimeout = null;
+
+// Modern floating toast message when pickle is added to bag (no auto drawer popup)
+function showToast(message, isError = false) {
+    let existing = document.getElementById('toastNotification');
+    if (existing) {
+        existing.remove();
+        if (toastTimeout) clearTimeout(toastTimeout);
     }
 
-    toast.className = 'fixed bottom-20 sm:bottom-6 left-3 right-3 sm:left-auto sm:right-6 z-50 bg-slate-950/95 backdrop-blur-md text-white p-3.5 sm:p-4 rounded-2xl shadow-2xl flex items-center justify-between gap-3 border-2 border-emerald-500/80 transform transition-all duration-300 translate-y-20 opacity-0 pointer-events-none max-w-sm mx-auto sm:mx-0';
+    const toast = document.createElement('div');
+    toast.id = 'toastNotification';
+    toast.className = 'fixed top-20 left-1/2 -translate-x-1/2 sm:left-auto sm:right-6 sm:translate-x-0 z-50 flex items-center gap-3 bg-slate-950/95 backdrop-blur-md text-white px-4 py-3 rounded-2xl shadow-2xl border transition-all duration-300 transform -translate-y-2 opacity-0 max-w-[90vw] sm:max-w-md pointer-events-auto ' + (isError ? 'border-rose-500/80 text-rose-100' : 'border-emerald-500/80');
+
+    const iconHtml = isError 
+        ? '<div class="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0 text-sm"><i class="fa-solid fa-circle-exclamation"></i></div>'
+        : '<div class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 text-sm"><i class="fa-solid fa-circle-check"></i></div>';
+
+    const cartBtnHtml = isError ? '' : '<button type="button" onclick="toggleCartDrawer(true)" class="bg-[#15803d] hover:bg-[#166534] active:scale-95 text-white font-black text-[11px] px-2.5 py-1 rounded-lg shrink-0 transition-all shadow-xs ml-1 cursor-pointer">View Bag</button>';
+
     toast.innerHTML = `
-        <div class="flex items-center gap-2.5 min-w-0">
-            <span class="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-base shrink-0">🥒</span>
-            <span id="toastMessage" class="text-xs sm:text-sm font-bold text-white leading-snug"></span>
+        ${iconHtml}
+        <div class="flex-1 min-w-0 pr-1">
+            <p class="text-xs sm:text-sm font-bold text-white leading-snug line-clamp-2">
+                ${message}
+            </p>
         </div>
-        <div class="shrink-0">
-            <a href="/cart/" class="text-xs font-black text-slate-950 bg-amber-400 hover:bg-amber-300 px-3.5 py-2 rounded-xl shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer">
-                <i class="fa-solid fa-basket-shopping text-[10px]"></i>
-                <span>View Cart</span>
-            </a>
-        </div>
+        ${cartBtnHtml}
+        <button type="button" onclick="dismissToast()" class="text-slate-400 hover:text-white p-1 text-xs shrink-0 cursor-pointer" aria-label="Close">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
     `;
 
-    const msgEl = document.getElementById('toastMessage');
-    if (msgEl) msgEl.innerText = message;
+    document.body.appendChild(toast);
 
-    if (window.toastHideTimeout) {
-        clearTimeout(window.toastHideTimeout);
-    }
-
+    // Trigger smooth fade-in
     requestAnimationFrame(() => {
-        toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
-        toast.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto', 'show');
+        toast.classList.remove('-translate-y-2', 'opacity-0');
+        toast.classList.add('translate-y-0', 'opacity-100');
     });
 
-    window.toastHideTimeout = setTimeout(() => {
-        toast.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto', 'show');
-        toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
-    }, 5000);
+    toastTimeout = setTimeout(() => {
+        dismissToast();
+    }, 3500);
+}
+
+function dismissToast() {
+    const existing = document.getElementById('toastNotification');
+    if (existing) {
+        existing.classList.remove('translate-y-0', 'opacity-100');
+        existing.classList.add('-translate-y-2', 'opacity-0');
+        setTimeout(() => {
+            if (existing && existing.parentNode) existing.remove();
+        }, 300);
+    }
 }
 
 // Unified Free Delivery Progress Updater (Drawer & Cart Page)
@@ -245,7 +260,17 @@ async function ajaxAddToCart(productId, quantity = 1, btnEl = null, variant = ''
         });
 
         if (!response.ok) {
-            throw new Error(`Server returned HTTP ${response.status}`);
+            let errorMsg = 'Failed to add item to bag';
+            try {
+                const errData = await response.json();
+                if (errData && errData.error) errorMsg = errData.error;
+            } catch(e) {}
+            alert(errorMsg);
+            if (btnEl) {
+                btnEl.innerHTML = originalBtnHTML;
+                btnEl.disabled = false;
+            }
+            return;
         }
 
         const data = await response.json();
@@ -266,7 +291,10 @@ async function ajaxAddToCart(productId, quantity = 1, btnEl = null, variant = ''
             if (data.items) {
                 renderCartDrawer(data.items, data.cart_subtotal);
             }
-            showToast(data.message || 'Added to your pickle jar bag!');
+            
+            // Do NOT auto popup cart drawer every time; display added toast message instead
+            const addedName = (data.added_product && data.added_product.name) ? data.added_product.name : 'Pickle';
+            showToast(`🥒 "${addedName}" added to your bag!`);
             
             if (btnEl) {
                 btnEl.innerHTML = '<i class="fa-solid fa-check text-xs"></i> <span>Added!</span>';
@@ -284,7 +312,7 @@ async function ajaxAddToCart(productId, quantity = 1, btnEl = null, variant = ''
         }
     } catch (err) {
         console.error('Error adding to cart:', err);
-        showToast('Item added to jar bag!');
+        alert(err.message || 'Error adding item to bag');
         if (btnEl) {
             btnEl.innerHTML = originalBtnHTML;
             btnEl.disabled = false;

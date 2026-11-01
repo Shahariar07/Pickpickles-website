@@ -479,7 +479,7 @@
     <!-- Products Grid (2 columns on mobile, 3 columns on desktop - Mobile-Optimized) -->
     <div class="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-6 lg:gap-8">
         {% for product in all_products %}
-        <div class="product-card bg-white rounded-2xl sm:rounded-3xl border transition-all duration-300 flex flex-col justify-between overflow-hidden group h-full relative {% if product.custom_badge %}{% if 'season' in product.custom_badge|lower or 'ended' in product.custom_badge|lower or 'শেষ' in product.custom_badge %}card-flash-rose border-rose-400/90{% elif 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower or 'launch' in product.custom_badge|lower or 'নতুন' in product.custom_badge %}card-flash-emerald border-emerald-400/90{% else %}card-flash-gold border-amber-400/90{% endif %}{% else %}border-slate-200/90 shadow-2xs hover:shadow-lg{% endif %}">
+        <div class="product-card bg-white rounded-2xl sm:rounded-3xl border transition-all duration-300 flex flex-col justify-between overflow-hidden group h-full relative {% if not product.is_in_stock or product.stock_count <= 0 %}border-slate-200/90 shadow-2xs{% elif product.custom_badge %}{% if 'season' in product.custom_badge|lower or 'ended' in product.custom_badge|lower or 'শেষ' in product.custom_badge %}card-flash-rose border-rose-400/90{% elif 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower or 'launch' in product.custom_badge|lower or 'নতুন' in product.custom_badge %}card-flash-emerald border-emerald-400/90{% else %}card-flash-gold border-amber-400/90{% endif %}{% else %}border-slate-200/90 shadow-2xs hover:shadow-lg{% endif %}">
             
             <!-- Card Image Box -->
             <div class="relative aspect-square overflow-hidden bg-slate-100 border-b border-slate-150">
@@ -487,9 +487,13 @@
                     <img src="{{ product.primary_image_url }}" alt="{{ product.name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" loading="lazy" decoding="async" width="1024" height="1024">
                 </a>
 
-                <!-- Top Left Badge: Custom Badge or Best Seller Ranking -->
+                <!-- Top Left Badge: Stock Out (Single Clean Red Badge), Custom Badge, or Best Seller Ranking -->
                 <div class="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 z-10 pointer-events-none flex flex-col gap-1 max-w-[85%]">
-                    {% if product.custom_badge %}
+                    {% if not product.is_in_stock or product.stock_count <= 0 %}
+                    <span class="inline-flex items-center bg-red-600 text-white font-black text-[10px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md tracking-wide uppercase border border-red-500">
+                        <span>Stock Out</span>
+                    </span>
+                    {% elif product.custom_badge %}
                         {% if 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower or 'launch' in product.custom_badge|lower or 'নতুন' in product.custom_badge %}
                         <span class="shimmer-ribbon inline-flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 text-white font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md tracking-tight border border-emerald-400/50">
                             <span class="relative flex h-1.5 w-1.5">
@@ -509,26 +513,27 @@
                         </span>
                         {% endif %}
                     {% elif top_best_sellers.0 and product.id == top_best_sellers.0.id %}
-                        <span class="inline-flex items-center gap-1 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 text-slate-950 font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md border border-amber-300 tracking-tight">
+                        <span class="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md border border-amber-400 tracking-tight ring-1 ring-amber-400/60 uppercase">
                             <i class="fa-solid fa-crown text-[8px] sm:text-[9px] text-amber-950"></i>
-                            <span>🔥 Best Seller</span>
+                            <span>#1 Best Seller</span>
                         </span>
                     {% elif top_best_sellers.1 and product.id == top_best_sellers.1.id %}
-                        <span class="inline-flex items-center gap-1 bg-gradient-to-r from-slate-950 to-slate-900 text-amber-300 font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md border border-slate-700 tracking-tight">
-                            <i class="fa-solid fa-fire text-[8px] sm:text-[9px] text-amber-400"></i>
-                            <span>⭐ Trending</span>
+                        <span class="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-200 to-amber-100 text-slate-950 font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md border border-amber-300 tracking-tight ring-1 ring-amber-300/50 uppercase">
+                            <i class="fa-solid fa-medal text-[8px] sm:text-[9px] text-amber-800"></i>
+                            <span>#2 Popular Pick</span>
                         </span>
                     {% elif top_best_sellers.2 and product.id == top_best_sellers.2.id %}
-                        <span class="inline-flex items-center gap-1 bg-gradient-to-r from-slate-950 to-slate-900 text-emerald-300 font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md border border-slate-700 tracking-tight">
-                            <i class="fa-solid fa-star text-[8px] sm:text-[9px] text-emerald-300"></i>
-                            <span>✨ Popular</span>
+                        <span class="inline-flex items-center gap-1.5 bg-gradient-to-r from-emerald-200 to-emerald-100 text-emerald-950 font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md border border-emerald-300 tracking-tight ring-1 ring-emerald-400/50 uppercase">
+                            <i class="fa-solid fa-star text-[8px] sm:text-[9px] text-emerald-800"></i>
+                            <span>#3 Fan Favorite</span>
                         </span>
                     {% else %}
-                        <span class="inline-flex items-center gap-1 bg-white/95 backdrop-blur-xs text-slate-800 font-black text-[8.5px] sm:text-[10px] px-2 py-0.5 rounded-full shadow-2xs border border-slate-200/80 tracking-tight">
-                            {% if product.spice_level == 'MILD' %}🌿 Mild
-                            {% elif product.spice_level == 'MEDIUM' %}🌶️ Medium
-                            {% elif product.spice_level == 'HOT' %}🔥 Hot
-                            {% elif product.spice_level == 'NAGA' %}💣 Naga
+                        <!-- Only shown when NO other badge exists -->
+                        <span class="inline-flex items-center gap-1 bg-white/95 backdrop-blur-xs text-slate-800 font-black text-[8.5px] sm:text-[10px] px-2.5 py-0.5 rounded-full shadow-2xs border border-slate-200/80 tracking-tight">
+                            {% if product.spice_level == 'MILD' %}🌿 Mild & Refreshing
+                            {% elif product.spice_level == 'MEDIUM' %}🌶️ Medium Zest
+                            {% elif product.spice_level == 'HOT' %}🔥 Hot & Tangy
+                            {% elif product.spice_level == 'NAGA' %}💣 Fire Naga Hot
                             {% else %}{{ product.get_spice_level_display }}
                             {% endif %}
                         </span>
@@ -579,7 +584,15 @@
                         {% endif %}
                     </div>
 
-                    <!-- Quick Add Button with AJAX -->
+                    <!-- Quick Add Button with AJAX OR Stock Out Disabled Button -->
+                    {% if not product.is_in_stock or product.stock_count <= 0 %}
+                    <button type="button" 
+                            disabled 
+                            class="h-8 sm:h-9 px-3 rounded-xl bg-slate-100 text-slate-400 font-bold text-[11px] sm:text-xs shadow-none cursor-not-allowed flex items-center justify-center border border-slate-200"
+                            aria-label="{{ product.name }} is out of stock">
+                        <span>Stock Out</span>
+                    </button>
+                    {% else %}
                     <button type="button" 
                             onclick="ajaxAddToCart({{ product.id }}, 1, this)" 
                             class="h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl bg-[#15803d] hover:bg-[#166534] active:scale-95 text-white font-black text-[11px] sm:text-xs shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-1 cursor-pointer shrink-0 border border-emerald-600/30"
@@ -588,6 +601,7 @@
                         <span class="inline sm:hidden">Add</span>
                         <span class="hidden sm:inline">Add to Bag</span>
                     </button>
+                    {% endif %}
                 </div>
 
             </div>
@@ -891,19 +905,6 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </section>
 
-<!-- Floating Action Toast for AJAX Cart (Go to Cart Only) -->
-<div id="toastNotification" class="fixed bottom-20 sm:bottom-6 left-3 right-3 sm:left-auto sm:right-6 z-50 bg-slate-950/95 backdrop-blur-md text-white p-3.5 sm:p-4 rounded-2xl shadow-2xl flex items-center justify-between gap-3 border-2 border-emerald-500/80 transform transition-all duration-300 translate-y-20 opacity-0 pointer-events-none max-w-sm mx-auto sm:mx-0">
-    <div class="flex items-center gap-2.5 min-w-0">
-        <span class="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-base shrink-0">🥒</span>
-        <span id="toastMessage" class="text-xs sm:text-sm font-bold text-white leading-snug">Added to jar bag!</span>
-    </div>
-    <div class="shrink-0">
-        <a href="{% url 'store:cart_view' %}" class="text-xs font-black text-slate-950 bg-amber-400 hover:bg-amber-300 px-3.5 py-2 rounded-xl shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer">
-            <i class="fa-solid fa-basket-shopping text-[10px]"></i>
-            <span>View Cart</span>
-        </a>
-    </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}

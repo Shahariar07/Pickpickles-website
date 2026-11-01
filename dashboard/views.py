@@ -675,13 +675,15 @@ def orders_list(request):
         if new_status in dict(Order.ORDER_STATUS_CHOICES) and order_numbers:
             target_orders = Order.objects.prefetch_related('items__product').filter(order_number__in=order_numbers)
             updated_count = 0
+            CONFIRMED_STATUSES = {'CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'}
             for order in target_orders:
-                if order.order_status != new_status:
-                    adjust_inventory_for_order_status_change(order, order.order_status, new_status, user=request.user)
+                old_status = order.order_status
+                if old_status != new_status:
+                    adjust_inventory_for_order_status_change(order, old_status, new_status, user=request.user)
                     order.order_status = new_status
                     if new_status == 'DELIVERED' and order.payment_status == 'UNPAID':
                         order.payment_status = 'PAID'
-                    if new_status == 'CONFIRMED' and order.order_status != 'CONFIRMED':
+                    if new_status in CONFIRMED_STATUSES and old_status not in CONFIRMED_STATUSES:
                         try:
                             from store.meta_capi import send_meta_purchase_event_on_accept
                             send_meta_purchase_event_on_accept(order, request=request)
@@ -968,9 +970,10 @@ def order_detail(request, order_number):
         new_payment_status = request.POST.get('payment_status')
         admin_notes = request.POST.get('admin_notes')
         
-        if new_status and new_status != order.order_status:
+        old_status = order.order_status
+        if new_status and new_status != old_status:
             # Adjust inventory based on acceptance / cancellation transition
-            adjust_inventory_for_order_status_change(order, order.order_status, new_status)
+            adjust_inventory_for_order_status_change(order, old_status, new_status)
 
             order.order_status = new_status
             # Auto-mark payment as collected/PAID when delivered
@@ -982,8 +985,9 @@ def order_detail(request, order_number):
                 request.session['auto_whatsapp_url'] = order.whatsapp_shipping_instruction_url
                 request.session['auto_whatsapp_order_number'] = order.order_number
 
-            # Trigger Meta Conversions API (CAPI) Purchase STRICTLY ONCE when moving to 'CONFIRMED'
-            if new_status == 'CONFIRMED' and order.order_status != 'CONFIRMED':
+            # Trigger Meta Conversions API (CAPI) Purchase STRICTLY ONCE when moving to confirmed status
+            CONFIRMED_STATUSES = {'CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'}
+            if new_status in CONFIRMED_STATUSES and old_status not in CONFIRMED_STATUSES:
                 try:
                     from store.meta_capi import send_meta_purchase_event_on_accept
                     send_meta_purchase_event_on_accept(order, request=request)
@@ -1011,7 +1015,12 @@ def order_detail(request, order_number):
         messages.success(request, f'Order #{order.order_number} details successfully updated.')
         return redirect('dashboard:order_detail', order_number=order.order_number)
 
-    return render(request, 'dashboard/order_detail.html', {'order': order})
+    from store.meta_capi import get_order_meta_sent_status
+    meta_sent_info = get_order_meta_sent_status(order.order_number)
+    return render(request, 'dashboard/order_detail.html', {
+        'order': order,
+        'meta_sent_info': meta_sent_info,
+    })
 
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
@@ -1024,9 +1033,10 @@ def update_order_status_quick(request, order_number):
             return redirect(request.META.get('HTTP_REFERER') or 'dashboard:index')
         order = get_object_or_404(Order, order_number=order_number)
         new_status = request.POST.get('status')
-        if new_status in dict(Order.ORDER_STATUS_CHOICES) and new_status != order.order_status:
+        old_status = order.order_status
+        if new_status in dict(Order.ORDER_STATUS_CHOICES) and new_status != old_status:
             # Adjust inventory based on acceptance / cancellation transition
-            adjust_inventory_for_order_status_change(order, order.order_status, new_status)
+            adjust_inventory_for_order_status_change(order, old_status, new_status)
 
             order.order_status = new_status
             # When marked as DELIVERED, automatically mark money as collected (PAID)
@@ -1038,8 +1048,9 @@ def update_order_status_quick(request, order_number):
                 request.session['auto_whatsapp_url'] = order.whatsapp_shipping_instruction_url
                 request.session['auto_whatsapp_order_number'] = order.order_number
 
-            # Trigger Meta Conversions API (CAPI) Purchase STRICTLY ONCE when moving to 'CONFIRMED'
-            if new_status == 'CONFIRMED' and order.order_status != 'CONFIRMED':
+            # Trigger Meta Conversions API (CAPI) Purchase STRICTLY ONCE when moving to confirmed status
+            CONFIRMED_STATUSES = {'CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'}
+            if new_status in CONFIRMED_STATUSES and old_status not in CONFIRMED_STATUSES:
                 try:
                     from store.meta_capi import send_meta_purchase_event_on_accept
                     send_meta_purchase_event_on_accept(order, request=request)
@@ -1059,6 +1070,25 @@ def update_order_status_quick(request, order_number):
             })
             
     return redirect(request.META.get('HTTP_REFERER') or 'dashboard:index')
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def resend_meta_purchase(request, order_number):
+    """Manually dispatch or re-dispatch Meta CAPI & Pixel Purchase event for an order."""
+    if not can_user_edit(request.user):
+        messages.error(request, 'Permission Denied: মেটা ইভেন্ট পাঠানোর অনুমতি নেই।')
+        return redirect('dashboard:order_detail', order_number=order_number)
+    order = get_object_or_404(Order, order_number=order_number)
+    try:
+        from store.meta_capi import send_meta_purchase_event_on_accept
+        res = send_meta_purchase_event_on_accept(order, request=request, force=True)
+        if res.get('success'):
+            messages.success(request, f"🎯 Meta Pixel & CAPI Purchase Event successfully dispatched for Order #{order.order_number} (৳{order.total_amount})!")
+        else:
+            messages.warning(request, f"Meta Purchase dispatch failed: {res.get('error')}")
+    except Exception as e:
+        messages.error(request, f"Error sending Meta Purchase: {e}")
+    return redirect('dashboard:order_detail', order_number=order.order_number)
 
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')

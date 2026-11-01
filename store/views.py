@@ -255,6 +255,15 @@ def cart_add(request, product_id):
     from django.utils.http import url_has_allowed_host_and_scheme
     cart = Cart(request)
     product = get_object_or_404(Product, id=product_id)
+
+    if not product.is_in_stock or product.stock_count <= 0:
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('format') == 'json':
+            return JsonResponse({
+                'success': False,
+                'error': f'Sorry, "{product.name}" is currently Out of Stock!',
+            }, status=400)
+        messages.error(request, f'Sorry, "{product.name}" is currently Out of Stock.')
+        return redirect(request.META.get('HTTP_REFERER') or 'store:index')
     
     try:
         raw_qty = int(request.POST.get('quantity', 1))
@@ -478,6 +487,16 @@ def checkout(request):
     billing_weight_kg = cart.get_billing_weight_kg()
 
     if request.method == 'POST':
+        # Stock verification: ensure no cart items are out of stock
+        out_of_stock_items = [
+            item['product'].name for item in cart
+            if not item['product'].is_in_stock or item['product'].stock_count <= 0
+        ]
+        if out_of_stock_items:
+            names = ', '.join(out_of_stock_items)
+            messages.error(request, f'Sorry, "{names}" in your bag is currently Out of Stock. Please remove it to proceed.')
+            return redirect('store:cart_view')
+
         # 1. Anti-Fraud & Security Verification (Honeypot, Blacklist, Rate Limiting)
         from store.security import check_rate_limit_and_blacklist, verify_cloudflare_turnstile, record_successful_order_rate
         

@@ -36,6 +36,7 @@ urlpatterns = [
     path('order/<str:order_number>/permanent-delete/', views.permanent_delete_order, name='permanent_delete_order'),
     path('order/<str:order_number>/edit-customer/', views.edit_order_customer, name='edit_order_customer'),
     path('order/<str:order_number>/quick-status/', views.update_order_status_quick, name='update_order_status_quick'),
+    path('order/<str:order_number>/resend-meta-purchase/', views.resend_meta_purchase, name='resend_meta_purchase'),
     path('order/<str:order_number>/mark-returned/', views.mark_order_returned, name='mark_order_returned'),
     path('orders/sync-pathao/', views.sync_all_pathao_orders, name='sync_all_pathao_orders'),
     path('order/<str:order_number>/sync-pathao/', views.sync_single_pathao_order, name='sync_single_pathao_order'),

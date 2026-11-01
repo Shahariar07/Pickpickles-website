@@ -93,9 +93,21 @@ def _read_env_fallback():
     return env_vars
 
 
-def _execute_meta_purchase(order):
-    """Internal function to send Purchase event to Meta Graph API strictly once per order."""
-    if _is_order_already_sent(order.order_number):
+def get_order_meta_sent_status(order_number):
+    """Retrieve sent details if Purchase event for this order was sent to Meta."""
+    try:
+        if os.path.exists(SENT_ORDERS_FILE):
+            with open(SENT_ORDERS_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                return data.get(str(order_number))
+    except Exception as e:
+        logger.warning(f"[Meta CAPI] Error checking sent file: {e}")
+    return None
+
+
+def _execute_meta_purchase(order, force=False):
+    """Internal function to send Purchase event to Meta Graph API strictly once per order unless forced."""
+    if not force and _is_order_already_sent(order.order_number):
         logger.info(f"[Meta CAPI] Purchase for Order #{order.order_number} was already sent previously. Skipping duplicate.")
         print(f"[Meta CAPI INFO] Order #{order.order_number} was already sent to Meta. Skipping duplicate.")
         return {'success': True, 'already_sent': True}
@@ -281,13 +293,13 @@ def build_browser_purchase_payload(order):
     }
 
 
-def send_meta_purchase_event_on_accept(order, request=None):
+def send_meta_purchase_event_on_accept(order, request=None, force=False):
     """
     Triggered when an admin accepts/confirms an order.
     STRICT ONE-TIME PURCHASE GUARANTEE:
-    Checks if this order was already sent to Meta. If already sent, it will NEVER fire again.
+    Checks if this order was already sent to Meta. If already sent, it will NEVER fire again unless force=True.
     """
-    if _is_order_already_sent(order.order_number):
+    if not force and _is_order_already_sent(order.order_number):
         logger.info(f"[Meta CAPI] Order #{order.order_number} has already been sent to Meta. Skipping duplicate send.")
         print(f"[Meta CAPI INFO] Order #{order.order_number} has already been sent to Meta. Skipping duplicate send.")
         return {'success': True, 'already_sent': True}
@@ -303,4 +315,4 @@ def send_meta_purchase_event_on_accept(order, request=None):
         except Exception as e:
             logger.warning(f"[Meta CAPI] Failed queuing browser purchase event in session: {e}")
 
-    return _execute_meta_purchase(order)
+    return _execute_meta_purchase(order, force=force)

@@ -82,9 +82,13 @@
         <div class="lg:col-span-6 space-y-4">
             <div class="relative aspect-square rounded-3xl overflow-hidden bg-white border border-gray-200 shadow-md flex items-center justify-center p-4">
                 <img src="{{ product.primary_image_url }}" alt="{{ product.name }}" class="w-full h-full object-cover rounded-2xl hover:scale-105 transition-transform duration-500" id="mainProductImg" loading="eager" fetchpriority="high" decoding="async" width="1024" height="1024">
-                
-                <!-- Custom Promotional Badge or Best Seller / Spice Badge -->
-                {% if product.custom_badge %}
+
+                <!-- Top Left Badge: Stock Out (Single Clean Red Badge), Custom Promotional Badge, or Best Seller / Spice Badge -->
+                {% if not product.is_in_stock or product.stock_count <= 0 %}
+                <div class="absolute top-4 left-4 bg-red-600 text-white px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-black shadow-md border border-red-500 flex items-center gap-1.5 z-10 uppercase">
+                    <span>Stock Out</span>
+                </div>
+                {% elif product.custom_badge %}
                     {% if 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower or 'launch' in product.custom_badge|lower or 'নতুন' in product.custom_badge %}
                     <div class="shimmer-ribbon absolute top-4 left-4 bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-600 text-white border-emerald-400 px-3.5 py-1.5 rounded-full text-xs font-black shadow-md border flex items-center gap-1.5">
                         <span class="relative flex h-2 w-2">
@@ -104,19 +108,19 @@
                     </div>
                     {% endif %}
                 {% elif is_best_seller %}
-                <div class="absolute top-4 left-4 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 text-slate-950 px-3.5 py-1.5 rounded-full text-xs font-black shadow-md border border-amber-300 flex items-center gap-1.5">
+                <div class="absolute top-4 left-4 bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 px-4 py-2 rounded-full text-xs sm:text-sm font-black shadow-lg border border-amber-400 flex items-center gap-2 ring-2 ring-amber-400/60 uppercase">
                     <i class="fa-solid fa-crown text-amber-950"></i>
-                    <span>🔥 #1 BEST SELLER</span>
+                    <span>#1 Best Seller</span>
                 </div>
                 {% elif is_top_2 %}
-                <div class="absolute top-4 left-4 bg-slate-950 text-amber-300 px-3.5 py-1.5 rounded-full text-xs font-black shadow-md border border-slate-700 flex items-center gap-1.5">
-                    <i class="fa-solid fa-fire text-amber-400"></i>
-                    <span>⭐ TRENDING PICK</span>
+                <div class="absolute top-4 left-4 bg-gradient-to-r from-amber-200 to-amber-100 text-slate-950 px-4 py-2 rounded-full text-xs sm:text-sm font-black shadow-lg border border-amber-300 flex items-center gap-2 ring-2 ring-amber-300/50 uppercase">
+                    <i class="fa-solid fa-medal text-amber-800"></i>
+                    <span>#2 Popular Pick</span>
                 </div>
                 {% elif is_top_3 %}
-                <div class="absolute top-4 left-4 bg-slate-950 text-emerald-300 px-3.5 py-1.5 rounded-full text-xs font-black shadow-md border border-slate-700 flex items-center gap-1.5">
-                    <i class="fa-solid fa-star text-emerald-300"></i>
-                    <span>✨ CUSTOMER FAVORITE</span>
+                <div class="absolute top-4 left-4 bg-gradient-to-r from-emerald-200 to-emerald-100 text-emerald-950 px-4 py-2 rounded-full text-xs sm:text-sm font-black shadow-lg border border-emerald-300 flex items-center gap-2 ring-2 ring-emerald-400/50 uppercase">
+                    <i class="fa-solid fa-star text-emerald-800"></i>
+                    <span>#3 Fan Favorite</span>
                 </div>
                 {% else %}
                 <div class="absolute top-4 left-4 bg-white/95 backdrop-blur-md px-3.5 py-1.5 rounded-full text-xs font-black text-gray-900 shadow-md border border-gray-100 flex items-center gap-1.5">
@@ -173,25 +177,30 @@
             <div>
                 <div class="flex items-center gap-2 mb-3 flex-wrap">
                     {% if is_best_seller %}
-                    <span class="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 text-slate-950 font-black text-xs px-3.5 py-1 rounded-full shadow-xs border border-amber-300">
+                    <span class="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 font-black text-xs px-3.5 py-1 rounded-full shadow-xs border border-amber-400 ring-1 ring-amber-400/50 uppercase">
                         <i class="fa-solid fa-crown text-amber-950 text-xs"></i>
-                        <span>🔥 #1 Best Seller Pickle</span>
+                        <span>#1 Best Seller</span>
                     </span>
                     {% elif is_top_2 %}
-                    <span class="inline-flex items-center gap-1.5 bg-gradient-to-r from-slate-950 to-slate-900 text-amber-300 font-black text-xs px-3.5 py-1 rounded-full shadow-xs border border-slate-700">
-                        <i class="fa-solid fa-fire text-amber-400 text-xs"></i>
-                        <span>⭐ Trending • #2 Pick</span>
+                    <span class="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-200 to-amber-100 text-slate-950 font-black text-xs px-3.5 py-1 rounded-full shadow-xs border border-amber-300 ring-1 ring-amber-300/50 uppercase">
+                        <i class="fa-solid fa-medal text-amber-800 text-xs"></i>
+                        <span>#2 Popular Pick</span>
                     </span>
                     {% elif is_top_3 %}
-                    <span class="inline-flex items-center gap-1.5 bg-gradient-to-r from-slate-950 to-slate-900 text-emerald-300 font-black text-xs px-3.5 py-1 rounded-full shadow-xs border border-slate-700">
-                        <i class="fa-solid fa-star text-emerald-300 text-xs"></i>
-                        <span>✨ Customer Favorite</span>
+                    <span class="inline-flex items-center gap-1.5 bg-gradient-to-r from-emerald-200 to-emerald-100 text-emerald-950 font-black text-xs px-3.5 py-1 rounded-full shadow-xs border border-emerald-300 ring-1 ring-emerald-400/50 uppercase">
+                        <i class="fa-solid fa-star text-emerald-800 text-xs"></i>
+                        <span>#3 Fan Favorite</span>
                     </span>
                     {% endif %}
 
                     <!-- Spice Level Pill -->
-                    <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-800 font-extrabold text-[11px] sm:text-xs px-3 py-1 rounded-full border border-slate-200">
-                        {% if product.spice_level == 'MILD' %}🌿 Mild Crunch
+                    <span class="inline-flex items-center gap-1.5 font-black text-xs sm:text-sm px-3.5 py-1 rounded-full shadow-2xs border
+                        {% if product.spice_level == 'MILD' %}bg-emerald-50 text-emerald-900 border-emerald-300
+                        {% elif product.spice_level == 'MEDIUM' %}bg-amber-50 text-amber-950 border-amber-300
+                        {% elif product.spice_level == 'HOT' %}bg-orange-50 text-orange-950 border-orange-300
+                        {% elif product.spice_level == 'NAGA' %}bg-red-50 text-red-950 border-red-300
+                        {% else %}bg-slate-100 text-slate-800 border-slate-200{% endif %}">
+                        {% if product.spice_level == 'MILD' %}🌿 Mild & Refreshing
                         {% elif product.spice_level == 'MEDIUM' %}🌶️ Medium Zest
                         {% elif product.spice_level == 'HOT' %}🔥 Hot & Tangy
                         {% elif product.spice_level == 'NAGA' %}💣 Fire Naga Hot
@@ -280,6 +289,18 @@
                 </div>
             </div>
 
+            {% if not product.is_in_stock or product.stock_count <= 0 %}
+            <!-- Out of Stock Disabled Action Button -->
+            <div class="space-y-3 pt-2">
+                <button type="button" disabled class="w-full bg-slate-100 border-2 border-slate-200 text-slate-400 font-display font-black text-base sm:text-lg py-4 px-6 rounded-2xl cursor-not-allowed flex items-center justify-center gap-2 shadow-none uppercase">
+                    <span>Stock Out</span>
+                </button>
+                <a href="{% url 'store:index' %}#pickle-menu" class="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold text-xs sm:text-sm transition">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>Explore Other Pickles</span>
+                </a>
+            </div>
+            {% else %}
             <!-- Add to Cart & 1-Click Direct Order Form -->
             <form action="{% url 'store:cart_add' product.id %}" method="POST" class="space-y-4">
                 {% csrf_token %}
@@ -298,6 +319,7 @@
                     </button>
                 </div>
             </form>
+            {% endif %}
 
             <!-- Description & Flavor Specs -->
             <div class="space-y-4 pt-4 border-t border-slate-200">
@@ -310,6 +332,26 @@
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                     <div class="bg-white p-4 rounded-xl border-2 border-slate-200 shadow-xs">
+                        <span class="text-[11px] font-black text-slate-500 uppercase tracking-wider block">Spice Level & Heat</span>
+                        <p class="text-xs font-black mt-0.5 flex items-center gap-1.5
+                            {% if product.spice_level == 'MILD' %}text-emerald-800
+                            {% elif product.spice_level == 'MEDIUM' %}text-amber-800
+                            {% elif product.spice_level == 'HOT' %}text-orange-800
+                            {% elif product.spice_level == 'NAGA' %}text-red-800
+                            {% else %}text-slate-900{% endif %}">
+                            {% if product.spice_level == 'MILD' %}🌿 Mild & Refreshing (Non-spicy, crisp artisanal brine)
+                            {% elif product.spice_level == 'MEDIUM' %}🌶️ Medium Zest (Balanced warmth & tingling garlic tang)
+                            {% elif product.spice_level == 'HOT' %}🔥 Hot & Tangy (Fiery pepper punch with savory crunch)
+                            {% elif product.spice_level == 'NAGA' %}💣 Fire Naga Hot (Authentic Bangladeshi Naga Morich blast)
+                            {% else %}{{ product.get_spice_level_display }}
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border-2 border-slate-200 shadow-xs">
+                        <span class="text-[11px] font-black text-slate-500 uppercase tracking-wider block">Crunch & Style</span>
+                        <p class="text-xs font-bold text-slate-900 mt-0.5">🥒 {{ product.get_cut_style_display }} (⭐ {{ product.crunch_rating }}/5 Crunch)</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border-2 border-slate-200 shadow-xs">
                         <span class="text-[11px] font-black text-slate-500 uppercase tracking-wider block">Flavor Profile</span>
                         <p class="text-xs font-bold text-slate-900 mt-0.5">{{ product.flavor_profile }}</p>
                     </div>
@@ -317,13 +359,9 @@
                         <span class="text-[11px] font-black text-slate-500 uppercase tracking-wider block">Best Paired With</span>
                         <p class="text-xs font-bold text-slate-900 mt-0.5">{{ product.pairing_suggestions }}</p>
                     </div>
-                    <div class="bg-white p-4 rounded-xl border-2 border-slate-200 shadow-xs">
+                    <div class="bg-white p-4 rounded-xl border-2 border-slate-200 shadow-xs sm:col-span-2">
                         <span class="text-[11px] font-black text-slate-500 uppercase tracking-wider block">Net Weight</span>
-                        <p class="text-xs font-bold text-slate-900 mt-0.5">🫙 {{ product.jar_weight_grams }} g Jar</p>
-                    </div>
-                    <div class="bg-white p-4 rounded-xl border-2 border-slate-200 shadow-xs">
-                        <span class="text-[11px] font-black text-slate-500 uppercase tracking-wider block">Crunch & Style</span>
-                        <p class="text-xs font-bold text-slate-900 mt-0.5">🥒 {{ product.get_cut_style_display }} (⭐ {{ product.crunch_rating }}/5 Crunch)</p>
+                        <p class="text-xs font-bold text-slate-900 mt-0.5">🫙 {{ product.jar_weight_grams }} g Net Jar Weight</p>
                     </div>
                 </div>
 
@@ -379,10 +417,16 @@
                 </div>
                 <div class="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
                     <span class="font-display font-black text-lg text-emerald-900">৳{{ rel.price_bdt|floatformat:0 }}</span>
+                    {% if not rel.is_in_stock or rel.stock_count <= 0 %}
+                    <button type="button" disabled class="bg-slate-100 text-slate-400 text-xs font-bold px-3 py-2 rounded-xl cursor-not-allowed border border-slate-200">
+                        <span>Stock Out</span>
+                    </button>
+                    {% else %}
                     <button type="button" onclick="quickAddToCart({{ rel.id }}, 1, this)" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-extrabold px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow-2xs cursor-pointer">
                         <i class="fa-solid fa-plus text-[10px]"></i>
                         <span>Add Jar</span>
                     </button>
+                    {% endif %}
                 </div>
             </div>
             {% endfor %}
@@ -460,18 +504,6 @@
 </div>
 
 <script>
-    });
-
-    // Highlight selected button
-    el.classList.remove('border-slate-200', 'hover:border-slate-300', 'shadow-2xs', 'opacity-90');
-    el.classList.add('border-emerald-600', 'ring-2', 'ring-emerald-600/30', 'shadow-xs');
-    const activeIcon = el.querySelector('.option-check-icon');
-    if (activeIcon) {
-        activeIcon.className = 'option-check-icon text-xs text-emerald-600 font-black';
-        activeIcon.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
-    }
-}
-
 function adjustProductQty(delta) {
     const input = document.getElementById('productQtyInput');
     let current = parseInt(input.value) || 1;
