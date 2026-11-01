@@ -365,87 +365,68 @@
     </div>
 
     <!-- ========================================================================= -->
-    <!-- 4. LOW STOCK & PRODUCTION SHORTAGE ALERT (স্টক ঘাটতি অ্যালার্ট) -->
+    <!-- 4. LOW STOCK & PRODUCTION SHORTAGE ALERT (স্টক খালি / ঘাটতি নোটিফিকেশন - Always Visible & Sleek Red) -->
     <!-- ========================================================================= -->
     {% if low_stock_count > 0 %}
-    <div class="relative overflow-hidden bg-gradient-to-r from-rose-500/10 via-amber-500/10 to-orange-500/10 border-2 border-rose-300/80 bg-white p-5 rounded-3xl shadow-md space-y-4">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-rose-200/70">
-            <div class="flex items-center gap-3">
-                <span class="w-11 h-11 rounded-2xl bg-rose-600 text-white flex items-center justify-center text-xl shadow-md shrink-0">
-                    <i class="fa-solid fa-triangle-exclamation animate-bounce"></i>
+    <div class="bg-gradient-to-r from-rose-50/90 via-rose-50/40 to-white border border-rose-200 border-l-4 border-l-rose-600 rounded-2xl p-3 sm:p-4 shadow-2xs space-y-3">
+        <!-- Header Bar with Clear Red Visual Cue -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div class="flex items-center gap-2.5 min-w-0">
+                <span class="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center text-sm shadow-xs shrink-0">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
                 </span>
-                <div>
+                <div class="min-w-0">
                     <div class="flex items-center gap-2 flex-wrap">
-                        <span class="bg-rose-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                            Low Stock Alert
+                        <span class="bg-rose-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-2xs">
+                            স্টক খালি
                         </span>
-                        <span class="text-xs font-bold text-rose-900">
-                            {{ low_stock_count }} Pickle Varieties Need Restocking
+                        <h3 class="text-xs sm:text-sm font-black text-rose-950 flex items-center gap-1.5">
+                            {{ low_stock_count }}টি পণ্যের স্টক ০ (Empty)
+                        </h3>
+                        {% if total_needed_jars > 0 %}
+                        <span class="text-[11px] font-bold text-rose-800 bg-rose-100/90 px-2.5 py-0.5 rounded-md border border-rose-300/80 flex items-center gap-1">
+                            <i class="fa-solid fa-circle-exclamation text-[10px]"></i>
+                            মোট অর্ডারের ঘাটতি: <strong>{{ total_needed_jars }} পিস</strong>
                         </span>
+                        {% endif %}
                     </div>
-                    <h3 class="font-display font-black text-base sm:text-lg text-gray-900 mt-0.5">
-                        অর্ডার ডেলিভারি ঘাটতি: <span class="text-rose-700">অর্ডার অনুযায়ী মোট কম আছে {{ total_needed_jars }} পিস!</span>
-                    </h3>
                 </div>
             </div>
-            
-            <a href="{% url 'dashboard:stock_manager' %}" class="bg-brand-800 hover:bg-brand-900 text-white text-xs font-bold px-4 py-2.5 rounded-2xl shadow-sm flex items-center justify-center gap-2 transition active:scale-95 shrink-0">
-                <i class="fa-solid fa-boxes-stacked text-brand-accent"></i>
-                <span>Open Stock Manager &rarr;</span>
+
+            <!-- Action Link -->
+            <a href="{% url 'dashboard:stock_manager' %}" class="bg-rose-700 hover:bg-rose-800 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-2xs flex items-center gap-1.5 transition active:scale-95 shrink-0 self-end sm:self-auto">
+                <i class="fa-solid fa-boxes-stacked text-[11px]"></i>
+                <span>রিস্টক ম্যানেজার</span>
+                <i class="fa-solid fa-arrow-right text-[10px]"></i>
             </a>
         </div>
 
-        <!-- Responsive Grid of Low Stock Products -->
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
+        <!-- Directly Visible Products Grid (Always Visible, No Hide/Toggle) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 pt-1">
             {% for prod in low_stock_products %}
-            <div class="bg-white p-4 rounded-2xl border {% if prod.stock_count == 0 %}border-rose-300 bg-rose-50/30{% else %}border-amber-200 bg-amber-50/20{% endif %} shadow-xs flex flex-col justify-between gap-3 transition hover:shadow-md">
-                
-                <div class="flex items-center gap-3">
-                    <img src="{{ prod.primary_image_url }}" alt="{{ prod.name }}" class="w-12 h-12 rounded-2xl object-cover border border-gray-200 shrink-0 shadow-2xs">
-                    <div class="min-w-0 flex-1">
-                        <div class="flex items-center justify-between gap-1">
-                            <h4 class="font-bold text-gray-900 text-xs truncate" title="{{ prod.name }}">{{ prod.name }}</h4>
-                            {% if prod.stock_count == 0 %}
-                            <span class="px-2 py-0.5 rounded text-[9px] font-black bg-rose-600 text-white uppercase shrink-0">0 Stock</span>
-                            {% elif prod.is_critical_stock %}
-                            <span class="px-2 py-0.5 rounded text-[9px] font-black bg-rose-100 text-rose-800 shrink-0">Critical Shortage</span>
-                            {% else %}
-                            <span class="px-2 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-800 shrink-0">Order Shortage</span>
-                            {% endif %}
-                        </div>
-                        <span class="text-gray-400 text-[10px] block truncate mt-0.5">{{ prod.category.name|default:"Artisan Pickles" }} • {{ prod.jar_weight_grams }}g</span>
+            <div class="bg-white hover:bg-rose-50/40 p-2.5 rounded-xl border border-rose-200 shadow-2xs transition flex items-center gap-2.5 group">
+                <img src="{{ prod.primary_image_url }}" alt="{{ prod.name }}" class="w-11 h-11 rounded-xl object-cover border border-rose-100 shrink-0 shadow-2xs">
+                <div class="min-w-0 flex-1">
+                    <h4 class="font-bold text-gray-900 text-xs truncate" title="{{ prod.name }}">{{ prod.name }}</h4>
+                    
+                    <!-- Stock & Order Count Badges -->
+                    <div class="flex items-center gap-1.5 flex-wrap text-[10px] mt-1">
+                        <span class="font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 border border-rose-200 shrink-0">
+                            স্টক: {{ prod.stock_count }}
+                        </span>
+                        <span class="font-bold px-1.5 py-0.5 rounded {% if prod.ordered_demand_count > 0 %}bg-amber-100 text-amber-900 border border-amber-200{% else %}bg-gray-100 text-gray-600 border border-gray-200{% endif %} shrink-0">
+                            অর্ডার আছে: <strong>{{ prod.ordered_demand_count }}টি</strong>
+                        </span>
+                        {% if prod.needed_stock > 0 %}
+                        <span class="font-bold px-1.5 py-0.5 rounded bg-rose-600 text-white shrink-0">
+                            ঘাটতি: +{{ prod.needed_stock }}
+                        </span>
+                        {% endif %}
                     </div>
                 </div>
-
-                <!-- Stock Numbers Grid -->
-                <div class="grid grid-cols-3 gap-1 bg-gray-50/90 p-2 rounded-xl border border-gray-200/70 text-center">
-                    <div>
-                        <span class="text-[9px] text-gray-400 font-bold uppercase block">স্টক (Stock)</span>
-                        <span class="font-display font-black text-sm {% if prod.stock_count == 0 %}text-rose-700{% elif prod.is_critical_stock %}text-rose-600{% else %}text-amber-700{% endif %}">
-                            {{ prod.stock_count }} <span class="text-[10px] font-normal text-gray-500">pcs</span>
-                        </span>
-                    </div>
-                    <div class="border-x border-gray-200">
-                        <span class="text-[9px] text-gray-400 font-bold uppercase block">অর্ডার চাহিদা</span>
-                        <span class="font-display font-black text-sm text-gray-800">
-                            {{ prod.ordered_demand_count }} <span class="text-[10px] font-normal text-gray-500">pcs</span>
-                        </span>
-                    </div>
-                    <div>
-                        <span class="text-[9px] text-rose-600 font-black uppercase block">কম আছে</span>
-                        <span class="font-display font-black text-sm text-rose-700">
-                            +{{ prod.needed_stock }} <span class="text-[10px] font-normal text-rose-500">pcs</span>
-                        </span>
-                    </div>
-                </div>
-
-                <div class="pt-1">
-                    <a href="{% url 'dashboard:stock_manager' %}?category={{ prod.category.slug|default:'' }}" class="w-full py-2 px-3 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition active:scale-95 shadow-xs">
-                        <i class="fa-solid fa-plus-circle text-emerald-200 text-xs"></i>
-                        <span>Restock +{{ prod.needed_stock }} pcs</span>
-                    </a>
-                </div>
-
+                <a href="{% url 'dashboard:stock_manager' %}?category={{ prod.category.slug|default:'' }}" class="text-[11px] font-bold text-white bg-rose-600 hover:bg-rose-700 px-2.5 py-1.5 rounded-lg shrink-0 transition shadow-2xs" title="Restock {{ prod.name }}">
+                    +Restock
+                </a>
             </div>
             {% endfor %}
         </div>
