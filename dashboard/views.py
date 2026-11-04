@@ -402,14 +402,28 @@ def dashboard_index(request):
         Q(delivered_at__isnull=True, updated_at__gte=start_plot_dt)
     ).values('delivered_at', 'updated_at', 'created_at', 'total_amount'))
 
+    # Calculate daily total jars ordered (sum of item quantities in confirmed/active orders by created_at)
+    incoming_jars_qs = list(OrderItem.objects.filter(
+        order__created_at__gte=start_plot_dt,
+        order__is_deleted=False,
+        order__order_status__in=['CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED']
+    ).values('order__created_at', 'quantity'))
+
     daily_orders_map = {}
     daily_revenue_map = {}
+    daily_jars_map = {}
 
     for ord_info in incoming_confirmed_orders:
         c_dt = ord_info.get('created_at')
         if c_dt:
             d = timezone.localtime(c_dt).date()
             daily_orders_map[d] = daily_orders_map.get(d, 0) + 1
+
+    for jar_item in incoming_jars_qs:
+        c_dt = jar_item.get('order__created_at')
+        if c_dt:
+            d = timezone.localtime(c_dt).date()
+            daily_jars_map[d] = daily_jars_map.get(d, 0) + (jar_item.get('quantity') or 0)
 
     for ord_info in delivered_orders:
         deliv_dt = ord_info.get('delivered_at') or ord_info.get('updated_at') or ord_info.get('created_at')
@@ -421,11 +435,13 @@ def dashboard_index(request):
     date_labels = []
     revenue_series = []
     orders_series = []
+    jars_series = []
     for i in range(days_to_plot - 1, -1, -1):
         target_date = today - datetime.timedelta(days=i)
         date_labels.append(target_date.strftime('%b %d'))
         revenue_series.append(round(daily_revenue_map.get(target_date, 0.0), 2))
         orders_series.append(daily_orders_map.get(target_date, 0))
+        jars_series.append(daily_jars_map.get(target_date, 0))
 
     # 2. Dynamic Product Sales Performance Breakdown (Delivered / Out for Delivery / Paid orders)
     order_items_qs = OrderItem.objects.filter(
@@ -568,6 +584,7 @@ def dashboard_index(request):
         'trendLabels': date_labels,
         'revenueData': revenue_series,
         'ordersData': orders_series,
+        'jarsData': jars_series,
         'statusLabels': ['Pending', 'Confirmed', 'Packing', 'Out for Delivery', 'Delivered', 'Cancelled'],
         'statusData': [pending_count, confirmed_count, packing_count, out_for_delivery_count, delivered_count, cancelled_count],
         'productLabels': product_labels,
@@ -1017,6 +1034,16 @@ def order_detail(request, order_number):
 
     from store.meta_capi import get_order_meta_sent_status
     meta_sent_info = get_order_meta_sent_status(order.order_number)
+
+    # Attach FIFO active selling batch to order items
+    from dashboard.batch_fifo import calculate_all_products_fifo
+    products_fifo_map = calculate_all_products_fifo()
+    for item in order.items.all():
+        if item.product_id:
+            p_fifo = products_fifo_map.get(item.product_id, {})
+            item.fifo_active_batch = p_fifo.get('active_batch')
+            item.fifo_all_sold_out = p_fifo.get('all_sold_out', False)
+
     return render(request, 'dashboard/order_detail.html', {
         'order': order,
         'meta_sent_info': meta_sent_info,
@@ -1158,6 +1185,12 @@ def edit_order_customer(request, order_number):
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def order_invoice(request, order_number):
     order = get_object_or_404(Order.objects.prefetch_related('items'), order_number=order_number)
+    from dashboard.batch_fifo import calculate_all_products_fifo
+    products_fifo_map = calculate_all_products_fifo()
+    for item in order.items.all():
+        if item.product_id:
+            p_fifo = products_fifo_map.get(item.product_id, {})
+            item.fifo_active_batch = p_fifo.get('active_batch')
     return render(request, 'dashboard/order_invoice.html', {'order': order})
 
 
@@ -2091,7 +2124,32 @@ def stock_manager(request):
 
     recent_price_logs = PriceHistory.objects.select_related('product', 'changed_by').all().order_by('-created_at')[:6]
 
+    # Map FIFO Batch selling recommendations for each product
+    from dashboard.batch_fifo import calculate_all_products_fifo, get_active_selling_recommendations, calculate_all_batches_fifo
+    products_fifo_map = calculate_all_products_fifo()
+    active_selling_batches = get_active_selling_recommendations()
+    all_batches_fifo_map = calculate_all_batches_fifo()
+
+    # Pre-fetch recent production batches for inventory top view
+    all_production_batches = list(ProductionBatch.objects.prefetch_related('items__product').order_by('-production_date', '-id')[:12])
+    for b in all_production_batches:
+        b_info = all_batches_fifo_map.get(b.id, {})
+        b.fifo_sold = b_info.get('total_sold', 0)
+        b.fifo_remaining = b_info.get('total_remaining', b.total_jars)
+        b.fifo_percent = b_info.get('percent_sold', 0.0)
+        b.fifo_status = b_info.get('status', 'QUEUED')
+        b.fifo_status_bn = b_info.get('status_bn', 'অপেক্ষমাণ')
+        b.fifo_badge_class = b_info.get('status_badge_class', 'bg-gray-100 text-gray-700 border-gray-200')
+
+    for p in products:
+        p_fifo = products_fifo_map.get(p.id, {})
+        p.fifo_active_batch = p_fifo.get('active_batch')
+        p.fifo_all_sold_out = p_fifo.get('all_sold_out', False)
+        p.fifo_has_batches = p_fifo.get('has_batches', False)
+
     context = {
+        'active_selling_batches': active_selling_batches,
+        'all_production_batches': all_production_batches,
         'products': products,
         'recent_price_logs': recent_price_logs,
         'all_catalog_products': all_products,
@@ -2272,6 +2330,21 @@ def production_batches_list(request):
     total_retail_value = sum(b.total_retail_value for b in all_batches_list)
     avg_jars_per_batch = round(total_jars_produced / total_batches_count, 1) if total_batches_count > 0 else 0
 
+    # Calculate FIFO batch tracking across all batches
+    from dashboard.batch_fifo import calculate_all_batches_fifo, get_active_selling_recommendations
+    batches_fifo_map = calculate_all_batches_fifo()
+    active_selling_batches = get_active_selling_recommendations()
+
+    for b in all_batches_list:
+        b_info = batches_fifo_map.get(b.id, {})
+        b.fifo_sold = b_info.get('total_sold', 0)
+        b.fifo_remaining = b_info.get('total_remaining', b.total_jars)
+        b.fifo_percent = b_info.get('percent_sold', 0.0)
+        b.fifo_status = b_info.get('status', 'QUEUED')
+        b.fifo_status_bn = b_info.get('status_bn', 'অপেক্ষমাণ')
+        b.fifo_badge_class = b_info.get('status_badge_class', 'bg-gray-100 text-gray-700 border-gray-200')
+        b.fifo_active_flavors = b_info.get('active_flavors', [])
+
     # Auto-suggest next batch reference
     last_batch = ProductionBatch.objects.order_by('-id').first()
     next_batch_num = 1
@@ -2321,6 +2394,7 @@ def production_batches_list(request):
         'total_jars_produced': total_jars_produced,
         'total_retail_value': total_retail_value,
         'avg_jars_per_batch': avg_jars_per_batch,
+        'active_selling_batches': active_selling_batches,
         'suggested_batch_ref': suggested_batch_ref,
         'all_products': all_products,
         'search_query': search_query,
@@ -2572,6 +2646,27 @@ def production_batch_detail(request, batch_id):
     total_jars = sum(i.quantity for i in items)
     total_retail_value = sum(i.total_retail_value for i in items)
 
+    # Compute FIFO tracking for this specific batch
+    from dashboard.batch_fifo import calculate_all_batches_fifo
+    all_batches_fifo = calculate_all_batches_fifo()
+    batch_fifo = all_batches_fifo.get(batch.id, {})
+
+    batch_sold_jars = batch_fifo.get('total_sold', 0)
+    batch_remaining_jars = batch_fifo.get('total_remaining', total_jars)
+    batch_percent_sold = batch_fifo.get('percent_sold', 0.0)
+    batch_status = batch_fifo.get('status', 'QUEUED')
+    batch_status_bn = batch_fifo.get('status_bn', 'অপেক্ষমাণ')
+    batch_badge_class = batch_fifo.get('status_badge_class', 'bg-amber-100 text-amber-900 border-amber-300')
+
+    items_fifo_by_pid = {it['product_id']: it for it in batch_fifo.get('items', [])}
+    for item in items:
+        f_info = items_fifo_by_pid.get(item.product_id, {})
+        item.fifo_sold = f_info.get('sold_qty', 0)
+        item.fifo_remaining = f_info.get('remaining_qty', item.quantity)
+        item.fifo_status = f_info.get('status', 'QUEUED')
+        item.fifo_status_bn = f_info.get('status_bn', 'অপেক্ষমাণ')
+        item.fifo_percent = f_info.get('percent_sold', 0.0)
+
     all_products = list(Product.objects.all().select_related('category').order_by('name'))
     existing_product_ids = {item.product_id for item in items}
     available_products_to_add = [p for p in all_products if p.id not in existing_product_ids]
@@ -2585,6 +2680,12 @@ def production_batch_detail(request, batch_id):
         'items': items,
         'total_jars': total_jars,
         'total_retail_value': total_retail_value,
+        'batch_sold_jars': batch_sold_jars,
+        'batch_remaining_jars': batch_remaining_jars,
+        'batch_percent_sold': batch_percent_sold,
+        'batch_status': batch_status,
+        'batch_status_bn': batch_status_bn,
+        'batch_badge_class': batch_badge_class,
         'all_products': all_products,
         'available_products_to_add': available_products_to_add,
         'today_date': timezone.now().date().strftime('%Y-%m-%d'),

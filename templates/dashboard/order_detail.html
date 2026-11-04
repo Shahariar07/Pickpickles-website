@@ -597,6 +597,21 @@
                                         Qty: {{ item.quantity }}
                                     </span>
                                 </div>
+                                {% if item.fifo_active_batch %}
+                                <div class="pt-1 flex items-center gap-1.5 flex-wrap">
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-black bg-emerald-100 text-emerald-950 border border-emerald-300 shadow-2xs">
+                                        <i class="fa-solid fa-boxes-packing text-emerald-700"></i>
+                                        <span>প্যাকিং ব্যাচ: <strong>{{ item.fifo_active_batch.batch_number }}</strong> (বাকি {{ item.fifo_active_batch.remaining_qty }} জার)</span>
+                                    </span>
+                                </div>
+                                {% elif item.fifo_all_sold_out %}
+                                <div class="pt-1 flex items-center gap-1.5 flex-wrap">
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                        <i class="fa-solid fa-circle-exclamation text-rose-600"></i>
+                                        <span>সব ব্যাচ শেষ</span>
+                                    </span>
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
 

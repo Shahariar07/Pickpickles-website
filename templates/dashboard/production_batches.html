@@ -44,6 +44,77 @@
         </div>
     </div>
 
+    <!-- FIFO Active Selling Batches Recommendation Banner -->
+    <div class="bg-gradient-to-r from-emerald-900 via-brand-900 to-emerald-950 rounded-2xl sm:rounded-3xl p-4 sm:p-6 text-white shadow-lg border border-emerald-500/30">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-emerald-500/20">
+            <div class="flex items-center gap-3">
+                <span class="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 flex items-center justify-center text-lg shrink-0">
+                    <i class="fa-solid fa-boxes-packing"></i>
+                </span>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="px-2.5 py-0.5 rounded-full bg-emerald-400 text-emerald-950 font-black text-[10px] uppercase tracking-wider">FIFO Smart Dispatch</span>
+                        <span class="text-emerald-200/80 text-xs">• বিক্রয় হিসাব অনুযায়ী রিকমেন্ডেশন</span>
+                    </div>
+                    <h2 class="font-display font-black text-lg sm:text-xl text-white mt-0.5">
+                        বর্তমানে কোন ব্যাচ থেকে সেল করতে হবে (Active Batches to Sell Right Now)
+                    </h2>
+                </div>
+            </div>
+            <span class="text-xs text-emerald-200 bg-emerald-950/70 px-3 py-1.5 rounded-xl border border-emerald-500/30 font-bold self-start sm:self-auto">
+                <i class="fa-solid fa-circle-check text-emerald-400 mr-1"></i>প্রথম প্রস্তুত ব্যাচ আগে সেল (First-In, First-Out)
+            </span>
+        </div>
+
+        <!-- Flavor Cards Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 pt-4">
+            {% for item in active_selling_batches %}
+            <div class="bg-white/10 backdrop-blur-sm p-3.5 rounded-xl border border-white/10 hover:border-emerald-400/40 transition">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        <span class="text-white font-extrabold text-xs block truncate" title="{{ item.product_name }}">{{ item.product_name }}</span>
+                        {% if item.batch_number and not item.is_sold_out %}
+                        <a href="{% if item.batch_id %}{% url 'dashboard:production_batch_detail' item.batch_id %}{% else %}#{% endif %}" class="inline-flex items-center gap-1 text-emerald-300 hover:text-white font-black text-sm mt-0.5">
+                            <i class="fa-solid fa-tag text-[10px]"></i>
+                            <span>{{ item.batch_number }}</span>
+                        </a>
+                        {% else %}
+                        <span class="inline-block text-rose-300 font-bold text-xs mt-0.5">
+                            ⚠️ স্টক শেষ / নতুন ব্যাচ দিন
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% if not item.is_sold_out %}
+                    <span class="px-2 py-1 rounded-lg bg-emerald-400 text-emerald-950 font-black text-xs shrink-0 shadow-xs">
+                        {{ item.remaining_in_batch }} jars left
+                    </span>
+                    {% else %}
+                    <span class="px-2 py-1 rounded-lg bg-rose-500/80 text-white font-black text-[10px] shrink-0">
+                        Sold Out
+                    </span>
+                    {% endif %}
+                </div>
+
+                {% if not item.is_sold_out %}
+                <div class="mt-2.5">
+                    <div class="flex justify-between text-[10px] text-emerald-100 font-semibold mb-1">
+                        <span>সেল হয়েছে: {{ item.sold_from_batch }}/{{ item.produced_in_batch }} জার</span>
+                        <span class="font-black">{{ item.percent_sold }}%</span>
+                    </div>
+                    <div class="w-full h-1.5 rounded-full bg-emerald-950/60 overflow-hidden border border-emerald-400/20">
+                        <div class="h-full bg-gradient-to-r from-emerald-400 to-amber-300 rounded-full" style="width: {{ item.percent_sold }}%;"></div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div class="col-span-full py-4 text-center text-emerald-200/60 text-xs">
+                কোনো একটিভ ব্যাচ পাওয়া যায়নি। নতুন ব্যাচ তৈরি করুন।
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
     <!-- Quick Stats Summary Cards -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <!-- Total Batches -->
@@ -141,9 +212,10 @@
                     <tr class="bg-gray-50/80 border-b border-gray-200 text-[11px] font-black text-gray-500 uppercase tracking-wider">
                         <th class="py-3 px-4 sm:px-5">ব্যাচ রেফারেন্স (Batch #)</th>
                         <th class="py-3 px-4">উৎপাদনের তারিখ (Date)</th>
-                        <th class="py-3 px-4">আচারের ফ্লেভার ও সংখ্যা (Flavor Breakdown)</th>
-                        <th class="py-3 px-4 text-center">মোট জার (Total Jars)</th>
-                        <th class="py-3 px-4 text-right">সম্ভাব্য মূল্য (Retail Value)</th>
+                        <th class="py-3 px-4">আচারের ফ্লেভার (Flavors)</th>
+                        <th class="py-3 px-4 text-center">মোট জার (Produced)</th>
+                        <th class="py-3 px-4 text-center">বিক্রয় অগ্রগতি (FIFO Sales)</th>
+                        <th class="py-3 px-4 text-center">স্ট্যাটাস (Status)</th>
                         <th class="py-3 px-4 text-center">অ্যাকশন (Actions)</th>
                     </tr>
                 </thead>
@@ -188,17 +260,48 @@
                             </div>
                         </td>
 
-                        <!-- Total Jars -->
+                        <!-- Total Jars Produced -->
                         <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-900 border border-emerald-300">
-                                <i class="fa-solid fa-jar text-[10px] text-emerald-700"></i>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-gray-100 text-gray-800 border border-gray-300">
+                                <i class="fa-solid fa-jar text-[10px] text-gray-600"></i>
                                 +{{ b.total_jars }} Jars
                             </span>
                         </td>
 
-                        <!-- Retail Value -->
-                        <td class="py-3.5 px-4 text-right whitespace-nowrap font-bold text-gray-900">
-                            <span>৳{{ b.total_retail_value|floatformat:0 }}</span>
+                        <!-- Sales Progress (FIFO) -->
+                        <td class="py-3.5 px-4 min-w-[150px]">
+                            <div class="space-y-1 text-center">
+                                <div class="flex justify-between items-center text-[10px] text-gray-600 font-bold">
+                                    <span>বিক্রি: {{ b.fifo_sold }}/{{ b.total_jars }}</span>
+                                    <span class="text-brand-800">{{ b.fifo_percent }}%</span>
+                                </div>
+                                <div class="w-full h-1.5 rounded-full bg-gray-200 overflow-hidden">
+                                    <div class="h-full {% if b.fifo_status == 'COMPLETED' %}bg-gray-400{% elif b.fifo_status == 'ACTIVE' %}bg-emerald-500{% else %}bg-amber-400{% endif %} rounded-full" style="width: {{ b.fifo_percent }}%;"></div>
+                                </div>
+                                <div class="text-[10px] font-bold text-gray-500">
+                                    অবশিষ্ট: <strong class="{% if b.fifo_remaining > 0 %}text-emerald-700{% else %}text-gray-400{% endif %}">{{ b.fifo_remaining }} jars</strong>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- FIFO Status Badge -->
+                        <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                            {% if b.fifo_status == 'ACTIVE' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-900 border border-emerald-300 shadow-2xs">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <span>বর্তমানে চলছে</span>
+                            </span>
+                            {% elif b.fifo_status == 'COMPLETED' %}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-gray-100 text-gray-600 border border-gray-200">
+                                <i class="fa-solid fa-check text-[10px] text-gray-500"></i>
+                                <span>১০০% শেষ</span>
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                <i class="fa-solid fa-clock text-[10px] text-amber-600"></i>
+                                <span>অপেক্ষমাণ</span>
+                            </span>
+                            {% endif %}
                         </td>
 
                         <!-- Action Buttons -->
@@ -217,7 +320,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="py-12 text-center text-gray-500">
+                        <td colspan="7" class="py-12 text-center text-gray-500">
                             <div class="max-w-sm mx-auto space-y-3">
                                 <div class="w-14 h-14 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto text-2xl">
                                     <i class="fa-solid fa-layer-group"></i>

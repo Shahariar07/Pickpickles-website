@@ -85,7 +85,8 @@ def index(request):
     categories = Category.objects.annotate(
         product_count=Count('products')
     ).order_by('name')
-    recent_reviews = Review.objects.filter(is_approved=True).select_related('product')[:6]
+    recent_reviews = Review.objects.filter(is_approved=True).select_related('product').order_by('-created_at')[:9]
+    total_reviews_count = Review.objects.filter(is_approved=True).count()
     
     # Filter by category if selected
     selected_cat = request.GET.get('category')
@@ -102,6 +103,7 @@ def index(request):
         'categories': categories,
         'selected_cat': selected_cat,
         'recent_reviews': recent_reviews,
+        'total_reviews_count': total_reviews_count,
     }
     return render(request, 'store/index.html', context)
 
@@ -182,15 +184,18 @@ def reviews_view(request):
             messages.error(request, cf_err or "Please complete the Cloudflare security verification.")
             return redirect('store:reviews')
 
-        review_form = ReviewForm(request.POST)
+        review_form = ReviewForm(request.POST, request.FILES)
         if review_form.is_valid():
             new_rev = review_form.save(commit=False)
-            # Moderation Protection: New public reviews require admin approval before going live
-            new_rev.is_approved = False
+            # Customer review goes live immediately on home page and wall of love
+            new_rev.is_approved = True
             new_rev.save()
             record_review_submission(request)
-            messages.success(request, 'Thank you! Your review has been submitted and will appear on the Wall of Love upon verification. 🥒✨')
-            return redirect('store:reviews')
+            messages.success(request, 'Thank you! Your review has been published and is now live on our website! 🥒✨')
+            next_url = request.POST.get('next') or request.GET.get('next')
+            if next_url:
+                return redirect(next_url)
+            return redirect('/#customer-reviews')
         else:
             messages.error(request, 'Please check your review form details and try again.')
 

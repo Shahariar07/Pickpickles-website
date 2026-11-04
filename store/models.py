@@ -166,6 +166,23 @@ class Product(models.Model):
         return False
 
     @property
+    def total_sold(self):
+        """Total jars sold so far across all confirmed/delivered customer orders."""
+        if hasattr(self, '_computed_sold'):
+            return self._computed_sold
+        if not hasattr(self, '_cached_sold'):
+            self._cached_sold = self.order_items.filter(
+                order__is_deleted=False
+            ).filter(
+                models.Q(order__order_status__in=['CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED']) | models.Q(order__payment_status='PAID')
+            ).aggregate(models.Sum('quantity'))['quantity__sum'] or 0
+        return self._cached_sold
+
+    @total_sold.setter
+    def total_sold(self, value):
+        self._computed_sold = value
+
+    @property
     def ordered_demand_count(self):
         """Total quantity demanded across all active unfulfilled orders."""
         if hasattr(self, '_computed_demand'):

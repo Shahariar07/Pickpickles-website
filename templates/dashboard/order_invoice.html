@@ -396,7 +396,7 @@
                     <span class="mono-num text-[11.5px] text-right shrink-0">Tk {{ item.total_price|floatformat:0 }}</span>
                 </div>
                 <div class="flex justify-between items-center text-[9px] mono-num font-black">
-                    <span>{{ item.jar_weight_grams }}g jar</span>
+                    <span>{{ item.jar_weight_grams }}g jar{% if item.fifo_active_batch %} • [{{ item.fifo_active_batch.batch_number }}]{% endif %}</span>
                     <span>{{ item.quantity }} x Tk {{ item.unit_price|floatformat:0 }}</span>
                 </div>
             </div>
@@ -617,7 +617,14 @@
                         <tr class="hover:bg-slate-50/80 transition-colors">
                             <td class="py-3 px-4 text-slate-500 font-bold mono-num">{{ forloop.counter }}</td>
                             <td class="py-3 px-4">
-                                <div class="font-black text-slate-950 text-sm">{{ item.product_name }}</div>
+                                <div class="font-black text-slate-950 text-sm flex items-center gap-1.5 flex-wrap">
+                                    <span>{{ item.product_name }}</span>
+                                    {% if item.fifo_active_batch %}
+                                    <span class="text-[10px] font-black px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-950 border border-emerald-300 print:text-black">
+                                        Batch: {{ item.fifo_active_batch.batch_number }}
+                                    </span>
+                                    {% endif %}
+                                </div>
                                 <div class="text-[11px] text-slate-600 font-semibold">Authentic Homemade Recipe</div>
                             </td>
                             <td class="py-3 px-3 text-center">

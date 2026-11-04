@@ -555,10 +555,11 @@
                             <i class="fa-solid fa-ranking-star"></i>
                         </span>
                         <div>
-                            <h3 class="font-display font-black text-base text-gray-900">
-                                Top Selling Pickle Varieties
+                            <h3 class="font-display font-black text-base text-gray-900 flex items-center gap-2">
+                                <span>Top 10 Best Selling Pickles</span>
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">শীর্ষ ১০</span>
                             </h3>
-                            <p class="text-xs text-gray-400">Total jars sold per flavor profile</p>
+                            <p class="text-xs text-gray-400">Total jars sold per flavor profile (Top 10 ranking)</p>
                         </div>
                     </div>
                     {% if best_seller %}
@@ -569,7 +570,7 @@
                     {% endif %}
                 </div>
 
-                <div class="relative h-64 sm:h-72 w-full">
+                <div class="relative h-80 sm:h-96 w-full">
                     <canvas id="topProductsChart"></canvas>
                 </div>
             </div>
@@ -900,25 +901,40 @@ document.addEventListener("DOMContentLoaded", function () {
                 labels: data.trendLabels,
                 datasets: [
                     {
-                        label: 'Revenue (৳)',
-                        data: data.revenueData,
-                        borderColor: '#2d6a4f',
-                        backgroundColor: revenueGradient,
+                        label: 'Jars Ordered (মোট জার)',
+                        data: data.jarsData || [],
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.15)',
                         fill: true,
+                        tension: 0.35,
+                        borderWidth: 3,
+                        pointRadius: 4.5,
+                        pointHoverRadius: 7,
+                        pointBackgroundColor: '#f59e0b',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 1.5,
+                        yAxisID: 'y1'
+                    },
+                    {
+                        label: 'Delivered Sales (৳)',
+                        data: data.revenueData,
+                        borderColor: '#10b981',
+                        backgroundColor: revenueGradient,
+                        fill: false,
                         tension: 0.4,
-                        borderWidth: 2.5,
+                        borderWidth: 2.2,
                         pointRadius: 3.5,
                         pointHoverRadius: 6,
-                        pointBackgroundColor: '#2d6a4f',
+                        pointBackgroundColor: '#10b981',
                         yAxisID: 'y'
                     },
                     {
-                        label: 'Orders',
+                        label: 'Confirmed Orders',
                         data: data.ordersData,
                         borderColor: '#6366f1',
-                        backgroundColor: 'rgba(99, 102, 241, 0.10)',
+                        backgroundColor: 'rgba(99, 102, 241, 0.08)',
                         borderDash: [4, 4],
-                        borderWidth: 2,
+                        borderWidth: 1.8,
                         pointRadius: 3,
                         pointHoverRadius: 5,
                         pointBackgroundColor: '#6366f1',
@@ -941,10 +957,12 @@ document.addEventListener("DOMContentLoaded", function () {
                         cornerRadius: 10,
                         callbacks: {
                             label: function (context) {
-                                if (context.dataset.yAxisID === 'y') {
-                                    return ` ৳${context.parsed.y.toLocaleString()} Delivered Sales`;
+                                if (context.dataset.label.includes('Jars')) {
+                                    return ` 🥒 ${context.parsed.y} Jars Ordered (মোট জার)`;
+                                } else if (context.dataset.label.includes('Orders')) {
+                                    return ` 📦 ${context.parsed.y} Confirmed Order(s)`;
                                 }
-                                return ` ${context.parsed.y} Confirmed Order(s)`;
+                                return ` ৳${context.parsed.y.toLocaleString()} Delivered Sales`;
                             }
                         }
                     }
@@ -971,13 +989,13 @@ document.addEventListener("DOMContentLoaded", function () {
                         display: true,
                         position: 'right',
                         beginAtZero: true,
-                        suggestedMax: Math.max(...(data.ordersData || [0]), 5),
+                        suggestedMax: Math.max(...(data.jarsData || [0]), ...(data.ordersData || [0]), 5),
                         grid: { drawOnChartArea: false },
                         ticks: {
                             font: { size: 10 },
                             stepSize: 1,
                             precision: 0,
-                            callback: value => value + ' orders'
+                            callback: value => value + ' jars'
                         }
                     }
                 }
@@ -1187,7 +1205,10 @@ document.addEventListener("DOMContentLoaded", function () {
     const productsEl = document.getElementById('topProductsChart');
     if (productsEl) {
         const productsCtx = productsEl.getContext('2d');
-        const barPalette = ['#1b4332', '#2d6a4f', '#40916c', '#52b788', '#74c69d', '#95d5b2', '#b7e4c7'];
+        const barPalette = [
+            '#1b4332', '#245a43', '#2d6a4f', '#367b5c', '#40916c',
+            '#4aa27a', '#52b788', '#63c093', '#74c69d', '#88cdac'
+        ];
         const maxQty = Math.max(...(data.productQtyData || [0]), 5);
         new Chart(productsCtx, {
             type: 'bar',
