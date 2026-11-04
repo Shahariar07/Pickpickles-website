@@ -203,12 +203,18 @@ class CheckoutForm(forms.ModelForm):
 class ReviewForm(forms.ModelForm):
     class Meta:
         model = Review
-        fields = ['reviewer_name', 'reviewer_location', 'product', 'rating', 'comment']
+        fields = ['reviewer_name', 'reviewer_phone', 'reviewer_location', 'product', 'rating', 'comment']
         widgets = {
             'reviewer_name': forms.TextInput(attrs={
                 'class': 'w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-900 font-bold placeholder-gray-400 focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 focus:outline-hidden transition shadow-2xs',
                 'placeholder': 'Your Full Name (e.g. Tanvir Ahmed)',
                 'required': True
+            }),
+            'reviewer_phone': forms.TextInput(attrs={
+                'class': 'w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-900 font-bold placeholder-gray-400 focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 focus:outline-hidden transition shadow-2xs',
+                'placeholder': 'Phone Number (e.g. 017XXXXXXXX)',
+                'required': True,
+                'type': 'tel',
             }),
             'reviewer_location': forms.TextInput(attrs={
                 'class': 'w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-900 font-semibold placeholder-gray-400 focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 focus:outline-hidden transition shadow-2xs',
@@ -229,7 +235,7 @@ class ReviewForm(forms.ModelForm):
             'comment': forms.Textarea(attrs={
                 'class': 'w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-900 font-medium placeholder-gray-400 focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 focus:outline-hidden transition shadow-2xs',
                 'rows': 3,
-                'placeholder': 'Tell us how you enjoyed the pickles (taste, crunchiness, pairing with burgers/rice)...',
+                'placeholder': 'Tell us how you enjoyed the pickles (crunchiness, taste, spice level, food pairings)...',
                 'required': True
             }),
         }
@@ -238,4 +244,13 @@ class ReviewForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if 'product' in self.fields:
             self.fields['product'].required = False
-            self.fields['product'].empty_label = "🥒 Pickpickles (General Pickle Experience)"
+            self.fields['product'].empty_label = "🥒 All Pickles (General Pickpickles Experience)"
+        if 'reviewer_phone' in self.fields:
+            self.fields['reviewer_phone'].required = True
+
+    def clean_reviewer_phone(self):
+        phone = (self.cleaned_data.get('reviewer_phone') or '').strip()
+        digits = ''.join(c for c in phone if c.isdigit())
+        if len(digits) < 10:
+            raise forms.ValidationError("Please enter a valid phone number (at least 10-11 digits, e.g. 017XXXXXXXX).")
+        return phone

@@ -187,15 +187,15 @@ def reviews_view(request):
         review_form = ReviewForm(request.POST, request.FILES)
         if review_form.is_valid():
             new_rev = review_form.save(commit=False)
-            # Customer review goes live immediately on home page and wall of love
-            new_rev.is_approved = True
+            # Review requires admin approval before going live on website
+            new_rev.is_approved = False
             new_rev.save()
             record_review_submission(request)
-            messages.success(request, 'Thank you! Your review has been published and is now live on our website! 🥒✨')
-            next_url = request.POST.get('next') or request.GET.get('next')
-            if next_url:
-                return redirect(next_url)
-            return redirect('/#customer-reviews')
+            messages.success(
+                request,
+                'Thank you! Your review has been submitted and will be published on our website after admin verification. (আপনার রিভিউটি সফলভাবে জমা হয়েছে, অ্যাডমিন অনুমোদনের পর ওয়েবসাইটে প্রকাশিত হবে।) 🥒✨'
+            )
+            return redirect('store:reviews')
         else:
             messages.error(request, 'Please check your review form details and try again.')
 

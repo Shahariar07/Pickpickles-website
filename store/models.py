@@ -1214,11 +1214,12 @@ class OrderItem(models.Model):
 class Review(models.Model):
     product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviews')
     reviewer_name = models.CharField(max_length=100)
+    reviewer_phone = models.CharField(max_length=30, blank=True, default="", help_text="Customer phone number for real customer verification (never shown publicly)")
     reviewer_location = models.CharField(max_length=100, default="Dhaka, BD")
     rating = models.PositiveSmallIntegerField(default=5)
     comment = models.TextField()
     image = models.ImageField(upload_to='reviews/', blank=True, null=True, help_text="Customer photo or screenshot")
-    is_approved = models.BooleanField(default=True)
+    is_approved = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

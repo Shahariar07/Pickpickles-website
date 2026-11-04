@@ -211,20 +211,29 @@
                         {{ review_form.reviewer_name }}
                     </div>
                     <div>
-                        <label class="block text-xs font-black text-gray-900 mb-1.5">Location / City</label>
-                        {{ review_form.reviewer_location }}
+                        <label class="block text-xs font-black text-gray-900 mb-1.5">Phone Number <span class="text-rose-500">*</span></label>
+                        {{ review_form.reviewer_phone }}
+                        <p class="text-[11px] text-emerald-800 bg-emerald-50/90 border border-emerald-200 rounded-lg px-2.5 py-1.5 mt-1.5 flex items-start gap-1.5 font-semibold leading-snug">
+                            <i class="fa-solid fa-lock text-emerald-600 mt-0.5 shrink-0 text-[10px]"></i>
+                            <span>Your phone number will never be shown publicly. It is strictly used to verify genuine customer purchases.</span>
+                        </p>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-black text-gray-900 mb-1.5">Which Pickle Did You Try? (Optional)</label>
-                        {{ review_form.product }}
+                        <label class="block text-xs font-black text-gray-900 mb-1.5">Location / City</label>
+                        {{ review_form.reviewer_location }}
                     </div>
                     <div>
-                        <label class="block text-xs font-black text-gray-900 mb-1.5">Your Rating <span class="text-rose-500">*</span></label>
-                        {{ review_form.rating }}
+                        <label class="block text-xs font-black text-gray-900 mb-1.5">Which Pickle Flavor Did You Enjoy?</label>
+                        {{ review_form.product }}
                     </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-black text-gray-900 mb-1.5">Your Rating <span class="text-rose-500">*</span></label>
+                    {{ review_form.rating }}
                 </div>
 
                 <div>
@@ -246,9 +255,9 @@
                         <i class="fa-solid fa-paper-plane text-amber-400"></i>
                         <span>Submit Review</span>
                     </button>
-                    <p class="text-[11px] text-gray-400 text-center mt-2 flex items-center justify-center gap-1">
+                    <p class="text-[11px] text-gray-500 text-center mt-2.5 flex items-center justify-center gap-1.5 font-semibold">
                         <i class="fa-solid fa-shield-check text-emerald-600"></i>
-                        <span>All reviews are verified by our team before being displayed publicly.</span>
+                        <span>All reviews are verified by our team before being published live on the website.</span>
                     </p>
                 </div>
             </form>

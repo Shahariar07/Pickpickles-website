@@ -612,7 +612,31 @@ def dashboard_index(request):
         'decreases': PriceHistory.objects.filter(change_type='DECREASE').count(),
     }
 
+    # Pending Reviews waiting for admin moderation & approval
+    from store.models import Review
+    pending_reviews = list(Review.objects.filter(is_approved=False).select_related('product').order_by('-created_at')[:6])
+    pending_reviews_total = Review.objects.filter(is_approved=False).count()
+
+    # Match reviewer phone numbers with customer orders to verify authenticity
+    phone_to_order = {}
+    for ord_row in Order.objects.filter(is_deleted=False).values('customer_phone', 'order_number').order_by('-created_at'):
+        raw_p = (ord_row['customer_phone'] or '').strip()
+        if raw_p:
+            digits = ''.join(ch for ch in raw_p if ch.isdigit())
+            clean_p = digits[-11:] if len(digits) >= 11 else digits
+            if clean_p and clean_p not in phone_to_order:
+                phone_to_order[clean_p] = ord_row['order_number']
+
+    for r in pending_reviews:
+        raw_rp = (getattr(r, 'reviewer_phone', '') or '').strip()
+        r_digits = ''.join(ch for ch in raw_rp if ch.isdigit())
+        clean_rp = r_digits[-11:] if len(r_digits) >= 11 else r_digits
+        r.matched_order_number = phone_to_order.get(clean_rp) if clean_rp else None
+        r.is_verified_customer = bool(r.matched_order_number)
+
     context = {
+        'pending_reviews': pending_reviews,
+        'pending_reviews_total': pending_reviews_total,
         'recent_orders': recent_orders,
         'recent_price_changes': recent_price_changes,
         'price_stats': price_stats,
@@ -3614,6 +3638,7 @@ def reviews_manager(request):
                 product = Product.objects.filter(id=prod_id).first()
 
             name = request.POST.get('reviewer_name', 'Verified Customer').strip()
+            phone = request.POST.get('reviewer_phone', '').strip()
             location = request.POST.get('reviewer_location', 'Dhaka').strip()
             rating = int(request.POST.get('rating', 5))
             crunch_score = int(request.POST.get('crunch_score', 5))
@@ -3623,6 +3648,7 @@ def reviews_manager(request):
             Review.objects.create(
                 product=product,
                 reviewer_name=name,
+                reviewer_phone=phone,
                 reviewer_location=location,
                 rating=rating,
                 comment=comment,
@@ -3647,6 +3673,8 @@ def reviews_manager(request):
                 review.product = None
 
             review.reviewer_name = request.POST.get('reviewer_name', review.reviewer_name).strip() or review.reviewer_name
+            if 'reviewer_phone' in request.POST:
+                review.reviewer_phone = request.POST.get('reviewer_phone', '').strip()
             review.reviewer_location = request.POST.get('reviewer_location', review.reviewer_location).strip() or review.reviewer_location
             try:
                 review.rating = int(request.POST.get('rating', review.rating))
@@ -3692,6 +3720,22 @@ def reviews_manager(request):
         elided_page_range = paginator.get_elided_page_range(number=page_obj.number, on_each_side=2, on_ends=1)
     except Exception:
         elided_page_range = paginator.page_range
+
+    # Match customer phone numbers against Order records to verify authentic buyers
+    phone_to_order = {}
+    for ord_row in Order.objects.filter(is_deleted=False).values('customer_phone', 'order_number').order_by('-created_at'):
+        raw_p = (ord_row['customer_phone'] or '').strip()
+        if raw_p:
+            digits = ''.join(ch for ch in raw_p if ch.isdigit())
+            clean_p = digits[-11:] if len(digits) >= 11 else digits
+            if clean_p and clean_p not in phone_to_order:
+                phone_to_order[clean_p] = ord_row['order_number']
+
+    for r in page_obj:
+        raw_rp = (getattr(r, 'reviewer_phone', '') or '').strip()
+        r_digits = ''.join(ch for ch in raw_rp if ch.isdigit())
+        clean_rp = r_digits[-11:] if len(r_digits) >= 11 else r_digits
+        r.matched_order_number = phone_to_order.get(clean_rp) if clean_rp else None
 
     context = {
         'reviews': page_obj,

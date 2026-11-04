@@ -119,7 +119,26 @@
                     <tr class="{% if not r.is_approved %}bg-amber-50/50 hover:bg-amber-100/50{% else %}hover:bg-gray-50/50{% endif %} transition">
                         <td class="p-4">
                             <strong class="text-gray-900 text-sm block">{{ r.reviewer_name }}</strong>
-                            <span class="text-gray-400 text-[11px]">{{ r.reviewer_location|default:"Dhaka" }} • {{ r.created_at|date:"M d, Y" }}</span>
+                            {% if r.reviewer_phone %}
+                            <div class="mt-1 flex items-center gap-1.5 flex-wrap">
+                                <span class="inline-flex items-center gap-1 text-[11px] font-bold text-gray-800 bg-gray-100 px-2 py-0.5 rounded-md border border-gray-200" title="Private Customer Phone (Hidden on website)">
+                                    <i class="fa-solid fa-phone text-[9px] text-emerald-600"></i>
+                                    <span>{{ r.reviewer_phone }}</span>
+                                </span>
+                                {% if r.matched_order_number %}
+                                <a href="{% url 'dashboard:order_detail' r.matched_order_number %}" class="inline-flex items-center gap-1 text-[10px] font-black text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-2 py-0.5 rounded-md border border-emerald-300 transition" title="Matching past order found for this phone number">
+                                    <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                                    <span>Verified Customer (#{{ r.matched_order_number }})</span>
+                                </a>
+                                {% else %}
+                                <span class="inline-flex items-center gap-1 text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200" title="No orders found with this phone number">
+                                    <i class="fa-solid fa-triangle-exclamation text-rose-500 text-[9px]"></i>
+                                    <span>Unverified (No Orders Found)</span>
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                            <span class="text-gray-400 text-[11px] block mt-0.5">{{ r.reviewer_location|default:"Dhaka" }} • {{ r.created_at|date:"M d, Y" }}</span>
                         </td>
                         <td class="p-4">
                             {% if r.product %}

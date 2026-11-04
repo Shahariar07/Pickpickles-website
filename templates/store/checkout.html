@@ -270,8 +270,8 @@
 
                         <div class="space-y-3">
                             <!-- Option 1: Cash on Delivery -->
-                            <label class="border-2 border-emerald-600 bg-emerald-50/80 p-4 sm:p-5 rounded-2xl cursor-pointer flex items-center gap-3.5 transition-all shadow-xs" id="payCodLabel">
-                                <input type="radio" name="payment_method" value="COD" checked class="text-emerald-700 focus:ring-emerald-500 w-4 h-4" onchange="togglePaymentInputs('COD')">
+                            <label class="border-2 border-emerald-600 bg-emerald-50/80 p-4 sm:p-5 rounded-2xl cursor-pointer flex items-start gap-3.5 transition-all shadow-xs" id="payCodLabel">
+                                <input type="radio" name="payment_method" value="COD" checked class="text-emerald-700 focus:ring-emerald-500 w-4 h-4 mt-1" onchange="togglePaymentInputs('COD')">
                                 <div class="flex-1">
                                     <div class="flex items-center justify-between">
                                         <div class="flex items-center gap-2">
@@ -281,8 +281,22 @@
                                         <span class="text-2xl">💵</span>
                                     </div>
                                     <p class="text-xs text-slate-700 font-medium mt-1">
-                                        No advance payment required. Pay in cash directly to the courier delivery rider upon inspecting and receiving your fresh jars.
+                                        No advance payment required for regular buyers. Pay in cash to the courier delivery rider upon inspecting and receiving your fresh jars.
                                     </p>
+
+                                    <!-- Clean Customer / Return & Fraud Policy Notice -->
+                                    <div class="mt-2.5 p-2.5 rounded-xl bg-amber-100/70 border border-amber-300/80 text-[11px] text-amber-950 space-y-0.5 font-medium leading-snug">
+                                        <div class="flex items-center gap-1.5 font-bold text-amber-900">
+                                            <i class="fa-solid fa-triangle-exclamation text-amber-600 text-xs"></i>
+                                            <span>Important Notice for COD:</span>
+                                        </div>
+                                        <p class="text-amber-900">
+                                            Cash on Delivery is available for customers with clean delivery records. If you have past parcel returns or fraud reports in courier databases, we will contact you and ask for advance payment before dispatching.
+                                        </p>
+                                        <p class="text-[10.5px] text-amber-800 font-normal">
+                                            (কুরিয়ারে পূর্ববর্তী রিটার্ন হিস্ট্রি বা ফ্রড রিপোর্ট থাকলে অর্ডার কনফার্ম করতে আমাদের টিম যোগাযোগ করে অগ্রিম পেমেন্ট চাইবে।)
+                                        </p>
+                                    </div>
                                 </div>
                             </label>
 
