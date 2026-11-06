@@ -258,7 +258,7 @@
                                     <span>{% if free_delivery_unlocked %}🎉{% else %}🚚{% endif %}</span>
                                     <span>
                                         {% if free_delivery_unlocked %}
-                                            <strong>FREE Shipping Applied!</strong> (6+ Jars)
+                                            <strong>FREE Shipping Applied!</strong> (4+ Jars)
                                         {% else %}
                                             Add <strong>{{ items_needed_for_free_delivery }} more jar(s)</strong> for <strong>FREE Delivery</strong>!
                                         {% endif %}
@@ -358,12 +358,12 @@
     const subtotalValue = parseFloat("{{ cart_subtotal|default:0 }}");
     const totalWeightGrams = parseInt("{{ total_weight_grams|default:600 }}");
     const totalItemsCount = parseInt("{{ cart_total_items|default:0 }}");
-    const isFreeDelivery = {% if free_delivery_unlocked %}true{% else %}totalItemsCount >= 6{% endif %};
+    const isFreeDelivery = {% if free_delivery_unlocked %}true{% else %}totalItemsCount >= 4{% endif %};
     const feeInside = isFreeDelivery ? 0.0 : 150.0;
     const feeOutside = isFreeDelivery ? 0.0 : 150.0;
 
     function calculateDeliveryFee(weightGrams, zone) {
-        if (isFreeDelivery || totalItemsCount >= 6) {
+        if (isFreeDelivery || totalItemsCount >= 4) {
             return 0.0;
         }
         return 150.0;

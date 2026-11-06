@@ -23,37 +23,37 @@ class CartTests(TestCase):
         from django.test import override_settings
 
         with override_settings(PATHAO_CLIENT_ID=''):
-            # 1-5 items: Flat ৳150 nationwide across all weights and zones
+            # 1-3 items: Flat ৳150 nationwide across all weights and zones
             self.assertEqual(calculate_pathao_delivery_fee(600, 'INSIDE_DHAKA', total_items=1), Decimal('150.00'))
             self.assertEqual(calculate_pathao_delivery_fee(600, 'OUTSIDE_DHAKA', total_items=1), Decimal('150.00'))
             self.assertEqual(calculate_pathao_delivery_fee(1200, 'INSIDE_DHAKA', total_items=2), Decimal('150.00'))
             self.assertEqual(calculate_pathao_delivery_fee(1200, 'OUTSIDE_DHAKA', total_items=2), Decimal('150.00'))
             self.assertEqual(calculate_pathao_delivery_fee(1800, 'INSIDE_DHAKA', total_items=3), Decimal('150.00'))
-            self.assertEqual(calculate_pathao_delivery_fee(3000, 'INSIDE_DHAKA', total_items=5), Decimal('150.00'))
             
-            # 6 or more items: 100% FREE Delivery (৳0.00)
+            # 4 or more items: 100% FREE Delivery (৳0.00)
+            self.assertEqual(calculate_pathao_delivery_fee(2400, 'INSIDE_DHAKA', total_items=4), Decimal('0.00'))
             self.assertEqual(calculate_pathao_delivery_fee(3600, 'INSIDE_DHAKA', total_items=6), Decimal('0.00'))
             self.assertEqual(calculate_pathao_delivery_fee(3600, 'OUTSIDE_DHAKA', total_items=6), Decimal('0.00'))
             self.assertEqual(calculate_pathao_delivery_fee(6000, 'OUTSIDE_DHAKA', total_items=10), Decimal('0.00'))
 
-    def test_free_delivery_on_six_items_in_cart_and_checkout(self):
+    def test_free_delivery_on_four_items_in_cart_and_checkout(self):
         from store.models import Order
         from django.test import override_settings
-        # Add 6 jars to cart
+        # Add 4 jars to cart
         add_url = reverse('store:cart_add', args=[self.product.id])
         response = self.client.post(
             f"{add_url}?format=json",
-            {'quantity': 6},
+            {'quantity': 4},
             HTTP_X_REQUESTED_WITH='XMLHttpRequest'
         )
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertTrue(data['success'])
-        self.assertEqual(data['cart_total_items'], 6)
+        self.assertEqual(data['cart_total_items'], 4)
         self.assertTrue(data['free_delivery_unlocked'])
         self.assertEqual(data['items_needed_for_free_delivery'], 0)
         self.assertEqual(data['delivery_fee'], 0.0)
-        self.assertEqual(data['grand_total'], 6 * 380.0)
+        self.assertEqual(data['grand_total'], 4 * 380.0)
 
         # Complete checkout
         checkout_data = {
@@ -70,8 +70,8 @@ class CartTests(TestCase):
 
         order = Order.objects.latest('created_at')
         self.assertEqual(order.delivery_fee, Decimal('0.00'))
-        self.assertEqual(order.subtotal, Decimal('2280.00'))
-        self.assertEqual(order.total_amount, Decimal('2280.00'))
+        self.assertEqual(order.subtotal, Decimal('1520.00'))
+        self.assertEqual(order.total_amount, Decimal('1520.00'))
 
     def test_pathao_service_structure(self):
         from store.pathao import PathaoCourierService

@@ -223,7 +223,7 @@ def cart_context(request):
                 'cart_total_items': 0,
                 'cart_subtotal': 0,
                 'free_delivery_unlocked': False,
-                'items_needed_for_free_delivery': 6,
+                'items_needed_for_free_delivery': 4,
                 **base_context,
             }
         cart = Cart(request)
@@ -241,6 +241,6 @@ def cart_context(request):
             'cart_total_items': 0,
             'cart_subtotal': 0,
             'free_delivery_unlocked': False,
-            'items_needed_for_free_delivery': 6,
+            'items_needed_for_free_delivery': 4,
             **base_context,
         }

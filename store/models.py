@@ -482,10 +482,10 @@ def detect_dhaka_and_city(address: str) -> tuple:
 def calculate_pathao_delivery_fee(weight_grams: int = 600, zone: str = 'INSIDE_DHAKA', total_items: int = 1) -> Decimal:
     """
     Calculates delivery fee.
-    Special Offer: Order 6 or more items and get FREE delivery!
+    Special Offer: Order 4 or more items and get FREE delivery!
     Otherwise: Flat ৳150 nationwide across Bangladesh (Inside & Outside Dhaka).
     """
-    if total_items >= 6:
+    if total_items >= 4:
         return Decimal('0.00')
     return Decimal('150.00')
 

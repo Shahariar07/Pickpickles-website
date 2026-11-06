@@ -1837,7 +1837,7 @@
 
                         <label class="font-bold text-gray-700">Delivery Fee (৳)</label>
 
-                        <span id="manualFreeDeliveryBadge" class="hidden text-[10px] font-extrabold text-emerald-700 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md">🎉 FREE (6+ Jars)</span>
+                        <span id="manualFreeDeliveryBadge" class="hidden text-[10px] font-extrabold text-emerald-700 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md">🎉 FREE (4+ Jars)</span>
 
                     </div>
 
@@ -2969,7 +2969,7 @@ function calculateManualOrderTotal(isManualFeeChange = false) {
 
     if (!manualDeliveryFeeUserOverridden && deliveryInput) {
 
-        if (totalJars >= 6) {
+        if (totalJars >= 4) {
 
             deliveryInput.value = 0;
 
@@ -2983,7 +2983,7 @@ function calculateManualOrderTotal(isManualFeeChange = false) {
 
 
 
-    let deliveryFee = deliveryInput ? (parseFloat(deliveryInput.value) || 0) : (totalJars >= 6 ? 0 : 150);
+    let deliveryFee = deliveryInput ? (parseFloat(deliveryInput.value) || 0) : (totalJars >= 4 ? 0 : 150);
 
     if (deliveryFee < 0) deliveryFee = 0;
 
@@ -2991,7 +2991,7 @@ function calculateManualOrderTotal(isManualFeeChange = false) {
 
     if (freeBadge) {
 
-        if (totalJars >= 6 || deliveryFee === 0) {
+        if (totalJars >= 4 || deliveryFee === 0) {
 
             freeBadge.classList.remove('hidden');
 
@@ -3025,7 +3025,7 @@ function calculateManualOrderTotal(isManualFeeChange = false) {
 
     if (deliveryEl) {
 
-        if (deliveryFee === 0 || totalJars >= 6) {
+        if (deliveryFee === 0 || totalJars >= 4) {
 
             deliveryEl.innerHTML = '<span class="text-emerald-700 font-black">FREE (৳0)</span>';
 

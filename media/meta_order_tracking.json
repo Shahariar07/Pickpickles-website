@@ -26,5 +26,12 @@
     "client_user_agent": "Mozilla/5.0 (Linux; Android 14; SM-A546E) AppleWebKit/537.36 Chrome/124.0.0.0 Mobile Safari/537.36",
     "client_ip_address": "103.205.71.12",
     "recorded_at": "2026-11-06 04:08:04 PM"
+  },
+  "PKP-00001": {
+    "fbp": "",
+    "fbc": "",
+    "client_user_agent": "",
+    "client_ip_address": "127.0.0.1",
+    "recorded_at": "2026-11-07 12:18:10 AM"
   }
 }
