@@ -58,7 +58,7 @@ function showToast(message, isError = false) {
 
     const toast = document.createElement('div');
     toast.id = 'toastNotification';
-    toast.className = 'fixed top-20 left-1/2 -translate-x-1/2 sm:left-auto sm:right-6 sm:translate-x-0 z-50 flex items-center gap-3 bg-slate-950/95 backdrop-blur-md text-white px-4 py-3 rounded-2xl shadow-2xl border transition-all duration-300 transform -translate-y-2 opacity-0 max-w-[90vw] sm:max-w-md pointer-events-auto ' + (isError ? 'border-rose-500/80 text-rose-100' : 'border-emerald-500/80');
+    toast.className = 'fixed bottom-20 sm:bottom-6 left-4 sm:left-6 z-50 flex items-center gap-3 bg-slate-950/95 backdrop-blur-md text-white px-4 py-3 rounded-2xl shadow-2xl border transition-all duration-300 transform translate-y-3 opacity-0 max-w-[92vw] sm:max-w-md pointer-events-auto ' + (isError ? 'border-rose-500/80 text-rose-100' : 'border-emerald-500/80');
 
     const iconHtml = isError 
         ? '<div class="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0 text-sm"><i class="fa-solid fa-circle-exclamation"></i></div>'
@@ -81,9 +81,9 @@ function showToast(message, isError = false) {
 
     document.body.appendChild(toast);
 
-    // Trigger smooth fade-in
+    // Trigger smooth fade-in from bottom
     requestAnimationFrame(() => {
-        toast.classList.remove('-translate-y-2', 'opacity-0');
+        toast.classList.remove('translate-y-3', 'opacity-0');
         toast.classList.add('translate-y-0', 'opacity-100');
     });
 
@@ -96,7 +96,7 @@ function dismissToast() {
     const existing = document.getElementById('toastNotification');
     if (existing) {
         existing.classList.remove('translate-y-0', 'opacity-100');
-        existing.classList.add('-translate-y-2', 'opacity-0');
+        existing.classList.add('translate-y-3', 'opacity-0');
         setTimeout(() => {
             if (existing && existing.parentNode) existing.remove();
         }, 300);

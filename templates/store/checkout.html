@@ -270,32 +270,34 @@
 
                         <div class="space-y-3">
                             <!-- Option 1: Cash on Delivery -->
-                            <label class="border-2 border-emerald-600 bg-emerald-50/80 p-4 sm:p-5 rounded-2xl cursor-pointer flex items-start gap-3.5 transition-all shadow-xs" id="payCodLabel">
-                                <input type="radio" name="payment_method" value="COD" checked class="text-emerald-700 focus:ring-emerald-500 w-4 h-4 mt-1" onchange="togglePaymentInputs('COD')">
-                                <div class="flex-1">
-                                    <div class="flex items-center justify-between">
+                            <label class="border-2 border-emerald-600 bg-emerald-50/80 p-4 sm:p-5 rounded-2xl cursor-pointer flex items-start sm:items-center gap-3.5 transition-all shadow-xs hover:border-emerald-700" id="payCodLabel">
+                                <input type="radio" name="payment_method" value="COD" checked class="text-emerald-700 focus:ring-emerald-500 w-4 h-4 mt-1 sm:mt-0 shrink-0" onchange="togglePaymentInputs('COD')">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between gap-2">
                                         <div class="flex items-center gap-2">
                                             <span class="font-black text-sm text-slate-950">Cash on Delivery (COD)</span>
                                             <span class="text-[10px] bg-emerald-700 text-white font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Pay on Delivery</span>
                                         </div>
-                                        <span class="text-2xl">💵</span>
+                                        <span class="text-2xl shrink-0">💵</span>
                                     </div>
-                                    <p class="text-xs text-slate-700 font-medium mt-1">
-                                        No advance payment required for regular buyers. Pay in cash to the courier delivery rider upon inspecting and receiving your fresh jars.
+                                    <p class="text-xs text-slate-700 font-medium mt-1 leading-relaxed">
+                                        Pay in cash to the courier delivery rider upon inspecting and receiving your fresh jars.
                                     </p>
 
-                                    <!-- Clean Customer / Return & Fraud Policy Notice -->
-                                    <div class="mt-2.5 p-2.5 rounded-xl bg-amber-100/70 border border-amber-300/80 text-[11px] text-amber-950 space-y-0.5 font-medium leading-snug">
-                                        <div class="flex items-center gap-1.5 font-bold text-amber-900">
-                                            <i class="fa-solid fa-triangle-exclamation text-amber-600 text-xs"></i>
-                                            <span>Important Notice for COD:</span>
+                                    <!-- Highlighted Eye-Catching Notice in English -->
+                                    <div class="mt-2.5 p-2 sm:p-2.5 rounded-xl bg-amber-50/95 border-2 border-amber-300 flex items-center justify-between gap-2.5 text-xs shadow-2xs">
+                                        <div class="flex items-center gap-2 min-w-0">
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-400 text-slate-950 font-black text-[10px] tracking-wider uppercase shrink-0 shadow-2xs">
+                                                <i class="fa-solid fa-shield-halved text-[9px]"></i> NOTICE
+                                            </span>
+                                            <p class="text-[11.5px] font-bold text-amber-950 leading-snug">
+                                                Advance payment required if you have past courier returns or fraud records.
+                                            </p>
                                         </div>
-                                        <p class="text-amber-900">
-                                            Cash on Delivery is available for customers with clean delivery records. If you have past parcel returns or fraud reports in courier databases, we will contact you and ask for advance payment before dispatching.
-                                        </p>
-                                        <p class="text-[10.5px] text-amber-800 font-normal">
-                                            (কুরিয়ারে পূর্ববর্তী রিটার্ন হিস্ট্রি বা ফ্রড রিপোর্ট থাকলে অর্ডার কনফার্ম করতে আমাদের টিম যোগাযোগ করে অগ্রিম পেমেন্ট চাইবে।)
-                                        </p>
+                                        <a href="{% url 'store:policies' %}#clause-2-0" target="_blank" onclick="event.stopPropagation()" class="inline-flex items-center gap-1 bg-white hover:bg-emerald-50 text-emerald-800 hover:text-emerald-950 px-2.5 py-1 rounded-lg border border-emerald-300 font-black text-[11px] shrink-0 transition-all shadow-2xs">
+                                            <span>Clause 2.0</span>
+                                            <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+                                        </a>
                                     </div>
                                 </div>
                             </label>
@@ -451,7 +453,7 @@
                             <div class="border-t-2 border-slate-200/80 pt-3 flex justify-between items-baseline text-base">
                                 <div>
                                     <span class="font-black text-slate-950 block">Total Payable</span>
-                                    <span class="text-[11px] text-slate-500 font-medium">All taxes & packaging included</span>
+                                    <span class="text-[11px] text-slate-500 font-medium">Food-grade airtight packaging included</span>
                                 </div>
                                 <span class="font-display font-black text-2xl sm:text-3xl text-emerald-800">৳<span id="checkoutTotal">{{ grand_total }}</span></span>
                             </div>
