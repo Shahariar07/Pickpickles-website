@@ -279,7 +279,14 @@ async function ajaxAddToCart(productId, quantity = 1, btnEl = null, variant = ''
                 const addPrice = parseFloat(data.added_product.price) || 0;
                 const addQty = parseInt(data.added_product.quantity, 10) || 1;
                 const totalVal = Math.round(addPrice * addQty * 100) / 100;
-                const catalogContentId = String(data.added_product.content_id || ('JAR-' + data.added_product.id));
+                const CATALOG_MAP = {
+                    9: 'JAR-1', 10: 'JAR-2', 11: 'JAR-3', 12: 'JAR-4',
+                    14: 'JAR-5', 15: 'JAR-6', 16: 'JAR-7', 17: 'JAR-8',
+                    18: 'JAR-9', 19: 'JAR-10', 20: 'JAR-11', 21: 'JAR-12',
+                    22: 'JAR-13', 23: 'JAR-14', 24: 'JAR-15', 25: 'JAR-16'
+                };
+                const pId = parseInt(data.added_product.id, 10);
+                const catalogContentId = String(data.added_product.content_id || CATALOG_MAP[pId] || ('JAR-' + pId));
                 fbq('track', 'AddToCart', {
                     content_name: String(data.added_product.name || ''),
                     content_ids: [catalogContentId],

@@ -772,10 +772,11 @@
             syncCheckoutUserData();
             var cartSub = parseFloat("{{ cart_subtotal|default:0|stringformat:'.2f' }}") || 0;
             var cartCount = parseInt("{{ cart_total_items|default:0 }}", 10) || 1;
-            if (cartSub > 0) {
+            var rawIds = [{% for item in cart %}'{{ item.product.catalog_id|default:"" }}'{% if not forloop.last %}, {% endif %}{% endfor %}].filter(function(id) { return id && id.length > 0; });
+            if (cartSub > 0 && rawIds.length > 0) {
                 fbq('track', 'InitiateCheckout', {
                     content_name: 'Pickle Order Checkout',
-                    content_ids: [{% for item in cart %}'{{ item.product.catalog_id }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+                    content_ids: rawIds,
                     value: cartSub,
                     currency: 'BDT',
                     num_items: cartCount,

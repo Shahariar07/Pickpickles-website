@@ -212,10 +212,26 @@
 
             fbq('init', '{{ META_PIXEL_ID }}', advancedMatchingData);
 
-            // Note: Official Meta 'Purchase' event is dispatched via Meta Conversions API (CAPI)
-            // only when the admin accepts/confirms the order in dashboard to filter out fake/unconfirmed COD orders.
+            // Official Meta Pixel Standard 'Purchase' Event
+            // Uses exact eventID: orderNum so Meta automatically deduplicates with Server Conversions API (CAPI)
             var orderTotal = parseFloat("{{ order.total_amount|stringformat:'.2f' }}") || 0;
             var orderItemsCount = parseInt("{{ order.items.count|default:1 }}", 10) || 1;
+            var catalogItemIds = [{% for item in order.items.all %}'{{ item.product.catalog_id|default:"JAR-1" }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
+
+            if (catalogItemIds.length > 0) {
+                fbq('track', 'Purchase', {
+                    content_name: 'Pickle Order',
+                    content_ids: catalogItemIds,
+                    content_type: 'product',
+                    value: orderTotal,
+                    currency: 'BDT',
+                    num_items: orderItemsCount,
+                    order_id: orderNum
+                }, { eventID: orderNum });
+                console.log("🎯 [Meta Pixel] Purchase event fired with eventID: " + orderNum, catalogItemIds);
+            }
+
+            // Custom event for internal analytics backup
             fbq('trackCustom', 'OrderPlaced', {
                 value: orderTotal,
                 currency: 'BDT',
