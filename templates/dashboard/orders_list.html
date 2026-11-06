@@ -430,6 +430,28 @@
 
                 </label>
 
+                <button 
+
+                    type="button" 
+
+                    onclick="openBulkPackingModal()" 
+
+                    id="topPackListBtn" 
+
+                    class="inline-flex items-center gap-1.5 text-xs font-black bg-amber-400 hover:bg-amber-300 text-slate-950 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl border border-amber-500 shadow-xs transition active:scale-95 cursor-pointer"
+
+                    title="সিলেক্ট করা অর্ডারের কিচেন ও প্যাকিং সামারি দেখুন"
+
+                >
+
+                    <i class="fa-solid fa-box-open text-xs text-amber-950"></i>
+
+                    <span>Pack List</span>
+
+                    <span id="topPackListBadge" class="bg-slate-950 text-amber-300 text-[10px] px-1.5 py-0.2 rounded-full font-mono hidden">0</span>
+
+                </button>
+
                 <span class="text-xs text-gray-400 font-semibold">•</span>
 
                 <span class="text-xs text-gray-600 font-bold">
@@ -541,6 +563,14 @@
                                 data-phone="{{ order.customer_phone }}"
 
                                 data-status="{{ order.order_status }}"
+
+                                data-city="{{ order.delivery_city|default:'' }}"
+
+                                data-address="{{ order.delivery_address|default:'' }}"
+
+                                data-amount="{{ order.total_amount }}"
+
+                                data-items='[{% for itm in order.items.all %}{"name":"{{ itm.product_name|escapejs }}","qty":{{ itm.quantity }}}{% if not forloop.last %},{% endif %}{% endfor %}]'
 
                                 data-wa-url="{{ order.whatsapp_shipping_instruction_url }}"
 
@@ -954,6 +984,14 @@
 
                                 data-status="{{ order.order_status }}"
 
+                                data-city="{{ order.delivery_city|default:'' }}"
+
+                                data-address="{{ order.delivery_address|default:'' }}"
+
+                                data-amount="{{ order.total_amount }}"
+
+                                data-items='[{% for itm in order.items.all %}{"name":"{{ itm.product_name|escapejs }}","qty":{{ itm.quantity }}}{% if not forloop.last %},{% endif %}{% endfor %}]'
+
                                 data-wa-url="{{ order.whatsapp_shipping_instruction_url }}"
 
                                 onchange="updateSelectedOrdersBar()"
@@ -1273,19 +1311,19 @@
 
     <!-- FLOATING BULK ACTIONS BAR (MOBILE-OPTIMIZED & STICKY AT BOTTOM) -->
 
-    <div id="bulkActionBar" class="fixed bottom-3 sm:bottom-6 inset-x-0 mx-auto max-w-xl sm:max-w-2xl w-[calc(100%-16px)] sm:w-full z-40 hidden px-1 sm:px-4 transition-all duration-300 transform translate-y-4 opacity-0">
+    <div id="bulkActionBar" class="fixed bottom-2.5 sm:bottom-6 inset-x-0 mx-auto max-w-3xl w-[calc(100%-12px)] sm:w-auto z-[999] hidden px-1 sm:px-4 transition-all duration-300 transform translate-y-4 opacity-0 box-border">
 
-        <div class="bg-gray-950/95 backdrop-blur-xl text-white p-3 sm:px-4 sm:py-3 rounded-2xl shadow-2xl border border-gray-700/80 space-y-2.5 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-3">
+        <div class="bg-gray-950/95 backdrop-blur-xl text-white p-2 sm:px-4 sm:py-2 rounded-2xl sm:rounded-full shadow-2xl border border-gray-700/80 space-y-2 sm:space-y-0 sm:flex sm:items-center sm:gap-2.5">
 
             
 
-            <!-- Mobile Row 1 (Selection Info & Quick Filter) / Desktop Left -->
+            <!-- Selection Info & Quick Filter (Desktop Left / Mobile Row 1) -->
 
-            <div class="flex items-center justify-between sm:justify-start gap-2 border-b border-gray-800/80 pb-2 sm:border-0 sm:pb-0">
+            <div class="flex items-center justify-between sm:justify-start gap-2 border-b border-gray-800/80 pb-1.5 sm:border-0 sm:pb-0 shrink-0">
 
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1.5">
 
-                    <span class="w-6 h-6 sm:w-7 sm:h-7 rounded-xl bg-emerald-500/20 text-emerald-400 font-black text-xs flex items-center justify-center border border-emerald-500/30" id="bulkBarCount">0</span>
+                    <span class="w-6 h-6 rounded-lg sm:rounded-full bg-emerald-500/20 text-emerald-400 font-black text-xs flex items-center justify-center border border-emerald-500/30" id="bulkBarCount">0</span>
 
                     <span class="text-xs font-bold text-gray-200">Selected</span>
 
@@ -1293,11 +1331,11 @@
 
                 
 
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1.5">
 
-                    <button type="button" onclick="selectOnlyShippedOrders()" class="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 hover:underline cursor-pointer bg-emerald-950/60 sm:bg-transparent px-2.5 py-1 sm:p-0 rounded-lg border border-emerald-500/30 sm:border-0 transition">
+                    <button type="button" onclick="selectOnlyShippedOrders()" class="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 bg-emerald-950/60 sm:bg-transparent px-2 py-0.5 sm:p-0 rounded-lg border border-emerald-500/30 sm:border-0 transition cursor-pointer">
 
-                        Select Shipped ({{ out_for_delivery_count }})
+                        Shipped ({{ out_for_delivery_count }})
 
                     </button>
 
@@ -1307,13 +1345,13 @@
 
                         onclick="clearOrderSelection()" 
 
-                        class="text-gray-400 hover:text-white text-xs font-bold px-2 py-1 sm:hidden rounded-lg bg-gray-800 border border-gray-700 cursor-pointer active:scale-95 transition"
+                        class="text-gray-400 hover:text-white text-[11px] font-bold px-2 py-0.5 rounded-lg bg-gray-800 sm:hidden border border-gray-700 cursor-pointer active:scale-95 transition"
 
                         title="Clear selection"
 
                     >
 
-                        <i class="fa-solid fa-xmark mr-1"></i> Clear
+                        <i class="fa-solid fa-xmark"></i> Clear
 
                     </button>
 
@@ -1323,13 +1361,17 @@
 
 
 
-            <!-- Mobile Row 2 (Action Dropdown & Buttons) / Desktop Right -->
+            <div class="hidden sm:block h-4 w-px bg-gray-800 shrink-0"></div>
 
-            <div class="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+
+
+            <!-- Action Controls Row (Desktop Right / Mobile Row 2) -->
+
+            <div class="flex items-center gap-1.5 sm:gap-2 justify-between sm:justify-start w-full sm:w-auto">
 
                 {% if can_edit %}
 
-                <form method="POST" action="{% url 'dashboard:orders' %}" id="bulkStatusForm" class="flex-1 sm:flex-none flex items-center gap-1.5" onsubmit="return submitBulkStatusChange(event)">
+                <form method="POST" action="{% url 'dashboard:orders' %}" id="bulkStatusForm" class="flex-1 sm:flex-initial flex items-center gap-1 min-w-0" onsubmit="return submitBulkStatusChange(event)">
 
                     {% csrf_token %}
 
@@ -1337,9 +1379,9 @@
 
                     <input type="hidden" name="order_numbers" id="bulkStatusOrderNumbers" value="">
 
-                    <select name="new_status" id="bulkStatusSelect" class="flex-1 sm:flex-none bg-gray-900 border border-gray-700 text-white text-xs font-bold rounded-xl px-2.5 py-2 sm:py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer">
+                    <select name="new_status" id="bulkStatusSelect" class="w-full sm:w-36 bg-gray-900 border border-gray-700 text-white text-[11px] sm:text-xs font-bold rounded-xl px-2 py-1.5 sm:py-1 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer truncate">
 
-                        <option value="">Status Change...</option>
+                        <option value="">Status...</option>
 
                         {% for code, label in status_choices %}
 
@@ -1349,9 +1391,11 @@
 
                     </select>
 
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold px-3 py-2 sm:py-1.5 rounded-xl shadow-md transition cursor-pointer active:scale-95 whitespace-nowrap">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white text-[11px] sm:text-xs font-black px-2 sm:px-2.5 py-1.5 sm:py-1 rounded-xl shadow-md transition cursor-pointer active:scale-95 shrink-0" title="Apply Status Change">
 
-                        Apply
+                        <span class="sm:hidden">✓</span>
+
+                        <span class="hidden sm:inline">Apply</span>
 
                     </button>
 
@@ -1361,7 +1405,29 @@
 
 
 
+                <!-- Action Buttons: Pack List + WhatsApp Queue -->
+
                 <div class="flex items-center gap-1.5 shrink-0">
+
+                    <button 
+
+                        type="button" 
+
+                        onclick="openBulkPackingModal()" 
+
+                        class="bg-amber-400 hover:bg-amber-300 text-slate-950 text-[11px] sm:text-xs font-black px-2.5 sm:px-3 py-1.5 sm:py-1 rounded-xl shadow-md transition flex items-center gap-1 cursor-pointer active:scale-95 shrink-0"
+
+                        title="সিলেক্ট করা অর্ডারের কিচেন ও প্যাকিং সামারি দেখুন"
+
+                    >
+
+                        <i class="fa-solid fa-box-open text-xs"></i>
+
+                        <span>Pack <span class="hidden sm:inline">List</span></span>
+
+                    </button>
+
+
 
                     <button 
 
@@ -1369,17 +1435,19 @@
 
                         onclick="openBulkWhatsAppModal()" 
 
-                        class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap"
+                        class="bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] sm:text-xs font-extrabold px-2.5 sm:px-3 py-1.5 sm:py-1 rounded-xl shadow-md transition flex items-center gap-1 cursor-pointer active:scale-95 shrink-0"
 
                         title="Open WhatsApp Queue"
 
                     >
 
-                        <i class="fa-brands fa-whatsapp text-sm"></i>
+                        <i class="fa-brands fa-whatsapp text-xs sm:text-sm"></i>
 
-                        <span>WhatsApp <span class="hidden sm:inline">Queue</span></span>
+                        <span>WA <span class="hidden sm:inline">Queue</span></span>
 
                     </button>
+
+
 
                     <button 
 
@@ -1387,11 +1455,25 @@
 
                         onclick="clearOrderSelection()" 
 
-                        class="hidden sm:flex bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold px-2.5 py-2 rounded-xl transition cursor-pointer"
+                        class="hidden sm:flex bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold w-6 h-6 rounded-full items-center justify-center transition cursor-pointer shrink-0"
 
                         title="Clear selection"
 
                     >
+
+                        <i class="fa-solid fa-xmark text-[10px]"></i>
+
+                    </button>
+
+                </div>
+
+            </div>
+
+
+
+        </div>
+
+    </div>
 
                         <i class="fa-solid fa-xmark"></i>
 
@@ -2634,6 +2716,182 @@
                 <span id="ordersBlModalBtnText">Yes, Block Number</span>
 
             </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- BULK KITCHEN PACKING LIST MODAL (MOBILE-RESPONSIVE) -->
+
+<div id="bulkPackingModal" class="fixed inset-0 z-50 bg-black/70 hidden flex items-center justify-center p-2.5 sm:p-4 backdrop-blur-xs">
+
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-4 sm:p-6 space-y-4 shadow-2xl relative max-h-[92vh] flex flex-col border border-gray-100">
+
+        <!-- Header -->
+
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3 shrink-0">
+
+            <div class="flex items-center gap-2.5 min-w-0">
+
+                <div class="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-700 flex items-center justify-center text-xl font-black shrink-0 border border-amber-500/20">
+
+                    📦
+
+                </div>
+
+                <div class="min-w-0">
+
+                    <div class="flex items-center gap-2">
+
+                        <h3 class="font-display font-black text-sm sm:text-base text-gray-900 truncate">Kitchen Pack & Pick List</h3>
+
+                        <span id="bulkPackingOrderCountBadge" class="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0">0 Orders</span>
+
+                    </div>
+
+                    <p class="text-[10px] sm:text-[11px] text-gray-500 font-medium truncate">সিলেক্ট করা অর্ডারে কোন ফ্লেভারের কয়টি বয়াম প্যাক করতে হবে</p>
+
+                </div>
+
+            </div>
+
+            <button type="button" onclick="closeBulkPackingModal()" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 flex items-center justify-center transition cursor-pointer shrink-0">
+
+                <i class="fa-solid fa-xmark text-sm"></i>
+
+            </button>
+
+        </div>
+
+
+
+        <!-- Scrollable Content -->
+
+        <div class="overflow-y-auto flex-1 space-y-4 pr-1">
+
+            <!-- Top Hero Stats -->
+
+            <div class="grid grid-cols-3 gap-2 sm:gap-3">
+
+                <div class="bg-gradient-to-br from-amber-50 to-orange-50/60 p-2.5 sm:p-3 rounded-2xl border border-amber-200 text-center">
+
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-amber-800 block">মোট বয়াম</span>
+
+                    <span class="font-display font-black text-xl sm:text-2xl text-amber-950" id="bulkPackingTotalJars">0</span>
+
+                </div>
+
+                <div class="bg-emerald-50/70 p-2.5 sm:p-3 rounded-2xl border border-emerald-200 text-center">
+
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block">ভ্যারাইটি</span>
+
+                    <span class="font-display font-black text-xl sm:text-2xl text-emerald-950" id="bulkPackingFlavorCount">0</span>
+
+                </div>
+
+                <div class="bg-slate-50 p-2.5 sm:p-3 rounded-2xl border border-slate-200 text-center">
+
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-600 block">মোট কালেকশন</span>
+
+                    <span class="font-display font-black text-base sm:text-2xl text-slate-900">৳<span id="bulkPackingTotalCOD">0</span></span>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- Flavor Breakdown Section -->
+
+            <div class="space-y-2">
+
+                <div class="flex items-center justify-between">
+
+                    <h4 class="text-xs font-black uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
+
+                        <i class="fa-solid fa-jar text-amber-600"></i>
+
+                        <span>প্রয়োজনীয় বয়াম সংখ্যা (Flavor Summary):</span>
+
+                    </h4>
+
+                    <span class="text-[10px] text-gray-400 font-medium">কিচেন থেকে মোট তুলুন</span>
+
+                </div>
+
+                <div id="bulkPackingFlavorsList" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+
+                    <!-- Populated dynamically -->
+
+                </div>
+
+            </div>
+
+
+
+            <!-- Order-by-Order Checklist Section -->
+
+            <div class="space-y-2 pt-2 border-t border-gray-100">
+
+                <div class="flex items-center justify-between">
+
+                    <h4 class="text-xs font-black uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
+
+                        <i class="fa-solid fa-clipboard-check text-emerald-600"></i>
+
+                        <span>পার্সেলভিত্তিক চেকলিস্ট (Order Checklist):</span>
+
+                    </h4>
+
+                    <span class="text-[10px] text-gray-400 font-medium">প্যাক করে বক্সে ভরার পর টিক দিন</span>
+
+                </div>
+
+                <div id="bulkPackingOrdersList" class="divide-y divide-gray-100 border border-gray-200 rounded-2xl overflow-hidden bg-gray-50/30">
+
+                    <!-- Populated dynamically -->
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- Footer Actions -->
+
+        <div class="border-t border-gray-100 pt-3 flex flex-wrap items-center justify-between gap-2 shrink-0">
+
+            <button type="button" onclick="copyBulkPackingSummary()" id="copyPackingBtn" class="bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl transition flex items-center gap-1.5 active:scale-95 cursor-pointer">
+
+                <i class="fa-regular fa-copy text-sm"></i>
+
+                <span id="copyPackingBtnTxt">কপি করুন (Copy Text)</span>
+
+            </button>
+
+            <div class="flex items-center gap-2">
+
+                <button type="button" onclick="printBulkPackingSlip()" class="bg-brand-800 hover:bg-brand-900 text-white text-xs font-bold px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl shadow-md transition flex items-center gap-1.5 active:scale-95 cursor-pointer">
+
+                    <i class="fa-solid fa-print text-sm"></i>
+
+                    <span>প্রিন্ট স্লিপ (Print)</span>
+
+                </button>
+
+                <button type="button" onclick="closeBulkPackingModal()" class="px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-bold transition cursor-pointer">
+
+                    বন্ধ করুন
+
+                </button>
+
+            </div>
 
         </div>
 
@@ -4201,6 +4459,54 @@ function getUniqueSelectedOrderCheckboxes() {
 
 
 
+function showDashboardNotification(msg, type = 'warning') {
+
+    if (typeof window.showToast === 'function') {
+
+        window.showToast(msg, type);
+
+    } else {
+
+        let c = document.getElementById('globalToastContainer');
+
+        if (!c) {
+
+            c = document.createElement('div');
+
+            c.id = 'globalToastContainer';
+
+            c.className = 'fixed bottom-5 right-5 z-[9999] flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4 sm:px-0';
+
+            document.body.appendChild(c);
+
+        }
+
+        const t = document.createElement('div');
+
+        t.className = 'pointer-events-auto flex items-center gap-2.5 p-3.5 rounded-2xl shadow-2xl border text-xs font-bold transition-all duration-300 bg-slate-900 text-white ' + 
+
+            (type === 'error' ? 'border-rose-500/50 text-rose-200' : (type === 'success' ? 'border-emerald-500/50 text-emerald-200' : 'border-amber-500/50 text-amber-200'));
+
+        const icn = type === 'error' ? 'fa-circle-xmark text-rose-400' : (type === 'success' ? 'fa-circle-check text-emerald-400' : 'fa-triangle-exclamation text-amber-400');
+
+        t.innerHTML = '<i class="fa-solid ' + icn + ' text-sm shrink-0"></i><span>' + msg + '</span>';
+
+        c.appendChild(t);
+
+        setTimeout(() => {
+
+            t.style.opacity = '0';
+
+            setTimeout(() => t.remove(), 300);
+
+        }, 3500);
+
+    }
+
+}
+
+
+
 function submitBulkStatusChange(e) {
 
     const select = document.getElementById('bulkStatusSelect');
@@ -4211,7 +4517,7 @@ function submitBulkStatusChange(e) {
 
         e.preventDefault();
 
-        alert('Please select a target status from the dropdown first.');
+        showDashboardNotification('Please select a target status from the dropdown first.', 'warning');
 
         return false;
 
@@ -4223,7 +4529,7 @@ function submitBulkStatusChange(e) {
 
         e.preventDefault();
 
-        alert('Please select at least one order.');
+        showDashboardNotification('Please select at least one order.', 'warning');
 
         return false;
 
@@ -4327,11 +4633,29 @@ function updateSelectedOrdersBar() {
 
     const countSpan = document.getElementById('bulkBarCount');
 
+    const topBadge = document.getElementById('topPackListBadge');
+
     const count = checkboxes.length;
 
 
 
     if (countSpan) countSpan.textContent = count;
+
+    if (topBadge) {
+
+        topBadge.textContent = count;
+
+        if (count > 0) {
+
+            topBadge.classList.remove('hidden');
+
+        } else {
+
+            topBadge.classList.add('hidden');
+
+        }
+
+    }
 
 
 
@@ -4340,6 +4664,14 @@ function updateSelectedOrdersBar() {
         if (count > 0) {
 
             bar.classList.remove('hidden');
+
+            bar.style.display = 'block';
+
+            bar.style.opacity = '1';
+
+            bar.style.transform = 'translateY(0)';
+
+            bar.style.pointerEvents = 'auto';
 
             requestAnimationFrame(() => {
 
@@ -4351,11 +4683,19 @@ function updateSelectedOrdersBar() {
 
             bar.classList.add('translate-y-4', 'opacity-0');
 
+            bar.style.opacity = '0';
+
+            bar.style.transform = 'translateY(16px)';
+
+            bar.style.pointerEvents = 'none';
+
             setTimeout(() => {
 
-                if (document.querySelectorAll('.order-select-checkbox:checked').length === 0) {
+                if (getUniqueSelectedOrderCheckboxes().length === 0) {
 
                     bar.classList.add('hidden');
+
+                    bar.style.display = 'none';
 
                 }
 
@@ -4369,13 +4709,423 @@ function updateSelectedOrdersBar() {
 
 
 
+let currentPackingData = {
+
+    totalJars: 0,
+
+    flavors: {},
+
+    orders: [],
+
+    totalCOD: 0
+
+};
+
+
+
+function openBulkPackingModal() {
+
+    const checkedBoxes = getUniqueSelectedOrderCheckboxes();
+
+    if (checkedBoxes.length === 0) {
+
+        showDashboardNotification('⚠️ অনুগ্রহ করে তালিকা থেকে অন্তত ১টি অর্ডার সিলেক্ট করুন।', 'warning');
+
+        return;
+
+    }
+
+
+
+    const flavors = {};
+
+    let totalJars = 0;
+
+    let totalCOD = 0;
+
+    const orders = [];
+
+
+
+    checkedBoxes.forEach(cb => {
+
+        let items = [];
+
+        try {
+
+            items = JSON.parse(cb.dataset.items || '[]');
+
+        } catch(e) {
+
+            items = [];
+
+        }
+
+
+
+        let orderJarCount = 0;
+
+        items.forEach(itm => {
+
+            const name = (itm.name || 'Artisanal Pickle Jar').trim();
+
+            const qty = parseInt(itm.qty, 10) || 1;
+
+            flavors[name] = (flavors[name] || 0) + qty;
+
+            totalJars += qty;
+
+            orderJarCount += qty;
+
+        });
+
+
+
+        const amount = parseFloat(cb.dataset.amount) || 0;
+
+        totalCOD += amount;
+
+
+
+        orders.push({
+
+            orderNumber: cb.dataset.orderNumber || cb.value,
+
+            customerName: cb.dataset.customerName || 'Customer',
+
+            phone: cb.dataset.phone || '',
+
+            city: cb.dataset.city || '',
+
+            address: cb.dataset.address || '',
+
+            amount: amount,
+
+            jarCount: orderJarCount,
+
+            items: items
+
+        });
+
+    });
+
+
+
+    currentPackingData = { totalJars, flavors, orders, totalCOD };
+
+
+
+    // Render Stats
+
+    const badgeEl = document.getElementById('bulkPackingOrderCountBadge');
+
+    if (badgeEl) badgeEl.innerText = `${orders.length} Orders Selected`;
+
+    const jarsEl = document.getElementById('bulkPackingTotalJars');
+
+    if (jarsEl) jarsEl.innerText = totalJars;
+
+    const flavorCntEl = document.getElementById('bulkPackingFlavorCount');
+
+    if (flavorCntEl) flavorCntEl.innerText = Object.keys(flavors).length;
+
+    const codEl = document.getElementById('bulkPackingTotalCOD');
+
+    if (codEl) codEl.innerText = totalCOD.toFixed(0);
+
+
+
+    // Render Flavors
+
+    const flavorsContainer = document.getElementById('bulkPackingFlavorsList');
+
+    if (flavorsContainer) {
+
+        const sortedFlavors = Object.entries(flavors).sort((a,b) => b[1] - a[1]);
+
+        if (sortedFlavors.length === 0) {
+
+            flavorsContainer.innerHTML = '<div class="text-xs text-gray-400 col-span-2 py-2">কোনো পণ্যের তথ্য পাওয়া যায়নি।</div>';
+
+        } else {
+
+            flavorsContainer.innerHTML = sortedFlavors.map(([name, qty]) => `
+
+                <div class="flex items-center justify-between p-2.5 rounded-xl bg-white border border-gray-200/90 shadow-2xs">
+
+                    <span class="text-xs font-extrabold text-gray-800 truncate pr-2">🥒 ${name}</span>
+
+                    <span class="bg-amber-400 text-slate-950 font-black text-xs px-2.5 py-0.5 rounded-lg shrink-0">${qty} Jar${qty > 1 ? 's' : ''}</span>
+
+                </div>
+
+            `).join('');
+
+        }
+
+    }
+
+
+
+    // Render Orders Checklist
+
+    const ordersContainer = document.getElementById('bulkPackingOrdersList');
+
+    if (ordersContainer) {
+
+        ordersContainer.innerHTML = orders.map((o, idx) => `
+
+            <div class="p-3 bg-white flex items-start gap-3 hover:bg-amber-50/20 transition">
+
+                <input type="checkbox" id="pack_check_${idx}" class="mt-1 w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300 cursor-pointer">
+
+                <label for="pack_check_${idx}" class="flex-1 cursor-pointer min-w-0 select-none">
+
+                    <div class="flex items-center justify-between gap-2 flex-wrap">
+
+                        <span class="font-display font-black text-xs text-brand-900">#${o.orderNumber} • ${o.customerName}</span>
+
+                        <span class="text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.2 rounded-md">${o.jarCount} Jars (৳${o.amount.toFixed(0)})</span>
+
+                    </div>
+
+                    <div class="text-[11px] text-gray-500 truncate mt-0.5">${o.phone}${o.city ? ' • ' + o.city : ''}</div>
+
+                    <div class="mt-1.5 flex flex-wrap gap-1">
+
+                        ${o.items.length > 0 ? o.items.map(it => `<span class="inline-flex items-center text-[10px] font-bold bg-gray-100 text-gray-800 px-2 py-0.5 rounded-md border border-gray-200">${it.qty}x ${it.name}</span>`).join('') : '<span class="text-[10px] text-gray-400">Items not listed</span>'}
+
+                    </div>
+
+                </label>
+
+            </div>
+
+        `).join('');
+
+    }
+
+
+
+    document.getElementById('bulkPackingModal').classList.remove('hidden');
+
+}
+
+
+
+function closeBulkPackingModal() {
+
+    const modal = document.getElementById('bulkPackingModal');
+
+    if (modal) modal.classList.add('hidden');
+
+}
+
+
+
+function copyBulkPackingSummary() {
+
+    if (!currentPackingData || currentPackingData.orders.length === 0) return;
+
+    
+
+    let text = `📦 PICKPICKLES KITCHEN PACKING LIST\n`;
+
+    text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+
+    text += `Total Orders: ${currentPackingData.orders.length} | Total Jars: ${currentPackingData.totalJars}\n\n`;
+
+    text += `🏺 REQUIRED JARS BREAKDOWN:\n`;
+
+    for (const [flavor, qty] of Object.entries(currentPackingData.flavors)) {
+
+        text += `• ${flavor}: ${qty} jars\n`;
+
+    }
+
+    text += `\n📋 ORDER DETAILS:\n`;
+
+    currentPackingData.orders.forEach(o => {
+
+        text += `\n[ ] #${o.orderNumber} - ${o.customerName} (${o.phone}${o.city ? ', ' + o.city : ''})\n`;
+
+        o.items.forEach(it => {
+
+            text += `    - ${it.qty}x ${it.name}\n`;
+
+        });
+
+    });
+
+
+
+    navigator.clipboard.writeText(text).then(() => {
+
+        const btnTxt = document.getElementById('copyPackingBtnTxt');
+
+        if (btnTxt) {
+
+            btnTxt.innerText = 'কপি হয়েছে! (Copied)';
+
+            setTimeout(() => { btnTxt.innerText = 'কপি করুন (Copy Text)'; }, 2000);
+
+        }
+
+        showDashboardNotification('📋 প্যাকিং সামারি ক্লিপবোর্ডে কপি হয়েছে!', 'success');
+
+    }).catch(err => {
+
+        showDashboardNotification('কপিতে ত্রুটি: ' + err, 'error');
+
+    });
+
+}
+
+
+
+function printBulkPackingSlip() {
+
+    if (!currentPackingData || currentPackingData.orders.length === 0) return;
+
+    
+
+    const printWindow = window.open('', '_blank');
+
+    const flavorsHtml = Object.entries(currentPackingData.flavors).map(([f, q]) => `
+
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+
+            <td style="padding: 8px 12px; font-weight: bold;">🥒 ${f}</td>
+
+            <td style="padding: 8px 12px; text-align: right; font-weight: 900; font-size: 16px; color: #047857;">${q}</td>
+
+        </tr>
+
+    `).join('');
+
+
+
+    const ordersHtml = currentPackingData.orders.map(o => `
+
+        <div style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; margin-bottom: 10px; page-break-inside: avoid;">
+
+            <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; border-bottom: 1px solid #f1f5f9; padding-bottom: 4px;">
+
+                <span>[  ] #${o.orderNumber} — ${o.customerName} (${o.phone})</span>
+
+                <span>${o.jarCount} Jars • ৳${o.amount.toFixed(0)}</span>
+
+            </div>
+
+            <div style="font-size: 12px; color: #64748b; margin-top: 4px;">${o.address ? o.address + ', ' : ''}${o.city}</div>
+
+            <div style="margin-top: 6px; font-size: 13px; font-weight: 600;">
+
+                ${o.items.map(it => `<span style="display: inline-block; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; margin-right: 6px; border: 1px solid #e2e8f0;">${it.qty}x ${it.name}</span>`).join('')}
+
+            </div>
+
+        </div>
+
+    `).join('');
+
+
+
+    let flavorsRows = '';
+
+    for (const [flavor, qty] of Object.entries(currentPackingData.flavors)) {
+
+        flavorsRows += '<tr style="border-bottom: 1px solid #e2e8f0;">' +
+
+            '<td style="padding: 8px 12px; font-weight: bold;">🥒 ' + flavor + '</td>' +
+
+            '<td style="padding: 8px 12px; text-align: right; font-weight: 900; font-size: 16px; color: #047857;">' + qty + '</td>' +
+
+            '</tr>';
+
+    }
+
+
+
+    let ordersCards = '';
+
+    currentPackingData.orders.forEach(o => {
+
+        let itemsBadges = '';
+
+        o.items.forEach(it => {
+
+            itemsBadges += '<span style="display: inline-block; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; margin-right: 6px; border: 1px solid #e2e8f0; font-size: 11px;">' + it.qty + 'x ' + it.name + '</span>';
+
+        });
+
+        ordersCards += '<div style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; margin-bottom: 10px; page-break-inside: avoid;">' +
+
+            '<div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; border-bottom: 1px solid #f1f5f9; padding-bottom: 4px;">' +
+
+            '<span>[  ] #' + o.orderNumber + ' — ' + o.customerName + ' (' + o.phone + ')</span>' +
+
+            '<span>' + o.jarCount + ' Jars • ৳' + o.amount.toFixed(0) + '</span>' +
+
+            '</div>' +
+
+            '<div style="font-size: 11px; color: #64748b; margin-top: 4px;">' + (o.address ? o.address + ', ' : '') + o.city + '</div>' +
+
+            '<div style="margin-top: 6px;">' + itemsBadges + '</div>' +
+
+            '</div>';
+
+    });
+
+
+
+    const fullHtml = '<!DOCTYPE html><html><head><title>Kitchen Packing Slip - Pickpickles</title>' +
+
+        '<style>body { font-family: system-ui, -apple-system, sans-serif; padding: 20px; color: #0f172a; max-width: 800px; margin: auto; } @media print { body { padding: 0; } }</style>' +
+
+        '</head><body>' +
+
+        '<div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 15px;">' +
+
+        '<div><h1 style="margin: 0; font-size: 20px;">🥒 Pickpickles — Kitchen Packing Slip</h1><p style="margin: 3px 0 0; font-size: 11px; color: #64748b;">Printed at ' + (new Date().toLocaleString()) + '</p></div>' +
+
+        '<div style="text-align: right;"><div style="font-size: 18px; font-weight: 900; color: #047857;">Total: ' + currentPackingData.totalJars + ' Jars</div><div style="font-size: 11px; color: #64748b;">' + currentPackingData.orders.length + ' Orders Selected</div></div>' +
+
+        '</div>' +
+
+        '<h3 style="margin: 15px 0 8px; font-size: 14px; text-transform: uppercase;">1. Flavors Required from Kitchen</h3>' +
+
+        '<table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">' +
+
+        '<thead><tr style="background: #f8fafc; border-bottom: 2px solid #cbd5e1; text-align: left; font-size: 12px;"><th style="padding: 6px 12px;">Flavor Name</th><th style="padding: 6px 12px; text-align: right;">Total Quantity</th></tr></thead>' +
+
+        '<tbody>' + flavorsRows + '</tbody></table>' +
+
+        '<h3 style="margin: 15px 0 8px; font-size: 14px; text-transform: uppercase;">2. Order Packing Checklist</h3>' +
+
+        ordersCards +
+
+        '<' + 'script>window.onload = function() { window.print(); };<' + '/script>' +
+
+        '</body></html>';
+
+
+
+    printWindow.document.write(fullHtml);
+
+    printWindow.document.close();
+
+}
+
+
+
 function openBulkWhatsAppModal() {
 
     const checkedBoxes = getUniqueSelectedOrderCheckboxes();
 
     if (checkedBoxes.length === 0) {
 
-        alert('Please select at least one order to send WhatsApp message.');
+        showDashboardNotification('⚠️ Please select at least one order to send WhatsApp message.', 'warning');
 
         return;
 
@@ -4403,7 +5153,7 @@ function openBulkWhatsAppModal() {
 
     if (bulkSelectedOrdersQueue.length === 0) {
 
-        alert('None of the selected orders have a valid phone number or WhatsApp message link.');
+        showDashboardNotification('⚠️ None of the selected orders have a valid phone number or WhatsApp message link.', 'warning');
 
         return;
 
@@ -4625,7 +5375,7 @@ function openAllWhatsAppBatch() {
 
     if (unsentList.length === 0) {
 
-        alert('All selected customers have already been sent.');
+        showDashboardNotification('নির্বাচিত সকল গ্রাহককে ইতোমধ্যে পাঠানো সম্পন্ন হয়েছে।', 'info');
 
         return;
 
@@ -4671,7 +5421,7 @@ function copyAllSelectedPhones() {
 
     navigator.clipboard.writeText(text).then(() => {
 
-        alert(`Copied ${phones.length} phone numbers to clipboard!`);
+        showDashboardNotification(`${phones.length}টি ফোন নম্বর ক্লিপবোর্ডে কপি হয়েছে!`, 'success');
 
     }).catch(() => {
 
