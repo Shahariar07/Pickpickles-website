@@ -178,10 +178,10 @@ def reviews_view(request):
             messages.error(request, rev_err)
             return redirect('store:reviews')
 
-        # 2. Cloudflare Turnstile Bot Protection
+        # 2. Cloudflare Turnstile Bot Protection (Smart Non-blocking)
         is_turnstile_valid, cf_err = verify_cloudflare_turnstile(request, expected_action="review")
         if not is_turnstile_valid:
-            messages.error(request, cf_err or "Please complete the Cloudflare security verification.")
+            messages.error(request, cf_err or "Please complete the security check.")
             return redirect('store:reviews')
 
         review_form = ReviewForm(request.POST, request.FILES)
@@ -511,6 +511,7 @@ def checkout(request):
             messages.error(request, sec_err)
             return redirect('store:checkout')
 
+        # 2. Cloudflare Turnstile Bot Protection (Smart Non-blocking)
         is_turnstile_valid, cf_err = verify_cloudflare_turnstile(request)
         if not is_turnstile_valid:
             messages.error(request, cf_err)

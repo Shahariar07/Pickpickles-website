@@ -69,6 +69,15 @@ def clean_and_validate_bd_phone(phone_str):
 
 
 class CheckoutForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'customer_email' in self.fields:
+            self.fields['customer_email'].required = False
+        if 'delivery_city' in self.fields:
+            self.fields['delivery_city'].required = False
+        if 'delivery_zone' in self.fields:
+            self.fields['delivery_zone'].required = False
+
     class Meta:
         model = Order
         fields = [
@@ -176,6 +185,22 @@ class CheckoutForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+        
+        # Auto-detect delivery zone and city from delivery address
+        addr = cleaned_data.get('delivery_address')
+        if addr:
+            from .models import detect_dhaka_and_city
+            auto_zone, auto_city = detect_dhaka_and_city(addr)
+            if not cleaned_data.get('delivery_zone'):
+                cleaned_data['delivery_zone'] = auto_zone
+            if not cleaned_data.get('delivery_city') or cleaned_data.get('delivery_city') in ('Dhaka', 'Outside Dhaka'):
+                cleaned_data['delivery_city'] = auto_city
+        else:
+            if not cleaned_data.get('delivery_zone'):
+                cleaned_data['delivery_zone'] = 'INSIDE_DHAKA'
+            if not cleaned_data.get('delivery_city'):
+                cleaned_data['delivery_city'] = 'Dhaka'
+
         payment_method = cleaned_data.get('payment_method')
         sender_number = (cleaned_data.get('payment_sender_number') or '').strip()
         trx_id = (cleaned_data.get('payment_trx_id') or '').strip().upper()

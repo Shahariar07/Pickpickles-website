@@ -344,6 +344,96 @@ import math
 from decimal import Decimal
 
 
+def detect_dhaka_and_city(address: str) -> tuple:
+    """
+    Auto-detects whether the delivery address is Inside Dhaka City or Outside Dhaka,
+    and infers the city/district name.
+    """
+    addr = (address or '').lower()
+    dhaka_keywords = [
+        'dhaka', 'ঢাকা', 'dhanmondi', 'ধানমন্ডি', 'gulshan', 'গুলশান', 'banani', 'বনানী', 
+        'uttara', 'উত্তরা', 'mirpur', 'মিরপুর', 'mohammadpur', 'মোহাম্মদপুর', 'motijheel', 'মতিঝিল',
+        'bashundhara', 'বসুন্ধরা', 'badda', 'বাড্ডা', 'rampura', 'রামপুরা', 'khilgaon', 'খিলগাঁও',
+        'malibagh', 'মালিবাগ', 'shantinagar', 'শান্তিনগর', 'farmgate', 'ফার্মগেট', 'tejgaon', 'তেজগাঁও',
+        'kawran bazar', 'কারওয়ান বাজার', 'karwan bazar', 'old dhaka', 'পুরান ঢাকা', 'lalbagh', 'লালবাগ',
+        'wari', 'ওয়ারী', 'chawkbazar', 'চকবাজার', 'keraniganj', 'কেরানীগঞ্জ', 'savar', 'সাভার',
+        'jatrabari', 'যাত্রাবাড়ী', 'demra', 'ডেমরা', 'kamrangirchar', 'কামরাঙ্গীরচর', 'aftabnagar', 'আফতাবনগর',
+        'nikunja', 'নিকুঞ্জ', 'baridhara', 'বারিধারা', 'cantonment', 'ক্যান্টনমেন্ট', 'banasree', 'বনশ্রী',
+        'moghbazar', 'মগবাজার', 'panthapath', 'পান্থপথ', 'azimpur', 'আজিমপুর', 'new market', 'নিউ মার্কেট',
+        'elephant road', 'এলিফ্যান্ট রোড', 'green road', 'গ্রীন রোড', 'shyamoli', 'শ্যামলী', 'kalyanpur', 'কল্যাণপুর',
+        'adabor', 'আদাবর', 'pallabi', 'পল্লবী', 'kafrul', 'কাফরুল', 'shahbagh', 'শাহবাগ', 'paltan', 'পল্টন',
+        'sutrapur', 'সূত্রাপুর', 'gandaria', 'গেন্ডারিয়া', 'kotwali', 'কোতোয়ালী', 'hazaribagh', 'হাজারীবাগ',
+        'tongi', 'টঙ্গী', 'gazipur', 'গাজীপুর', 'narayanganj', 'নারায়ণগঞ্জ', 'dohar', 'দোহার', 'dhamrai', 'ধামরাই',
+        'nawabganj', 'নবাবগঞ্জ', 'keranigang', 'কেরানিগঞ্জ'
+    ]
+    if any(k in addr for k in dhaka_keywords):
+        return 'INSIDE_DHAKA', 'Dhaka'
+    
+    districts = {
+        'chittagong': 'Chattogram', 'chattogram': 'Chattogram', 'চট্টগ্রাম': 'Chattogram', 'ctg': 'Chattogram',
+        'sylhet': 'Sylhet', 'সিলেট': 'Sylhet',
+        'rajshahi': 'Rajshahi', 'রাজশাহী': 'Rajshahi',
+        'khulna': 'Khulna', 'খুলনা': 'Khulna',
+        'barisal': 'Barishal', 'barishal': 'Barishal', 'বরিশাল': 'Barishal',
+        'rangpur': 'Rangpur', 'রংপুর': 'Rangpur',
+        'mymensingh': 'Mymensingh', 'ময়মনসিংহ': 'Mymensingh',
+        'comilla': 'Cumilla', 'cumilla': 'Cumilla', 'কুমিল্লা': 'Cumilla',
+        'cox': "Cox's Bazar", 'কক্সবাজার': "Cox's Bazar",
+        'bogura': 'Bogura', 'bogra': 'Bogura', 'বগুড়া': 'Bogura',
+        'jashore': 'Jashore', 'jessore': 'Jashore', 'যশোর': 'Jashore',
+        'feni': 'Feni', 'ফেনী': 'Feni',
+        'noakhali': 'Noakhali', 'নোয়াখালী': 'Noakhali',
+        'tangail': 'Tangail', 'টাঙ্গাইল': 'Tangail',
+        'pabna': 'Pabna', 'পাবনা': 'Pabna',
+        'kushtia': 'Kushtia', 'কুষ্টিয়া': 'Kushtia',
+        'faridpur': 'Faridpur', 'ফরিদপুর': 'Faridpur',
+        'dinajpur': 'Dinajpur', 'দিনাজপুর': 'Dinajpur',
+        'brahmanbaria': 'Brahmanbaria', 'ব্রাহ্মণবাড়িয়া': 'Brahmanbaria',
+        'kishoreganj': 'Kishoreganj', 'কিশোরগঞ্জ': 'Kishoreganj',
+        'manikganj': 'Manikganj', 'মানিকগঞ্জ': 'Manikganj',
+        'munshiganj': 'Munshiganj', 'মুন্সীগঞ্জ': 'Munshiganj',
+        'narsingdi': 'Narsingdi', 'নরসিংদী': 'Narsingdi',
+        'sirajganj': 'Sirajganj', 'সিরাজগঞ্জ': 'Sirajganj',
+        'natore': 'Natore', 'নাটোর': 'Natore',
+        'naogaon': 'Naogaon', 'নওগাঁ': 'Naogaon',
+        'chapainawabganj': 'Chapainawabganj', 'চাঁপাইনবাবগঞ্জ': 'Chapainawabganj',
+        'bagerhat': 'Bagerhat', 'বাগেরহাট': 'Bagerhat',
+        'satkhira': 'Satkhira', 'সাতক্ষীরা': 'Satkhira',
+        'jhenaidah': 'Jhenaidah', 'ঝিনাইদহ': 'Jhenaidah',
+        'magura': 'Magura', 'মাগুরা': 'Magura',
+        'narail': 'Narail', 'নড়াইল': 'Narail',
+        'chuadanga': 'Chuadanga', 'চুয়াডাঙ্গা': 'Chuadanga',
+        'meherpur': 'Meherpur', 'মেহেরপুর': 'Meherpur',
+        'patuakhali': 'Patuakhali', 'পটুয়াখালী': 'Patuakhali',
+        'bhola': 'Bhola', 'ভোলা': 'Bhola',
+        'pirojpur': 'Pirojpur', 'পিরোজপুর': 'Pirojpur',
+        'barguna': 'Barguna', 'বরগুনা': 'Barguna',
+        'jhalokati': 'Jhalokati', 'ঝালকাঠি': 'Jhalokati',
+        'sunamganj': 'Sunamganj', 'সুনামগঞ্জ': 'Sunamganj',
+        'habiganj': 'Habiganj', 'হবিগঞ্জ': 'Habiganj',
+        'moulvibazar': 'Moulvibazar', 'মৌলভীবাজার': 'Moulvibazar',
+        'gaibandha': 'Gaibandha', 'গাইবান্ধা': 'Gaibandha',
+        'kurigram': 'Kurigram', 'কুড়িগ্রাম': 'Kurigram',
+        'lalmonirhat': 'Lalmonirhat', 'লালমনিরহাট': 'Lalmonirhat',
+        'nilphamari': 'Nilphamari', 'নীলফামারী': 'Nilphamari',
+        'panchagarh': 'Panchagarh', 'পঞ্চগড়': 'Panchagarh',
+        'thakurgaon': 'Thakurgaon', 'ঠাকুরগাঁও': 'Thakurgaon',
+        'jamalpur': 'Jamalpur', 'জামালপুর': 'Jamalpur',
+        'sherpur': 'Sherpur', 'শেরপুর': 'Sherpur',
+        'netrokona': 'Netrokona', 'নেত্রকোণা': 'Netrokona',
+        'chandpur': 'Chandpur', 'চাঁদপুর': 'Chandpur',
+        'lakshmipur': 'Lakshmipur', 'লক্ষ্মীপুর': 'Lakshmipur',
+        'khagrachhari': 'Khagrachhari', 'খাগড়াছড়ি': 'Khagrachhari',
+        'rangamati': 'Rangamati', 'রাঙ্গামাটি': 'Rangamati',
+        'bandarban': 'Bandarban', 'বান্দরবান': 'Bandarban'
+    }
+    for k, dist_name in districts.items():
+        if k in addr:
+            return 'OUTSIDE_DHAKA', dist_name
+            
+    return 'OUTSIDE_DHAKA', 'Outside Dhaka'
+
+
 def calculate_pathao_delivery_fee(weight_grams: int = 600, zone: str = 'INSIDE_DHAKA', total_items: int = 1) -> Decimal:
     """
     Calculates delivery fee.
@@ -519,6 +609,14 @@ class Order(models.Model):
                 candidate += 1
                 cand_str = f"PKP-{candidate:05d}"
             self.order_number = cand_str
+
+        # Auto-detect delivery zone and city from delivery address
+        if self.delivery_address:
+            auto_zone, auto_city = detect_dhaka_and_city(self.delivery_address)
+            if not self.delivery_zone or (self.delivery_zone == 'INSIDE_DHAKA' and auto_zone == 'OUTSIDE_DHAKA'):
+                self.delivery_zone = auto_zone
+            if not self.delivery_city or self.delivery_city in ('Dhaka', 'Outside Dhaka'):
+                self.delivery_city = auto_city
 
         # Synchronize customer instruction and delivery instruction
         clean_cust_notes = (self.customer_notes or '').strip()
