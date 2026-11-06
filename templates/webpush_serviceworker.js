@@ -42,13 +42,19 @@ self.addEventListener('push', function(event) {
     body: data.body,
     icon: iconUrl,
     badge: badgeUrl,
-    vibrate: [200, 100, 200, 100, 200],
+    vibrate: data.vibrate || [300, 100, 300, 100, 400],
     tag: data.tag || ('pickpickles-order-' + Date.now()),
     renotify: true,
     requireInteraction: true,
+    silent: false,
+    timestamp: data.timestamp || Date.now(),
     data: {
       url: data.url || '/dashboard/orders/'
-    }
+    },
+    actions: [
+      { action: 'open_order', title: '👀 View Order' },
+      { action: 'open_dashboard', title: '📊 Dashboard' }
+    ]
   };
 
   event.waitUntil(
@@ -59,9 +65,14 @@ self.addEventListener('push', function(event) {
 // Open order / dashboard on notification click
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
-  const targetUrl = (event.notification.data && event.notification.data.url) 
+  
+  let targetUrl = (event.notification.data && event.notification.data.url) 
     ? event.notification.data.url 
     : '/dashboard/orders/';
+
+  if (event.action === 'open_dashboard') {
+    targetUrl = '/dashboard/';
+  }
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {

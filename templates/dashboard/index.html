@@ -55,98 +55,6 @@
         </div>
     </div>
 
-    <!-- Pending Customer Reviews Approval Alert on Main Dashboard -->
-    {% if pending_reviews_total > 0 %}
-    <div class="bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border-2 border-amber-400/70 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-amber-200/70">
-            <div class="flex items-center gap-2.5">
-                <span class="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center text-sm font-black shadow-xs shrink-0">
-                    <i class="fa-solid fa-star"></i>
-                </span>
-                <div>
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <h3 class="font-display font-black text-sm sm:text-base text-gray-900">
-                            অনুমোদনের অপেক্ষায় নতুন রিভিউ (Pending Customer Reviews)
-                        </h3>
-                        <span class="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-black text-[10px] animate-pulse">
-                            {{ pending_reviews_total }} New
-                        </span>
-                    </div>
-                    <p class="text-xs text-gray-600 mt-0.5">
-                        কাস্টমারদের ফোন নম্বর ও অর্ডার মিলিয়ে দেখে এখান থেকেই ১-ক্লিকে Approve করতে পারবেন:
-                    </p>
-                </div>
-            </div>
-
-            <a href="{% url 'dashboard:reviews' %}?status=pending" class="self-start sm:self-auto px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs transition shadow-xs flex items-center gap-1.5">
-                <span>সবগুলো রিভিউ দেখুন ({{ pending_reviews_total }})</span>
-                <i class="fa-solid fa-arrow-right text-[10px]"></i>
-            </a>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {% for r in pending_reviews %}
-            <div class="bg-white p-3.5 rounded-xl border border-amber-200/80 shadow-2xs space-y-2 flex flex-col justify-between">
-                <div>
-                    <div class="flex items-start justify-between gap-2">
-                        <div>
-                            <strong class="text-gray-900 font-black text-xs sm:text-sm block">{{ r.reviewer_name }}</strong>
-                            {% if r.reviewer_phone %}
-                            <div class="mt-1.5 flex items-center gap-1.5 flex-wrap">
-                                <span class="inline-flex items-center gap-1 text-[10.5px] font-bold text-gray-800 bg-gray-100 px-2 py-0.5 rounded-md border border-gray-200">
-                                    <i class="fa-solid fa-phone text-[9px] text-emerald-600"></i>
-                                    <span>{{ r.reviewer_phone }}</span>
-                                </span>
-                                {% if r.is_verified_customer %}
-                                <a href="{% url 'dashboard:order_detail' r.matched_order_number %}" class="inline-flex items-center gap-1 text-[10px] font-black text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-2 py-0.5 rounded-md border border-emerald-300 transition" title="Past verified buyer confirmed from order history">
-                                    <i class="fa-solid fa-circle-check text-emerald-600"></i>
-                                    <span>Verified Customer (#{{ r.matched_order_number }})</span>
-                                </a>
-                                {% else %}
-                                <span class="inline-flex items-center gap-1 text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200" title="No past orders found with this phone number">
-                                    <i class="fa-solid fa-triangle-exclamation text-rose-500 text-[9px]"></i>
-                                    <span>Unverified (No Orders Found)</span>
-                                </span>
-                                {% endif %}
-                            </div>
-                            {% endif %}
-                        </div>
-                        <span class="text-amber-500 font-black text-xs shrink-0">
-                            ★ {{ r.rating }}.0
-                        </span>
-                    </div>
-                    
-                    <p class="text-xs text-gray-700 italic mt-2 line-clamp-2">
-                        "{{ r.comment }}"
-                    </p>
-
-                    <div class="text-[10px] text-gray-400 font-semibold mt-1">
-                        {{ r.product.name|default:"General Pickles" }} • {{ r.created_at|timesince }} আগে
-                    </div>
-                </div>
-
-                <!-- 1-Click Approve or View Button -->
-                <div class="pt-2 border-t border-gray-100 flex items-center justify-between gap-2">
-                    <form method="POST" action="{% url 'dashboard:reviews' %}" class="inline">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="toggle_approve">
-                        <input type="hidden" name="review_id" value="{{ r.id }}">
-                        <button type="submit" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer">
-                            <i class="fa-solid fa-check text-xs"></i>
-                            <span>Approve & Live</span>
-                        </button>
-                    </form>
-
-                    <a href="{% url 'dashboard:reviews' %}" class="text-[11px] text-gray-500 hover:text-gray-800 font-bold">
-                        ম্যানেজার দেখুন
-                    </a>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
-
     <!-- ========================================================================= -->
     <!-- 2. PERIODIC ORDERS & REVENUE BREAKDOWN (৪টি কম্প্যাক্ট কার্ড) -->
     <!-- ========================================================================= -->
@@ -166,7 +74,7 @@
             </a>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2.5">
             
             <!-- 0. TODAY ORDER (আজকের লাইভ) -->
             <div class="relative overflow-hidden bg-gradient-to-br from-emerald-500/10 via-white to-brand-50/30 rounded-xl p-3 border-2 border-emerald-500/70 shadow-xs hover:shadow-sm hover:border-emerald-600 transition-all flex flex-col justify-between group">
@@ -183,19 +91,32 @@
                     </span>
                 </div>
 
-                <div class="mt-1.5">
-                    <span class="text-[8px] font-extrabold text-gray-400 uppercase tracking-wider block">Delivered Sales (আদায়কৃত)</span>
-                    <div class="font-display font-black text-lg sm:text-xl text-emerald-800 leading-none mt-0.5 tracking-tight">
-                        ৳{{ today_delivered_sum|floatformat:0|default:"0" }}
+                <div class="mt-1.5 flex items-baseline justify-between gap-1">
+                    <div>
+                        <span class="text-[8px] font-extrabold text-gray-400 uppercase tracking-wider block">Delivered (আদায়কৃত)</span>
+                        <div class="font-display font-black text-lg sm:text-xl text-emerald-800 leading-none mt-0.5 tracking-tight">
+                            ৳{{ today_delivered_sum|floatformat:0|default:"0" }}
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <span class="inline-flex items-center gap-1 bg-amber-50 text-amber-900 border border-amber-200 px-1.5 py-0.5 rounded-lg text-[10px] font-black shadow-2xs" title="Total jars in today's orders">
+                            <i class="fa-solid fa-jar text-amber-600 text-[9px]"></i>
+                            <span>{{ today_jars_count|default:"0" }} Jars</span>
+                        </span>
                     </div>
                 </div>
 
-                <div class="mt-2 pt-1.5 border-t border-emerald-200/80 flex items-center justify-between text-[10px]">
-                    <a href="{% url 'dashboard:orders' %}?period=today" class="font-black text-emerald-900 bg-emerald-100 hover:bg-emerald-200 px-1.5 py-0.5 rounded text-[9px] transition">
-                        {{ today_orders_count }} Confirmed &rarr;
+                <!-- Bottom Single Row: Orders Link + Delivered Orders on the side -->
+                <div class="mt-2.5 pt-2 border-t border-emerald-100 flex items-center justify-between text-[11px]">
+                    <a href="{% url 'dashboard:orders' %}?period=today" class="font-bold text-emerald-800 hover:text-emerald-950 flex items-center gap-1 group/lnk transition">
+                        <span>{{ today_orders_count }} Confirmed</span>
+                        {% if today_pending_count > 0 %}
+                        <span class="text-[9px] font-bold text-amber-700 bg-amber-50 px-1 rounded">({{ today_pending_count }}p)</span>
+                        {% endif %}
+                        <i class="fa-solid fa-arrow-right text-[9px] group-hover/lnk:translate-x-0.5 transition-transform"></i>
                     </a>
-                    <span class="text-gray-600 font-semibold text-[9px]">
-                        Delivered: <strong class="text-emerald-700 font-bold">{{ today_delivered_count }}</strong>{% if today_pending_count > 0 %}<span class="text-amber-600 font-bold ml-1">({{ today_pending_count }} Pnd)</span>{% endif %}
+                    <span class="text-slate-500 font-semibold text-[10.5px]">
+                        Delivered: <strong class="text-emerald-800 font-black">{{ today_delivered_count|default:"0" }}</strong>
                     </span>
                 </div>
             </div>
@@ -214,19 +135,29 @@
                     </span>
                 </div>
 
-                <div class="mt-1.5">
-                    <span class="text-[8px] font-extrabold text-gray-400 uppercase tracking-wider block">Delivered Sales (আদায়কৃত)</span>
-                    <div class="font-display font-black text-lg sm:text-xl text-emerald-800 leading-none mt-0.5 tracking-tight">
-                        ৳{{ this_month_orders_sum|floatformat:0|default:"0" }}
+                <div class="mt-1.5 flex items-baseline justify-between gap-1">
+                    <div>
+                        <span class="text-[8px] font-extrabold text-gray-400 uppercase tracking-wider block">Delivered (আদায়কৃত)</span>
+                        <div class="font-display font-black text-lg sm:text-xl text-emerald-800 leading-none mt-0.5 tracking-tight">
+                            ৳{{ this_month_orders_sum|floatformat:0|default:"0" }}
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <span class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-900 border border-emerald-200 px-1.5 py-0.5 rounded-lg text-[10px] font-black shadow-2xs" title="Total jars in this month's orders">
+                            <i class="fa-solid fa-jar text-emerald-600 text-[9px]"></i>
+                            <span>{{ this_month_jars_count|default:"0" }} Jars</span>
+                        </span>
                     </div>
                 </div>
 
-                <div class="mt-2 pt-1.5 border-t border-emerald-100/80 flex items-center justify-between text-[10px]">
-                    <a href="{% url 'dashboard:orders' %}?period=this_month" class="font-black text-emerald-800 bg-emerald-100/70 hover:bg-emerald-200 px-1.5 py-0.2 rounded text-[9px] transition">
-                        {{ this_month_orders_count }} Orders &rarr;
+                <!-- Bottom Single Row: Orders Link + Delivered Orders on the side -->
+                <div class="mt-2.5 pt-2 border-t border-emerald-100 flex items-center justify-between text-[11px]">
+                    <a href="{% url 'dashboard:orders' %}?period=this_month" class="font-bold text-emerald-800 hover:text-emerald-950 flex items-center gap-1 group/lnk transition">
+                        <span>{{ this_month_orders_count }} Orders</span>
+                        <i class="fa-solid fa-arrow-right text-[9px] group-hover/lnk:translate-x-0.5 transition-transform"></i>
                     </a>
-                    <span class="text-gray-500 font-semibold text-[9px]">
-                        Delivered: <strong class="text-emerald-700 font-bold">{{ this_month_delivered_count }}</strong>{% if this_month_active_count > 0 %}<span class="text-amber-600 font-bold ml-1">({{ this_month_active_count }} Active)</span>{% endif %}
+                    <span class="text-slate-500 font-semibold text-[10.5px]">
+                        Delivered: <strong class="text-emerald-800 font-black">{{ this_month_delivered_count|default:"0" }}</strong>
                     </span>
                 </div>
             </div>
@@ -245,19 +176,29 @@
                     </span>
                 </div>
 
-                <div class="mt-1.5">
-                    <span class="text-[8px] font-extrabold text-gray-400 uppercase tracking-wider block">Delivered Sales (আদায়কৃত)</span>
-                    <div class="font-display font-black text-lg sm:text-xl text-blue-900 leading-none mt-0.5 tracking-tight">
-                        ৳{{ last_month_orders_sum|floatformat:0|default:"0" }}
+                <div class="mt-1.5 flex items-baseline justify-between gap-1">
+                    <div>
+                        <span class="text-[8px] font-extrabold text-gray-400 uppercase tracking-wider block">Delivered (আদায়কৃত)</span>
+                        <div class="font-display font-black text-lg sm:text-xl text-blue-900 leading-none mt-0.5 tracking-tight">
+                            ৳{{ last_month_orders_sum|floatformat:0|default:"0" }}
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <span class="inline-flex items-center gap-1 bg-blue-50 text-blue-900 border border-blue-200 px-1.5 py-0.5 rounded-lg text-[10px] font-black shadow-2xs" title="Total jars in last month's orders">
+                            <i class="fa-solid fa-jar text-blue-600 text-[9px]"></i>
+                            <span>{{ last_month_jars_count|default:"0" }} Jars</span>
+                        </span>
                     </div>
                 </div>
 
-                <div class="mt-2 pt-1.5 border-t border-blue-100 flex items-center justify-between text-[10px]">
-                    <a href="{% url 'dashboard:orders' %}?period=last_month" class="font-black text-blue-800 bg-blue-100/70 hover:bg-blue-200 px-1.5 py-0.2 rounded text-[9px] transition">
-                        {{ last_month_orders_count }} Orders &rarr;
+                <!-- Bottom Single Row: Orders Link + Delivered Orders on the side -->
+                <div class="mt-2.5 pt-2 border-t border-blue-100 flex items-center justify-between text-[11px]">
+                    <a href="{% url 'dashboard:orders' %}?period=last_month" class="font-bold text-blue-800 hover:text-blue-950 flex items-center gap-1 group/lnk transition">
+                        <span>{{ last_month_orders_count }} Orders</span>
+                        <i class="fa-solid fa-arrow-right text-[9px] group-hover/lnk:translate-x-0.5 transition-transform"></i>
                     </a>
-                    <span class="text-gray-500 font-semibold text-[9px]">
-                        Delivered: <strong class="text-blue-800 font-bold">{{ last_month_delivered_count }} Orders</strong>
+                    <span class="text-slate-500 font-semibold text-[10.5px]">
+                        Delivered: <strong class="text-blue-800 font-black">{{ last_month_delivered_count|default:"0" }}</strong>
                     </span>
                 </div>
             </div>
@@ -276,19 +217,29 @@
                     </span>
                 </div>
 
-                <div class="mt-1.5">
-                    <span class="text-[8px] font-extrabold text-gray-400 uppercase tracking-wider block">Delivered Sales (আদায়কৃত)</span>
-                    <div class="font-display font-black text-lg sm:text-xl text-indigo-900 leading-none mt-0.5 tracking-tight">
-                        ৳{{ this_year_orders_sum|floatformat:0|default:"0" }}
+                <div class="mt-1.5 flex items-baseline justify-between gap-1">
+                    <div>
+                        <span class="text-[8px] font-extrabold text-gray-400 uppercase tracking-wider block">Delivered (আদায়কৃত)</span>
+                        <div class="font-display font-black text-lg sm:text-xl text-indigo-900 leading-none mt-0.5 tracking-tight">
+                            ৳{{ this_year_orders_sum|floatformat:0|default:"0" }}
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <span class="inline-flex items-center gap-1 bg-indigo-50 text-indigo-900 border border-indigo-200 px-1.5 py-0.5 rounded-lg text-[10px] font-black shadow-2xs" title="Total jars in this year's orders">
+                            <i class="fa-solid fa-jar text-indigo-600 text-[9px]"></i>
+                            <span>{{ this_year_jars_count|default:"0" }} Jars</span>
+                        </span>
                     </div>
                 </div>
 
-                <div class="mt-2 pt-1.5 border-t border-indigo-100 flex items-center justify-between text-[10px]">
-                    <a href="{% url 'dashboard:orders' %}?period=this_year" class="font-black text-indigo-800 bg-indigo-100/70 hover:bg-indigo-200 px-1.5 py-0.2 rounded text-[9px] transition">
-                        {{ this_year_orders_count }} Orders &rarr;
+                <!-- Bottom Single Row: Orders Link + Delivered Orders on the side -->
+                <div class="mt-2.5 pt-2 border-t border-indigo-100 flex items-center justify-between text-[11px]">
+                    <a href="{% url 'dashboard:orders' %}?period=this_year" class="font-bold text-indigo-800 hover:text-indigo-950 flex items-center gap-1 group/lnk transition">
+                        <span>{{ this_year_orders_count }} Orders</span>
+                        <i class="fa-solid fa-arrow-right text-[9px] group-hover/lnk:translate-x-0.5 transition-transform"></i>
                     </a>
-                    <span class="text-gray-500 font-semibold text-[9px]">
-                        Delivered: <strong class="text-indigo-800 font-bold">{{ this_year_delivered_count }} Orders</strong>
+                    <span class="text-slate-500 font-semibold text-[10.5px]">
+                        Delivered: <strong class="text-indigo-800 font-black">{{ this_year_delivered_count|default:"0" }}</strong>
                     </span>
                 </div>
             </div>
@@ -307,19 +258,29 @@
                     </span>
                 </div>
 
-                <div class="mt-1.5">
-                    <span class="text-[8px] font-extrabold text-gray-400 uppercase tracking-wider block">Delivered Sales (আদায়কৃত)</span>
-                    <div class="font-display font-black text-lg sm:text-xl text-amber-950 leading-none mt-0.5 tracking-tight">
-                        ৳{{ prev_year_orders_sum|floatformat:0|default:"0" }}
+                <div class="mt-1.5 flex items-baseline justify-between gap-1">
+                    <div>
+                        <span class="text-[8px] font-extrabold text-gray-400 uppercase tracking-wider block">Delivered (আদায়কৃত)</span>
+                        <div class="font-display font-black text-lg sm:text-xl text-amber-950 leading-none mt-0.5 tracking-tight">
+                            ৳{{ prev_year_orders_sum|floatformat:0|default:"0" }}
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <span class="inline-flex items-center gap-1 bg-amber-50 text-amber-900 border border-amber-200 px-1.5 py-0.5 rounded-lg text-[10px] font-black shadow-2xs" title="Total jars in previous year's orders">
+                            <i class="fa-solid fa-jar text-amber-600 text-[9px]"></i>
+                            <span>{{ prev_year_jars_count|default:"0" }} Jars</span>
+                        </span>
                     </div>
                 </div>
 
-                <div class="mt-2 pt-1.5 border-t border-amber-100 flex items-center justify-between text-[10px]">
-                    <a href="{% url 'dashboard:orders' %}?period=prev_year" class="font-black text-amber-900 bg-amber-100/70 hover:bg-amber-200 px-1.5 py-0.2 rounded text-[9px] transition">
-                        {{ prev_year_orders_count }} Orders &rarr;
+                <!-- Bottom Single Row: Orders Link + Delivered Orders on the side -->
+                <div class="mt-2.5 pt-2 border-t border-amber-100 flex items-center justify-between text-[11px]">
+                    <a href="{% url 'dashboard:orders' %}?period=prev_year" class="font-bold text-amber-900 hover:text-amber-950 flex items-center gap-1 group/lnk transition">
+                        <span>{{ prev_year_orders_count }} Orders</span>
+                        <i class="fa-solid fa-arrow-right text-[9px] group-hover/lnk:translate-x-0.5 transition-transform"></i>
                     </a>
-                    <span class="text-gray-500 font-semibold text-[9px]">
-                        Delivered: <strong class="text-amber-800 font-bold">{{ prev_year_delivered_count }} Orders</strong>
+                    <span class="text-slate-500 font-semibold text-[10.5px]">
+                        Delivered: <strong class="text-amber-900 font-black">{{ prev_year_delivered_count|default:"0" }}</strong>
                     </span>
                 </div>
             </div>
@@ -753,8 +714,9 @@
                             <a href="{% url 'dashboard:order_detail' order.order_number %}" class="font-display font-black text-brand-800 group-hover:text-brand-600 transition">
                                 #{{ order.order_number }}
                             </a>
-                            <div class="text-[10px] text-gray-400 font-medium mt-0.5">
-                                {{ order.created_at|date:"M d, h:i A" }}
+                            <div class="inline-flex items-center gap-1 text-[10px] text-slate-700 font-bold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 mt-1 whitespace-nowrap">
+                                <i class="fa-regular fa-clock text-[9px] text-slate-500"></i>
+                                <span>{{ order.created_at|date:"M d, h:i A" }}</span>
                             </div>
                         </td>
                         <td class="py-3.5 px-3.5">

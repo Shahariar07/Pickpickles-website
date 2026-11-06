@@ -16,6 +16,97 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 SENT_ORDERS_FILE = os.path.join(settings.BASE_DIR, 'media', 'meta_capi_sent_orders.json')
+TRACKING_KEYS_FILE = os.path.join(settings.BASE_DIR, 'media', 'meta_order_tracking.json')
+_tracking_lock = threading.Lock()
+
+
+def record_order_tracking_keys(order, request):
+    """
+    Saves customer's exact Meta Match Keys (fbp, fbc, mobile User-Agent, real IP)
+    at checkout time. Stored persistently in media/meta_order_tracking.json keyed
+    by order_number so when admin confirms the order, the Purchase CAPI event
+    is dispatched with high Event Match Quality (EMQ).
+    """
+    if not order or not getattr(order, 'order_number', None):
+        return
+    try:
+        order_num = str(order.order_number).strip()
+
+        # 1. Extract fbp (Browser ID)
+        fbp = (
+            (request.POST.get('meta_fbp') if hasattr(request, 'POST') else '') or
+            (request.COOKIES.get('_fbp') if hasattr(request, 'COOKIES') else '') or
+            (request.session.get('meta_fbp') if hasattr(request, 'session') else '') or ''
+        ).strip()
+
+        # 2. Extract fbc (Click ID)
+        fbc = (
+            (request.POST.get('meta_fbc') if hasattr(request, 'POST') else '') or
+            (request.COOKIES.get('_fbc') if hasattr(request, 'COOKIES') else '') or
+            (request.session.get('meta_fbc') if hasattr(request, 'session') else '') or ''
+        ).strip()
+
+        # If no fbc but fbclid exists, build standard fbc format: fb.1.<timestamp>.<fbclid>
+        if not fbc:
+            fbclid = (
+                (request.GET.get('fbclid') if hasattr(request, 'GET') else '') or
+                (request.POST.get('meta_fbclid') if hasattr(request, 'POST') else '') or
+                (request.session.get('meta_fbclid') if hasattr(request, 'session') else '') or ''
+            ).strip()
+            if fbclid:
+                fbc = f"fb.1.{int(time.time())}.{fbclid}"
+
+        # 3. Extract customer's real device User-Agent
+        client_ua = ''
+        if hasattr(request, 'META'):
+            client_ua = (request.META.get('HTTP_USER_AGENT') or '').strip()
+
+        # 4. Extract customer's real IP address
+        client_ip = ''
+        try:
+            from store.security import get_client_ip
+            client_ip = get_client_ip(request)
+        except Exception:
+            if hasattr(request, 'META'):
+                client_ip = request.META.get('REMOTE_ADDR', '')
+
+        tracking_payload = {
+            'fbp': fbp,
+            'fbc': fbc,
+            'client_user_agent': client_ua,
+            'client_ip_address': client_ip,
+            'recorded_at': time.strftime('%Y-%m-%d %I:%M:%S %p'),
+        }
+
+        with _tracking_lock:
+            os.makedirs(os.path.dirname(TRACKING_KEYS_FILE), exist_ok=True)
+            existing_data = {}
+            if os.path.exists(TRACKING_KEYS_FILE):
+                try:
+                    with open(TRACKING_KEYS_FILE, 'r', encoding='utf-8') as f:
+                        existing_data = json.load(f)
+                except Exception:
+                    existing_data = {}
+
+            existing_data[order_num] = tracking_payload
+            with open(TRACKING_KEYS_FILE, 'w', encoding='utf-8') as f:
+                json.dump(existing_data, f, indent=2)
+
+        logger.info(f"[Meta CAPI] Recorded tracking keys for #{order_num}: fbp={'yes' if fbp else 'no'}, fbc={'yes' if fbc else 'no'}, ip={'yes' if client_ip else 'no'}")
+    except Exception as e:
+        logger.warning(f"[Meta CAPI] Failed recording order tracking keys for #{getattr(order, 'order_number', 'unknown')}: {e}")
+
+
+def get_order_tracking_keys(order_number):
+    """Retrieve saved tracking keys for this order."""
+    try:
+        if os.path.exists(TRACKING_KEYS_FILE):
+            with open(TRACKING_KEYS_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                return data.get(str(order_number), {})
+    except Exception as e:
+        logger.warning(f"[Meta CAPI] Error reading tracking file: {e}")
+    return {}
 
 
 def _is_order_already_sent(order_number):
@@ -123,14 +214,37 @@ def _execute_meta_purchase(order, force=False):
         return {'success': False, 'error': 'Missing META_PIXEL_ID or META_CONVERSIONS_API_TOKEN'}
 
     try:
-        # 1. Customer User Data (Hashed with SHA-256 as required by Meta CAPI)
+        # Load recorded tracking keys for this specific customer
+        tracking = get_order_tracking_keys(order.order_number)
+
+        # 1. Customer User Data (Hashed with SHA-256 where required by Meta CAPI)
         user_data = {
             'country': [_sha256('bd')],
             'external_id': [_sha256(order.order_number)],
-            'client_user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
         }
-        if getattr(order, 'ip_address', None):
-            user_data['client_ip_address'] = str(order.ip_address).strip()
+
+        # Match Key: Browser ID (fbp) - Unhashed
+        fbp_val = tracking.get('fbp')
+        if fbp_val:
+            user_data['fbp'] = str(fbp_val).strip()
+
+        # Match Key: Click ID (fbc) - Unhashed
+        fbc_val = tracking.get('fbc')
+        if fbc_val:
+            user_data['fbc'] = str(fbc_val).strip()
+
+        # Match Key: Client User Agent - Unhashed
+        # 95%+ of traffic is mobile Android/iPhone in Bangladesh
+        client_ua = tracking.get('client_user_agent')
+        if client_ua:
+            user_data['client_user_agent'] = str(client_ua).strip()
+        else:
+            user_data['client_user_agent'] = 'Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36'
+
+        # Match Key: Real Client IP Address - Unhashed
+        client_ip = tracking.get('client_ip_address') or getattr(order, 'ip_address', None)
+        if client_ip:
+            user_data['client_ip_address'] = str(client_ip).strip()
 
         # Email
         if order.customer_email:
@@ -164,11 +278,11 @@ def _execute_meta_purchase(order, force=False):
             if hashed_city:
                 user_data['ct'] = [hashed_city]
 
-        # 2. Custom Data (Financials & Items)
+        # 2. Custom Data (Financials & Items with Catalog Content ID match)
         contents = []
         content_ids = []
         for item in order.items.all():
-            prod_id = str(item.product.id) if item.product else str(item.product_name)
+            prod_id = item.product.catalog_id if item.product else str(item.product_name)
             content_ids.append(prod_id)
             contents.append({
                 'id': prod_id,
@@ -262,7 +376,7 @@ def build_browser_purchase_payload(order):
     num_items = 0
     try:
         for item in order.items.all():
-            pid = str(item.product.id) if item.product else str(item.product_name)
+            pid = item.product.catalog_id if item.product else str(item.product_name)
             qty = int(item.quantity or 1)
             content_ids.append(pid)
             contents.append({
@@ -274,6 +388,24 @@ def build_browser_purchase_payload(order):
     except Exception:
         num_items = 1
 
+    adv_matching = {
+        'em': em,
+        'ph': cleaned_phone,
+        'fn': fn,
+        'ln': ln,
+        'ct': ct,
+        'country': 'bd',
+        'external_id': str(order.order_number).strip().lower()
+    }
+    try:
+        tracking = get_order_tracking_keys(order.order_number)
+        if tracking.get('fbp'):
+            adv_matching['fbp'] = str(tracking['fbp']).strip()
+        if tracking.get('fbc'):
+            adv_matching['fbc'] = str(tracking['fbc']).strip()
+    except Exception:
+        pass
+
     return {
         'order_number': str(order.order_number),
         'value': float(order.total_amount or 0),
@@ -281,15 +413,7 @@ def build_browser_purchase_payload(order):
         'content_ids': content_ids,
         'contents': contents,
         'num_items': num_items or 1,
-        'advanced_matching': {
-            'em': em,
-            'ph': cleaned_phone,
-            'fn': fn,
-            'ln': ln,
-            'ct': ct,
-            'country': 'bd',
-            'external_id': str(order.order_number).strip().lower()
-        }
+        'advanced_matching': adv_matching
     }
 
 

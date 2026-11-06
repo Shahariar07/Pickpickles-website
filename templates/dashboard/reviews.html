@@ -200,6 +200,15 @@
                                 {% endif %}
                             </form>
 
+                            <form method="POST" class="inline" onsubmit="return confirm('Are you sure you want to reject and remove this review?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="reject_review">
+                                <input type="hidden" name="review_id" value="{{ r.id }}">
+                                <button type="submit" class="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-[11px] transition inline-flex items-center gap-1 cursor-pointer" title="Reject Review">
+                                    <i class="fa-solid fa-xmark text-xs"></i> Reject
+                                </button>
+                            </form>
+
                             <button type="button" 
                                     onclick="openEditReviewModal('{{ r.id }}', '{{ r.reviewer_name|escapejs }}', '{{ r.reviewer_location|escapejs }}', '{{ r.product.id|default:"" }}', '{{ r.rating }}', '{{ r.comment|escapejs }}', '{{ r.image_url|escapejs }}', {{ r.is_approved|yesno:"true,false" }})" 
                                     class="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[11px] transition inline-flex items-center gap-1 cursor-pointer" 

@@ -79,6 +79,39 @@ def cart_context(request):
         except Exception:
             meta_pixel_purchase_events_json = ''
 
+    # Meta Match Keys (fbp, fbc, fbclid) capture for high Conversions API Event Match Quality
+    meta_fbp = ''
+    meta_fbc = ''
+    try:
+        if hasattr(request, 'session'):
+            # 1. Capture fbclid from GET query parameter (ad click arrival)
+            if hasattr(request, 'GET') and 'fbclid' in request.GET:
+                fbclid = str(request.GET.get('fbclid') or '').strip()
+                if fbclid:
+                    request.session['meta_fbclid'] = fbclid
+                    meta_fbc = f"fb.1.{int(time.time())}.{fbclid}"
+                    request.session['meta_fbc'] = meta_fbc
+
+            # 2. Capture _fbc cookie if Meta Pixel has written it
+            if hasattr(request, 'COOKIES') and '_fbc' in request.COOKIES:
+                cookie_fbc = str(request.COOKIES.get('_fbc') or '').strip()
+                if cookie_fbc:
+                    meta_fbc = cookie_fbc
+                    request.session['meta_fbc'] = cookie_fbc
+            elif not meta_fbc and 'meta_fbc' in request.session:
+                meta_fbc = request.session.get('meta_fbc', '')
+
+            # 3. Capture _fbp cookie if Meta Pixel has written it
+            if hasattr(request, 'COOKIES') and '_fbp' in request.COOKIES:
+                cookie_fbp = str(request.COOKIES.get('_fbp') or '').strip()
+                if cookie_fbp:
+                    meta_fbp = cookie_fbp
+                    request.session['meta_fbp'] = cookie_fbp
+            elif 'meta_fbp' in request.session:
+                meta_fbp = request.session.get('meta_fbp', '')
+    except Exception:
+        pass
+
     meta_adv = {'em': '', 'ph': '', 'fn': '', 'ln': '', 'ct': 'dhaka', 'country': 'bd', 'external_id': ''}
     try:
         if hasattr(request, 'session'):
@@ -165,6 +198,8 @@ def cart_context(request):
         'STATIC_VERSION': static_version,
         'META_PIXEL_ID': meta_pixel_id,
         'meta_adv': meta_adv,
+        'meta_fbp': meta_fbp,
+        'meta_fbc': meta_fbc,
         'GOOGLE_ANALYTICS_ID': google_analytics_id,
         'CLOUDFLARE_TURNSTILE_SITE_KEY': cloudflare_turnstile_site_key,
         'global_trash_count': trash_orders_count,

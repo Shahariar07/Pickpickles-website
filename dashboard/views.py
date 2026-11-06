@@ -332,15 +332,45 @@ def dashboard_index(request):
     delivered_count = status_counts_dict.get('DELIVERED', 0)
     cancelled_count = status_counts_dict.get('CANCELLED', 0)
     
-    # Advanced KPIs (Single aggregation query for jars)
+    # Advanced KPIs (Single aggregation query for jars across all periodic cohorts)
     jar_stats = OrderItem.objects.aggregate(
         delivered_jars=Sum('quantity', filter=Q(order__order_status='DELIVERED') | Q(order__payment_status='PAID')),
-        total_jars=Sum('quantity', filter=Q(order__order_status='DELIVERED') | Q(order__payment_status='PAID')),
+        total_jars=Sum('quantity', filter=~Q(order__order_status='CANCELLED')),
         pipeline_jars=Sum('quantity', filter=~Q(order__order_status__in=['DELIVERED', 'CANCELLED']) & ~Q(order__payment_status='PAID')),
+
+        # Today Jars
+        today_jars=Sum('quantity', filter=Q(order__created_at__gte=today_start, order__created_at__lt=today_end) & ~Q(order__order_status='CANCELLED')),
+        today_delivered_jars=Sum('quantity', filter=Q(order__order_status='DELIVERED') & (Q(order__delivered_at__gte=today_start, order__delivered_at__lt=today_end) | Q(order__delivered_at__isnull=True, order__updated_at__gte=today_start, order__updated_at__lt=today_end))),
+
+        # This Month Jars
+        this_month_jars=Sum('quantity', filter=Q(order__created_at__year=current_year, order__created_at__month=current_month) & ~Q(order__order_status='CANCELLED')),
+        this_month_delivered_jars=Sum('quantity', filter=Q(order__order_status='DELIVERED') & (Q(order__delivered_at__year=current_year, order__delivered_at__month=current_month) | Q(order__delivered_at__isnull=True, order__created_at__year=current_year, order__created_at__month=current_month))),
+
+        # Last Month Jars
+        last_month_jars=Sum('quantity', filter=Q(order__created_at__year=last_month_year, order__created_at__month=last_month) & ~Q(order__order_status='CANCELLED')),
+        last_month_delivered_jars=Sum('quantity', filter=Q(order__order_status='DELIVERED') & (Q(order__delivered_at__year=last_month_year, order__delivered_at__month=last_month) | Q(order__delivered_at__isnull=True, order__created_at__year=last_month_year, order__created_at__month=last_month))),
+
+        # This Year Jars
+        this_year_jars=Sum('quantity', filter=Q(order__created_at__year=current_year) & ~Q(order__order_status='CANCELLED')),
+        this_year_delivered_jars=Sum('quantity', filter=Q(order__order_status='DELIVERED') & (Q(order__delivered_at__year=current_year) | Q(order__delivered_at__isnull=True, order__created_at__year=current_year))),
+
+        # Previous Year Jars
+        prev_year_jars=Sum('quantity', filter=Q(order__created_at__year=prev_year) & ~Q(order__order_status='CANCELLED')),
+        prev_year_delivered_jars=Sum('quantity', filter=Q(order__order_status='DELIVERED') & (Q(order__delivered_at__year=prev_year) | Q(order__delivered_at__isnull=True, order__created_at__year=prev_year)))
     )
     delivered_jars_sold = jar_stats['delivered_jars'] or 0
     total_jars_sold = jar_stats['total_jars'] or 0
     pipeline_jars_sold = jar_stats['pipeline_jars'] or 0
+    today_jars_count = jar_stats['today_jars'] or 0
+    today_delivered_jars = jar_stats['today_delivered_jars'] or 0
+    this_month_jars_count = jar_stats['this_month_jars'] or 0
+    this_month_delivered_jars = jar_stats['this_month_delivered_jars'] or 0
+    last_month_jars_count = jar_stats['last_month_jars'] or 0
+    last_month_delivered_jars = jar_stats['last_month_delivered_jars'] or 0
+    this_year_jars_count = jar_stats['this_year_jars'] or 0
+    this_year_delivered_jars = jar_stats['this_year_delivered_jars'] or 0
+    prev_year_jars_count = jar_stats['prev_year_jars'] or 0
+    prev_year_delivered_jars = jar_stats['prev_year_delivered_jars'] or 0
 
     avg_order_val = round(float(total_revenue) / delivered_count, 1) if delivered_count > 0 else 0
     delivery_rate = round((delivered_count / total_orders_count) * 100, 1) if total_orders_count > 0 else 0
@@ -650,6 +680,8 @@ def dashboard_index(request):
         'today_delivered_sum': today_delivered_sum,
         'today_orders_sum': today_orders_sum,
         'today_revenue': today_revenue,
+        'today_jars_count': today_jars_count,
+        'today_delivered_jars': today_delivered_jars,
         'total_revenue': total_revenue,
         'pipeline_revenue': pipeline_revenue,
         'this_month_orders_sum': this_month_orders_sum,
@@ -660,6 +692,8 @@ def dashboard_index(request):
         'this_month_pipeline_sum': this_month_pipeline_sum,
         'this_month_label': this_month_label,
         'this_month_label_bn': this_month_label_bn,
+        'this_month_jars_count': this_month_jars_count,
+        'this_month_delivered_jars': this_month_delivered_jars,
         'last_month_orders_sum': last_month_orders_sum,
         'last_month_orders_count': last_month_orders_count,
         'last_month_delivered_sum': last_month_delivered_sum,
@@ -667,16 +701,22 @@ def dashboard_index(request):
         'last_month_pipeline_sum': last_month_pipeline_sum,
         'last_month_label': last_month_label,
         'last_month_label_bn': last_month_label_bn,
+        'last_month_jars_count': last_month_jars_count,
+        'last_month_delivered_jars': last_month_delivered_jars,
         'this_year_orders_sum': this_year_orders_sum,
         'this_year_orders_count': this_year_orders_count,
         'this_year_delivered_sum': this_year_delivered_sum,
         'this_year_delivered_count': this_year_delivered_count,
         'this_year_label': this_year_label,
+        'this_year_jars_count': this_year_jars_count,
+        'this_year_delivered_jars': this_year_delivered_jars,
         'prev_year_orders_sum': prev_year_orders_sum,
         'prev_year_orders_count': prev_year_orders_count,
         'prev_year_delivered_sum': prev_year_delivered_sum,
         'prev_year_delivered_count': prev_year_delivered_count,
         'prev_year_label': prev_year_label,
+        'prev_year_jars_count': prev_year_jars_count,
+        'prev_year_delivered_jars': prev_year_delivered_jars,
         'total_expenses': total_expenses,
         'net_profit': net_profit,
         'profit_margin': profit_margin,
@@ -3613,6 +3653,20 @@ def reviews_manager(request):
                 redirect_url += f'?status={status_filter}'
             return redirect(redirect_url)
 
+        # 1b. Reject Review
+        elif action == 'reject_review':
+            if not can_user_edit(request.user):
+                messages.error(request, 'Permission Denied: রিভিউ রিজেক্ট করার অনুমতি নেই।')
+                return redirect('dashboard:reviews')
+            review = get_object_or_404(Review, id=review_id)
+            r_name = review.reviewer_name
+            review.delete()
+            messages.success(request, f'Review by {r_name} was rejected.')
+            redirect_url = reverse('dashboard:reviews')
+            if status_filter:
+                redirect_url += f'?status={status_filter}'
+            return redirect(redirect_url)
+
         # 2. Delete Review
         elif action == 'delete_review':
             if not can_user_delete(request.user):
@@ -5981,21 +6035,35 @@ def send_test_push_api(request):
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
 
-    from webpush import send_user_notification
+    from store.webpush_sender import send_high_priority_user_notification
     payload = {
         "head": "🔔 Pickpickles Test Alert",
         "body": f"Real-time notifications are active on your device! ({timezone.now().strftime('%I:%M %p')})",
         "icon": "/static/images/icon-192.png",
         "badge": "/static/images/badge-96.png",
-        "url": "/dashboard/orders/"
+        "url": "/dashboard/orders/",
+        "tag": "test-alert",
+        "timestamp": int(timezone.now().timestamp() * 1000),
+        "vibrate": [300, 100, 300, 100, 400]
     }
 
     try:
-        send_user_notification(user=request.user, payload=payload, ttl=60)
-        return JsonResponse({
-            'success': True,
-            'message': 'Test notification sent! Check your phone notification shade.'
-        })
+        success_cnt, fail_cnt = send_high_priority_user_notification(
+            user=request.user,
+            payload=payload,
+            ttl=3600,
+            urgency='high'
+        )
+        if success_cnt > 0:
+            return JsonResponse({
+                'success': True,
+                'message': f'Test notification sent to {success_cnt} device(s)! Check your phone notification shade.'
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'No active registered device found for this account. Please tap "Subscribe to Push Messaging" above first.'
+            }, status=400)
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 

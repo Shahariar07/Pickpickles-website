@@ -25,6 +25,26 @@ class Category(models.Model):
         return self.name
 
 
+CATALOG_ID_MAP = {
+    9: 'JAR-1',
+    10: 'JAR-2',
+    11: 'JAR-3',
+    12: 'JAR-4',
+    14: 'JAR-5',
+    15: 'JAR-6',
+    16: 'JAR-7',
+    17: 'JAR-8',
+    18: 'JAR-9',
+    19: 'JAR-10',
+    20: 'JAR-11',
+    21: 'JAR-12',
+    22: 'JAR-13',
+    23: 'JAR-14',
+    24: 'JAR-15',
+    25: 'JAR-16',
+}
+
+
 class Product(models.Model):
     SPICE_CHOICES = [
         ('MILD', 'Mild & Refreshing 🌿'),
@@ -243,6 +263,31 @@ class Product(models.Model):
             avg = approved.aggregate(models.Avg('rating'))['rating__avg']
             return round(avg, 1) if avg else self.crunch_rating
         return self.crunch_rating
+
+    @property
+    def catalog_id(self):
+        """
+        Unique Product Content ID / SKU for Meta Commerce Manager Catalog (e.g. JAR-1).
+        Sequentially maps live store products starting from 1 to 16.
+        """
+        if self.id in CATALOG_ID_MAP:
+            return CATALOG_ID_MAP[self.id]
+        if self.id is not None:
+            return f"JAR-{self.id}"
+        return ""
+
+    @classmethod
+    def get_by_catalog_id(cls, catalog_id):
+        rev_map = {v: k for k, v in CATALOG_ID_MAP.items()}
+        if catalog_id in rev_map:
+            return cls.objects.filter(id=rev_map[catalog_id]).first()
+        if isinstance(catalog_id, str) and catalog_id.startswith('JAR-'):
+            try:
+                pk = int(catalog_id.replace('JAR-', ''))
+                return cls.objects.filter(id=pk).first()
+            except ValueError:
+                pass
+        return None
 
     @property
     def reviews_count(self):

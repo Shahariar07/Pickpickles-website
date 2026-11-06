@@ -281,16 +281,11 @@
                             </a>
 
                             <!-- Customer Reviews -->
-                            <a href="{% url 'dashboard:reviews' %}{% if pending_reviews_count > 0 %}?status=pending{% endif %}"
+                            <a href="{% url 'dashboard:reviews' %}"
                                 id="sidebarReviewsLink"
                                 class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'reviews' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
                                 <i class="fa-solid fa-star text-brand-accent text-sm w-4 text-center"></i>
                                 <span>Customer Reviews</span>
-                                <span id="sidebarReviewsBadge"
-                                    class="{% if not pending_reviews_count %}hidden {% endif %}ml-auto min-w-[20px] h-5 px-1.5 text-[10px] font-black bg-rose-500 text-white rounded-full flex items-center justify-center shadow-xs animate-pulse"
-                                    title="নতুন কাস্টমার রিভিউ অ্যাপ্রুভালের অপেক্ষায় আছে">
-                                    {{ pending_reviews_count|default:"0" }}
-                                </span>
                             </a>
 
                             <!-- Feedback Reminders (1+ Month Old) -->
@@ -1250,6 +1245,44 @@
         })();
     </script>
     {% endif %}
+
+    <!-- Global Service Worker & Push Notification Auto-Sync for Admin Dashboard -->
+    <script>
+        (function() {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+                return;
+            }
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
+                    .then(function(reg) {
+                        if (Notification.permission === 'granted') {
+                            reg.pushManager.getSubscription().then(function(sub) {
+                                if (sub) {
+                                    try {
+                                        var subData = JSON.parse(JSON.stringify(sub));
+                                        fetch('/webpush/save_information/', {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                                'X-CSRFToken': '{{ csrf_token }}'
+                                            },
+                                            body: JSON.stringify({
+                                                status_type: 'subscribe',
+                                                subscription: subData,
+                                                browser: navigator.userAgent.indexOf('Chrome') !== -1 ? 'chrome' : 'other',
+                                                user_agent: navigator.userAgent
+                                            })
+                                        }).catch(function() {});
+                                    } catch(e) {}
+                                }
+                            }).catch(function() {});
+                        }
+                    }).catch(function(err) {
+                        console.debug('[PWA SW] Registration:', err);
+                    });
+            });
+        })();
+    </script>
 
     {% block extra_js %}{% endblock %}
 </body>

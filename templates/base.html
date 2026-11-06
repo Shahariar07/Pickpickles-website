@@ -152,6 +152,20 @@
         // Initialize Meta Pixel with Manual Advanced Matching (3rd parameter)
         fbq('init', '{{ META_PIXEL_ID }}', advancedMatching);
         fbq('track', 'PageView');
+
+        // Capture and persist Meta Match Keys (fbclid, _fbp, _fbc) across sessions & pages
+        try {
+            var urlParams = new URLSearchParams(window.location.search);
+            var urlFbclid = urlParams.get('fbclid');
+            if (urlFbclid) {
+                localStorage.setItem('meta_fbclid', urlFbclid);
+                sessionStorage.setItem('meta_fbclid', urlFbclid);
+            }
+            var mFbp = (document.cookie.match(/(?:^|;\s*)_fbp=([^;]*)/) || [])[1];
+            if (mFbp) localStorage.setItem('_fbp', decodeURIComponent(mFbp));
+            var mFbc = (document.cookie.match(/(?:^|;\s*)_fbc=([^;]*)/) || [])[1];
+            if (mFbc) localStorage.setItem('_fbc', decodeURIComponent(mFbc));
+        } catch (e) {}
     })();
     </script>
     <noscript><img height="1" width="1" style="display:none"

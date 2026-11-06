@@ -279,9 +279,10 @@ async function ajaxAddToCart(productId, quantity = 1, btnEl = null, variant = ''
                 const addPrice = parseFloat(data.added_product.price) || 0;
                 const addQty = parseInt(data.added_product.quantity, 10) || 1;
                 const totalVal = Math.round(addPrice * addQty * 100) / 100;
+                const catalogContentId = String(data.added_product.content_id || ('JAR-' + data.added_product.id));
                 fbq('track', 'AddToCart', {
                     content_name: String(data.added_product.name || ''),
-                    content_ids: [String(data.added_product.id)],
+                    content_ids: [catalogContentId],
                     content_type: 'product',
                     value: totalVal,
                     currency: 'BDT'

@@ -21,6 +21,9 @@
 
         <form method="POST" action="{% url 'store:checkout' %}" id="checkoutForm" novalidate>
             {% csrf_token %}
+            <!-- Meta CAPI Match Keys (Browser & Ad Click Attribution) -->
+            <input type="hidden" name="meta_fbp" id="id_meta_fbp" value="{{ meta_fbp|default:'' }}">
+            <input type="hidden" name="meta_fbc" id="id_meta_fbc" value="{{ meta_fbc|default:'' }}">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-start">
 
                 <!-- Left Column: Form Steps (7 Cols) -->
@@ -704,7 +707,40 @@
     {% if META_PIXEL_ID %}
     if (typeof fbq === 'function') {
         // On email/phone blur or checkout submit, sync Advanced Matching parameters with Meta Pixel
+        function populateMetaTrackingKeys() {
+            try {
+                function getCookieVal(name) {
+                    var m = document.cookie.match(new RegExp('(?:^|;\\s*)' + name + '=([^;]*)'));
+                    return m ? decodeURIComponent(m[1]) : '';
+                }
+                var fbpInput = document.getElementById('id_meta_fbp');
+                var fbcInput = document.getElementById('id_meta_fbc');
+
+                var fbp = getCookieVal('_fbp') || localStorage.getItem('_fbp') || '';
+                var fbc = getCookieVal('_fbc') || localStorage.getItem('_fbc') || '';
+
+                if (!fbc) {
+                    var urlParams = new URLSearchParams(window.location.search);
+                    var fbclid = urlParams.get('fbclid') || sessionStorage.getItem('meta_fbclid') || localStorage.getItem('meta_fbclid');
+                    if (fbclid) {
+                        fbc = 'fb.1.' + Date.now() + '.' + fbclid;
+                        try { localStorage.setItem('_fbc', fbc); } catch(e) {}
+                    }
+                }
+
+                if (fbp) {
+                    if (fbpInput && !fbpInput.value) fbpInput.value = fbp;
+                    try { localStorage.setItem('_fbp', fbp); } catch(e) {}
+                }
+                if (fbc) {
+                    if (fbcInput && !fbcInput.value) fbcInput.value = fbc;
+                    try { localStorage.setItem('_fbc', fbc); } catch(e) {}
+                }
+            } catch(e) {}
+        }
+
         function syncCheckoutUserData() {
+            populateMetaTrackingKeys();
             var emailVal = (document.getElementById('customer_email') ? document.getElementById('customer_email').value : '').trim().toLowerCase();
             var phoneVal = (document.getElementById('customer_phone') ? document.getElementById('customer_phone').value : '').replace(/\D/g, '');
             if (phoneVal.startsWith('00')) phoneVal = phoneVal.substring(2);
@@ -732,11 +768,14 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
+            populateMetaTrackingKeys();
             syncCheckoutUserData();
             var cartSub = parseFloat("{{ cart_subtotal|default:0|stringformat:'.2f' }}") || 0;
             var cartCount = parseInt("{{ cart_total_items|default:0 }}", 10) || 1;
             if (cartSub > 0) {
                 fbq('track', 'InitiateCheckout', {
+                    content_name: 'Pickle Order Checkout',
+                    content_ids: [{% for item in cart %}'{{ item.product.catalog_id }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
                     value: cartSub,
                     currency: 'BDT',
                     num_items: cartCount,

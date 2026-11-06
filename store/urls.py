@@ -17,6 +17,7 @@ urlpatterns = [
     path('story-and-faq/', views.about_story, name='about_story'),
     path('policies/', views.policies_view, name='policies'),
     path('reviews/', views.reviews_view, name='reviews'),
+    path('meta-catalog.csv', views.meta_catalog_csv, name='meta_catalog_csv'),
     path('sitemap.xml', views.sitemap_xml, name='sitemap_xml'),
     path('robots.txt', views.robots_txt, name='robots_txt'),
     path('404/', views.custom_404_view, name='custom_404'),

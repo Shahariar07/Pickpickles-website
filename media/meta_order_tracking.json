@@ -1,0 +1,30 @@
+{
+  "PKP-00154": {
+    "fbp": "",
+    "fbc": "",
+    "client_user_agent": "",
+    "client_ip_address": "127.0.0.1",
+    "recorded_at": "2026-11-06 02:59:27 PM"
+  },
+  "PKP-00155": {
+    "fbp": "fb.1.1712000000.999888",
+    "fbc": "fb.1.1712000000.IwARclickfromad999",
+    "client_user_agent": "Mozilla/5.0 (Linux; Android 14; SM-A546E) AppleWebKit/537.36 Chrome/124.0.0.0 Mobile Safari/537.36",
+    "client_ip_address": "103.205.71.12",
+    "recorded_at": "2026-11-06 03:02:25 PM"
+  },
+  "PKP-00156": {
+    "fbp": "fb.1.1712000000.999888",
+    "fbc": "fb.1.1712000000.IwARclickfromad999",
+    "client_user_agent": "Mozilla/5.0 (Linux; Android 14; SM-A546E) AppleWebKit/537.36 Chrome/124.0.0.0 Mobile Safari/537.36",
+    "client_ip_address": "103.205.71.12",
+    "recorded_at": "2026-11-06 03:38:06 PM"
+  },
+  "PKP-00157": {
+    "fbp": "fb.1.1712000000.999888",
+    "fbc": "fb.1.1712000000.IwARclickfromad999",
+    "client_user_agent": "Mozilla/5.0 (Linux; Android 14; SM-A546E) AppleWebKit/537.36 Chrome/124.0.0.0 Mobile Safari/537.36",
+    "client_ip_address": "103.205.71.12",
+    "recorded_at": "2026-11-06 04:08:04 PM"
+  }
+}

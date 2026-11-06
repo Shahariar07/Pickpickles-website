@@ -249,15 +249,16 @@
             </div>
         </div>
 
-        <!-- Steadfast Courier & Customer Routing Hub -->
-        <div class="py-0.5 px-1 bg-white border-b border-black flex items-center justify-between font-black mono-num text-[8.5px]">
-            <div class="flex items-baseline gap-1">
-                <span class="text-[7.5px] uppercase text-black font-black">SF CID:</span>
-                <span class="text-[11.5px] font-black text-black tracking-tight">{% if order.steadfast_consignment_id %}{{ order.steadfast_consignment_id }}{% else %}{{ order.id }}{% endif %}</span>
+        <!-- Steadfast Courier & Pickle Jars Quantity (BIG & BOLD) -->
+        <div class="py-0.5 px-1 bg-white border-b-2 border-black flex items-center justify-between font-black mono-num">
+            <div class="flex items-center gap-1">
+                <span class="text-[7.5px] uppercase font-black bg-black text-white px-1 py-0.2 rounded">SF CID:</span>
+                <span class="text-[14px] font-black text-black tracking-tight leading-none">{% if order.steadfast_consignment_id %}{{ order.steadfast_consignment_id }}{% else %}{{ order.id }}{% endif %}</span>
             </div>
             <div class="text-right">
-                <span class="text-[7.5px] text-black">CUST ID:</span>
-                <span class="text-[10px] font-black text-black">#{{ order.id }}</span>
+                <span class="bg-black text-white px-1.5 py-0.5 rounded text-[10px] font-black tracking-tight">
+                    🫙 {{ order.total_items_count }} JAR{% if order.total_items_count != 1 %}S{% endif %}
+                </span>
             </div>
         </div>
 
@@ -280,6 +281,14 @@
                 <strong>NOTE:</strong> {{ order.delivery_instruction|truncatechars:55 }}
             </div>
             {% endif %}
+        </div>
+
+        <!-- Pickle Jars Item Breakdown Line (Compact) -->
+        <div class="py-0.5 px-1 border-t border-b border-black text-[7.5px] font-black leading-tight bg-white flex items-center justify-between gap-1">
+            <span class="uppercase tracking-tight text-[7px] font-black shrink-0">CONTENTS ({{ order.total_items_count }} JARS):</span>
+            <span class="truncate text-right font-black mono-num text-[7.5px]">
+                {% for item in order.items.all %}{{ item.quantity }}x {{ item.product_name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+            </span>
         </div>
 
         <!-- Financial & COD Inverted Collection Banner -->
@@ -355,9 +364,13 @@
                 <span>DATE:</span>
                 <span class="mono-num font-black text-[10px]">{{ order.created_at|date:"d M Y • h:i A" }}</span>
             </div>
-            <div class="flex justify-between items-center">
-                <span>STEADFAST CID:</span>
-                <span class="mono-num font-black text-[10.5px]">{% if order.steadfast_consignment_id %}{{ order.steadfast_consignment_id }}{% else %}{{ order.id }}{% endif %}</span>
+            <div class="flex justify-between items-center p-1 bg-black text-white rounded my-0.5">
+                <span class="text-[9.5px] uppercase tracking-wider">STEADFAST CID:</span>
+                <span class="mono-num font-black text-[14px] tracking-tight">{% if order.steadfast_consignment_id %}{{ order.steadfast_consignment_id }}{% else %}{{ order.id }}{% endif %}</span>
+            </div>
+            <div class="flex justify-between items-center border border-black px-1.5 py-0.5 rounded text-[10px]">
+                <span>TOTAL PICKLE JARS:</span>
+                <span class="font-black text-[12px] mono-num">🫙 {{ order.total_items_count }} JARS</span>
             </div>
         </div>
 
@@ -524,8 +537,20 @@
                         <span class="font-bold text-slate-900">Address:</span> {{ order.delivery_address }}, {{ order.delivery_city }}
                     </div>
 
-                    <div class="text-xs text-slate-800 font-medium mt-1">
-                        <span class="font-bold text-slate-900">Steadfast CID:</span> {{ order.steadfast_consignment_id|default:order.id }}
+                    <div class="mt-2.5 p-2.5 rounded-xl bg-slate-100 border border-slate-300 flex items-center justify-between">
+                        <div>
+                            <span class="text-[9.5px] font-black uppercase tracking-wider text-slate-500 block">STEADFAST COURIER CID</span>
+                            <span class="text-base font-black text-slate-950 mono-num tracking-tight">
+                                {{ order.steadfast_consignment_id|default:order.id }}
+                            </span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[9.5px] font-black uppercase tracking-wider text-slate-500 block">PICKLE QUANTITY</span>
+                            <span class="inline-flex items-center gap-1 text-xs font-black text-emerald-950 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md">
+                                <i class="fa-solid fa-jar text-emerald-700"></i>
+                                <span>{{ order.total_items_count }} JARS</span>
+                            </span>
+                        </div>
                     </div>
                 </div>
 

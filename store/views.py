@@ -317,6 +317,7 @@ def cart_add(request, product_id):
             'items': items_data,
             'added_product': {
                 'id': product.id,
+                'content_id': product.catalog_id,
                 'name': item_display_name,
                 'price': float(product.price_bdt),
                 'quantity': quantity,
@@ -537,6 +538,11 @@ def checkout(request):
                 order.payment_status = 'PENDING_VERIFICATION'
                 
             order.save()
+
+            # Record customer's Meta Match Keys (fbp, fbc, mobile User-Agent, real IP) at checkout
+            # Saved persistently until admin verifies & accepts the order, guaranteeing high EMQ without fake data
+            from store.meta_capi import record_order_tracking_keys
+            record_order_tracking_keys(order, request)
 
             # Create Order Items (Stock will be deducted when admin accepts/confirms order)
             for item in cart:
@@ -1060,3 +1066,63 @@ def courier_live_status_ajax(request, order_number):
         'payment_status': order.get_payment_status_display(),
         'active_tracking_url': order.active_tracking_url or 'https://steadfast.com.bd/tracking',
     })
+
+
+def meta_catalog_csv(request):
+    """
+    Live dynamic CSV product feed for Meta Commerce Manager Catalog (ID 1458658886112376).
+    Enables scheduled automated daily feed syncing from Meta Commerce Manager.
+    Always reflects real-time prices, stock status, and matching Content IDs (PKP-{id}).
+    """
+    import csv
+    from django.http import HttpResponse
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'inline; filename="meta_products_catalog.csv"'
+
+    fields = [
+        'id', 'title', 'description', 'availability', 'condition',
+        'price', 'link', 'image_link', 'brand', 'google_product_category',
+        'fb_product_category', 'product_type', 'inventory', 'sale_price', 'weight'
+    ]
+
+    base_url = 'https://pickpickles.xyz'
+    writer = csv.DictWriter(response, fieldnames=fields)
+    writer.writeheader()
+
+    products = Product.objects.all().order_by('id')
+    for p in products:
+        raw_img = p.primary_image_url.split('?')[0] if p.primary_image_url else ''
+        if raw_img.startswith('/'):
+            image_link = f'{base_url}{raw_img}'
+        elif raw_img.startswith('http'):
+            image_link = raw_img
+        else:
+            image_link = f'{base_url}/media/{raw_img}'
+
+        product_link = f'{base_url}/product/{p.slug}/'
+        avail = 'in stock' if (p.is_in_stock and p.stock_count > 0) else 'preorder'
+        price_val = f'{p.price_bdt:.2f} BDT'
+        title = f'{p.name} ({p.jar_weight_grams}g)'
+        cat_name = p.category.name if p.category else 'Pickles'
+        weight_str = f'{p.jar_weight_grams} g'
+
+        writer.writerow({
+            'id': p.catalog_id,
+            'title': title,
+            'description': p.description.strip(),
+            'availability': avail,
+            'condition': 'new',
+            'price': price_val,
+            'link': product_link,
+            'image_link': image_link,
+            'brand': 'Pickpickles',
+            'google_product_category': 'Food, Beverages & Tobacco > Food Items > Condiments & Sauces > Pickles & Relishes',
+            'fb_product_category': 'Food, Beverages & Tobacco > Food Items > Condiments & Sauces > Pickles & Relishes',
+            'product_type': cat_name,
+            'inventory': p.stock_count,
+            'sale_price': price_val,
+            'weight': weight_str
+        })
+
+    return response

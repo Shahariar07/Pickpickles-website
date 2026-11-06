@@ -63,7 +63,7 @@ class Command(BaseCommand):
             weight_str = f'{p.jar_weight_grams} g'
 
             row = {
-                'id': f'PKP-{p.id}',
+                'id': p.catalog_id,
                 'title': title,
                 'description': p.description.strip(),
                 'availability': avail,
@@ -73,7 +73,7 @@ class Command(BaseCommand):
                 'image_link': image_link,
                 'brand': 'Pickpickles',
                 'google_product_category': 'Food, Beverages & Tobacco > Food Items > Condiments & Sauces > Pickles & Relishes',
-                'fb_product_category': 'Food & Beverage > Food Items > Condiments & Sauces > Pickles & Relishes',
+                'fb_product_category': 'Food, Beverages & Tobacco > Food Items > Condiments & Sauces > Pickles & Relishes',
                 'product_type': cat_name,
                 'inventory': p.stock_count,
                 'sale_price': price_val,
