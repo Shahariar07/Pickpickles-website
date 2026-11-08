@@ -631,6 +631,12 @@
                     <span>Items Subtotal ({{ order.total_items_count }} Jars):</span>
                     <strong class="text-gray-900">৳{{ order.subtotal }}</strong>
                 </div>
+                {% if order.discount_amount > 0 %}
+                <div class="flex justify-between text-emerald-700 text-xs sm:text-sm font-bold">
+                    <span>2-Jar Offer Discount:</span>
+                    <span>-৳{{ order.discount_amount }}</span>
+                </div>
+                {% endif %}
                 <div class="flex justify-between text-gray-600 text-xs sm:text-sm">
                     <span>Delivery Fee ({{ order.get_delivery_zone_display|default:order.delivery_zone }} • {{ order.total_weight_kg }} kg):</span>
                     <strong class="text-gray-900">৳{{ order.delivery_fee }}</strong>

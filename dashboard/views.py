@@ -1735,7 +1735,8 @@ def create_manual_order(request):
             except Exception:
                 delivery_fee = default_fee
 
-            total_amount = subtotal + delivery_fee
+            discount_amount = Decimal('100.00') if total_items_count == 2 else Decimal('0.00')
+            total_amount = max(Decimal('0.00'), subtotal - discount_amount + delivery_fee)
 
             order = Order.objects.create(
                 customer_name=customer_name,
@@ -1745,6 +1746,7 @@ def create_manual_order(request):
                 delivery_zone=delivery_zone,
                 delivery_fee=delivery_fee,
                 subtotal=subtotal,
+                discount_amount=discount_amount,
                 total_amount=total_amount,
                 payment_method=payment_method,
                 payment_status=payment_status,

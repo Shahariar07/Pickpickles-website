@@ -506,9 +506,6 @@
                     </div>
                 </div>
                 <div class="flex flex-wrap items-center gap-2 text-xs font-bold">
-                    <span class="inline-flex items-center gap-1.5 text-amber-900 bg-amber-50 px-2.5 py-1 rounded-xl border border-amber-200 text-xs">
-                        <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block shadow-2xs"></span> Jars Ordered (মোট জার)
-                    </span>
                     <span class="inline-flex items-center gap-1.5 text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200 text-xs">
                         <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block shadow-2xs"></span> Delivered Sales (৳)
                     </span>
@@ -665,52 +662,8 @@
 
         </div>
 
-        <!-- Row 4: Customer Retention Analytics: New vs Repeat Orders (Filterable by Date) -->
-        <div class="space-y-3">
-            <!-- Retention Date Filter Toolbar -->
-            <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-gray-200/90 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <div class="flex items-center gap-2.5">
-                    <span class="w-8 h-8 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center text-xs font-black">
-                        <i class="fa-solid fa-calendar-days"></i>
-                    </span>
-                    <div>
-                        <h4 class="text-xs sm:text-sm font-extrabold text-gray-900 flex items-center gap-1.5">
-                            <span>Retention Date Filter (তারিখ অনুযায়ী সার্চ)</span>
-                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-200">{{ retention_period_label }}</span>
-                        </h4>
-                        <p class="text-[11px] text-gray-400">ফিল্টার করে নির্দিষ্ট তারিখের নতুন বনাম রিপিট অর্ডারের অনুপাত দেখুন</p>
-                    </div>
-                </div>
-
-                <!-- Date Range Form & Quick Presets -->
-                <form method="GET" action="#retentionSection" class="flex flex-wrap items-center gap-2">
-                    <div class="flex items-center gap-1 bg-gray-50 p-1 rounded-xl border border-gray-200 text-[11px] font-bold">
-                        <a href="?retention_period=ALL#retentionSection" class="px-2 py-1 rounded-lg transition {% if retention_period == 'ALL' and not retention_start %}bg-brand-700 text-white{% else %}text-gray-600 hover:text-gray-900{% endif %}">All Time</a>
-                        <a href="?retention_period=today#retentionSection" class="px-2 py-1 rounded-lg transition {% if retention_period == 'today' %}bg-brand-700 text-white{% else %}text-gray-600 hover:text-gray-900{% endif %}">Today</a>
-                        <a href="?retention_period=this_month#retentionSection" class="px-2 py-1 rounded-lg transition {% if retention_period == 'this_month' %}bg-brand-700 text-white{% else %}text-gray-600 hover:text-gray-900{% endif %}">This Month</a>
-                        <a href="?retention_period=last_month#retentionSection" class="px-2 py-1 rounded-lg transition {% if retention_period == 'last_month' %}bg-brand-700 text-white{% else %}text-gray-600 hover:text-gray-900{% endif %}">Last Month</a>
-                        <a href="?retention_period=last_30_days#retentionSection" class="px-2 py-1 rounded-lg transition {% if retention_period == 'last_30_days' %}bg-brand-700 text-white{% else %}text-gray-600 hover:text-gray-900{% endif %}">30 Days</a>
-                    </div>
-
-                    <!-- Custom Date Range Inputs -->
-                    <div class="inline-flex items-center gap-1.5 text-xs bg-gray-50 px-2 py-1 rounded-xl border border-gray-200">
-                        <input type="date" name="retention_start" value="{{ retention_start }}" class="bg-white border border-gray-200 rounded-lg px-2 py-0.5 text-[11px] font-bold text-gray-800 focus:outline-none focus:ring-1 focus:ring-brand-500">
-                        <span class="text-gray-400 text-xs">to</span>
-                        <input type="date" name="retention_end" value="{{ retention_end }}" class="bg-white border border-gray-200 rounded-lg px-2 py-0.5 text-[11px] font-bold text-gray-800 focus:outline-none focus:ring-1 focus:ring-brand-500">
-                        <button type="submit" class="bg-brand-700 hover:bg-brand-800 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg transition shadow-2xs">
-                            Search
-                        </button>
-                        {% if retention_start or retention_period != 'ALL' %}
-                        <a href="?retention_period=ALL#retentionSection" class="text-gray-400 hover:text-rose-600 text-xs px-1" title="Reset date filter">
-                            <i class="fa-solid fa-xmark"></i>
-                        </a>
-                        {% endif %}
-                    </div>
-                </form>
-            </div>
-
-            <!-- Retention Grid -->
-            <div id="retentionSection" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Row 4: Customer Retention Analytics: New vs Repeat Orders -->
+        <div id="retentionSection" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 
                 <!-- Left: Doughnut Chart (New vs Repeat) -->
                 <div class="lg:col-span-5 bg-white p-5 sm:p-6 rounded-3xl border border-gray-200/90 shadow-sm space-y-4">
@@ -762,7 +715,7 @@
                             <span class="text-gray-500 font-bold block text-[10px]">Repeat Orders Revenue (২য় অর্ডার থেকে)</span>
                             <strong class="text-emerald-900 font-black text-sm">৳{{ repeat_revenue|floatformat:0 }}</strong>
                         </div>
-                        <a href="{% url 'dashboard:orders' %}?customer_type=repeat{% if retention_start %}&start_date={{ retention_start }}{% endif %}{% if retention_end %}&end_date={{ retention_end }}{% endif %}" class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-[11px] px-3 py-1.5 rounded-xl shadow-2xs transition inline-flex items-center gap-1 active:scale-95">
+                        <a href="{% url 'dashboard:orders' %}?customer_type=repeat" class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-[11px] px-3 py-1.5 rounded-xl shadow-2xs transition inline-flex items-center gap-1 active:scale-95">
                             <span>View Repeat Orders ({{ repeat_orders_count }})</span>
                             <i class="fa-solid fa-arrow-right text-[9px]"></i>
                         </a>
@@ -780,10 +733,10 @@
                                 <h3 class="font-display font-black text-base text-gray-900">
                                     Repeat Customers (রিপিট গ্রাহকদের তালিকা)
                                 </h3>
-                                <p class="text-xs text-gray-400">{{ repeat_customers_count }} customers with repeat orders in this period</p>
+                                <p class="text-xs text-gray-400">{{ repeat_customers_count }} loyal customers with 2+ orders</p>
                             </div>
                         </div>
-                        <a href="{% url 'dashboard:orders' %}?customer_type=repeat{% if retention_start %}&start_date={{ retention_start }}{% endif %}{% if retention_end %}&end_date={{ retention_end }}{% endif %}" class="text-xs font-bold text-brand-700 hover:underline bg-brand-50 px-2.5 py-1 rounded-xl border border-brand-200">
+                        <a href="{% url 'dashboard:orders' %}?customer_type=repeat" class="text-xs font-bold text-brand-700 hover:underline bg-brand-50 px-2.5 py-1 rounded-xl border border-brand-200">
                             All Repeat Orders ({{ repeat_orders_count }}) &rarr;
                         </a>
                     </div>
@@ -831,7 +784,7 @@
                                 {% empty %}
                                 <tr>
                                     <td colspan="5" class="py-6 text-center text-gray-400 text-xs">
-                                        No repeat orders found in this date range.
+                                        No repeat orders found yet.
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -841,7 +794,6 @@
                 </div>
 
             </div>
-        </div>
 
 
 
@@ -1147,31 +1099,18 @@ document.addEventListener("DOMContentLoaded", function () {
                 labels: data.trendLabels,
                 datasets: [
                     {
-                        label: 'Jars Ordered (মোট জার)',
-                        data: data.jarsData || [],
-                        borderColor: '#f59e0b',
-                        backgroundColor: 'rgba(245, 158, 11, 0.15)',
-                        fill: true,
-                        tension: 0.35,
-                        borderWidth: 3,
-                        pointRadius: 4.5,
-                        pointHoverRadius: 7,
-                        pointBackgroundColor: '#f59e0b',
-                        pointBorderColor: '#ffffff',
-                        pointBorderWidth: 1.5,
-                        yAxisID: 'y1'
-                    },
-                    {
                         label: 'Delivered Sales (৳)',
                         data: data.revenueData,
                         borderColor: '#10b981',
                         backgroundColor: revenueGradient,
-                        fill: false,
-                        tension: 0.4,
-                        borderWidth: 2.2,
-                        pointRadius: 3.5,
-                        pointHoverRadius: 6,
+                        fill: true,
+                        tension: 0.35,
+                        borderWidth: 2.5,
+                        pointRadius: 4,
+                        pointHoverRadius: 6.5,
                         pointBackgroundColor: '#10b981',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 1.5,
                         yAxisID: 'y'
                     },
                     {
@@ -1179,11 +1118,14 @@ document.addEventListener("DOMContentLoaded", function () {
                         data: data.ordersData,
                         borderColor: '#6366f1',
                         backgroundColor: 'rgba(99, 102, 241, 0.08)',
-                        borderDash: [4, 4],
-                        borderWidth: 1.8,
-                        pointRadius: 3,
-                        pointHoverRadius: 5,
+                        fill: false,
+                        tension: 0.35,
+                        borderWidth: 2.2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6.5,
                         pointBackgroundColor: '#6366f1',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 1.5,
                         yAxisID: 'y1'
                     }
                 ]
@@ -1203,9 +1145,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         cornerRadius: 10,
                         callbacks: {
                             label: function (context) {
-                                if (context.dataset.label.includes('Jars')) {
-                                    return ` 🥒 ${context.parsed.y} Jars Ordered (মোট জার)`;
-                                } else if (context.dataset.label.includes('Orders')) {
+                                if (context.dataset.label.includes('Orders')) {
                                     return ` 📦 ${context.parsed.y} Confirmed Order(s)`;
                                 }
                                 return ` ৳${context.parsed.y.toLocaleString()} Delivered Sales`;
@@ -1235,13 +1175,13 @@ document.addEventListener("DOMContentLoaded", function () {
                         display: true,
                         position: 'right',
                         beginAtZero: true,
-                        suggestedMax: Math.max(...(data.jarsData || [0]), ...(data.ordersData || [0]), 5),
+                        suggestedMax: Math.max(...(data.ordersData || [0]), 5),
                         grid: { drawOnChartArea: false },
                         ticks: {
                             font: { size: 10 },
                             stepSize: 1,
                             precision: 0,
-                            callback: value => value + ' jars'
+                            callback: value => value + (value === 1 ? ' order' : ' orders')
                         }
                     }
                 }

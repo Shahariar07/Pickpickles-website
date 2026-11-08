@@ -142,6 +142,12 @@
                     <span>Items Subtotal</span>
                     <span class="font-black text-gray-900 text-sm">৳{{ order.subtotal }}</span>
                 </div>
+                {% if order.discount_amount > 0 %}
+                <div class="flex justify-between items-center text-emerald-700 font-bold">
+                    <span class="flex items-center gap-1">🎁 2-Jar Offer Discount</span>
+                    <span class="font-black text-sm">-৳{{ order.discount_amount }}</span>
+                </div>
+                {% endif %}
                 <div class="flex justify-between items-center text-gray-600 font-semibold">
                     <span class="flex items-center gap-1.5">
                         <span>Delivery Fee</span>

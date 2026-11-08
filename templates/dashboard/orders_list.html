@@ -1065,14 +1065,11 @@
 
                 </div>
 
-                <!-- Date & Time Sub-Row (Zero overlap with Pending dropdown, 100% visible on any phone!) -->
-                <div class="flex items-center justify-between text-[11px] text-slate-500 -mt-0.5 pl-7">
+                <!-- Date & Time Sub-Row -->
+                <div class="flex items-center text-[11px] text-slate-500 -mt-0.5 pl-7">
                     <span class="inline-flex items-center gap-1.5 font-bold text-slate-700 bg-slate-100/90 px-2 py-0.5 rounded-md border border-slate-200/90 shadow-2xs whitespace-nowrap">
                         <i class="fa-regular fa-clock text-[9.5px] text-brand-600"></i>
                         <span>{{ order.created_at|date:"M d, Y • h:i A" }}</span>
-                    </span>
-                    <span class="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/80 whitespace-nowrap">
-                        {{ order.created_at|timesince }} ago
                     </span>
                 </div>
 

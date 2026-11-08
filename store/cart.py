@@ -186,5 +186,15 @@ class Cart:
     def get_delivery_fee(self, zone='INSIDE_DHAKA'):
         return calculate_pathao_delivery_fee(self.get_total_weight_grams(), zone, total_items=len(self))
 
+    def get_discount(self):
+        # Flat ৳100 discount ONLY when total jars == 2
+        # For 3 jars or 4+ jars, discount is 0 (4+ jars get FREE delivery)
+        if len(self) == 2:
+            return Decimal('100.00')
+        return Decimal('0.00')
+
     def get_total_price(self, zone='INSIDE_DHAKA'):
-        return self.get_subtotal() + self.get_delivery_fee(zone)
+        subtotal = self.get_subtotal()
+        discount = self.get_discount()
+        delivery_fee = self.get_delivery_fee(zone)
+        return max(Decimal('0.00'), subtotal - discount + delivery_fee)

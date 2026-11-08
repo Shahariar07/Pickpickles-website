@@ -536,6 +536,7 @@ class Order(models.Model):
     # Financials in BDT
     delivery_fee = models.DecimalField(max_digits=8, decimal_places=2, default=150.00)
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     
     # Courier Integration (Pathao & Steadfast)

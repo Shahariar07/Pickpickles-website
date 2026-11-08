@@ -1,155 +1,253 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Shopping Cart | Pickpickles Bangladesh{% endblock %}
+{% block title %}Shopping Cart — Review Artisanal Jars | Pickpickles Bangladesh{% endblock %}
 
 {% block content %}
-<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-    
-    <div class="flex items-center justify-between mb-8">
-        <div>
-            <h1 class="font-display font-black text-2xl sm:text-3xl text-gray-900">Your Pickle Jar Cart</h1>
-            <p class="text-xs sm:text-sm text-gray-500 mt-1">Review your jars before checkout.</p>
-        </div>
-        <a href="{% url 'store:index' %}#pickle-menu" class="text-xs sm:text-sm font-bold text-brand-600 hover:text-brand-800 flex items-center gap-1">
-            <i class="fa-solid fa-arrow-left"></i> Add More Jars
-        </a>
-    </div>
+<div class="bg-gradient-to-b from-slate-50 via-white to-slate-50 min-h-screen py-5 sm:py-10">
+    <div class="max-w-6xl mx-auto px-3.5 sm:px-6 lg:px-8">
 
-    {% if cart|length > 0 %}
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
-        <!-- Cart Items List -->
-        <div class="lg:col-span-8 space-y-4">
-            {% for item in cart %}
-            <div class="bg-white p-4 sm:p-5 rounded-3xl border border-gray-200 shadow-xs flex flex-col sm:flex-row items-center gap-4 sm:gap-6" id="cart-page-item-{{ item.key }}">
-                <img src="{{ item.product.primary_image_url }}" alt="{{ item.name }}" class="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-2xl border border-gray-100 flex-shrink-0" loading="lazy" decoding="async" width="96" height="96">
-                
-                <div class="flex-1 text-center sm:text-left min-w-0">
-                    <h3 class="font-display font-extrabold text-base sm:text-lg text-gray-900">
-                        <a href="{% url 'store:product_detail' item.product.slug %}" class="hover:text-brand-700">{{ item.name }}</a>
-                    </h3>
-                    <p class="text-xs text-gray-500 mt-0.5">{{ item.product.jar_weight_grams }} g Jar • ৳{{ item.price }} each</p>
-                    <div class="flex items-center gap-2 mt-1 justify-center sm:justify-start flex-wrap">
-                        <span class="text-[10px] bg-brand-50 text-brand-700 font-bold px-2 py-0.5 rounded">{{ item.product.get_cut_style_display }}</span>
-                        {% if item.variant %}
-                        <span class="text-[10px] bg-amber-50 text-amber-900 border border-amber-200 font-bold px-2 py-0.5 rounded">Style: {{ item.variant }}</span>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Quantity controls -->
-                <div class="flex items-center gap-4">
-                    <div class="flex items-center border border-gray-200 rounded-xl bg-gray-50 overflow-hidden shadow-xs">
-                        <button onclick="ajaxUpdateCart('{{ item.key }}', 'decrease')" class="w-8 h-8 flex items-center justify-center text-sm font-bold text-gray-600 hover:bg-gray-200">-</button>
-                        <span class="w-10 text-center font-extrabold text-sm text-gray-900 bg-white py-1" id="cart-page-qty-{{ item.key }}">{{ item.quantity }}</span>
-                        <button onclick="ajaxUpdateCart('{{ item.key }}', 'increase')" class="w-8 h-8 flex items-center justify-center text-sm font-bold text-gray-600 hover:bg-gray-200">+</button>
-                    </div>
-
-                    <div class="text-right min-w-[70px]">
-                        <span class="font-display font-black text-base sm:text-lg text-gray-900 block" id="cart-page-total-{{ item.key }}">৳{{ item.total_price }}</span>
-                    </div>
-
-                    <button onclick="ajaxUpdateCart('{{ item.key }}', 'remove')" class="text-gray-400 hover:text-rose-500 p-2 text-sm transition" title="Remove">
-                        <i class="fa-solid fa-trash-can"></i>
-                    </button>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-
-        <!-- Order Summary Card -->
-        <div class="lg:col-span-4 bg-white p-6 rounded-3xl border border-gray-200 shadow-md space-y-4">
-            <h3 class="font-display font-black text-lg text-gray-900 border-b border-gray-100 pb-3">Order Summary</h3>
-
-            <!-- Free Delivery Progress / Incentive Banner -->
-            <div id="freeDeliveryBanner" class="p-3.5 rounded-2xl border transition-all {% if free_delivery_unlocked %}bg-emerald-50 border-emerald-200 text-emerald-950{% else %}bg-amber-50/90 border-amber-200 text-amber-950{% endif %}">
-                <div class="flex items-center gap-2 text-xs font-black">
-                    <span id="freeDeliveryIcon">{% if free_delivery_unlocked %}🎉{% else %}🚚{% endif %}</span>
-                    <span id="freeDeliveryText">
-                        {% if free_delivery_unlocked %}
-                            <strong>FREE Delivery Unlocked!</strong> (4+ jars offer)
-                        {% else %}
-                            Add <strong><span id="freeDeliveryRemaining">{{ items_needed_for_free_delivery }}</span> more jar{% if items_needed_for_free_delivery > 1 %}s{% endif %}</strong> for <strong>FREE Delivery</strong>!
-                        {% endif %}
-                    </span>
-                </div>
-                <div class="w-full bg-black/10 rounded-full h-2 mt-2 overflow-hidden">
-                    <div id="freeDeliveryProgressBar" class="h-2 rounded-full transition-all duration-500 {% if free_delivery_unlocked or cart_total_items >= 4 %}bg-emerald-600{% else %}bg-amber-500{% endif %}" style="width: {% if free_delivery_unlocked or cart_total_items >= 4 %}100{% elif cart_total_items == 3 %}75{% elif cart_total_items == 2 %}50{% elif cart_total_items == 1 %}25{% else %}0{% endif %}%;"></div>
-                </div>
-                <p class="text-[10px] mt-1.5 opacity-80" id="freeDeliverySubtext">
-                    {% if free_delivery_unlocked %}
-                        Special discount applied: Nationwide shipping charge is ৳0.
-                    {% else %}
-                        Order 4 or more items to get 100% free delivery nationwide!
-                    {% endif %}
-                </p>
-            </div>
-
-            <div class="space-y-2 text-sm">
-                <div class="flex justify-between text-gray-600">
-                    <span>Jars Subtotal</span>
-                    <span class="font-bold text-gray-900">৳<span id="pageCartSubtotal">{{ cart_subtotal }}</span></span>
-                </div>
-                <div class="flex justify-between text-gray-600">
-                    <span>Total Weight</span>
-                    <span class="font-bold text-amber-900"><span id="pageCartWeightKg">{{ total_weight_kg }}</span> kg</span>
-                </div>
-                <div class="flex justify-between items-center text-gray-600">
-                    <span>Delivery Fee</span>
-                    <div class="text-right">
-                        {% if free_delivery_unlocked %}
-                            <span class="text-xs text-gray-400 line-through mr-1" id="pageCartOldFee">৳150.00</span>
-                            <span class="font-black text-emerald-700 bg-emerald-100 text-xs px-2 py-0.5 rounded-md" id="pageCartDeliveryFee">FREE (৳0.00)</span>
-                        {% else %}
-                            <span class="text-xs text-gray-400 line-through mr-1 hidden" id="pageCartOldFee">৳150.00</span>
-                            <span class="font-bold text-emerald-800" id="pageCartDeliveryFee">৳{{ delivery_fee }}</span>
-                        {% endif %}
-                    </div>
-                </div>
-                <p class="text-[11px] text-gray-400" id="pageCartDeliveryNote">
-                    {% if free_delivery_unlocked %}
-                        🎉 Enjoy free door-to-door delivery across Bangladesh!
-                    {% else %}
-                        Flat ৳150 nationwide delivery across Bangladesh (Free on 4+ jars).
-                    {% endif %}
-                </p>
-            </div>
-
-            <div class="border-t border-gray-100 pt-3 flex justify-between items-baseline">
-                <span class="font-bold text-gray-900">Total (Est.)</span>
-                <span class="font-display font-black text-2xl text-brand-700">৳<span id="pageCartTotal">{{ grand_total }}</span></span>
-            </div>
-
-            <a href="{% url 'store:checkout' %}" class="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-700 hover:to-brand-800 active:scale-[0.99] text-white font-display font-extrabold text-base py-3.5 px-4 rounded-2xl shadow-xl shadow-brand-600/20 text-center transition-all">
-                <span>Proceed to Checkout</span>
-                <i class="fa-solid fa-arrow-right text-sm"></i>
-            </a>
-
-            <p class="text-[11px] text-center text-slate-500 font-medium">
-                🚚 Estimated Delivery: <strong>7–10 Days</strong> Nationwide (Fresh Small-Batch Preparation)
+        <!-- Clean & Welcoming Cart Header (Matches Checkout Page) -->
+        <div class="mb-5 sm:mb-8 text-center px-2">
+            <h1 class="font-display font-black text-2xl sm:text-3xl lg:text-4xl text-slate-950 tracking-tight">
+                Your Pickle Jar Bag
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-600 font-medium mt-1.5 max-w-md mx-auto">
+                Review your handcrafted jars before checkout • 7–10 days fresh delivery nationwide
             </p>
+        </div>
 
-            <div class="pt-2 text-center text-xs text-gray-400 flex items-center justify-center gap-2">
-                <i class="fa-solid fa-lock text-brand-600"></i>
-                <span>Fast & Secure Mobile Checkout</span>
+        {% if cart|length > 0 %}
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-start">
+
+            <!-- Left Column: Cart Items List & Guarantees (7 Cols) -->
+            <div class="lg:col-span-7 space-y-4 sm:space-y-6">
+
+                <!-- 1. Jars in Cart Card -->
+                <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/90 shadow-xs">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-emerald-700 text-white flex items-center justify-center text-xs sm:text-sm font-black shrink-0">
+                                <i class="fa-solid fa-basket-shopping"></i>
+                            </div>
+                            <h2 class="font-display font-black text-base text-slate-950">Cart Items</h2>
+                        </div>
+                        <a href="{% url 'store:index' %}#pickle-menu" class="text-xs font-black text-emerald-800 hover:text-emerald-950 bg-emerald-50 border border-emerald-200/90 px-3 py-1.5 rounded-xl transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-plus text-[10px]"></i>
+                            <span>Add More Jars</span>
+                        </a>
+                    </div>
+
+                    <!-- Items List -->
+                    <div class="space-y-3.5 divide-y divide-slate-100">
+                        {% for item in cart %}
+                        <div class="pt-3.5 first:pt-0 flex flex-col sm:flex-row items-center gap-3.5 sm:gap-4" id="cart-page-item-{{ item.key }}">
+                            <div class="relative shrink-0">
+                                <img src="{{ item.product.primary_image_url }}" alt="{{ item.name }}" class="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-xl border border-slate-200 bg-slate-50" loading="lazy" decoding="async" width="80" height="80">
+                            </div>
+
+                            <div class="flex-1 min-w-0 text-center sm:text-left">
+                                <h3 class="font-display font-black text-sm sm:text-base text-slate-950 truncate">
+                                    <a href="{% url 'store:product_detail' item.product.slug %}" class="hover:text-emerald-800 transition">{{ item.name }}</a>
+                                </h3>
+                                <p class="text-xs text-slate-500 font-medium mt-0.5">
+                                    {{ item.product.jar_weight_grams }}g Jar • ৳{{ item.price }} each
+                                </p>
+                                <div class="flex items-center gap-1.5 mt-1.5 justify-center sm:justify-start flex-wrap">
+                                    {% if item.product.cut_style %}
+                                    <span class="text-[10px] bg-slate-100 text-slate-700 font-bold px-2 py-0.5 rounded-md">{{ item.product.get_cut_style_display }}</span>
+                                    {% endif %}
+                                    {% if item.variant %}
+                                    <span class="text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold px-2 py-0.5 rounded-md">Style: {{ item.variant }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Quantity Controls & Price -->
+                            <div class="flex items-center gap-3 shrink-0">
+                                <div class="flex items-center border border-slate-200 rounded-xl bg-slate-50 overflow-hidden shadow-2xs">
+                                    <button onclick="ajaxUpdateCart('{{ item.key }}', 'decrease')" class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-xs sm:text-sm font-black text-slate-600 hover:bg-slate-200 active:bg-slate-300 transition cursor-pointer" aria-label="Decrease quantity">-</button>
+                                    <span class="w-8 sm:w-10 text-center font-black text-xs sm:text-sm text-slate-950 bg-white py-1" id="cart-page-qty-{{ item.key }}">{{ item.quantity }}</span>
+                                    <button onclick="ajaxUpdateCart('{{ item.key }}', 'increase')" class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-xs sm:text-sm font-black text-slate-600 hover:bg-slate-200 active:bg-slate-300 transition cursor-pointer" aria-label="Increase quantity">+</button>
+                                </div>
+
+                                <div class="text-right min-w-[70px]">
+                                    <span class="font-display font-black text-sm sm:text-base text-slate-950 block" id="cart-page-total-{{ item.key }}">৳{{ item.total_price }}</span>
+                                </div>
+
+                                <button onclick="ajaxUpdateCart('{{ item.key }}', 'remove')" class="text-slate-400 hover:text-rose-600 p-1.5 text-xs sm:text-sm transition cursor-pointer" title="Remove jar">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- 2. Nationwide Delivery & Craft Promise -->
+                <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                    <div class="flex items-center gap-3 text-center sm:text-left">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center text-lg shrink-0 border border-emerald-100">
+                            🚚
+                        </div>
+                        <div>
+                            <h4 class="font-display font-black text-sm text-slate-950">Nationwide Courier Delivery</h4>
+                            <p class="text-slate-500 text-[11px] font-medium mt-0.5">Estimated <strong>7–10 days</strong> • Small-batch fresh preparation with airtight safety seal</p>
+                        </div>
+                    </div>
+                    <span class="text-[10px] uppercase font-black tracking-wider px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 shrink-0">100% Fresh Pack</span>
+                </div>
+
             </div>
+
+            <!-- Right Column: Sticky Order Summary (5 Cols) (Matches Checkout 1:1) -->
+            <div class="lg:col-span-5 space-y-4 sm:space-y-5 sticky top-24">
+                <div class="bg-white p-4 sm:p-7 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-md space-y-4 sm:space-y-5">
+                    
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                        <h3 class="font-display font-black text-lg text-slate-950">Order Summary</h3>
+                        <span class="text-xs font-black text-emerald-800 bg-emerald-100/80 px-2.5 py-1 rounded-full" id="pageCartItemCountBadge">
+                            {{ cart_total_items }} Jar{% if cart_total_items > 1 %}s{% endif %}
+                        </span>
+                    </div>
+
+                    <!-- Free Delivery / 2-Jar Reward Pill (Matching Checkout 100%) -->
+                    <div id="freeDeliveryBanner" class="p-3 rounded-2xl border text-xs font-bold transition-all {% if free_delivery_unlocked or cart_total_items >= 4 %}bg-emerald-50 border-emerald-200 text-emerald-950{% elif cart_total_items == 2 %}bg-emerald-50 border-emerald-200 text-emerald-950{% else %}bg-amber-50/90 border-amber-200 text-amber-950{% endif %}">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="flex items-start gap-2 min-w-0 flex-1">
+                                <span id="freeDeliveryIcon" class="shrink-0 text-base leading-none mt-0.5">{% if free_delivery_unlocked or cart_total_items >= 4 or cart_total_items == 2 %}🎉{% elif cart_total_items == 1 %}🎁{% else %}🚚{% endif %}</span>
+                                <div class="min-w-0 flex-1">
+                                    <div id="freeDeliveryText" class="text-xs font-black leading-snug break-words">
+                                        {% if free_delivery_unlocked or cart_total_items >= 4 %}
+                                            <strong>Free Delivery Applied!</strong>
+                                        {% elif cart_total_items == 2 %}
+                                            <strong>৳100 OFF Applied</strong> • Add 2 for Free Delivery
+                                        {% elif cart_total_items == 1 %}
+                                            <strong>2 jars = ৳100 OFF</strong> • 4 = Free Delivery
+                                        {% else %}
+                                            Add <strong><span id="freeDeliveryRemaining">{{ items_needed_for_free_delivery }}</span> more</strong> for Free Delivery
+                                        {% endif %}
+                                    </div>
+                                    <p class="text-[11px] mt-1 opacity-90 leading-normal break-words font-medium" id="freeDeliverySubtext">
+                                        {% if free_delivery_unlocked or cart_total_items >= 4 %}
+                                            Nationwide delivery fee is ৳0.
+                                        {% elif cart_total_items == 2 %}
+                                            ৳100 discount applied! Add 2 more jars for free delivery.
+                                        {% elif cart_total_items == 1 %}
+                                            Add 1 more jar for ৳100 discount, or 4+ for free delivery.
+                                        {% else %}
+                                            Order 2 jars for ৳100 off, or 4+ for free delivery!
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                            <span id="freeDeliveryBadge" class="text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap mt-0.5 {% if free_delivery_unlocked or cart_total_items >= 4 or cart_total_items == 2 %}bg-emerald-600 text-white{% elif cart_total_items == 1 %}bg-amber-400 text-slate-950 font-black{% else %}bg-amber-400 text-slate-950{% endif %}">
+                                {% if free_delivery_unlocked or cart_total_items >= 4 %}Unlocked{% elif cart_total_items == 2 %}Saved ৳100{% elif cart_total_items == 1 %}৳100 OFF{% else %}Save ৳150{% endif %}
+                            </span>
+                        </div>
+                        <div class="w-full bg-black/10 rounded-full h-1.5 mt-2.5 overflow-hidden">
+                            <div id="freeDeliveryProgressBar" class="h-1.5 rounded-full transition-all duration-500 {% if free_delivery_unlocked or cart_total_items >= 4 or cart_total_items == 2 %}bg-emerald-600{% else %}bg-amber-500{% endif %}" style="width: {% if free_delivery_unlocked or cart_total_items >= 4 %}100{% elif cart_total_items == 3 %}75{% elif cart_total_items == 2 %}50{% elif cart_total_items == 1 %}25{% else %}0{% endif %}%;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Price Calculations Breakdown -->
+                    <div class="border-t border-slate-200/80 pt-4 space-y-2 text-xs">
+                        <div class="flex justify-between text-slate-600 font-medium">
+                            <span>Pickle Jars Subtotal</span>
+                            <span class="font-black text-slate-900 text-sm">৳<span id="pageCartSubtotal">{{ cart_subtotal }}</span></span>
+                        </div>
+
+                        <div id="pageCartDiscountRow" class="flex justify-between items-center text-emerald-700 font-bold {% if cart_total_items != 2 %}hidden{% endif %}">
+                            <span class="flex items-center gap-1.5">
+                                <span>🎁 2-Jar Special Discount</span>
+                            </span>
+                            <span class="font-black text-sm text-emerald-700">-৳<span id="pageCartDiscount">100.00</span></span>
+                        </div>
+
+                        <div class="flex justify-between text-slate-600 font-medium">
+                            <span>Total Parcel Weight</span>
+                            <span class="font-bold text-slate-900"><span id="pageCartWeightKg">{{ total_weight_kg }}</span> kg</span>
+                        </div>
+
+                        <div class="flex justify-between items-center text-slate-600 font-medium">
+                            <div>
+                                <span>Nationwide Delivery</span>
+                                <span class="block text-[11px] text-slate-500 font-medium">Estimated: <strong>7–10 days</strong></span>
+                            </div>
+                            <div class="text-right">
+                                {% if free_delivery_unlocked %}
+                                    <span class="text-xs text-slate-400 line-through mr-1" id="pageCartOldFee">৳150.00</span>
+                                    <span class="font-black text-emerald-700 bg-emerald-100 text-xs px-2.5 py-0.5 rounded-md" id="pageCartDeliveryFee">FREE (৳0.00)</span>
+                                {% else %}
+                                    <span class="text-xs text-slate-400 line-through mr-1 hidden" id="pageCartOldFee">৳150.00</span>
+                                    <span class="font-black text-slate-900 text-sm" id="pageCartDeliveryFee">৳{{ delivery_fee }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <p class="text-[11px] text-slate-400 font-medium" id="pageCartDeliveryNote">
+                            {% if free_delivery_unlocked %}
+                                🎉 Free nationwide delivery across Bangladesh!
+                            {% elif cart_total_items == 2 %}
+                                Flat ৳150 delivery • ৳100 discount applied!
+                            {% elif cart_total_items == 1 %}
+                                Flat ৳150 delivery • ৳100 OFF on 2 jars (Free on 4+)
+                            {% else %}
+                                Flat ৳150 nationwide delivery (Free on 4+ jars).
+                            {% endif %}
+                        </p>
+
+                        <div class="border-t-2 border-slate-200/80 pt-3 flex justify-between items-baseline text-base">
+                            <div>
+                                <span class="font-black text-slate-950 block">Total (Est.)</span>
+                                <span class="text-[11px] text-slate-500 font-medium">Food-grade airtight packaging included</span>
+                            </div>
+                            <span class="font-display font-black text-2xl sm:text-3xl text-emerald-800">৳<span id="pageCartTotal">{{ grand_total }}</span></span>
+                        </div>
+                    </div>
+
+                    <!-- Proceed to Checkout Button -->
+                    <a href="{% url 'store:checkout' %}" class="w-full flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-800 active:scale-[0.99] text-white font-display font-black text-base py-4 rounded-2xl shadow-xl shadow-emerald-800/25 transition-all text-center cursor-pointer">
+                        <span>Proceed to Checkout</span>
+                        <i class="fa-solid fa-arrow-right text-sm"></i>
+                    </a>
+
+                    <!-- Customer Assurance & Policy Link (Matches Checkout 1:1) -->
+                    <div class="flex items-center justify-between p-3 rounded-2xl bg-emerald-50/70 border border-emerald-100/90 text-xs text-emerald-950">
+                        <span class="flex items-center gap-2 font-bold">
+                            <i class="fa-solid fa-shield-halved text-emerald-700"></i>
+                            <span>100% Satisfaction Guarantee</span>
+                        </span>
+                        <a href="{% url 'store:policies' %}" target="_blank" class="text-[11px] font-black text-emerald-800 hover:text-emerald-950 underline underline-offset-2 flex items-center gap-1">
+                            <span>View Policy & Support</span>
+                            <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+                        </a>
+                    </div>
+
+                    <div class="pt-1 text-center text-xs text-slate-400 flex items-center justify-center gap-2 font-medium">
+                        <i class="fa-solid fa-lock text-emerald-700"></i>
+                        <span>Fast & Secure Checkout • Cash on Delivery & bKash</span>
+                    </div>
+
+                </div>
+            </div>
+
         </div>
+        {% else %}
+        <!-- Empty Cart State (Matches Checkout Slate Gradient Theme) -->
+        <div class="text-center py-16 bg-white rounded-3xl border border-slate-200 p-8 max-w-lg mx-auto shadow-xs">
+            <div class="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl shadow-inner border border-emerald-100">
+                🥒
+            </div>
+            <h2 class="font-display font-black text-2xl text-slate-950">Your cart is empty</h2>
+            <p class="text-xs sm:text-sm font-medium text-slate-500 mt-1.5 mb-6">Pick some fresh artisanal crunch first! 🌿</p>
+            <a href="{% url 'store:index' %}#pickle-menu" class="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-display font-black text-sm px-7 py-3.5 rounded-2xl shadow-lg shadow-emerald-800/20 transition-all">
+                <span>Explore Pickle Flavors</span>
+                <i class="fa-solid fa-arrow-right text-xs"></i>
+            </a>
+        </div>
+        {% endif %}
 
     </div>
-    {% else %}
-    <div class="text-center py-16 bg-white rounded-3xl border border-gray-200 p-8 max-w-lg mx-auto">
-        <div class="w-20 h-20 bg-brand-50 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl">
-            🥒
-        </div>
-        <h2 class="font-display font-black text-xl sm:text-2xl text-gray-900">Your cart is empty.</h2>
-        <p class="text-sm sm:text-base font-semibold text-brand-600 mt-2 mb-6">Pick some crunch first! 🌿</p>
-        <a href="{% url 'store:index' %}#pickle-menu" class="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm px-6 py-3 rounded-2xl shadow-md transition">
-            <span>Explore Pickle Flavors</span>
-            <i class="fa-solid fa-arrow-right text-xs"></i>
-        </a>
-    </div>
-    {% endif %}
-
 </div>
 {% endblock %}

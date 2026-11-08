@@ -248,14 +248,16 @@ from .pathao import PathaoCourierService
 def cart_view(request):
     cart = Cart(request)
     subtotal = cart.get_subtotal()
+    discount = cart.get_discount()
     total_weight_grams = cart.get_total_weight_grams()
     total_weight_kg = cart.get_total_weight_kg()
     billing_weight_kg = cart.get_billing_weight_kg()
     delivery_fee = cart.get_delivery_fee('INSIDE_DHAKA')
-    grand_total = subtotal + delivery_fee
+    grand_total = cart.get_total_price('INSIDE_DHAKA')
     return render(request, 'store/cart.html', {
         'cart': cart,
         'cart_subtotal': subtotal,
+        'cart_discount': discount,
         'cart_total_items': len(cart),
         'total_weight_grams': total_weight_grams,
         'total_weight_kg': total_weight_kg,
@@ -275,9 +277,11 @@ def cart_add(request, product_id):
 
     if not product.is_in_stock or product.stock_count <= 0:
         if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('format') == 'json':
+            err_msg = f'Sorry, "{product.name}" is currently Out of Stock!'
             return JsonResponse({
                 'success': False,
-                'error': f'Sorry, "{product.name}" is currently Out of Stock!',
+                'error': err_msg,
+                'message': err_msg,
             }, status=400)
         messages.error(request, f'Sorry, "{product.name}" is currently Out of Stock.')
         return redirect(request.META.get('HTTP_REFERER') or 'store:index')
@@ -319,6 +323,7 @@ def cart_add(request, product_id):
             'message': msg,
             'cart_total_items': len(cart),
             'cart_subtotal': float(cart.get_subtotal()),
+            'cart_discount': float(cart.get_discount()),
             'total_weight_grams': cart.get_total_weight_grams(),
             'total_weight_kg': cart.get_total_weight_kg(),
             'billing_weight_kg': cart.get_billing_weight_kg(),
@@ -373,6 +378,7 @@ def cart_remove(request, product_id):
             'success': True,
             'cart_total_items': len(cart),
             'cart_subtotal': float(cart.get_subtotal()),
+            'cart_discount': float(cart.get_discount()),
             'total_weight_grams': cart.get_total_weight_grams(),
             'total_weight_kg': cart.get_total_weight_kg(),
             'billing_weight_kg': cart.get_billing_weight_kg(),
@@ -448,12 +454,14 @@ def cart_update_ajax(request):
 
         delivery_fee = float(cart.get_delivery_fee(zone))
         subtotal = float(cart.get_subtotal())
-        grand_total = subtotal + delivery_fee
+        discount = float(cart.get_discount())
+        grand_total = float(cart.get_total_price(zone))
 
         return JsonResponse({
             'success': True,
             'cart_total_items': len(cart),
             'cart_subtotal': subtotal,
+            'cart_discount': discount,
             'total_weight_grams': cart.get_total_weight_grams(),
             'total_weight_kg': cart.get_total_weight_kg(),
             'billing_weight_kg': cart.get_billing_weight_kg(),
@@ -478,7 +486,8 @@ def shipping_calc_ajax(request):
     
     delivery_fee = cart.get_delivery_fee(zone)
     subtotal = cart.get_subtotal()
-    total = subtotal + delivery_fee
+    discount = cart.get_discount()
+    total = cart.get_total_price(zone)
     
     return JsonResponse({
         'success': True,
@@ -488,6 +497,7 @@ def shipping_calc_ajax(request):
         'billing_weight_kg': cart.get_billing_weight_kg(),
         'delivery_fee': float(delivery_fee),
         'subtotal': float(subtotal),
+        'discount': float(discount),
         'total': float(total),
         'free_delivery_unlocked': cart.is_free_delivery(),
         'items_needed_for_free_delivery': cart.items_needed_for_free_delivery(),
@@ -535,11 +545,13 @@ def checkout(request):
             order = form.save(commit=False)
             
             subtotal = cart.get_subtotal()
+            discount = cart.get_discount()
             delivery_zone = form.cleaned_data.get('delivery_zone') or 'INSIDE_DHAKA'
             delivery_fee = cart.get_delivery_fee(delivery_zone)
-            total = subtotal + delivery_fee
+            total = cart.get_total_price(delivery_zone)
             
             order.subtotal = subtotal
+            order.discount_amount = discount
             order.delivery_fee = delivery_fee
             order.total_amount = total
             
@@ -609,12 +621,14 @@ def checkout(request):
     
     delivery_fee = delivery_fee_inside if selected_zone == 'INSIDE_DHAKA' else delivery_fee_outside
     subtotal = cart.get_subtotal()
-    total = subtotal + delivery_fee
+    discount = cart.get_discount()
+    total = cart.get_total_price(selected_zone)
 
     context = {
         'cart': cart,
         'form': form,
         'cart_subtotal': subtotal,
+        'cart_discount': discount,
         'cart_total_items': len(cart),
         'total_weight_grams': total_weight_grams,
         'total_weight_kg': total_weight_kg,

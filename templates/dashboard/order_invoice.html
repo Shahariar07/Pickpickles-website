@@ -425,6 +425,12 @@
                 <span>Subtotal ({{ order.total_items_count }} items):</span>
                 <span class="font-black">Tk {{ order.subtotal|floatformat:0 }}</span>
             </div>
+            {% if order.discount_amount > 0 %}
+            <div class="flex justify-between text-emerald-800 font-bold">
+                <span>Special Discount (2 Jars):</span>
+                <span class="font-black">-Tk {{ order.discount_amount|floatformat:0 }}</span>
+            </div>
+            {% endif %}
             <div class="flex justify-between">
                 <span>Delivery ({{ order.delivery_city }}):</span>
                 <span class="font-black">Tk {{ order.delivery_fee|floatformat:0 }}</span>

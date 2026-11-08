@@ -31,6 +31,9 @@ function getCsrfToken() {
 
 // Toggle Slide Drawer
 function toggleCartDrawer(open) {
+    if (open && (window.location.pathname.includes('/checkout/') || window.location.pathname.includes('/cart/'))) {
+        return; // Distraction-free: suppress drawer popup on cart & checkout pages
+    }
     const drawer = document.getElementById('cartDrawer');
     const backdrop = document.getElementById('cartDrawerBackdrop');
     if (!drawer || !backdrop) return;
@@ -118,18 +121,26 @@ function updateFreeDeliveryProgress(totalItems) {
 
     if (freeMsgEl) {
         if (isFreeDelivery) {
-            freeMsgEl.innerHTML = '🎉 <strong>FREE Delivery Unlocked!</strong>';
+            freeMsgEl.innerHTML = '🎉 <strong>Free Delivery Applied!</strong>';
+        } else if (count === 2) {
+            freeMsgEl.innerHTML = '🎉 <strong>৳100 OFF Applied</strong> • Add 2 for Free Delivery';
+        } else if (count === 1) {
+            freeMsgEl.innerHTML = '🎁 <strong>2 jars = ৳100 OFF</strong> • 4 = Free Delivery';
         } else {
-            freeMsgEl.innerHTML = `🚚 Add <strong><span id="drawerFreeDeliveryRemaining">${remainingForFree}</span> more jar${remainingForFree > 1 ? 's' : ''}</strong> for FREE Delivery!`;
+            freeMsgEl.innerHTML = `🚚 Add <strong><span id="drawerFreeDeliveryRemaining">${remainingForFree}</span> more</strong> for Free Delivery`;
         }
     }
     if (freePercentEl) freePercentEl.innerText = `${progressPercent}%`;
     if (freeBarEl) freeBarEl.style.width = `${progressPercent}%`;
     if (deliveryNoteEl) {
         if (isFreeDelivery) {
-            deliveryNoteEl.innerHTML = '<span class="text-emerald-700 font-bold">🎉 FREE Nationwide Delivery Applied!</span>';
+            deliveryNoteEl.innerHTML = '<span class="text-emerald-700 font-bold">🎉 Free nationwide delivery across Bangladesh!</span>';
+        } else if (count === 2) {
+            deliveryNoteEl.innerHTML = '<span class="text-emerald-700 font-bold">Flat ৳150 delivery • ৳100 discount applied!</span>';
+        } else if (count === 1) {
+            deliveryNoteEl.innerHTML = '<span class="text-emerald-700 font-bold">Flat ৳150 delivery • ৳100 OFF on 2 jars (Free on 4+)</span>';
         } else {
-            deliveryNoteEl.innerHTML = '<span class="text-gray-500">Flat ৳150 Nationwide Delivery • <strong>Free on 4+ jars</strong></span>';
+            deliveryNoteEl.innerHTML = '<span class="text-gray-500">Flat ৳150 nationwide delivery (Free on 4+ jars).</span>';
         }
     }
 
@@ -142,23 +153,58 @@ function updateFreeDeliveryProgress(totalItems) {
 
     if (pageFreeBanner) {
         if (isFreeDelivery) {
-            pageFreeBanner.className = "p-3.5 rounded-2xl border transition-all bg-emerald-50 border-emerald-200 text-emerald-950";
+            pageFreeBanner.className = "p-3 rounded-2xl border transition-all bg-emerald-50 border-emerald-200 text-emerald-950";
             if (pageFreeIcon) pageFreeIcon.innerText = "🎉";
-            if (pageFreeText) pageFreeText.innerHTML = "<strong>FREE Delivery Unlocked!</strong> (4+ jars offer)";
+            if (pageFreeText) pageFreeText.innerHTML = "<strong>Free Delivery Applied!</strong>";
             if (pageFreeProgress) {
-                pageFreeProgress.className = "h-2 rounded-full transition-all duration-500 bg-emerald-600";
+                pageFreeProgress.className = "h-1.5 rounded-full transition-all duration-500 bg-emerald-600";
                 pageFreeProgress.style.width = "100%";
             }
-            if (pageFreeSubtext) pageFreeSubtext.innerText = "Special discount applied: Nationwide shipping charge is ৳0.";
-        } else {
-            pageFreeBanner.className = "p-3.5 rounded-2xl border transition-all bg-amber-50/90 border-amber-200 text-amber-950";
-            if (pageFreeIcon) pageFreeIcon.innerText = "🚚";
-            if (pageFreeText) pageFreeText.innerHTML = `Add <strong><span id="freeDeliveryRemaining">${remainingForFree}</span> more jar${remainingForFree > 1 ? 's' : ''}</strong> for <strong>FREE Delivery</strong>!`;
+            if (pageFreeSubtext) pageFreeSubtext.innerText = "Nationwide delivery fee is ৳0.";
+        } else if (count === 2) {
+            pageFreeBanner.className = "p-3 rounded-2xl border transition-all bg-emerald-50 border-emerald-200 text-emerald-950";
+            if (pageFreeIcon) pageFreeIcon.innerText = "🎉";
+            if (pageFreeText) pageFreeText.innerHTML = "<strong>৳100 OFF Applied</strong> • Add 2 for Free Delivery";
             if (pageFreeProgress) {
-                pageFreeProgress.className = "h-2 rounded-full transition-all duration-500 bg-amber-500";
+                pageFreeProgress.className = "h-1.5 rounded-full transition-all duration-500 bg-emerald-600";
                 pageFreeProgress.style.width = `${progressPercent}%`;
             }
-            if (pageFreeSubtext) pageFreeSubtext.innerText = "Order 4 or more items to get 100% free delivery nationwide!";
+            if (pageFreeSubtext) pageFreeSubtext.innerText = "৳100 discount applied! Add 2 more jars for free delivery.";
+        } else if (count === 1) {
+            pageFreeBanner.className = "p-3 rounded-2xl border transition-all bg-amber-50/90 border-amber-200 text-amber-950";
+            if (pageFreeIcon) pageFreeIcon.innerText = "🎁";
+            if (pageFreeText) pageFreeText.innerHTML = "<strong>2 jars = ৳100 OFF</strong> • 4 = Free Delivery";
+            if (pageFreeProgress) {
+                pageFreeProgress.className = "h-1.5 rounded-full transition-all duration-500 bg-amber-500";
+                pageFreeProgress.style.width = `${progressPercent}%`;
+            }
+            if (pageFreeSubtext) pageFreeSubtext.innerText = "Add 1 more jar for ৳100 discount, or 4+ for free delivery.";
+        } else {
+            pageFreeBanner.className = "p-3 rounded-2xl border transition-all bg-amber-50/90 border-amber-200 text-amber-950";
+            if (pageFreeIcon) pageFreeIcon.innerText = "🚚";
+            if (pageFreeText) pageFreeText.innerHTML = `Add <strong><span id="freeDeliveryRemaining">${remainingForFree}</span> more</strong> for Free Delivery`;
+            if (pageFreeProgress) {
+                pageFreeProgress.className = "h-1.5 rounded-full transition-all duration-500 bg-amber-500";
+                pageFreeProgress.style.width = `${progressPercent}%`;
+            }
+            if (pageFreeSubtext) pageFreeSubtext.innerText = "Order 2 jars for ৳100 off, or 4+ for free delivery!";
+        }
+
+        const pageFreeBadge = document.getElementById('freeDeliveryBadge');
+        if (pageFreeBadge) {
+            if (isFreeDelivery) {
+                pageFreeBadge.className = "text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full bg-emerald-600 text-white shrink-0 whitespace-nowrap mt-0.5";
+                pageFreeBadge.innerText = "Unlocked";
+            } else if (count === 2) {
+                pageFreeBadge.className = "text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full bg-emerald-600 text-white shrink-0 whitespace-nowrap mt-0.5";
+                pageFreeBadge.innerText = "Saved ৳100";
+            } else if (count === 1) {
+                pageFreeBadge.className = "text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-black shrink-0 whitespace-nowrap mt-0.5";
+                pageFreeBadge.innerText = "৳100 OFF";
+            } else {
+                pageFreeBadge.className = "text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 shrink-0 whitespace-nowrap mt-0.5";
+                pageFreeBadge.innerText = "Save ৳150";
+            }
         }
     }
 }
@@ -170,6 +216,15 @@ function renderCartDrawer(items, subtotal) {
 
     const totalItems = items ? items.reduce((sum, itm) => sum + (itm.quantity || 0), 0) : 0;
     updateFreeDeliveryProgress(totalItems);
+
+    const drawerDiscountRow = document.getElementById('drawerDiscountRow');
+    if (drawerDiscountRow) {
+        if (totalItems === 2) {
+            drawerDiscountRow.classList.remove('hidden');
+        } else {
+            drawerDiscountRow.classList.add('hidden');
+        }
+    }
 
     const drawerFooter = document.getElementById('cartDrawerFooter');
 
@@ -384,6 +439,27 @@ async function ajaxUpdateCart(itemKey, action) {
             const pageSub = document.getElementById('pageCartSubtotal');
             if (pageSub) pageSub.innerText = parseFloat(data.cart_subtotal).toFixed(2);
 
+            const discount = (data.cart_discount !== undefined) ? parseFloat(data.cart_discount) : ((data.cart_total_items === 2) ? 100.0 : 0.0);
+            const pageDiscountRow = document.getElementById('pageCartDiscountRow');
+            const pageDiscount = document.getElementById('pageCartDiscount');
+            if (pageDiscountRow) {
+                if (discount > 0) {
+                    pageDiscountRow.classList.remove('hidden');
+                    if (pageDiscount) pageDiscount.innerText = discount.toFixed(2);
+                } else {
+                    pageDiscountRow.classList.add('hidden');
+                }
+            }
+
+            const drawerDiscountRow = document.getElementById('drawerDiscountRow');
+            if (drawerDiscountRow) {
+                if (discount > 0) {
+                    drawerDiscountRow.classList.remove('hidden');
+                } else {
+                    drawerDiscountRow.classList.add('hidden');
+                }
+            }
+
             const deliveryFee = data.delivery_fee !== undefined ? parseFloat(data.delivery_fee) : (data.cart_total_items >= 4 ? 0.00 : 150.00);
             const pageDelivery = document.getElementById('pageCartDeliveryFee');
             const pageOldFee = document.getElementById('pageCartOldFee');
@@ -395,6 +471,16 @@ async function ajaxUpdateCart(itemKey, action) {
                     pageDelivery.className = "font-black text-emerald-700 bg-emerald-100 text-xs px-2 py-0.5 rounded-md";
                     pageDelivery.innerText = "FREE (৳0.00)";
                     if (pageDeliveryNote) pageDeliveryNote.innerText = "🎉 Enjoy free door-to-door delivery across Bangladesh!";
+                } else if (data.cart_total_items === 2) {
+                    if (pageOldFee) pageOldFee.classList.add('hidden');
+                    pageDelivery.className = "font-bold text-emerald-800";
+                    pageDelivery.innerText = `৳${deliveryFee.toFixed(2)}`;
+                    if (pageDeliveryNote) pageDeliveryNote.innerText = "Flat ৳150 nationwide delivery • ৳100 product discount applied!";
+                } else if (data.cart_total_items === 1) {
+                    if (pageOldFee) pageOldFee.classList.add('hidden');
+                    pageDelivery.className = "font-bold text-emerald-800";
+                    pageDelivery.innerText = `৳${deliveryFee.toFixed(2)}`;
+                    if (pageDeliveryNote) pageDeliveryNote.innerText = "Flat ৳150 nationwide delivery • 💡 Add 1 more jar to save ৳100 (Free delivery on 4+ jars)!";
                 } else {
                     if (pageOldFee) pageOldFee.classList.add('hidden');
                     pageDelivery.className = "font-bold text-emerald-800";
@@ -405,13 +491,19 @@ async function ajaxUpdateCart(itemKey, action) {
 
             const pageTot = document.getElementById('pageCartTotal');
             if (pageTot) {
-                const total = data.grand_total !== undefined ? parseFloat(data.grand_total) : (parseFloat(data.cart_subtotal) + deliveryFee);
+                const total = data.grand_total !== undefined ? parseFloat(data.grand_total) : (parseFloat(data.cart_subtotal) - discount + deliveryFee);
                 pageTot.innerText = total.toFixed(2);
             }
 
             const pageWeight = document.getElementById('pageCartWeightKg');
             if (pageWeight && data.total_weight_kg !== undefined) {
                 pageWeight.innerText = data.total_weight_kg;
+            }
+
+            const pageItemBadge = document.getElementById('pageCartItemCountBadge');
+            if (pageItemBadge && data.cart_total_items !== undefined) {
+                const count = parseInt(data.cart_total_items, 10) || 0;
+                pageItemBadge.innerText = `${count} Jar${count > 1 ? 's' : ''}`;
             }
         }
     } catch (err) {

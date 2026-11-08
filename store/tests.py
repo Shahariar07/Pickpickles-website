@@ -359,13 +359,13 @@ class CartTests(TestCase):
         self.assertIn('https://pickpickles.xyz/reviews/', msg)
 
         wa_url = order.whatsapp_shipping_instruction_url
-        self.assertTrue(wa_url.startswith('https://api.whatsapp.com/send?phone=8801712345678&text='))
+        self.assertTrue(wa_url.startswith('https://api.whatsapp.com/send?phone=8801712345678&text=') or wa_url.startswith('https://wa.me/8801712345678?text='))
 
         fb_msg = order.get_whatsapp_feedback_message()
         self.assertIn('Mahmudul Hasan', fb_msg)
         self.assertIn('experience', fb_msg.lower())
         self.assertIn('https://pickpickles.xyz/reviews/', fb_msg)
-        self.assertTrue(order.whatsapp_feedback_url.startswith('https://api.whatsapp.com/send?phone=8801712345678&text='))
+        self.assertTrue(order.whatsapp_feedback_url.startswith('https://api.whatsapp.com/send?phone=8801712345678&text=') or order.whatsapp_feedback_url.startswith('https://wa.me/8801712345678?text='))
 
         month_msg = order.get_whatsapp_1month_review_request_message()
         self.assertIn('Mahmudul Hasan', month_msg)
@@ -377,24 +377,24 @@ class CartTests(TestCase):
         self.assertIn(order.order_number, confirm_msg)
         self.assertIn('Order Confirmation', confirm_msg)
         self.assertIn('https://pickpickles.xyz/reviews/', confirm_msg)
-        self.assertTrue(order.whatsapp_order_confirmation_url.startswith('https://api.whatsapp.com/send?phone=8801712345678&text='))
+        self.assertTrue(order.whatsapp_order_confirmation_url.startswith('https://api.whatsapp.com/send?phone=8801712345678&text=') or order.whatsapp_order_confirmation_url.startswith('https://wa.me/8801712345678?text='))
 
     def test_bangladeshi_mobile_number_validation(self):
         from store.forms import CheckoutForm, clean_and_validate_bd_phone
 
         # Valid BD numbers
         valid_numbers = [
-            '01712345678',
-            '01812345678',
-            '01912345678',
-            '01312345678',
-            '01412345678',
-            '01512345678',
-            '01612345678',
-            '+8801712345678',
-            '8801712345678',
-            '01712-345678',
-            '01712 345 678',
+            '01719874562',
+            '01833445566',
+            '01955667788',
+            '01319874562',
+            '01419874562',
+            '01519874562',
+            '01619874562',
+            '+8801719874562',
+            '8801719874562',
+            '01719-874562',
+            '01719 874 562',
         ]
         for phone in valid_numbers:
             cleaned, err = clean_and_validate_bd_phone(phone)
@@ -430,4 +430,130 @@ class CartTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn('customer_phone', form.errors)
 
+    def test_flat_100_discount_on_two_jars_and_not_on_three_or_four(self):
+        """
+        Verify the exact business rules:
+        - 1 jar: 0 discount, flat 150 delivery.
+        - 2 jars: flat 100 discount, flat 150 delivery (Total = Subtotal - 100 + 150).
+        - 3 jars: 0 discount, flat 150 delivery (Total = Subtotal + 150).
+        - 4 jars: 0 discount, FREE delivery (Total = Subtotal).
+        - 5 jars: 0 discount, FREE delivery (Total = Subtotal).
+        """
+        from store.cart import Cart
+        from django.test.client import RequestFactory
+        from django.contrib.sessions.middleware import SessionMiddleware
+        from store.models import Order
 
+        factory = RequestFactory()
+
+        # Helper to get cart instance with session
+        def get_fresh_cart():
+            req = factory.get('/')
+            middleware = SessionMiddleware(lambda r: None)
+            middleware.process_request(req)
+            req.session.save()
+            return Cart(req), req
+
+        # 1 Jar
+        cart, _ = get_fresh_cart()
+        cart.add(self.product, quantity=1)
+        self.assertEqual(len(cart), 1)
+        self.assertEqual(cart.get_discount(), Decimal('0.00'))
+        self.assertEqual(cart.get_delivery_fee(), Decimal('150.00'))
+        self.assertEqual(cart.get_total_price(), Decimal('530.00'))  # 380 + 150
+
+        # 2 Jars (Flat 100 discount applies!)
+        cart, _ = get_fresh_cart()
+        cart.add(self.product, quantity=2)
+        self.assertEqual(len(cart), 2)
+        self.assertEqual(cart.get_discount(), Decimal('100.00'))
+        self.assertEqual(cart.get_delivery_fee(), Decimal('150.00'))
+        self.assertEqual(cart.get_subtotal(), Decimal('760.00'))
+        self.assertEqual(cart.get_total_price(), Decimal('810.00'))  # 760 - 100 + 150
+
+        # 3 Jars (Discount does NOT apply)
+        cart, _ = get_fresh_cart()
+        cart.add(self.product, quantity=3)
+        self.assertEqual(len(cart), 3)
+        self.assertEqual(cart.get_discount(), Decimal('0.00'))
+        self.assertEqual(cart.get_delivery_fee(), Decimal('150.00'))
+        self.assertEqual(cart.get_subtotal(), Decimal('1140.00'))
+        self.assertEqual(cart.get_total_price(), Decimal('1290.00'))  # 1140 + 150
+
+        # 4 Jars (Discount does NOT apply, FREE delivery applies!)
+        cart, _ = get_fresh_cart()
+        cart.add(self.product, quantity=4)
+        self.assertEqual(len(cart), 4)
+        self.assertEqual(cart.get_discount(), Decimal('0.00'))
+        self.assertEqual(cart.get_delivery_fee(), Decimal('0.00'))
+        self.assertTrue(cart.is_free_delivery())
+        self.assertEqual(cart.get_subtotal(), Decimal('1520.00'))
+        self.assertEqual(cart.get_total_price(), Decimal('1520.00'))  # 1520 + 0
+
+        # 5 Jars (Discount does NOT apply, FREE delivery applies!)
+        cart, _ = get_fresh_cart()
+        cart.add(self.product, quantity=5)
+        self.assertEqual(len(cart), 5)
+        self.assertEqual(cart.get_discount(), Decimal('0.00'))
+        self.assertEqual(cart.get_delivery_fee(), Decimal('0.00'))
+        self.assertTrue(cart.is_free_delivery())
+        self.assertEqual(cart.get_subtotal(), Decimal('1900.00'))
+        self.assertEqual(cart.get_total_price(), Decimal('1900.00'))
+
+    def test_checkout_order_creation_with_two_jar_discount(self):
+        """
+        Verify checkout order creation saves discount_amount=100 and correct total for 2 jars.
+        """
+        from store.models import Order
+        from django.test import override_settings
+
+        client = Client()
+        # Add 2 jars to cart
+        client.post(reverse('store:cart_add', args=[self.product.id]), {'quantity': 2})
+
+        checkout_data = {
+            'customer_name': 'Two Jar Customer',
+            'customer_phone': '01719874562',
+            'delivery_address': 'House 10, Road 4, Banani',
+            'delivery_city': 'Dhaka',
+            'delivery_zone': 'INSIDE_DHAKA',
+            'payment_method': 'COD',
+        }
+        with override_settings(CLOUDFLARE_TURNSTILE_SECRET_KEY=''):
+            res = client.post(reverse('store:checkout'), checkout_data)
+        self.assertEqual(res.status_code, 302)
+
+        order = Order.objects.latest('created_at')
+        self.assertEqual(order.subtotal, Decimal('760.00'))
+        self.assertEqual(order.discount_amount, Decimal('100.00'))
+        self.assertEqual(order.delivery_fee, Decimal('150.00'))
+        self.assertEqual(order.total_amount, Decimal('810.00'))  # 760 - 100 + 150
+
+    def test_checkout_order_creation_with_three_jars_no_discount(self):
+        """
+        Verify checkout order creation for 3 jars has discount_amount=0 and delivery_fee=150.
+        """
+        from store.models import Order
+        from django.test import override_settings
+
+        client = Client()
+        # Add 3 jars to cart
+        client.post(reverse('store:cart_add', args=[self.product.id]), {'quantity': 3})
+
+        checkout_data = {
+            'customer_name': 'Three Jar Customer',
+            'customer_phone': '01833445566',
+            'delivery_address': 'GEC Circle, Chattogram',
+            'delivery_city': 'Chattogram',
+            'delivery_zone': 'OUTSIDE_DHAKA',
+            'payment_method': 'COD',
+        }
+        with override_settings(CLOUDFLARE_TURNSTILE_SECRET_KEY=''):
+            res = client.post(reverse('store:checkout'), checkout_data)
+        self.assertEqual(res.status_code, 302)
+
+        order = Order.objects.latest('created_at')
+        self.assertEqual(order.subtotal, Decimal('1140.00'))
+        self.assertEqual(order.discount_amount, Decimal('0.00'))
+        self.assertEqual(order.delivery_fee, Decimal('150.00'))
+        self.assertEqual(order.total_amount, Decimal('1290.00'))
