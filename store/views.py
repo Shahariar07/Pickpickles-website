@@ -82,9 +82,19 @@ def index(request):
         has_sale_badge=has_sale_badge
     ).order_by('-badge_featured_priority', '-total_sold', '-is_featured', '-id')
     total_products_count = all_products.count()
+    category_order = Case(
+        When(slug='dill-pickles', then=Value(1)),
+        When(slug='fruit-pickles', then=Value(2)),
+        When(slug='vegetable-pickles', then=Value(3)),
+        When(slug='spicy-garlic-pickles', then=Value(4)),
+        When(slug='pickled-eggs', then=Value(5)),
+        default=Value(99),
+        output_field=IntegerField()
+    )
     categories = Category.objects.annotate(
-        product_count=Count('products')
-    ).order_by('name')
+        product_count=Count('products', filter=Q(products__isnull=False)),
+        display_order=category_order
+    ).filter(product_count__gt=0).order_by('display_order', 'id')
     recent_reviews = Review.objects.filter(is_approved=True).select_related('product').order_by('-created_at')[:9]
     total_reviews_count = Review.objects.filter(is_approved=True).count()
     

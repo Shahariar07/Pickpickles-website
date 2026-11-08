@@ -476,8 +476,8 @@
         </div>
     </div>
 
-    <!-- Products Grid (2 columns on mobile, 3 columns on desktop - Mobile-Optimized) -->
-    <div class="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-6 lg:gap-8">
+    <!-- Products Grid (2 columns on mobile, 3 columns on desktop - Spacious & Premium) -->
+    <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 lg:gap-8">
         {% for product in all_products %}
         <div class="product-card bg-white rounded-2xl sm:rounded-3xl border transition-all duration-300 flex flex-col justify-between overflow-hidden group h-full relative {% if not product.is_in_stock or product.stock_count <= 0 %}border-slate-200/90 shadow-2xs{% elif product.custom_badge %}{% if 'season' in product.custom_badge|lower or 'ended' in product.custom_badge|lower or 'শেষ' in product.custom_badge %}card-flash-rose border-rose-400/90{% elif 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower or 'launch' in product.custom_badge|lower or 'নতুন' in product.custom_badge %}card-flash-emerald border-emerald-400/90{% else %}card-flash-gold border-amber-400/90{% endif %}{% else %}border-slate-200/90 shadow-2xs hover:shadow-lg{% endif %}">
             

@@ -114,33 +114,95 @@ function updateFreeDeliveryProgress(totalItems) {
     const progressPercent = isFreeDelivery ? 100 : Math.min(100, Math.round((count / 4) * 100));
 
     // 1. Drawer Elements
+    const drawerBanner = document.getElementById('drawerFreeDeliveryBanner');
+    const drawerIcon = document.getElementById('drawerFreeDeliveryIcon');
     const freeMsgEl = document.getElementById('drawerFreeDeliveryMsg');
-    const freePercentEl = document.getElementById('drawerFreeDeliveryPercent');
+    const drawerSubtext = document.getElementById('drawerFreeDeliverySubtext');
+    const drawerBadge = document.getElementById('drawerFreeDeliveryBadge');
     const freeBarEl = document.getElementById('drawerFreeDeliveryBar');
     const deliveryNoteEl = document.getElementById('drawerDeliveryNote');
 
-    if (freeMsgEl) {
+    if (drawerBanner) {
         if (isFreeDelivery) {
-            freeMsgEl.innerHTML = '🎉 <strong>Free Delivery Applied!</strong>';
+            drawerBanner.className = "p-3 border-b text-xs transition-all bg-emerald-50/90 border-emerald-200 text-emerald-950";
+            if (drawerIcon) drawerIcon.innerText = "🎉";
+            if (freeMsgEl) freeMsgEl.innerHTML = "<strong>Free Delivery Applied!</strong>";
+            if (drawerSubtext) drawerSubtext.innerText = "Nationwide delivery fee is ৳0.";
+            if (drawerBadge) {
+                drawerBadge.className = "text-[9.5px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap mt-0.5 bg-emerald-600 text-white";
+                drawerBadge.innerText = "Unlocked";
+            }
+            if (freeBarEl) {
+                freeBarEl.className = "h-1 rounded-full transition-all duration-500 bg-emerald-600";
+                freeBarEl.style.width = "100%";
+            }
+            if (deliveryNoteEl) {
+                deliveryNoteEl.innerHTML = '<span class="text-emerald-700 font-bold">🎉 Free nationwide delivery across Bangladesh!</span>';
+            }
         } else if (count === 2) {
-            freeMsgEl.innerHTML = '🎉 <strong>৳100 OFF Applied</strong> • Add 2 for Free Delivery';
+            drawerBanner.className = "p-3 border-b text-xs transition-all bg-emerald-50/90 border-emerald-200 text-emerald-950";
+            if (drawerIcon) drawerIcon.innerText = "🎉";
+            if (freeMsgEl) freeMsgEl.innerHTML = "<strong>৳100 OFF Applied</strong> • Add 2 for Free Delivery";
+            if (drawerSubtext) drawerSubtext.innerText = "৳100 discount applied! Add 2 more jars for free delivery.";
+            if (drawerBadge) {
+                drawerBadge.className = "text-[9.5px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap mt-0.5 bg-emerald-600 text-white";
+                drawerBadge.innerText = "Saved ৳100";
+            }
+            if (freeBarEl) {
+                freeBarEl.className = "h-1 rounded-full transition-all duration-500 bg-emerald-600";
+                freeBarEl.style.width = `${progressPercent}%`;
+            }
+            if (deliveryNoteEl) {
+                deliveryNoteEl.innerHTML = '<span class="text-emerald-700 font-bold">Flat ৳150 delivery • ৳100 discount applied!</span>';
+            }
         } else if (count === 1) {
-            freeMsgEl.innerHTML = '🎁 <strong>2 jars = ৳100 OFF</strong> • 4 = Free Delivery';
+            drawerBanner.className = "p-3 border-b text-xs transition-all bg-amber-50/90 border-amber-200 text-amber-950";
+            if (drawerIcon) drawerIcon.innerText = "🎁";
+            if (freeMsgEl) freeMsgEl.innerHTML = "<strong>2 jars = ৳100 OFF</strong> • 4 = Free Delivery";
+            if (drawerSubtext) drawerSubtext.innerText = "Add 1 more jar for ৳100 discount, or 4+ for free delivery.";
+            if (drawerBadge) {
+                drawerBadge.className = "text-[9.5px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap mt-0.5 bg-amber-400 text-slate-950 font-black";
+                drawerBadge.innerText = "৳100 OFF";
+            }
+            if (freeBarEl) {
+                freeBarEl.className = "h-1 rounded-full transition-all duration-500 bg-amber-500";
+                freeBarEl.style.width = `${progressPercent}%`;
+            }
+            if (deliveryNoteEl) {
+                deliveryNoteEl.innerHTML = '<span class="text-emerald-700 font-bold">Flat ৳150 delivery • ৳100 OFF on 2 jars (Free on 4+)</span>';
+            }
+        } else if (count === 3) {
+            drawerBanner.className = "p-3 border-b text-xs transition-all bg-amber-50/90 border-amber-200 text-amber-950";
+            if (drawerIcon) drawerIcon.innerText = "🚚";
+            if (freeMsgEl) freeMsgEl.innerHTML = "Add <strong>1 more jar</strong> for Free Delivery";
+            if (drawerSubtext) drawerSubtext.innerText = "Add 1 more jar to unlock nationwide free delivery!";
+            if (drawerBadge) {
+                drawerBadge.className = "text-[9.5px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap mt-0.5 bg-amber-400 text-slate-950";
+                drawerBadge.innerText = "Save ৳150";
+            }
+            if (freeBarEl) {
+                freeBarEl.className = "h-1 rounded-full transition-all duration-500 bg-amber-500";
+                freeBarEl.style.width = `${progressPercent}%`;
+            }
+            if (deliveryNoteEl) {
+                deliveryNoteEl.innerHTML = '<span class="text-amber-800 font-bold">Flat ৳150 delivery • Add 1 more jar for FREE delivery!</span>';
+            }
         } else {
-            freeMsgEl.innerHTML = `🚚 Add <strong><span id="drawerFreeDeliveryRemaining">${remainingForFree}</span> more</strong> for Free Delivery`;
-        }
-    }
-    if (freePercentEl) freePercentEl.innerText = `${progressPercent}%`;
-    if (freeBarEl) freeBarEl.style.width = `${progressPercent}%`;
-    if (deliveryNoteEl) {
-        if (isFreeDelivery) {
-            deliveryNoteEl.innerHTML = '<span class="text-emerald-700 font-bold">🎉 Free nationwide delivery across Bangladesh!</span>';
-        } else if (count === 2) {
-            deliveryNoteEl.innerHTML = '<span class="text-emerald-700 font-bold">Flat ৳150 delivery • ৳100 discount applied!</span>';
-        } else if (count === 1) {
-            deliveryNoteEl.innerHTML = '<span class="text-emerald-700 font-bold">Flat ৳150 delivery • ৳100 OFF on 2 jars (Free on 4+)</span>';
-        } else {
-            deliveryNoteEl.innerHTML = '<span class="text-gray-500">Flat ৳150 nationwide delivery (Free on 4+ jars).</span>';
+            drawerBanner.className = "p-3 border-b text-xs transition-all bg-amber-50/90 border-amber-200 text-amber-950";
+            if (drawerIcon) drawerIcon.innerText = "🚚";
+            if (freeMsgEl) freeMsgEl.innerHTML = `Add <strong><span id="drawerFreeDeliveryRemaining">${remainingForFree}</span> more</strong> for Free Delivery`;
+            if (drawerSubtext) drawerSubtext.innerText = "Order 2 jars for ৳100 off, or 4+ for free delivery!";
+            if (drawerBadge) {
+                drawerBadge.className = "text-[9.5px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap mt-0.5 bg-amber-400 text-slate-950";
+                drawerBadge.innerText = "Save ৳150";
+            }
+            if (freeBarEl) {
+                freeBarEl.className = "h-1 rounded-full transition-all duration-500 bg-amber-500";
+                freeBarEl.style.width = `${progressPercent}%`;
+            }
+            if (deliveryNoteEl) {
+                deliveryNoteEl.innerHTML = '<span class="text-gray-500">Flat ৳150 nationwide delivery (Free on 4+ jars).</span>';
+            }
         }
     }
 

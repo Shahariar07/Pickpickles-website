@@ -580,23 +580,45 @@
         </div>
 
         <!-- Free Delivery Progress Bar in Drawer -->
-        <div class="px-4 py-2.5 bg-emerald-50/70 border-b border-emerald-100" id="drawerFreeDeliveryBanner">
-            <div class="flex items-center justify-between gap-2 text-[11px] font-bold text-emerald-950 mb-1.5">
-                <span id="drawerFreeDeliveryMsg" class="min-w-0 flex-1 leading-snug break-words">
-                    {% if cart_total_items >= 4 or free_delivery_unlocked %}
-                        🎉 <strong>Free Delivery Applied!</strong>
-                    {% elif cart_total_items == 2 %}
-                        🎉 <strong>৳100 OFF Applied</strong> • Add 2 for Free Delivery
-                    {% elif cart_total_items == 1 %}
-                        🎁 <strong>2 jars = ৳100 OFF</strong> • 4 = Free Delivery
-                    {% else %}
-                        🚚 Add <strong><span id="drawerFreeDeliveryRemaining">{{ items_needed_for_free_delivery }}</span> more</strong> for Free Delivery
-                    {% endif %}
+        <div class="p-3 border-b text-xs transition-all {% if cart_total_items >= 4 or free_delivery_unlocked %}bg-emerald-50/90 border-emerald-200 text-emerald-950{% elif cart_total_items == 2 %}bg-emerald-50/90 border-emerald-200 text-emerald-950{% else %}bg-amber-50/90 border-amber-200 text-amber-950{% endif %}" id="drawerFreeDeliveryBanner">
+            <div class="flex items-start justify-between gap-2 mb-1.5">
+                <div class="flex items-start gap-1.5 min-w-0 flex-1">
+                    <span id="drawerFreeDeliveryIcon" class="shrink-0 text-sm mt-0.5">{% if cart_total_items >= 4 or free_delivery_unlocked or cart_total_items == 2 %}🎉{% elif cart_total_items == 1 %}🎁{% else %}🚚{% endif %}</span>
+                    <div class="min-w-0 flex-1">
+                        <div id="drawerFreeDeliveryMsg" class="font-black text-xs leading-snug break-words">
+                            {% if cart_total_items >= 4 or free_delivery_unlocked %}
+                                <strong>Free Delivery Applied!</strong>
+                            {% elif cart_total_items == 2 %}
+                                <strong>৳100 OFF Applied</strong> • Add 2 for Free Delivery
+                            {% elif cart_total_items == 1 %}
+                                <strong>2 jars = ৳100 OFF</strong> • 4 = Free Delivery
+                            {% elif cart_total_items == 3 %}
+                                Add <strong>1 more jar</strong> for Free Delivery
+                            {% else %}
+                                Add <strong><span id="drawerFreeDeliveryRemaining">{{ items_needed_for_free_delivery }}</span> more</strong> for Free Delivery
+                            {% endif %}
+                        </div>
+                        <p class="text-[10px] mt-0.5 opacity-90 leading-tight break-words font-medium" id="drawerFreeDeliverySubtext">
+                            {% if cart_total_items >= 4 or free_delivery_unlocked %}
+                                Nationwide delivery fee is ৳0.
+                            {% elif cart_total_items == 2 %}
+                                ৳100 discount applied! Add 2 more jars for free delivery.
+                            {% elif cart_total_items == 1 %}
+                                Add 1 more jar for ৳100 discount, or 4+ for free delivery.
+                            {% elif cart_total_items == 3 %}
+                                Add 1 more jar to unlock nationwide free delivery!
+                            {% else %}
+                                Order 2 jars for ৳100 off, or 4+ for free delivery!
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                <span id="drawerFreeDeliveryBadge" class="text-[9.5px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap mt-0.5 {% if cart_total_items >= 4 or free_delivery_unlocked or cart_total_items == 2 %}bg-emerald-600 text-white{% elif cart_total_items == 1 %}bg-amber-400 text-slate-950 font-black{% else %}bg-amber-400 text-slate-950{% endif %}">
+                    {% if cart_total_items >= 4 or free_delivery_unlocked %}Unlocked{% elif cart_total_items == 2 %}Saved ৳100{% elif cart_total_items == 1 %}৳100 OFF{% else %}Save ৳150{% endif %}
                 </span>
-                <span class="text-[10px] text-emerald-700 font-extrabold shrink-0 whitespace-nowrap" id="drawerFreeDeliveryPercent">{% if cart_total_items >= 4 or free_delivery_unlocked %}100%{% elif cart_total_items == 3 %}75%{% elif cart_total_items == 2 %}50%{% elif cart_total_items == 1 %}25%{% else %}0%{% endif %}</span>
             </div>
-            <div class="w-full bg-emerald-200/60 rounded-full h-1.5 overflow-hidden">
-                <div id="drawerFreeDeliveryBar" class="bg-emerald-600 h-1.5 rounded-full transition-all duration-300" style="width: {% if cart_total_items >= 4 or free_delivery_unlocked %}100{% elif cart_total_items == 3 %}75{% elif cart_total_items == 2 %}50{% elif cart_total_items == 1 %}25{% else %}0{% endif %}%;"></div>
+            <div class="w-full bg-black/10 rounded-full h-1 mt-2 overflow-hidden">
+                <div id="drawerFreeDeliveryBar" class="h-1 rounded-full transition-all duration-500 {% if cart_total_items >= 4 or free_delivery_unlocked or cart_total_items == 2 %}bg-emerald-600{% else %}bg-amber-500{% endif %}" style="width: {% if cart_total_items >= 4 or free_delivery_unlocked %}100{% elif cart_total_items == 3 %}75{% elif cart_total_items == 2 %}50{% elif cart_total_items == 1 %}25{% else %}0{% endif %}%;"></div>
             </div>
         </div>
 
@@ -657,7 +679,7 @@
                 <span class="font-display font-extrabold text-lg text-gray-900">৳<span id="drawerSubtotal">{{ cart_subtotal }}</span></span>
             </div>
             <div id="drawerDiscountRow" class="flex items-center justify-between text-xs text-emerald-700 font-bold {% if cart_total_items != 2 %}hidden{% endif %}">
-                <span>2-Jar Offer Discount</span>
+                <span>🎁 2-Jar Special Discount</span>
                 <span>-৳<span id="drawerDiscount">100.00</span></span>
             </div>
             <p class="text-[11px] text-center font-medium" id="drawerDeliveryNote">
@@ -665,6 +687,8 @@
                     <span class="text-emerald-700 font-bold">🎉 Free nationwide delivery across Bangladesh!</span>
                 {% elif cart_total_items == 2 %}
                     <span class="text-emerald-700 font-bold">Flat ৳150 delivery • ৳100 discount applied!</span>
+                {% elif cart_total_items == 3 %}
+                    <span class="text-amber-800 font-bold">Flat ৳150 delivery • Add 1 more jar for FREE delivery!</span>
                 {% elif cart_total_items == 1 %}
                     <span class="text-emerald-700 font-bold">Flat ৳150 delivery • ৳100 OFF on 2 jars (Free on 4+)</span>
                 {% else %}
