@@ -1128,7 +1128,7 @@ Thank you for your order! Your Pickpickles order *#{self.order_number}* has been
 {payment_line}
 🚚 *Delivery Address:* {self.delivery_address}, {self.delivery_city}
 
-Each jar of our artisanal pickles is handcrafted and fresh-brined in small batches for exceptional taste and crunch (Estimated delivery: 5-6 business days).
+Each jar of our artisanal pickles is handcrafted and fresh-brined in small batches for exceptional taste and crunch (Estimated delivery: 7-10 days).
 
 ⭐ *Read Customer Reviews or Share Yours:*
 🌐 https://pickpickles.xyz/reviews/

@@ -135,6 +135,17 @@ def product_detail(request, slug):
     is_top_3 = (len(top_3) > 2 and top_3[2].id == product.id)
     best_seller = top_3[0] if top_3 else None
 
+    import uuid
+    import time
+    view_content_event_id = f"vc_{product.id}_{int(time.time())}_{uuid.uuid4().hex[:8]}"
+
+    # Dispatch Server-Side Meta CAPI ViewContent event in non-blocking background thread
+    try:
+        from .meta_capi import send_meta_view_content_capi
+        send_meta_view_content_capi(request, product, view_content_event_id)
+    except Exception:
+        pass
+
     context = {
         'product': product,
         'is_best_seller': is_best_seller,
@@ -143,6 +154,7 @@ def product_detail(request, slug):
         'best_seller': best_seller,
         'related_products': related_products,
         'reviews': reviews,
+        'meta_view_content_event_id': view_content_event_id,
     }
     return render(request, 'store/product_detail.html', context)
 

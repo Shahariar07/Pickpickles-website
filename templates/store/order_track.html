@@ -33,6 +33,31 @@
 
     <!-- Tracking Result Display -->
     {% if order %}
+    <script>
+    try {
+        var trkPh = "{{ order.customer_phone|escapejs }}".replace(/\D/g, '');
+        if (trkPh) {
+            if (trkPh.startsWith('01') && trkPh.length === 11) trkPh = '88' + trkPh;
+            localStorage.setItem('pickpickles_customer_phone', trkPh);
+        }
+        var trkNm = "{{ order.customer_name|escapejs }}";
+        if (trkNm) localStorage.setItem('pickpickles_customer_name', trkNm);
+        var trkCt = "{{ order.delivery_city|escapejs }}";
+        if (trkCt) localStorage.setItem('pickpickles_customer_city', trkCt);
+        if (typeof fbq === 'function' && trkPh) {
+            var nParts = (trkNm || '').trim().split(/\s+/);
+            fbq('init', '{{ META_PIXEL_ID }}', {
+                ph: trkPh,
+                fn: nParts[0] ? nParts[0].toLowerCase() : '',
+                ln: nParts.length > 1 ? nParts.slice(1).join(' ').toLowerCase() : '',
+                ct: (trkCt || 'dhaka').toLowerCase(),
+                st: (trkCt || 'dhaka').toLowerCase(),
+                country: 'bd',
+                zp: '1200'
+            });
+        }
+    } catch(e) {}
+    </script>
     <div class="bg-white p-6 sm:p-8 rounded-3xl border border-gray-200 shadow-lg space-y-6">
         
         <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-gray-100 gap-3">
@@ -148,9 +173,9 @@
             <div>
                 <span class="text-gray-400 font-bold block mb-1">Delivery Timeline</span>
                 <p class="font-bold text-gray-900 flex items-center gap-1">
-                    <i class="fa-solid fa-truck-fast text-brand-600"></i> 5 to 6 Days
+                    <i class="fa-solid fa-truck-fast text-brand-600"></i> 7 to 10 Days
                 </p>
-                <p class="text-gray-500 text-[11px] mt-0.5">3 days fresh brining + 2–3 days courier</p>
+                <p class="text-gray-500 text-[11px] mt-0.5">Fresh batch preparation + doorstep delivery (7–10 days)</p>
             </div>
         </div>
 

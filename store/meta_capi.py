@@ -440,3 +440,100 @@ def send_meta_purchase_event_on_accept(order, request=None, force=False):
             logger.warning(f"[Meta CAPI] Failed queuing browser purchase event in session: {e}")
 
     return _execute_meta_purchase(order, force=force)
+
+
+def send_meta_view_content_capi(request, product, event_id):
+    """
+    Dispatches a high-fidelity 'ViewContent' event to Meta Conversions API (CAPI)
+    asynchronously in a background daemon thread, paired with the browser-side eventID.
+    Includes maximum customer match keys (IP, User-Agent, fbp, fbc, external_id,
+    and phone/email/name when known from session, cookie, or profile).
+    """
+    def _worker():
+        try:
+            env_fallback = _read_env_fallback()
+            pixel_id = (getattr(settings, 'META_PIXEL_ID', '') or env_fallback.get('META_PIXEL_ID', '') or '2165451210680943').strip()
+            access_token = (getattr(settings, 'META_CONVERSIONS_API_TOKEN', '') or env_fallback.get('META_CONVERSIONS_API_TOKEN', '')).strip()
+            if not pixel_id or not access_token:
+                return
+
+            # Extract user IP & Agent
+            client_ip = (
+                request.META.get('HTTP_CF_CONNECTING_IP') or
+                request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip() or
+                request.META.get('REMOTE_ADDR', '')
+            ).strip()
+            client_ua = request.META.get('HTTP_USER_AGENT', '').strip() or 'Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36'
+
+            # Extract cookies / session match keys
+            fbp = (request.COOKIES.get('_fbp') or (request.session.get('meta_fbp') if hasattr(request, 'session') else '') or '').strip()
+            fbc = (request.COOKIES.get('_fbc') or (request.session.get('meta_fbc') if hasattr(request, 'session') else '') or '').strip()
+            if not fbc and hasattr(request, 'GET') and request.GET.get('fbclid'):
+                fbc = f"fb.1.{int(time.time())}.{request.GET.get('fbclid').strip()}"
+
+            # Known customer info from session or authenticated user
+            user_data = {
+                'country': [_sha256('bd')],
+                'client_ip_address': client_ip,
+                'client_user_agent': client_ua,
+            }
+            if fbp:
+                user_data['fbp'] = fbp
+            if fbc:
+                user_data['fbc'] = fbc
+
+            session_meta = getattr(request, 'session', {})
+            known_phone = session_meta.get('customer_phone') or session_meta.get('meta_ph') or ''
+            known_email = session_meta.get('customer_email') or session_meta.get('meta_em') or (request.user.email if getattr(request, 'user', None) and request.user.is_authenticated else '')
+            known_name = session_meta.get('customer_name') or session_meta.get('meta_fn') or ''
+            known_city = session_meta.get('customer_city') or session_meta.get('meta_ct') or 'dhaka'
+            external_id = session_meta.get('visitor_id') or session_meta.get('meta_external_id') or ''
+
+            if known_phone:
+                formatted_ph = _format_bd_phone(known_phone)
+                if formatted_ph:
+                    user_data['ph'] = [_sha256(formatted_ph)]
+            if known_email:
+                user_data['em'] = [_sha256(known_email)]
+            if known_name:
+                parts = str(known_name).strip().split()
+                if parts:
+                    user_data['fn'] = [_sha256(parts[0])]
+                    if len(parts) > 1:
+                        user_data['ln'] = [_sha256(' '.join(parts[1:]))]
+            if known_city:
+                user_data['ct'] = [_sha256(known_city)]
+                user_data['st'] = [_sha256(known_city)]
+            if external_id:
+                user_data['external_id'] = [_sha256(external_id)]
+
+            prod_price = float(product.price_bdt) if hasattr(product, 'price_bdt') else 0.0
+
+            payload = {
+                'data': [{
+                    'event_name': 'ViewContent',
+                    'event_time': int(time.time()),
+                    'event_id': str(event_id),
+                    'event_source_url': request.build_absolute_uri(),
+                    'action_source': 'website',
+                    'user_data': user_data,
+                    'custom_data': {
+                        'content_name': str(product.name),
+                        'content_ids': [str(getattr(product, 'catalog_id', product.id))],
+                        'content_type': 'product',
+                        'value': prod_price,
+                        'currency': 'BDT'
+                    }
+                }]
+            }
+
+            test_event_code = (getattr(settings, 'META_TEST_EVENT_CODE', '') or env_fallback.get('META_TEST_EVENT_CODE', '')).strip()
+            if test_event_code:
+                payload['test_event_code'] = test_event_code
+
+            url = f"https://graph.facebook.com/v19.0/{pixel_id}/events?access_token={access_token}"
+            requests.post(url, json=payload, timeout=4)
+        except Exception as e:
+            logger.debug(f"[Meta CAPI ViewContent] Async send failed: {e}")
+
+    threading.Thread(target=_worker, daemon=True).start()

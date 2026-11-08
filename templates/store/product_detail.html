@@ -166,7 +166,7 @@
                 <div class="bg-indigo-50/60 p-3 rounded-2xl border border-indigo-100">
                     <span class="text-lg">🚀</span>
                     <p class="text-[11px] font-bold text-indigo-900 mt-1">Nationwide Delivery</p>
-                    <p class="text-[10px] text-indigo-700">Safe doorstep delivery</p>
+                    <p class="text-[10px] text-indigo-700">7–10 Days Doorstep</p>
                 </div>
             </div>
         </div>
@@ -513,17 +513,49 @@ function adjustProductQty(delta) {
     input.value = current;
 }
 
-// Meta Pixel ViewContent Tracking (Catalog Content ID Match)
+// Meta Pixel ViewContent Tracking (Catalog Content ID Match with Event ID Deduplication & Advanced Matching)
 {% if META_PIXEL_ID %}
 if (typeof fbq === 'function') {
     var prodPrice = parseFloat("{{ product.price_bdt|stringformat:'.2f' }}") || 0;
+
+    // Attach any known customer parameters from localStorage / session to Meta Pixel
+    try {
+        var profRaw = localStorage.getItem('pickpickles_checkout_profile');
+        var prof = profRaw ? JSON.parse(profRaw) : {};
+        var sPhone = localStorage.getItem('pickpickles_customer_phone') || (prof && prof.phone) || '';
+        var sEmail = localStorage.getItem('pickpickles_customer_email') || (prof && prof.email) || '';
+        var sName = localStorage.getItem('pickpickles_customer_name') || (prof && prof.name) || '';
+        var sCity = localStorage.getItem('pickpickles_customer_city') || (prof && prof.city) || 'dhaka';
+
+        if (sPhone || sEmail || sName) {
+            var adv = {
+                ct: sCity.toLowerCase(),
+                st: sCity.toLowerCase(),
+                zp: '1200',
+                country: 'bd'
+            };
+            if (sPhone) {
+                var cleanPh = String(sPhone).replace(/\D/g, '');
+                if (cleanPh.startsWith('01') && cleanPh.length === 11) cleanPh = '88' + cleanPh;
+                adv.ph = cleanPh;
+            }
+            if (sEmail) adv.em = String(sEmail).trim().toLowerCase();
+            if (sName) {
+                var nParts = String(sName).trim().split(/\s+/);
+                adv.fn = nParts[0].toLowerCase();
+                if (nParts.length > 1) adv.ln = nParts.slice(1).join(' ').toLowerCase();
+            }
+            fbq('init', '{{ META_PIXEL_ID }}', adv);
+        }
+    } catch(e) {}
+
     fbq('track', 'ViewContent', {
         content_name: '{{ product.name|escapejs }}',
         content_ids: ['{{ product.catalog_id }}'],
         content_type: 'product',
         value: prodPrice,
         currency: 'BDT'
-    });
+    }, { eventID: '{{ meta_view_content_event_id }}' });
 }
 {% endif %}
 

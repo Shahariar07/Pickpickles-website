@@ -3,6 +3,8 @@ import json
 import datetime
 from datetime import timedelta
 import math
+from collections import defaultdict
+import calendar
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.contrib.auth import authenticate, login, logout
@@ -193,6 +195,42 @@ def dashboard_logout(request):
     logout(request)
     messages.info(request, 'You have been logged out.')
     return redirect('dashboard:login')
+
+
+def get_order_customer_sequences():
+    """
+    Computes chronological sequence for all valid orders per customer phone.
+    Order sequence:
+      1: First-time purchase (Initial order, New customer order)
+      2+: Repeat purchase (2nd order onwards)
+    Returns:
+      order_sequence_map: dict of order_id -> sequence_number (int)
+      repeat_order_ids: set of order_ids with sequence >= 2
+      first_order_ids: set of order_ids with sequence == 1
+    """
+    all_valid_orders = Order.objects.filter(is_deleted=False).exclude(order_status='CANCELLED').values(
+        'id', 'customer_phone', 'created_at'
+    ).order_by('created_at', 'id')
+
+    order_sequence_map = {}
+    customer_order_ids = defaultdict(list)
+
+    for o in all_valid_orders:
+        raw_ph = o['customer_phone'] or ''
+        clean_ph = ''.join(c for c in raw_ph if c.isdigit())
+        if clean_ph.startswith('8801') and len(clean_ph) == 13:
+            clean_ph = clean_ph[2:]
+        if not clean_ph:
+            clean_ph = raw_ph.strip() or f"order_{o['id']}"
+
+        customer_order_ids[clean_ph].append(o['id'])
+        seq = len(customer_order_ids[clean_ph])
+        order_sequence_map[o['id']] = seq
+
+    repeat_order_ids = {oid for oid, seq in order_sequence_map.items() if seq >= 2}
+    first_order_ids = {oid for oid, seq in order_sequence_map.items() if seq == 1}
+
+    return order_sequence_map, repeat_order_ids, first_order_ids
 
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
@@ -609,6 +647,128 @@ def dashboard_index(request):
             chart_subcat_labels.append(str(item['sub_category']))
             chart_subcat_data.append(float(item['sub_sum'] or 0))
 
+    # -----------------------------------------------------------------
+    # Customer Retention & Cohort Analytics (New vs Repeat Customers)
+    # Requirement: Repeat orders count strictly starting from 2nd order (not 1st order)
+    # Searchable and filterable by date range.
+    # -----------------------------------------------------------------
+    retention_period = request.GET.get('retention_period', 'ALL')
+    retention_start_str = request.GET.get('retention_start', '').strip()
+    retention_end_str = request.GET.get('retention_end', '').strip()
+
+    ret_start_dt = None
+    ret_end_dt = None
+
+    if retention_start_str:
+        try:
+            s_date = datetime.datetime.strptime(retention_start_str, '%Y-%m-%d').date()
+            ret_start_dt = timezone.make_aware(datetime.datetime.combine(s_date, datetime.time.min))
+        except ValueError:
+            pass
+
+    if retention_end_str:
+        try:
+            e_date = datetime.datetime.strptime(retention_end_str, '%Y-%m-%d').date()
+            ret_end_dt = timezone.make_aware(datetime.datetime.combine(e_date, datetime.time.max))
+        except ValueError:
+            pass
+
+    if not ret_start_dt and not ret_end_dt:
+        if retention_period == 'today':
+            ret_start_dt = today_start
+            ret_end_dt = today_end
+        elif retention_period == 'this_month':
+            m_start = datetime.date(current_year, current_month, 1)
+            ret_start_dt = timezone.make_aware(datetime.datetime.combine(m_start, datetime.time.min))
+            ret_end_dt = today_end
+        elif retention_period == 'last_month':
+            lm_start = datetime.date(last_month_year, last_month, 1)
+            _, lm_last_day = calendar.monthrange(last_month_year, last_month)
+            lm_end = datetime.date(last_month_year, last_month, lm_last_day)
+            ret_start_dt = timezone.make_aware(datetime.datetime.combine(lm_start, datetime.time.min))
+            ret_end_dt = timezone.make_aware(datetime.datetime.combine(lm_end, datetime.time.max))
+        elif retention_period == 'last_30_days':
+            ret_start_dt = today_start - datetime.timedelta(days=30)
+            ret_end_dt = today_end
+        elif retention_period == 'this_year':
+            y_start = datetime.date(current_year, 1, 1)
+            ret_start_dt = timezone.make_aware(datetime.datetime.combine(y_start, datetime.time.min))
+            ret_end_dt = today_end
+        elif retention_period == 'prev_year':
+            py_start = datetime.date(prev_year, 1, 1)
+            py_end = datetime.date(prev_year, 12, 31)
+            ret_start_dt = timezone.make_aware(datetime.datetime.combine(py_start, datetime.time.min))
+            ret_end_dt = timezone.make_aware(datetime.datetime.combine(py_end, datetime.time.max))
+
+    order_sequence_map, repeat_order_ids, first_order_ids = get_order_customer_sequences()
+
+    all_retention_orders = list(Order.objects.filter(is_deleted=False).exclude(order_status='CANCELLED').values(
+        'id', 'customer_phone', 'customer_name', 'total_amount', 'created_at', 'order_number', 'delivery_city'
+    ).order_by('-created_at'))
+
+    period_orders = []
+    for o in all_retention_orders:
+        o_dt = o['created_at']
+        if ret_start_dt and o_dt < ret_start_dt:
+            continue
+        if ret_end_dt and o_dt > ret_end_dt:
+            continue
+        period_orders.append(o)
+
+    period_total_orders = len(period_orders)
+    period_first_orders = [o for o in period_orders if order_sequence_map.get(o['id'], 1) == 1]
+    period_repeat_orders = [o for o in period_orders if order_sequence_map.get(o['id'], 1) >= 2]
+
+    new_orders_count = len(period_first_orders)
+    repeat_orders_count = len(period_repeat_orders)
+
+    repeat_rate = round((repeat_orders_count / period_total_orders) * 100, 1) if period_total_orders > 0 else 0.0
+    new_rate = round(100.0 - repeat_rate, 1) if period_total_orders > 0 else 0.0
+
+    repeat_revenue = sum(float(o['total_amount'] or 0.0) for o in period_repeat_orders)
+    new_revenue = sum(float(o['total_amount'] or 0.0) for o in period_first_orders)
+
+    repeat_cust_map = {}
+    for o in period_repeat_orders:
+        raw_ph = o['customer_phone'] or ''
+        clean_ph = ''.join(c for c in raw_ph if c.isdigit())
+        if clean_ph.startswith('8801') and len(clean_ph) == 13:
+            clean_ph = clean_ph[2:]
+        if not clean_ph:
+            clean_ph = raw_ph.strip() or f"order_{o['id']}"
+
+        if clean_ph not in repeat_cust_map:
+            repeat_cust_map[clean_ph] = {
+                'phone': clean_ph,
+                'name': o['customer_name'] or 'Customer',
+                'city': o['delivery_city'] or 'Dhaka',
+                'repeat_orders_count': 0,
+                'repeat_spent': 0.0,
+                'latest_order_number': o['order_number'],
+                'latest_order_date': o['created_at'],
+            }
+        repeat_cust_map[clean_ph]['repeat_orders_count'] += 1
+        repeat_cust_map[clean_ph]['repeat_spent'] += float(o['total_amount'] or 0.0)
+
+    repeat_customers_list = list(repeat_cust_map.values())
+    repeat_customers_list.sort(key=lambda x: (x['repeat_orders_count'], x['repeat_spent']), reverse=True)
+    repeat_customers_count = len(repeat_customers_list)
+
+    if retention_start_str and retention_end_str:
+        retention_period_label = f"{retention_start_str} to {retention_end_str}"
+    elif retention_period == 'today':
+        retention_period_label = "Today (আজকের)"
+    elif retention_period == 'this_month':
+        retention_period_label = f"This Month ({this_month_label})"
+    elif retention_period == 'last_month':
+        retention_period_label = f"Last Month ({last_month_label})"
+    elif retention_period == 'last_30_days':
+        retention_period_label = "Last 30 Days (বিগত ৩০ দিন)"
+    elif retention_period == 'this_year':
+        retention_period_label = f"This Year ({this_year_label})"
+    else:
+        retention_period_label = "All Time (সর্বমোট)"
+
     # JSON Serialized for Chart.js
     chart_data = {
         'trendLabels': date_labels,
@@ -629,6 +789,9 @@ def dashboard_index(request):
         'subcatData': chart_subcat_data,
         'comparisonLabels': ['Gross Revenue (৳)', 'Total Costs (৳)', 'Net Profit / Balance (৳)'],
         'comparisonData': [float(total_revenue), float(total_expenses), float(net_profit)],
+        'customerLabels': ['New Orders (1st Purchase)', 'Repeat Orders (2nd+ Purchase)'],
+        'customerData': [new_orders_count, repeat_orders_count],
+        'customerRates': [new_rate, repeat_rate],
     }
 
     # Recent orders preview for analytics dashboard
@@ -737,6 +900,19 @@ def dashboard_index(request):
         'out_for_delivery_count': out_for_delivery_count,
         'delivered_count': delivered_count,
         'cancelled_count': cancelled_count,
+        'retention_period': retention_period,
+        'retention_period_label': retention_period_label,
+        'retention_start': retention_start_str,
+        'retention_end': retention_end_str,
+        'period_total_orders': period_total_orders,
+        'repeat_customers_count': repeat_customers_count,
+        'repeat_orders_count': repeat_orders_count,
+        'new_orders_count': new_orders_count,
+        'repeat_rate': repeat_rate,
+        'new_rate': new_rate,
+        'repeat_revenue': repeat_revenue,
+        'new_revenue': new_revenue,
+        'repeat_customers_list': repeat_customers_list,
         'chart_data_json': json.dumps(chart_data),
     }
     return render(request, 'dashboard/index.html', context)
@@ -795,6 +971,8 @@ def orders_list(request):
     orders = Order.objects.all().prefetch_related('items', 'items__product').order_by('-created_at', '-id')
     status_filter = request.GET.get('status', 'ALL')
     period_filter = request.GET.get('period', 'ALL')
+    start_date = request.GET.get('start_date', '').strip()
+    end_date = request.GET.get('end_date', '').strip()
     search_query = request.GET.get('q', '').strip()
     zone_filter = request.GET.get('zone', 'ALL')
     payment_filter = request.GET.get('payment', 'ALL')
@@ -813,22 +991,52 @@ def orders_list(request):
         last_month_year = current_year
     prev_year = current_year - 1
 
-    if period_filter == 'today':
-        orders = orders.filter(created_at__gte=today_start, created_at__lt=today_end)
-    elif period_filter == 'this_month':
-        orders = orders.filter(created_at__year=current_year, created_at__month=current_month)
-    elif period_filter == 'last_month':
-        orders = orders.filter(created_at__year=last_month_year, created_at__month=last_month)
-    elif period_filter == 'this_year':
-        orders = orders.filter(created_at__year=current_year)
-    elif period_filter == 'prev_year':
-        orders = orders.filter(created_at__year=prev_year)
+    # Date Range Search / Custom Date filtering
+    if start_date:
+        try:
+            s_date = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
+            s_dt = timezone.make_aware(datetime.datetime.combine(s_date, datetime.time.min))
+            orders = orders.filter(created_at__gte=s_dt)
+        except ValueError:
+            pass
+
+    if end_date:
+        try:
+            e_date = datetime.datetime.strptime(end_date, '%Y-%m-%d').date()
+            e_dt = timezone.make_aware(datetime.datetime.combine(e_date, datetime.time.max))
+            orders = orders.filter(created_at__lte=e_dt)
+        except ValueError:
+            pass
+
+    # Period presets (only if custom start_date/end_date not explicitly set)
+    if not start_date and not end_date:
+        if period_filter == 'today':
+            orders = orders.filter(created_at__gte=today_start, created_at__lt=today_end)
+        elif period_filter == 'this_month':
+            orders = orders.filter(created_at__year=current_year, created_at__month=current_month)
+        elif period_filter == 'last_month':
+            orders = orders.filter(created_at__year=last_month_year, created_at__month=last_month)
+        elif period_filter == 'this_year':
+            orders = orders.filter(created_at__year=current_year)
+        elif period_filter == 'prev_year':
+            orders = orders.filter(created_at__year=prev_year)
 
     if status_filter and status_filter != 'ALL':
         orders = orders.filter(order_status=status_filter)
         
     if zone_filter and zone_filter != 'ALL':
         orders = orders.filter(delivery_zone=zone_filter)
+
+    # Customer retention sequence: 1 = Initial purchase, 2+ = Repeat purchase
+    order_sequence_map, repeat_order_ids, first_order_ids = get_order_customer_sequences()
+
+    customer_type = request.GET.get('customer_type', 'ALL')
+    if customer_type == 'repeat':
+        # Strictly repeat purchases (2nd order onwards; never includes 1st order)
+        orders = orders.filter(id__in=repeat_order_ids)
+    elif customer_type == 'new':
+        # Strictly first-time purchases
+        orders = orders.filter(id__in=first_order_ids)
 
     if payment_filter and payment_filter != 'ALL':
         orders = orders.filter(payment_status=payment_filter)
@@ -914,6 +1122,22 @@ def orders_list(request):
     except Exception:
         elided_page_range = paginator.page_range
 
+    # Attach customer order sequence to orders on this page:
+    # Sequence 1: 1st-time purchase (Initial order) -> NOT a repeat order
+    # Sequence 2+: Repeat purchase (2nd order onwards)
+    for o in page_obj:
+        seq = order_sequence_map.get(o.id, 1)
+        o.is_repeat_order = (seq >= 2)
+        o.order_sequence = seq
+        if seq == 1:
+            o.order_seq_label = "1st Order"
+        elif seq == 2:
+            o.order_seq_label = "2nd Order"
+        elif seq == 3:
+            o.order_seq_label = "3rd Order"
+        else:
+            o.order_seq_label = f"{seq}th Order"
+
     context = {
         'orders': page_obj,
         'page_obj': page_obj,
@@ -931,8 +1155,11 @@ def orders_list(request):
         'trash_count': Order.trash_objects.count(),
         'status_filter': status_filter,
         'period_filter': period_filter,
+        'start_date': start_date,
+        'end_date': end_date,
         'zone_filter': zone_filter,
         'payment_filter': payment_filter,
+        'customer_type': customer_type,
         'search_query': search_query,
         'status_choices': Order.ORDER_STATUS_CHOICES,
         'payment_status_choices': Order.PAYMENT_STATUS_CHOICES,

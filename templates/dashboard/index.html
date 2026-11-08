@@ -665,6 +665,184 @@
 
         </div>
 
+        <!-- Row 4: Customer Retention Analytics: New vs Repeat Orders (Filterable by Date) -->
+        <div class="space-y-3">
+            <!-- Retention Date Filter Toolbar -->
+            <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-gray-200/90 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-8 h-8 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center text-xs font-black">
+                        <i class="fa-solid fa-calendar-days"></i>
+                    </span>
+                    <div>
+                        <h4 class="text-xs sm:text-sm font-extrabold text-gray-900 flex items-center gap-1.5">
+                            <span>Retention Date Filter (তারিখ অনুযায়ী সার্চ)</span>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-200">{{ retention_period_label }}</span>
+                        </h4>
+                        <p class="text-[11px] text-gray-400">ফিল্টার করে নির্দিষ্ট তারিখের নতুন বনাম রিপিট অর্ডারের অনুপাত দেখুন</p>
+                    </div>
+                </div>
+
+                <!-- Date Range Form & Quick Presets -->
+                <form method="GET" action="#retentionSection" class="flex flex-wrap items-center gap-2">
+                    <div class="flex items-center gap-1 bg-gray-50 p-1 rounded-xl border border-gray-200 text-[11px] font-bold">
+                        <a href="?retention_period=ALL#retentionSection" class="px-2 py-1 rounded-lg transition {% if retention_period == 'ALL' and not retention_start %}bg-brand-700 text-white{% else %}text-gray-600 hover:text-gray-900{% endif %}">All Time</a>
+                        <a href="?retention_period=today#retentionSection" class="px-2 py-1 rounded-lg transition {% if retention_period == 'today' %}bg-brand-700 text-white{% else %}text-gray-600 hover:text-gray-900{% endif %}">Today</a>
+                        <a href="?retention_period=this_month#retentionSection" class="px-2 py-1 rounded-lg transition {% if retention_period == 'this_month' %}bg-brand-700 text-white{% else %}text-gray-600 hover:text-gray-900{% endif %}">This Month</a>
+                        <a href="?retention_period=last_month#retentionSection" class="px-2 py-1 rounded-lg transition {% if retention_period == 'last_month' %}bg-brand-700 text-white{% else %}text-gray-600 hover:text-gray-900{% endif %}">Last Month</a>
+                        <a href="?retention_period=last_30_days#retentionSection" class="px-2 py-1 rounded-lg transition {% if retention_period == 'last_30_days' %}bg-brand-700 text-white{% else %}text-gray-600 hover:text-gray-900{% endif %}">30 Days</a>
+                    </div>
+
+                    <!-- Custom Date Range Inputs -->
+                    <div class="inline-flex items-center gap-1.5 text-xs bg-gray-50 px-2 py-1 rounded-xl border border-gray-200">
+                        <input type="date" name="retention_start" value="{{ retention_start }}" class="bg-white border border-gray-200 rounded-lg px-2 py-0.5 text-[11px] font-bold text-gray-800 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                        <span class="text-gray-400 text-xs">to</span>
+                        <input type="date" name="retention_end" value="{{ retention_end }}" class="bg-white border border-gray-200 rounded-lg px-2 py-0.5 text-[11px] font-bold text-gray-800 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                        <button type="submit" class="bg-brand-700 hover:bg-brand-800 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg transition shadow-2xs">
+                            Search
+                        </button>
+                        {% if retention_start or retention_period != 'ALL' %}
+                        <a href="?retention_period=ALL#retentionSection" class="text-gray-400 hover:text-rose-600 text-xs px-1" title="Reset date filter">
+                            <i class="fa-solid fa-xmark"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+
+            <!-- Retention Grid -->
+            <div id="retentionSection" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- Left: Doughnut Chart (New vs Repeat) -->
+                <div class="lg:col-span-5 bg-white p-5 sm:p-6 rounded-3xl border border-gray-200/90 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-gray-100 flex-wrap gap-2">
+                        <div class="flex items-center gap-3">
+                            <span class="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center text-sm font-black border border-purple-200">
+                                <i class="fa-solid fa-users-viewfinder"></i>
+                            </span>
+                            <div>
+                                <h3 class="font-display font-black text-base text-gray-900 flex items-center gap-2">
+                                    <span>Repeat Orders Analysis</span>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-300">2nd Order Onwards</span>
+                                </h3>
+                                <p class="text-xs text-gray-400">১ম অর্ডার বাদ দিয়ে ২য় বা তদূর্ধ্ব অর্ডারের হিসাব</p>
+                            </div>
+                        </div>
+                        <span class="text-xs font-black text-purple-800 bg-purple-50 px-2.5 py-1 rounded-xl border border-purple-200">
+                            {{ repeat_rate }}% Repeat Rate
+                        </span>
+                    </div>
+
+                    <div class="relative h-56 sm:h-64 w-full flex items-center justify-center">
+                        <canvas id="customerRetentionChart"></canvas>
+                    </div>
+
+                    <!-- KPI Metric Pills -->
+                    <div class="grid grid-cols-2 gap-2.5 pt-2 border-t border-gray-100 text-xs">
+                        <div class="bg-indigo-50/70 p-3 rounded-2xl border border-indigo-100">
+                            <span class="text-gray-500 font-bold block text-[11px]">🆕 New Orders</span>
+                            <div class="flex items-baseline gap-1.5 mt-0.5">
+                                <strong class="text-indigo-950 font-black text-base">{{ new_orders_count }}</strong>
+                                <span class="text-[10px] text-indigo-700 font-extrabold">({{ new_rate }}%)</span>
+                            </div>
+                            <span class="text-[10px] text-gray-400">1st-time purchase</span>
+                        </div>
+
+                        <div class="bg-emerald-50/70 p-3 rounded-2xl border border-emerald-100">
+                            <span class="text-gray-500 font-bold block text-[11px]">🔄 Repeat Orders</span>
+                            <div class="flex items-baseline gap-1.5 mt-0.5">
+                                <strong class="text-emerald-950 font-black text-base">{{ repeat_orders_count }}</strong>
+                                <span class="text-[10px] text-emerald-700 font-extrabold">({{ repeat_rate }}%)</span>
+                            </div>
+                            <span class="text-[10px] text-gray-400">2nd+ orders placed</span>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-gray-50 rounded-2xl border border-gray-200 text-xs flex items-center justify-between flex-wrap gap-2">
+                        <div>
+                            <span class="text-gray-500 font-bold block text-[10px]">Repeat Orders Revenue (২য় অর্ডার থেকে)</span>
+                            <strong class="text-emerald-900 font-black text-sm">৳{{ repeat_revenue|floatformat:0 }}</strong>
+                        </div>
+                        <a href="{% url 'dashboard:orders' %}?customer_type=repeat{% if retention_start %}&start_date={{ retention_start }}{% endif %}{% if retention_end %}&end_date={{ retention_end }}{% endif %}" class="bg-brand-700 hover:bg-brand-800 text-white font-bold text-[11px] px-3 py-1.5 rounded-xl shadow-2xs transition inline-flex items-center gap-1 active:scale-95">
+                            <span>View Repeat Orders ({{ repeat_orders_count }})</span>
+                            <i class="fa-solid fa-arrow-right text-[9px]"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Right: Loyal / Repeat Customers Directory (শীর্ষ রিপিট কাস্টমার তালিকা) -->
+                <div class="lg:col-span-7 bg-white p-5 sm:p-6 rounded-3xl border border-gray-200/90 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between pb-3.5 border-b border-gray-100 flex-wrap gap-2">
+                        <div class="flex items-center gap-3">
+                            <span class="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center text-sm font-black border border-amber-200">
+                                <i class="fa-solid fa-medal"></i>
+                            </span>
+                            <div>
+                                <h3 class="font-display font-black text-base text-gray-900">
+                                    Repeat Customers (রিপিট গ্রাহকদের তালিকা)
+                                </h3>
+                                <p class="text-xs text-gray-400">{{ repeat_customers_count }} customers with repeat orders in this period</p>
+                            </div>
+                        </div>
+                        <a href="{% url 'dashboard:orders' %}?customer_type=repeat{% if retention_start %}&start_date={{ retention_start }}{% endif %}{% if retention_end %}&end_date={{ retention_end }}{% endif %}" class="text-xs font-bold text-brand-700 hover:underline bg-brand-50 px-2.5 py-1 rounded-xl border border-brand-200">
+                            All Repeat Orders ({{ repeat_orders_count }}) &rarr;
+                        </a>
+                    </div>
+
+                    <div class="overflow-x-auto max-h-[380px] overflow-y-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-gray-50/90 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider rounded-xl sticky top-0 bg-white">
+                                    <th class="py-2.5 px-3">Customer</th>
+                                    <th class="py-2.5 px-3">Repeat Orders</th>
+                                    <th class="py-2.5 px-3">Repeat Spend</th>
+                                    <th class="py-2.5 px-3">City</th>
+                                    <th class="py-2.5 px-3 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                {% for cust in repeat_customers_list %}
+                                <tr class="hover:bg-gray-50/80 transition">
+                                    <td class="py-3 px-3">
+                                        <strong class="font-extrabold text-gray-900 block">{{ cust.name }}</strong>
+                                        <span class="text-gray-500 text-[11px] font-mono">{{ cust.phone }}</span>
+                                    </td>
+                                    <td class="py-3 px-3">
+                                        <span class="inline-flex items-center gap-1 bg-purple-100 text-purple-900 font-black text-[11px] px-2.5 py-0.5 rounded-full border border-purple-200">
+                                            <i class="fa-solid fa-rotate text-[9px]"></i> {{ cust.repeat_orders_count }} Repeat Order{{ cust.repeat_orders_count|pluralize }}
+                                        </span>
+                                    </td>
+                                    <td class="py-3 px-3 font-black text-emerald-800">
+                                        ৳{{ cust.repeat_spent|floatformat:0 }}
+                                    </td>
+                                    <td class="py-3 px-3 text-gray-600 font-medium">
+                                        {{ cust.city }}
+                                    </td>
+                                    <td class="py-3 px-3 text-right">
+                                        <div class="flex items-center justify-end gap-1.5">
+                                            <a href="{% url 'dashboard:orders' %}?q={{ cust.phone }}" class="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs transition" title="View all orders for this customer">
+                                                <i class="fa-solid fa-list-check text-[11px]"></i>
+                                            </a>
+                                            <a href="https://wa.me/88{{ cust.phone }}?text=Assalamu%20Alaikum%20{{ cust.name|urlencode }}%20ji,%20Pickpickles%20er%20shathe%20thakar%20jonno%20apnake%20onek%20dhonnobad!" target="_blank" class="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs transition" title="Send WhatsApp Message">
+                                                <i class="fa-brands fa-whatsapp text-[12px]"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="py-6 text-center text-gray-400 text-xs">
+                                        No repeat orders found in this date range.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
 
 
     </div>
@@ -1363,6 +1541,67 @@ document.addEventListener("DOMContentLoaded", function () {
                         backgroundColor: '#0f172a',
                         padding: 10,
                         cornerRadius: 10
+                    }
+                }
+            }
+        });
+    }
+
+    // 6. Customer Retention Doughnut (New vs Repeat Customers)
+    const customerEl = document.getElementById('customerRetentionChart');
+    if (customerEl) {
+        const customerCtx = customerEl.getContext('2d');
+        const totalCustomers = (data.customerData || []).reduce((a, b) => a + b, 0);
+        new Chart(customerCtx, {
+            type: 'doughnut',
+            data: {
+                labels: totalCustomers > 0 ? (data.customerLabels || ['New Customers', 'Repeat Customers']) : ['No Customers Yet'],
+                datasets: [{
+                    data: totalCustomers > 0 ? data.customerData : [1],
+                    backgroundColor: totalCustomers > 0 ? [
+                        '#6366f1', // New Customers (Indigo)
+                        '#10b981'  // Repeat Customers (Emerald)
+                    ] : ['#e2e8f0'],
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                    hoverOffset: totalCustomers > 0 ? 5 : 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '68%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 10,
+                            font: { size: 11, weight: 'bold' },
+                            padding: 10,
+                            generateLabels: function(chart) {
+                                const original = Chart.overrides.doughnut.plugins.legend.labels.generateLabels(chart);
+                                if (!data.customerRates || !data.customerData) return original;
+                                return original.map((item, idx) => {
+                                    const val = data.customerData[idx] || 0;
+                                    const rate = data.customerRates[idx] || 0;
+                                    item.text = `${item.text}: ${val} (${rate}%)`;
+                                    return item;
+                                });
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#0f172a',
+                        padding: 10,
+                        cornerRadius: 10,
+                        callbacks: {
+                            label: function(ctx) {
+                                if (totalCustomers === 0) return ' No customers yet';
+                                const val = ctx.parsed || 0;
+                                const rate = data.customerRates && data.customerRates[ctx.dataIndex] !== undefined ? data.customerRates[ctx.dataIndex] : Math.round((val / totalCustomers) * 100);
+                                return ` ${ctx.label}: ${val} customers (${rate}%)`;
+                            }
+                        }
                     }
                 }
             }
