@@ -369,8 +369,7 @@
                         <button type="button" onclick="switchHeroPickle({{ forloop.counter0 }})"
                             id="hero-pill-{{ forloop.counter0 }}"
                             class="hero-pill-btn relative overflow-hidden flex-1 py-2 px-2.5 rounded-xl text-center cursor-pointer flex items-center justify-center gap-1.5 {% if forloop.first %}bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 font-black shadow-lg shadow-amber-400/25 ring-2 ring-amber-300/80 scale-[1.02]{% else %}text-emerald-200/85 hover:text-white hover:bg-white/10 font-bold{% endif %}">
-                            <span class="text-xs sm:text-sm">{% if forloop.counter == 1 %}🥇{% elif forloop.counter == 2
-                                %}🥈{% else %}🥉{% endif %}</span>
+                            <span class="text-xs sm:text-sm">{% if forloop.counter == 1 %}🥇{% elif forloop.counter == 2 %}🥈{% else %}🥉{% endif %}</span>
                             <span class="text-xs font-black tracking-wide whitespace-nowrap">
                                 {% if forloop.counter == 1 %}
                                 #1 <span class="hidden sm:inline">Best Seller</span><span class="sm:hidden">Best</span>
@@ -420,11 +419,9 @@
                             <div
                                 class="hero-card-badge absolute bottom-3 right-3 z-20 bg-black/85 backdrop-blur-md text-white text-xs font-black px-2.5 py-1 rounded-xl border border-white/25 flex items-center gap-1 shadow-lg">
                                 {% if hero_pickle.reviews_count > 0 %}
-                                <span class="text-amber-300">⭐</span> <span>{{ hero_pickle.average_rating }}/5 ({{
-                                    hero_pickle.reviews_count }})</span>
+                                <span class="text-amber-300">⭐</span> <span>{{ hero_pickle.average_rating }}/5 ({{ hero_pickle.reviews_count }})</span>
                                 {% else %}
-                                <span class="text-amber-300">⭐</span> <span>{{ hero_pickle.crunch_rating|default:5 }}/5
-                                    Crunch</span>
+                                <span class="text-amber-300">⭐</span> <span>{{ hero_pickle.crunch_rating|default:5 }}/5 Crunch</span>
                                 {% endif %}
                             </div>
                         </div>
@@ -441,18 +438,13 @@
                                     {{ hero_pickle.name }}
                                 </a>
                             </h3>
-                            <p class="text-[11px] text-amber-200 font-bold sm:hidden">Taste: {{
-                                hero_pickle.flavor_profile }}</p>
-                            <p class="text-xs text-emerald-100/90 font-semibold line-clamp-1 hidden sm:block">{{
-                                hero_pickle.tagline }}</p>
+                            <p class="text-[11px] text-amber-200 font-bold sm:hidden">Taste: {{ hero_pickle.flavor_profile }}</p>
+                            <p class="text-xs text-emerald-100/90 font-semibold line-clamp-1 hidden sm:block">{{ hero_pickle.tagline }}</p>
                             <div class="flex items-center justify-center gap-3 pt-0.5">
-                                <span
-                                    class="font-display font-black text-2xl sm:text-3xl text-amber-300 drop-shadow-sm">৳{{
-                                    hero_pickle.price_bdt|floatformat:0 }}</span>
-                                {% if hero_pickle.original_price_bdt and hero_pickle.original_price_bdt >
-                                hero_pickle.price_bdt %}
-                                <span class="text-sm line-through text-emerald-300/60 font-bold">৳{{
-                                    hero_pickle.original_price_bdt|floatformat:0 }}</span>
+                                <span class="font-display font-black text-2xl sm:text-3xl text-amber-300 drop-shadow-sm">৳{{ hero_pickle.price_bdt|floatformat:0 }}</span>
+                                {% if hero_pickle.original_price_bdt and hero_pickle.original_price_bdt > hero_pickle.price_bdt %}
+                                <span class="text-sm line-through text-emerald-300/60 font-bold">৳{{ hero_pickle.original_price_bdt|floatformat:0 }}</span>
+                                <span class="text-[10px] sm:text-xs font-black bg-rose-500 text-white px-2 py-0.5 rounded-full border border-rose-400/50 shadow-2xs">Save ৳{{ hero_pickle.discount_amount|floatformat:0 }}</span>
                                 {% endif %}
                             </div>
                             <div class="pt-2 flex items-center justify-center gap-2">
@@ -583,8 +575,7 @@
                 </span>
             </a>
             {% for cat in categories %}
-            <a href="{% url 'store:index' %}?category={{ cat.slug }}#pickle-menu" {% if selected_cat==cat.slug
-                %}id="activeCategoryPill" {% endif %}
+            <a href="{% url 'store:index' %}?category={{ cat.slug }}#pickle-menu" {% if selected_cat == cat.slug %}id="activeCategoryPill"{% endif %}
                 class="shrink-0 whitespace-nowrap px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-full transition-all text-xs font-black active:scale-95 flex items-center gap-1.5 {% if selected_cat == cat.slug %}bg-slate-950 text-white shadow-md ring-2 ring-slate-950/20{% else %}bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 shadow-2xs{% endif %}">
                 <span>{{ cat.name }}</span>
                 <span
@@ -619,8 +610,7 @@
                         <span>Stock Out</span>
                         </span>
                         {% elif product.custom_badge %}
-                        {% if 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower or 'launch'
-                        in product.custom_badge|lower or 'নতুন' in product.custom_badge %}
+                        {% if 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower or 'launch' in product.custom_badge|lower or 'নতুন' in product.custom_badge %}
                         <span
                             class="shimmer-ribbon inline-flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 text-white font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md tracking-tight border border-emerald-400/50">
                             <span class="relative flex h-1.5 w-1.5">
@@ -630,8 +620,7 @@
                             </span>
                             <span>✨ New Arrival</span>
                         </span>
-                        {% elif 'season' in product.custom_badge|lower or 'ended' in product.custom_badge|lower or 'শেষ'
-                        in product.custom_badge %}
+                        {% elif 'season' in product.custom_badge|lower or 'ended' in product.custom_badge|lower or 'শেষ' in product.custom_badge %}
                         <span
                             class="inline-flex items-center gap-1.5 bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md tracking-tight border border-rose-400/50">
                             <i class="fa-solid fa-hourglass-half text-[8px] sm:text-[9px]"></i>
@@ -709,8 +698,7 @@
                         <span
                             class="text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200/80 flex items-center gap-1 text-[9px] sm:text-[10.5px] font-black shrink-0">
                             <i class="fa-solid fa-star text-amber-400 text-[8px] sm:text-[9px]"></i>
-                            <span>{% if product.reviews_count > 0 %}{{ product.average_rating }}{% else %}{{
-                                product.crunch_rating|default:5 }}{% endif %}/5</span>
+                            <span>{% if product.reviews_count > 0 %}{{ product.average_rating }}{% else %}{{ product.crunch_rating|default:5 }}{% endif %}/5</span>
                         </span>
                     </div>
                 </div>
@@ -718,15 +706,12 @@
                 <!-- Price and Add to Bag Footer Row (Mobile Side-by-Side, Zero Clutter) -->
                 <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-1 mt-auto">
                     <div class="min-w-0">
-                        <span class="font-display font-black text-sm sm:text-xl text-slate-950 block leading-tight">৳{{
-                            product.price_bdt|floatformat:0 }}</span>
+                        <span class="font-display font-black text-sm sm:text-xl text-slate-950 block leading-tight">৳{{ product.price_bdt|floatformat:0 }}</span>
                         {% if product.original_price_bdt and product.original_price_bdt > product.price_bdt %}
-                        <div class="flex items-center gap-1 mt-0.5">
-                            <span class="text-[10px] sm:text-xs text-slate-400 line-through font-bold leading-none">৳{{
-                                product.original_price_bdt|floatformat:0 }}</span>
+                        <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                            <span class="text-[10px] sm:text-xs text-slate-400 line-through font-bold leading-none">৳{{ product.original_price_bdt|floatformat:0 }}</span>
                             <span
-                                class="text-[8px] sm:text-[9px] font-black text-rose-700 bg-rose-50 border border-rose-200 px-1 py-0.2 rounded leading-none">-৳{{
-                                product.discount_amount|floatformat:0 }}</span>
+                                class="text-[8px] sm:text-[9.5px] font-black text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded leading-none whitespace-nowrap">Save ৳{{ product.discount_amount|floatformat:0 }}</span>
                         </div>
                         {% endif %}
                     </div>
@@ -756,6 +741,18 @@
             <p class="text-slate-600 font-medium">No pickles in this category yet. Check back soon!</p>
         </div>
         {% endfor %}
+    </div>
+
+    <!-- Seasonal Harvest & Fair Pricing Notice -->
+    <div class="mt-8 max-w-3xl mx-auto text-center px-4">
+        <p class="text-[11px] sm:text-xs text-slate-600 font-medium flex items-center justify-center gap-1.5 flex-wrap">
+            <i class="fa-solid fa-leaf text-emerald-700 text-xs"></i>
+            <span>Prices may adjust periodically due to 100% farm-fresh seasonal produce and raw material market costs.</span>
+            <a href="{% url 'store:policies' %}#market-pricing-policy" class="text-emerald-800 underline font-bold hover:text-emerald-950 inline-flex items-center gap-0.5">
+                <span>Pricing Policy</span>
+                <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+            </a>
+        </p>
     </div>
 </section>
 
@@ -895,8 +892,7 @@
                     {% if review.image %}
                     <div class="pt-2">
                         <button type="button"
-                            onclick="openHomeReviewLightbox('{{ review.image_url }}', '{{ review.reviewer_name|escapejs }}', '{{ review.product.name|default:"
-                            Homemade Pickles"|escapejs }}')"
+                            onclick="openHomeReviewLightbox('{{ review.image_url }}', '{{ review.reviewer_name|escapejs }}', '{{ review.product.name|default:'Homemade Pickles'|escapejs }}')"
                             class="relative group/img block w-full rounded-xl overflow-hidden border border-emerald-200 bg-gray-50 aspect-16/9 cursor-pointer shadow-2xs hover:shadow-sm transition">
                             <img src="{{ review.image_url }}" alt="Review photo by {{ review.reviewer_name }}"
                                 class="w-full h-full object-cover group-hover/img:scale-105 transition duration-300">
@@ -917,10 +913,8 @@
                 </div>
                 <div class="pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
                     <div class="min-w-0 pr-2">
-                        <span class="font-black text-slate-950 block text-xs sm:text-sm truncate">{{
-                            review.reviewer_name }}</span>
-                        <span class="text-slate-500 font-semibold text-[11px] truncate block">📍 {{
-                            review.reviewer_location|default:"Dhaka, Bangladesh" }}</span>
+                        <span class="font-black text-slate-950 block text-xs sm:text-sm truncate">{{ review.reviewer_name }}</span>
+                        <span class="text-slate-500 font-semibold text-[11px] truncate block">📍 {{ review.reviewer_location|default:"Dhaka, Bangladesh" }}</span>
                     </div>
                     <span
                         class="bg-emerald-100 text-emerald-900 font-extrabold px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] border border-emerald-300 truncate max-w-[140px] shrink-0">
@@ -1131,7 +1125,7 @@
     let heroPickleTimer = null;
     let currentHeroPickleIndex = 0;
     let isHeroHovered = false;
-    const totalHeroPickles = {{ top_best_sellers| length |default: 3 }};
+    const totalHeroPickles = {{ top_best_sellers|length|default:3 }};
     const HERO_CYCLE_DURATION = 5000; // 5.0 seconds showcase time
 
     function animatePillProgress(pillIndex) {
