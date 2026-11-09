@@ -5,287 +5,379 @@
 
 {% block extra_head %}
 <style>
-@keyframes borderFlashGold {
-    0%, 100% {
-        box-shadow: 0 0 0 1.5px rgba(245, 158, 11, 0.45), 0 4px 14px -2px rgba(245, 158, 11, 0.25);
-    }
-    50% {
-        box-shadow: 0 0 0 3px rgba(251, 191, 36, 1), 0 0 28px 4px rgba(245, 158, 11, 0.65);
-    }
-}
-@keyframes borderFlashEmerald {
-    0%, 100% {
-        box-shadow: 0 0 0 1.5px rgba(16, 185, 129, 0.45), 0 4px 14px -2px rgba(16, 185, 129, 0.25);
-    }
-    50% {
-        box-shadow: 0 0 0 3px rgba(52, 211, 153, 1), 0 0 28px 4px rgba(16, 185, 129, 0.65);
-    }
-}
-@keyframes borderFlashRose {
-    0%, 100% {
-        box-shadow: 0 0 0 1.5px rgba(244, 63, 94, 0.45), 0 4px 14px -2px rgba(244, 63, 94, 0.25);
-    }
-    50% {
-        box-shadow: 0 0 0 3px rgba(251, 113, 133, 1), 0 0 28px 4px rgba(244, 63, 94, 0.65);
-    }
-}
-.card-flash-gold {
-    border-color: rgba(245, 158, 11, 0.9) !important;
-    animation: borderFlashGold 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-.card-flash-emerald {
-    border-color: rgba(16, 185, 129, 0.9) !important;
-    animation: borderFlashEmerald 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-.card-flash-rose {
-    border-color: rgba(244, 63, 94, 0.9) !important;
-    animation: borderFlashRose 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-@keyframes seasonalGlow {
-    0%, 100% {
-        box-shadow: 0 4px 18px -2px rgba(245, 158, 11, 0.28), 0 0 0 1px rgba(245, 158, 11, 0.45);
-    }
-    50% {
-        box-shadow: 0 8px 28px 2px rgba(245, 158, 11, 0.55), 0 0 0 3px rgba(251, 191, 36, 0.8);
-    }
-}
-@keyframes shimmerLight {
-    0% { transform: translateX(-120%); }
-    60%, 100% { transform: translateX(220%); }
-}
-.seasonal-card-glow {
-    animation: seasonalGlow 3s ease-in-out infinite;
-}
-.shimmer-ribbon {
-    position: relative;
-    overflow: hidden;
-}
-.shimmer-ribbon::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 60%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
-    transform: translateX(-120%);
-    animation: shimmerLight 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-    pointer-events: none;
-}
+    @keyframes borderFlashGold {
 
-/* ==========================================================================
+        0%,
+        100% {
+            box-shadow: 0 0 0 1.5px rgba(245, 158, 11, 0.45), 0 4px 14px -2px rgba(245, 158, 11, 0.25);
+        }
+
+        50% {
+            box-shadow: 0 0 0 3px rgba(251, 191, 36, 1), 0 0 28px 4px rgba(245, 158, 11, 0.65);
+        }
+    }
+
+    @keyframes borderFlashEmerald {
+
+        0%,
+        100% {
+            box-shadow: 0 0 0 1.5px rgba(16, 185, 129, 0.45), 0 4px 14px -2px rgba(16, 185, 129, 0.25);
+        }
+
+        50% {
+            box-shadow: 0 0 0 3px rgba(52, 211, 153, 1), 0 0 28px 4px rgba(16, 185, 129, 0.65);
+        }
+    }
+
+    @keyframes borderFlashRose {
+
+        0%,
+        100% {
+            box-shadow: 0 0 0 1.5px rgba(244, 63, 94, 0.45), 0 4px 14px -2px rgba(244, 63, 94, 0.25);
+        }
+
+        50% {
+            box-shadow: 0 0 0 3px rgba(251, 113, 133, 1), 0 0 28px 4px rgba(244, 63, 94, 0.65);
+        }
+    }
+
+    .card-flash-gold {
+        border-color: rgba(245, 158, 11, 0.9) !important;
+        animation: borderFlashGold 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    .card-flash-emerald {
+        border-color: rgba(16, 185, 129, 0.9) !important;
+        animation: borderFlashEmerald 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    .card-flash-rose {
+        border-color: rgba(244, 63, 94, 0.9) !important;
+        animation: borderFlashRose 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes seasonalGlow {
+
+        0%,
+        100% {
+            box-shadow: 0 4px 18px -2px rgba(245, 158, 11, 0.28), 0 0 0 1px rgba(245, 158, 11, 0.45);
+        }
+
+        50% {
+            box-shadow: 0 8px 28px 2px rgba(245, 158, 11, 0.55), 0 0 0 3px rgba(251, 191, 36, 0.8);
+        }
+    }
+
+    @keyframes shimmerLight {
+        0% {
+            transform: translateX(-120%);
+        }
+
+        60%,
+        100% {
+            transform: translateX(220%);
+        }
+    }
+
+    .seasonal-card-glow {
+        animation: seasonalGlow 3s ease-in-out infinite;
+    }
+
+    .shimmer-ribbon {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .shimmer-ribbon::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 60%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+        transform: translateX(-120%);
+        animation: shimmerLight 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        pointer-events: none;
+    }
+
+    /* ==========================================================================
    Eye-Catching 3D Stacked Fan / Coverflow Spotlight Deck Showcase
    ========================================================================== */
-@keyframes heroFloatChipA {
-    0%, 100% { transform: translateY(0px) rotate(-2deg); }
-    50% { transform: translateY(-7px) rotate(1deg); }
-}
-@keyframes heroFloatChipB {
-    0%, 100% { transform: translateY(0px) rotate(2deg); }
-    50% { transform: translateY(-6px) rotate(-1.5deg); }
-}
-@keyframes heroAmbientOrbit {
-    0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.65; }
-    50% { transform: scale(1.08) rotate(4deg); opacity: 0.9; }
-}
-.hero-ambient-orbit {
-    animation: heroAmbientOrbit 5s ease-in-out infinite;
-}
-.hero-float-chip-a {
-    animation: heroFloatChipA 3.8s ease-in-out infinite;
-}
-.hero-float-chip-b {
-    animation: heroFloatChipB 4.4s ease-in-out infinite;
-}
-.hero-fan-deck {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 1 / 0.88;
-    perspective: 1200px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 0.75rem;
-}
-.hero-fan-card {
-    position: absolute;
-    width: 78%;
-    aspect-ratio: 1 / 1;
-    border-radius: 1.35rem;
-    overflow: hidden;
-    background: #0f172a;
-    transition:
-        transform 620ms cubic-bezier(0.22, 1, 0.36, 1),
-        opacity 520ms cubic-bezier(0.22, 1, 0.36, 1),
-        filter 520ms cubic-bezier(0.22, 1, 0.36, 1),
-        box-shadow 520ms cubic-bezier(0.22, 1, 0.36, 1),
-        border-color 420ms ease;
-    will-change: transform, opacity, filter;
-    user-select: none;
-}
-.hero-fan-card.is-center {
-    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
-    opacity: 1;
-    z-index: 30;
-    filter: brightness(1.02) saturate(1.05);
-    border: 2.5px solid rgba(251, 191, 36, 0.9);
-    box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.8), 0 0 28px rgba(245, 158, 11, 0.32);
-}
-.hero-fan-card.is-left {
-    transform: translate3d(-24%, 8px, -95px) scale(0.82) rotate(-8deg);
-    opacity: 0.65;
-    z-index: 15;
-    filter: brightness(0.65) saturate(0.85);
-    border: 2px solid rgba(16, 185, 129, 0.45);
-    box-shadow: 0 14px 28px -8px rgba(0, 0, 0, 0.65);
-    cursor: pointer;
-}
-.hero-fan-card.is-left:hover {
-    transform: translate3d(-26%, 4px, -70px) scale(0.85) rotate(-6deg);
-    opacity: 0.88;
-    filter: brightness(0.85);
-}
-.hero-fan-card.is-right {
-    transform: translate3d(24%, 8px, -95px) scale(0.82) rotate(8deg);
-    opacity: 0.65;
-    z-index: 15;
-    filter: brightness(0.65) saturate(0.85);
-    border: 2px solid rgba(16, 185, 129, 0.45);
-    box-shadow: 0 14px 28px -8px rgba(0, 0, 0, 0.65);
-    cursor: pointer;
-}
-.hero-fan-card.is-right:hover {
-    transform: translate3d(26%, 4px, -70px) scale(0.85) rotate(6deg);
-    opacity: 0.88;
-    filter: brightness(0.85);
-}
-.hero-fan-card.is-hidden {
-    transform: translate3d(0, 12px, -160px) scale(0.7);
-    opacity: 0;
-    z-index: 5;
-    pointer-events: none;
-}
-.hero-fan-card .hero-card-badge {
-    transition: opacity 320ms ease, transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.hero-fan-card:not(.is-center) .hero-card-badge {
-    opacity: 0;
-    transform: scale(0.8);
-}
-.hero-fan-card:not(.is-center) a {
-    pointer-events: none;
-}
-.hero-info-slide {
-    display: none;
-}
-.hero-info-slide.is-active {
-    display: block;
-    animation: heroInfoPop 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-@keyframes heroInfoPop {
-    0% {
-        opacity: 0;
-        transform: translateY(10px) scale(0.98);
+    @keyframes heroFloatChipA {
+
+        0%,
+        100% {
+            transform: translateY(0px) rotate(-2deg);
+        }
+
+        50% {
+            transform: translateY(-7px) rotate(1deg);
+        }
     }
-    100% {
+
+    @keyframes heroFloatChipB {
+
+        0%,
+        100% {
+            transform: translateY(0px) rotate(2deg);
+        }
+
+        50% {
+            transform: translateY(-6px) rotate(-1.5deg);
+        }
+    }
+
+    @keyframes heroAmbientOrbit {
+
+        0%,
+        100% {
+            transform: scale(1) rotate(0deg);
+            opacity: 0.65;
+        }
+
+        50% {
+            transform: scale(1.08) rotate(4deg);
+            opacity: 0.9;
+        }
+    }
+
+    .hero-ambient-orbit {
+        animation: heroAmbientOrbit 5s ease-in-out infinite;
+    }
+
+    .hero-float-chip-a {
+        animation: heroFloatChipA 3.8s ease-in-out infinite;
+    }
+
+    .hero-float-chip-b {
+        animation: heroFloatChipB 4.4s ease-in-out infinite;
+    }
+
+    .hero-fan-deck {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 1 / 0.88;
+        perspective: 1200px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 0.75rem;
+    }
+
+    .hero-fan-card {
+        position: absolute;
+        width: 78%;
+        aspect-ratio: 1 / 1;
+        border-radius: 1.35rem;
+        overflow: hidden;
+        background: #0f172a;
+        transition:
+            transform 620ms cubic-bezier(0.22, 1, 0.36, 1),
+            opacity 520ms cubic-bezier(0.22, 1, 0.36, 1),
+            filter 520ms cubic-bezier(0.22, 1, 0.36, 1),
+            box-shadow 520ms cubic-bezier(0.22, 1, 0.36, 1),
+            border-color 420ms ease;
+        will-change: transform, opacity, filter;
+        user-select: none;
+    }
+
+    .hero-fan-card.is-center {
+        transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
         opacity: 1;
-        transform: translateY(0) scale(1);
+        z-index: 30;
+        filter: brightness(1.02) saturate(1.05);
+        border: 2.5px solid rgba(251, 191, 36, 0.9);
+        box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.8), 0 0 28px rgba(245, 158, 11, 0.32);
     }
-}
-.hero-pill-btn {
-    transition: all 280ms cubic-bezier(0.22, 1, 0.36, 1);
-}
+
+    .hero-fan-card.is-left {
+        transform: translate3d(-24%, 8px, -95px) scale(0.82) rotate(-8deg);
+        opacity: 0.65;
+        z-index: 15;
+        filter: brightness(0.65) saturate(0.85);
+        border: 2px solid rgba(16, 185, 129, 0.45);
+        box-shadow: 0 14px 28px -8px rgba(0, 0, 0, 0.65);
+        cursor: pointer;
+    }
+
+    .hero-fan-card.is-left:hover {
+        transform: translate3d(-26%, 4px, -70px) scale(0.85) rotate(-6deg);
+        opacity: 0.88;
+        filter: brightness(0.85);
+    }
+
+    .hero-fan-card.is-right {
+        transform: translate3d(24%, 8px, -95px) scale(0.82) rotate(8deg);
+        opacity: 0.65;
+        z-index: 15;
+        filter: brightness(0.65) saturate(0.85);
+        border: 2px solid rgba(16, 185, 129, 0.45);
+        box-shadow: 0 14px 28px -8px rgba(0, 0, 0, 0.65);
+        cursor: pointer;
+    }
+
+    .hero-fan-card.is-right:hover {
+        transform: translate3d(26%, 4px, -70px) scale(0.85) rotate(6deg);
+        opacity: 0.88;
+        filter: brightness(0.85);
+    }
+
+    .hero-fan-card.is-hidden {
+        transform: translate3d(0, 12px, -160px) scale(0.7);
+        opacity: 0;
+        z-index: 5;
+        pointer-events: none;
+    }
+
+    .hero-fan-card .hero-card-badge {
+        transition: opacity 320ms ease, transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .hero-fan-card:not(.is-center) .hero-card-badge {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+
+    .hero-fan-card:not(.is-center) a {
+        pointer-events: none;
+    }
+
+    .hero-info-slide {
+        display: none;
+    }
+
+    .hero-info-slide.is-active {
+        display: block;
+        animation: heroInfoPop 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    @keyframes heroInfoPop {
+        0% {
+            opacity: 0;
+            transform: translateY(10px) scale(0.98);
+        }
+
+        100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .hero-pill-btn {
+        transition: all 280ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <!-- Hero Section (Rich High-Contrast Dark Forest Theme) -->
-<section class="relative overflow-hidden text-white py-12 sm:py-20 px-4 sm:px-6 lg:px-8 border-b-4 border-amber-500" style="background-color: #04170c; background-image: radial-gradient(#166534 1.5px, transparent 1.5px), linear-gradient(180deg, #02130a 0%, #092d18 50%, #04170c 100%); background-size: 24px 24px, 100% 100%;">
+<section class="relative overflow-hidden text-white py-12 sm:py-20 px-4 sm:px-6 lg:px-8 border-b-4 border-amber-500"
+    style="background-color: #04170c; background-image: radial-gradient(#166534 1.5px, transparent 1.5px), linear-gradient(180deg, #02130a 0%, #092d18 50%, #04170c 100%); background-size: 24px 24px, 100% 100%;">
     <div class="max-w-7xl mx-auto relative z-10">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-            
+
             <!-- Left Text Content -->
             <div class="lg:col-span-7 space-y-5 sm:space-y-6 text-center lg:text-left min-w-0">
-                <div class="inline-flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 bg-[#082816] border-2 border-emerald-400/80 px-3 sm:px-4 py-1.5 rounded-full text-[11px] sm:text-xs font-bold text-amber-300 shadow-md max-w-full text-center">
+                <div
+                    class="inline-flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 bg-[#082816] border-2 border-emerald-400/80 px-3 sm:px-4 py-1.5 rounded-full text-[11px] sm:text-xs font-bold text-amber-300 shadow-md max-w-full text-center">
                     <span class="inline-flex items-center gap-1">🥒 100% Fresh Pickles</span>
                     <span class="text-emerald-500 opacity-60">•</span>
                     <span class="inline-flex items-center gap-1">🇧🇩 Handcrafted in Bangladesh</span>
                 </div>
 
-                <h1 class="font-display font-black text-2xl sm:text-4xl lg:text-6xl tracking-tight leading-[1.15] text-white break-words">
+                <h1
+                    class="font-display font-black text-2xl sm:text-4xl lg:text-6xl tracking-tight leading-[1.15] text-white break-words">
                     That <span class="text-amber-400">Crispy, Zesty Crunch</span> You’ve Been Craving.
                 </h1>
 
-                <p class="text-sm sm:text-base lg:text-lg text-emerald-100 leading-relaxed max-w-2xl mx-auto lg:mx-0 font-semibold break-words">
-                    Elevate your burgers, shawarmas, sandwiches, and daily snacks with crave-worthy crunchy pickled vegetables crafted with farm-fresh cucumbers, sweet carrots, whole garlic, and zesty herbs right here in Bangladesh!
+                <p
+                    class="text-sm sm:text-base lg:text-lg text-emerald-100 leading-relaxed max-w-2xl mx-auto lg:mx-0 font-semibold break-words">
+                    Elevate your burgers, shawarmas, sandwiches, and daily snacks with crave-worthy crunchy pickled
+                    vegetables crafted with farm-fresh cucumbers, sweet carrots, whole garlic, and zesty herbs right
+                    here in Bangladesh!
                 </p>
 
                 <!-- Value Props Pills -->
                 <div class="flex flex-wrap items-center justify-center lg:justify-start gap-2 sm:gap-2.5 pt-2">
-                    <span class="inline-flex items-center gap-1.5 bg-[#082816] px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black text-emerald-200 border-2 border-emerald-600/60 shadow-md hover:-translate-y-0.5 transition-transform">
+                    <span
+                        class="inline-flex items-center gap-1.5 bg-[#082816] px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black text-emerald-200 border-2 border-emerald-600/60 shadow-md hover:-translate-y-0.5 transition-transform">
                         <i class="fa-solid fa-bolt text-amber-400"></i> Maximum Crunch
                     </span>
-                    <span class="inline-flex items-center gap-1.5 bg-[#082816] px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black text-emerald-200 border-2 border-emerald-600/60 shadow-md hover:-translate-y-0.5 transition-transform">
+                    <span
+                        class="inline-flex items-center gap-1.5 bg-[#082816] px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black text-emerald-200 border-2 border-emerald-600/60 shadow-md hover:-translate-y-0.5 transition-transform">
                         <i class="fa-solid fa-seedling text-amber-400"></i> 100% Real Herbs & Spices
                     </span>
-                    <span class="inline-flex items-center gap-1.5 bg-[#082816] px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black text-emerald-200 border-2 border-emerald-600/60 shadow-md hover:-translate-y-0.5 transition-transform">
+                    <span
+                        class="inline-flex items-center gap-1.5 bg-[#082816] px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black text-emerald-200 border-2 border-emerald-600/60 shadow-md hover:-translate-y-0.5 transition-transform">
                         <i class="fa-solid fa-burger text-amber-400"></i> Perfect for Burgers & Sandwiches
                     </span>
                 </div>
 
                 <!-- CTA Actions -->
                 <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 sm:gap-4 pt-4">
-                    <a href="#pickle-menu" class="w-full sm:w-auto bg-amber-400 hover:bg-amber-300 text-slate-950 font-display font-black text-base px-8 py-4 rounded-2xl shadow-xl shadow-amber-500/40 hover:scale-[1.02] active:scale-95 transition-all text-center flex items-center justify-center gap-2 border-2 border-amber-300">
+                    <a href="#pickle-menu"
+                        class="w-full sm:w-auto bg-amber-400 hover:bg-amber-300 text-slate-950 font-display font-black text-base px-8 py-4 rounded-2xl shadow-xl shadow-amber-500/40 hover:scale-[1.02] active:scale-95 transition-all text-center flex items-center justify-center gap-2 border-2 border-amber-300">
                         <span>Shop Pickle Jars</span>
                         <i class="fa-solid fa-arrow-down text-sm"></i>
                     </a>
-                    <a href="{% url 'store:about_story' %}" class="w-full sm:w-auto bg-[#082816] hover:bg-[#0c3820] text-white font-black text-sm px-6 py-4 rounded-2xl border-2 border-emerald-400 hover:border-emerald-300 transition-all text-center shadow-lg">
+                    <a href="{% url 'store:about_story' %}"
+                        class="w-full sm:w-auto bg-[#082816] hover:bg-[#0c3820] text-white font-black text-sm px-6 py-4 rounded-2xl border-2 border-emerald-400 hover:border-emerald-300 transition-all text-center shadow-lg">
                         Our Pickling Story
                     </a>
                 </div>
 
                 <!-- Delivery Fast Banner -->
-                <div class="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-2 sm:gap-4 text-xs text-emerald-200 font-bold">
-                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-truck-fast text-amber-400"></i> Nationwide Safe Delivery</span>
+                <div
+                    class="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-2 sm:gap-4 text-xs text-emerald-200 font-bold">
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-truck-fast text-amber-400"></i>
+                        Nationwide Safe Delivery</span>
                     <span class="hidden sm:inline">•</span>
-                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-shield-check text-emerald-400"></i> bKash / Cash on Delivery</span>
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-shield-check text-emerald-400"></i>
+                        bKash / Cash on Delivery</span>
                 </div>
             </div>
 
             <!-- Right Hero Visual Card (Interactive 3D Stacked Fan / Coverflow Showcase) -->
             <div class="lg:col-span-5 relative flex justify-center">
                 <!-- Background Ambient Spotlight Glow -->
-                <div class="hero-ambient-orbit absolute -inset-3 bg-gradient-to-tr from-emerald-500/35 via-amber-400/25 to-emerald-500/35 rounded-3xl blur-2xl pointer-events-none"></div>
+                <div
+                    class="hero-ambient-orbit absolute -inset-3 bg-gradient-to-tr from-emerald-500/35 via-amber-400/25 to-emerald-500/35 rounded-3xl blur-2xl pointer-events-none">
+                </div>
 
                 <!-- Floating Decorative Badge Top-Right -->
-                <div class="hero-float-chip-a hidden sm:flex absolute -top-3.5 -right-2 z-40 items-center gap-1.5 bg-slate-950/90 backdrop-blur-md text-amber-300 text-[11px] font-black px-3 py-1.5 rounded-full border border-amber-400/60 shadow-xl pointer-events-none">
+                <div
+                    class="hero-float-chip-a hidden sm:flex absolute -top-3.5 -right-2 z-40 items-center gap-1.5 bg-slate-950/90 backdrop-blur-md text-amber-300 text-[11px] font-black px-3 py-1.5 rounded-full border border-amber-400/60 shadow-xl pointer-events-none">
                     <span>🔥</span>
                     <span>Fresh Batch Ready</span>
                 </div>
 
                 <!-- Floating Decorative Badge Bottom-Left -->
-                <div class="hero-float-chip-b hidden sm:flex absolute -bottom-3 -left-2 z-40 items-center gap-1.5 bg-slate-950/90 backdrop-blur-md text-emerald-300 text-[11px] font-black px-3 py-1.5 rounded-full border border-emerald-400/60 shadow-xl pointer-events-none">
+                <div
+                    class="hero-float-chip-b hidden sm:flex absolute -bottom-3 -left-2 z-40 items-center gap-1.5 bg-slate-950/90 backdrop-blur-md text-emerald-300 text-[11px] font-black px-3 py-1.5 rounded-full border border-emerald-400/60 shadow-xl pointer-events-none">
                     <span>🥒</span>
                     <span>Zero Oil • Cold Brined</span>
                 </div>
 
-                <div class="relative w-full max-w-sm sm:max-w-md p-4 sm:p-5 rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.65)] border-2 border-emerald-400/80 backdrop-blur-xl bg-[#082816]/95" id="heroShowcaseContainer">
-                    
+                <div class="relative w-full max-w-sm sm:max-w-md p-4 sm:p-5 rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.65)] border-2 border-emerald-400/80 backdrop-blur-xl bg-[#082816]/95"
+                    id="heroShowcaseContainer">
+
                     <!-- Segmented Best 3 Switcher Pills -->
-                    <div class="flex items-center justify-between gap-1.5 p-1.5 bg-black/60 backdrop-blur-md rounded-2xl border border-emerald-500/40 mb-3 text-xs shadow-inner">
+                    <div
+                        class="flex items-center justify-between gap-1.5 p-1.5 bg-black/60 backdrop-blur-md rounded-2xl border border-emerald-500/40 mb-3 text-xs shadow-inner">
                         {% for hero_pickle in top_best_sellers %}
-                        <button type="button" 
-                                onclick="switchHeroPickle({{ forloop.counter0 }})" 
-                                id="hero-pill-{{ forloop.counter0 }}" 
-                                class="hero-pill-btn relative overflow-hidden flex-1 py-2 px-2.5 rounded-xl text-center cursor-pointer flex items-center justify-center gap-1.5 {% if forloop.first %}bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 font-black shadow-lg shadow-amber-400/25 ring-2 ring-amber-300/80 scale-[1.02]{% else %}text-emerald-200/85 hover:text-white hover:bg-white/10 font-bold{% endif %}">
-                            <span class="text-xs sm:text-sm">{% if forloop.counter == 1 %}🥇{% elif forloop.counter == 2 %}🥈{% else %}🥉{% endif %}</span>
+                        <button type="button" onclick="switchHeroPickle({{ forloop.counter0 }})"
+                            id="hero-pill-{{ forloop.counter0 }}"
+                            class="hero-pill-btn relative overflow-hidden flex-1 py-2 px-2.5 rounded-xl text-center cursor-pointer flex items-center justify-center gap-1.5 {% if forloop.first %}bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 font-black shadow-lg shadow-amber-400/25 ring-2 ring-amber-300/80 scale-[1.02]{% else %}text-emerald-200/85 hover:text-white hover:bg-white/10 font-bold{% endif %}">
+                            <span class="text-xs sm:text-sm">{% if forloop.counter == 1 %}🥇{% elif forloop.counter == 2
+                                %}🥈{% else %}🥉{% endif %}</span>
                             <span class="text-xs font-black tracking-wide whitespace-nowrap">
                                 {% if forloop.counter == 1 %}
-                                    #1 <span class="hidden sm:inline">Best Seller</span><span class="sm:hidden">Best</span>
+                                #1 <span class="hidden sm:inline">Best Seller</span><span class="sm:hidden">Best</span>
                                 {% elif forloop.counter == 2 %}
-                                    #2 <span class="hidden sm:inline">Top Pick</span><span class="sm:hidden">Top</span>
+                                #2 <span class="hidden sm:inline">Top Pick</span><span class="sm:hidden">Top</span>
                                 {% else %}
-                                    #3 <span class="hidden sm:inline">Fan Favorite</span><span class="sm:hidden">Fav</span>
+                                #3 <span class="hidden sm:inline">Fan Favorite</span><span class="sm:hidden">Fav</span>
                                 {% endif %}
                             </span>
                         </button>
@@ -296,39 +388,43 @@
                     <div class="hero-fan-deck" id="heroFanDeck">
                         {% for hero_pickle in top_best_sellers %}
                         <div class="hero-fan-card group {% if forloop.counter0 == 0 %}is-center{% elif forloop.counter0 == 1 %}is-right{% elif forloop.counter0 == 2 %}is-left{% else %}is-hidden{% endif %}"
-                             data-slide-idx="{{ forloop.counter0 }}"
-                             onclick="handleFanCardClick({{ forloop.counter0 }}, event)">
-                            <a href="{% url 'store:product_detail' hero_pickle.slug %}" class="w-full h-full block relative z-10 overflow-hidden">
-                                <img src="{{ hero_pickle.primary_image_url }}" 
-                                     alt="{{ hero_pickle.name }}" 
-                                     class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500" 
-                                     loading="eager" 
-                                     fetchpriority="high" 
-                                     decoding="async">
+                            data-slide-idx="{{ forloop.counter0 }}"
+                            onclick="handleFanCardClick({{ forloop.counter0 }}, event)">
+                            <a href="{% url 'store:product_detail' hero_pickle.slug %}"
+                                class="w-full h-full block relative z-10 overflow-hidden">
+                                <img src="{{ hero_pickle.primary_image_url }}" alt="{{ hero_pickle.name }}"
+                                    class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                                    loading="eager" fetchpriority="high" decoding="async">
                             </a>
 
                             {% if forloop.counter == 1 %}
-                            <div class="hero-card-badge absolute top-3 left-3 z-20 bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 text-[11px] sm:text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-xl flex items-center gap-1.5 ring-2 ring-amber-400/60">
+                            <div
+                                class="hero-card-badge absolute top-3 left-3 z-20 bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 text-[11px] sm:text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-xl flex items-center gap-1.5 ring-2 ring-amber-400/60">
                                 <i class="fa-solid fa-crown text-amber-950"></i>
                                 <span>#1 Best Seller</span>
                             </div>
                             {% elif forloop.counter == 2 %}
-                            <div class="hero-card-badge absolute top-3 left-3 z-20 bg-gradient-to-r from-amber-200 to-amber-100 text-slate-950 text-[11px] sm:text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-xl flex items-center gap-1.5 ring-2 ring-amber-300/50">
+                            <div
+                                class="hero-card-badge absolute top-3 left-3 z-20 bg-gradient-to-r from-amber-200 to-amber-100 text-slate-950 text-[11px] sm:text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-xl flex items-center gap-1.5 ring-2 ring-amber-300/50">
                                 <i class="fa-solid fa-medal text-amber-800"></i>
                                 <span>#2 Popular Pick</span>
                             </div>
                             {% else %}
-                            <div class="hero-card-badge absolute top-3 left-3 z-20 bg-gradient-to-r from-emerald-200 to-emerald-100 text-emerald-950 text-[11px] sm:text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-xl flex items-center gap-1.5 ring-2 ring-emerald-400/50">
+                            <div
+                                class="hero-card-badge absolute top-3 left-3 z-20 bg-gradient-to-r from-emerald-200 to-emerald-100 text-emerald-950 text-[11px] sm:text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-xl flex items-center gap-1.5 ring-2 ring-emerald-400/50">
                                 <i class="fa-solid fa-star text-emerald-800"></i>
                                 <span>#3 Fan Favorite</span>
                             </div>
                             {% endif %}
 
-                            <div class="hero-card-badge absolute bottom-3 right-3 z-20 bg-black/85 backdrop-blur-md text-white text-xs font-black px-2.5 py-1 rounded-xl border border-white/25 flex items-center gap-1 shadow-lg">
+                            <div
+                                class="hero-card-badge absolute bottom-3 right-3 z-20 bg-black/85 backdrop-blur-md text-white text-xs font-black px-2.5 py-1 rounded-xl border border-white/25 flex items-center gap-1 shadow-lg">
                                 {% if hero_pickle.reviews_count > 0 %}
-                                <span class="text-amber-300">⭐</span> <span>{{ hero_pickle.average_rating }}/5 ({{ hero_pickle.reviews_count }})</span>
+                                <span class="text-amber-300">⭐</span> <span>{{ hero_pickle.average_rating }}/5 ({{
+                                    hero_pickle.reviews_count }})</span>
                                 {% else %}
-                                <span class="text-amber-300">⭐</span> <span>{{ hero_pickle.crunch_rating|default:5 }}/5 Crunch</span>
+                                <span class="text-amber-300">⭐</span> <span>{{ hero_pickle.crunch_rating|default:5 }}/5
+                                    Crunch</span>
                                 {% endif %}
                             </div>
                         </div>
@@ -340,27 +436,37 @@
                         {% for hero_pickle in top_best_sellers %}
                         <div class="hero-info-slide {% if forloop.first %}is-active{% endif %} text-center space-y-1.5">
                             <h3 class="font-display font-black text-xl sm:text-2xl text-white">
-                                <a href="{% url 'store:product_detail' hero_pickle.slug %}" class="hover:text-amber-300 transition-colors">
+                                <a href="{% url 'store:product_detail' hero_pickle.slug %}"
+                                    class="hover:text-amber-300 transition-colors">
                                     {{ hero_pickle.name }}
                                 </a>
                             </h3>
-                            <p class="text-[11px] text-amber-200 font-bold sm:hidden">Taste: {{ hero_pickle.flavor_profile }}</p>
-                            <p class="text-xs text-emerald-100/90 font-semibold line-clamp-1 hidden sm:block">{{ hero_pickle.tagline }}</p>
+                            <p class="text-[11px] text-amber-200 font-bold sm:hidden">Taste: {{
+                                hero_pickle.flavor_profile }}</p>
+                            <p class="text-xs text-emerald-100/90 font-semibold line-clamp-1 hidden sm:block">{{
+                                hero_pickle.tagline }}</p>
                             <div class="flex items-center justify-center gap-3 pt-0.5">
-                                <span class="font-display font-black text-2xl sm:text-3xl text-amber-300 drop-shadow-sm">৳{{ hero_pickle.price_bdt|floatformat:0 }}</span>
-                                {% if hero_pickle.original_price_bdt and hero_pickle.original_price_bdt > hero_pickle.price_bdt %}
-                                <span class="text-sm line-through text-emerald-300/60 font-bold">৳{{ hero_pickle.original_price_bdt|floatformat:0 }}</span>
+                                <span
+                                    class="font-display font-black text-2xl sm:text-3xl text-amber-300 drop-shadow-sm">৳{{
+                                    hero_pickle.price_bdt|floatformat:0 }}</span>
+                                {% if hero_pickle.original_price_bdt and hero_pickle.original_price_bdt >
+                                hero_pickle.price_bdt %}
+                                <span class="text-sm line-through text-emerald-300/60 font-bold">৳{{
+                                    hero_pickle.original_price_bdt|floatformat:0 }}</span>
                                 {% endif %}
                             </div>
                             <div class="pt-2 flex items-center justify-center gap-2">
-                                <button type="button" onclick="prevHeroPickle()" aria-label="Previous Best Seller" class="w-10 h-10 rounded-xl bg-black/40 hover:bg-black/70 border border-emerald-500/40 text-emerald-200 hover:text-amber-300 flex items-center justify-center transition cursor-pointer shrink-0">
+                                <button type="button" onclick="prevHeroPickle()" aria-label="Previous Best Seller"
+                                    class="w-10 h-10 rounded-xl bg-black/40 hover:bg-black/70 border border-emerald-500/40 text-emerald-200 hover:text-amber-300 flex items-center justify-center transition cursor-pointer shrink-0">
                                     <i class="fa-solid fa-chevron-left text-xs"></i>
                                 </button>
-                                <a href="{% url 'store:product_detail' hero_pickle.slug %}" class="flex-1 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 hover:from-amber-300 hover:to-amber-200 text-slate-950 text-xs font-black py-3 px-4 rounded-xl shadow-lg shadow-amber-400/25 transition-all hover:shadow-amber-400/40 active:scale-95 text-center flex items-center justify-center gap-1.5 border border-amber-200">
+                                <a href="{% url 'store:product_detail' hero_pickle.slug %}"
+                                    class="flex-1 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 hover:from-amber-300 hover:to-amber-200 text-slate-950 text-xs font-black py-3 px-4 rounded-xl shadow-lg shadow-amber-400/25 transition-all hover:shadow-amber-400/40 active:scale-95 text-center flex items-center justify-center gap-1.5 border border-amber-200">
                                     <span>Order Best Seller Jar</span>
                                     <i class="fa-solid fa-arrow-right text-[10px]"></i>
                                 </a>
-                                <button type="button" onclick="nextHeroPickle(true)" aria-label="Next Best Seller" class="w-10 h-10 rounded-xl bg-black/40 hover:bg-black/70 border border-emerald-500/40 text-emerald-200 hover:text-amber-300 flex items-center justify-center transition cursor-pointer shrink-0">
+                                <button type="button" onclick="nextHeroPickle(true)" aria-label="Next Best Seller"
+                                    class="w-10 h-10 rounded-xl bg-black/40 hover:bg-black/70 border border-emerald-500/40 text-emerald-200 hover:text-amber-300 flex items-center justify-center transition cursor-pointer shrink-0">
                                     <i class="fa-solid fa-chevron-right text-xs"></i>
                                 </button>
                             </div>
@@ -380,7 +486,8 @@
     <div class="max-w-7xl mx-auto">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center sm:text-left">
             <div class="flex flex-col sm:flex-row items-center gap-3">
-                <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-900 flex items-center justify-center text-2xl flex-shrink-0 border border-emerald-300">
+                <div
+                    class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-900 flex items-center justify-center text-2xl flex-shrink-0 border border-emerald-300">
                     🥒
                 </div>
                 <div>
@@ -389,7 +496,8 @@
                 </div>
             </div>
             <div class="flex flex-col sm:flex-row items-center gap-3">
-                <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-900 flex items-center justify-center text-2xl flex-shrink-0 border border-amber-300">
+                <div
+                    class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-900 flex items-center justify-center text-2xl flex-shrink-0 border border-amber-300">
                     🧄
                 </div>
                 <div>
@@ -398,7 +506,8 @@
                 </div>
             </div>
             <div class="flex flex-col sm:flex-row items-center gap-3">
-                <div class="w-12 h-12 rounded-2xl bg-teal-100 text-teal-900 flex items-center justify-center text-2xl flex-shrink-0 border border-teal-300">
+                <div
+                    class="w-12 h-12 rounded-2xl bg-teal-100 text-teal-900 flex items-center justify-center text-2xl flex-shrink-0 border border-teal-300">
                     🍔
                 </div>
                 <div>
@@ -407,7 +516,8 @@
                 </div>
             </div>
             <div class="flex flex-col sm:flex-row items-center gap-3">
-                <div class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-900 flex items-center justify-center text-2xl flex-shrink-0 border border-rose-300">
+                <div
+                    class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-900 flex items-center justify-center text-2xl flex-shrink-0 border border-rose-300">
                     ⚡
                 </div>
                 <div>
@@ -422,7 +532,8 @@
 <!-- Main Product Flavor Menu -->
 <section id="pickle-menu" class="py-14 px-3 sm:px-6 lg:px-8 max-w-7xl mx-auto">
     <div class="text-center max-w-2xl mx-auto mb-8 sm:mb-10">
-        <span class="text-xs font-black uppercase tracking-widest text-emerald-800 bg-emerald-100 border border-emerald-300 px-3.5 py-1.5 rounded-full">
+        <span
+            class="text-xs font-black uppercase tracking-widest text-emerald-800 bg-emerald-100 border border-emerald-300 px-3.5 py-1.5 rounded-full">
             Artisanal Pickle Lineup
         </span>
         <h2 class="font-display font-black text-2xl sm:text-4xl text-slate-950 mt-3">
@@ -434,41 +545,50 @@
     </div>
 
     <!-- Special Offer Callout: FREE Nationwide Delivery on 4+ Jars -->
-    <div class="mb-8 max-w-2xl mx-auto bg-gradient-to-r from-emerald-900 via-emerald-800 to-teal-900 text-white rounded-2xl p-4 sm:p-5 shadow-lg border border-emerald-500/40 flex items-center justify-between gap-3 text-left">
+    <div
+        class="mb-8 max-w-2xl mx-auto bg-gradient-to-r from-emerald-900 via-emerald-800 to-teal-900 text-white rounded-2xl p-4 sm:p-5 shadow-lg border border-emerald-500/40 flex items-center justify-between gap-3 text-left">
         <div class="flex items-center gap-3">
-            <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center text-xl shrink-0 border border-white/20">
+            <div
+                class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center text-xl shrink-0 border border-white/20">
                 🚚
             </div>
             <div>
                 <div class="flex items-center gap-2">
-                    <span class="bg-amber-400 text-slate-950 text-[10px] sm:text-xs font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Free Delivery Offer</span>
+                    <span
+                        class="bg-amber-400 text-slate-950 text-[10px] sm:text-xs font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Free
+                        Delivery Offer</span>
                     <span class="text-xs sm:text-sm font-extrabold text-emerald-200">Across Bangladesh</span>
                 </div>
-                <p class="text-xs sm:text-sm text-white/90 font-medium mt-0.5">Order any <strong>4 or more jars</strong> to get <strong>100% FREE Home Delivery</strong> (Save ৳150)!</p>
+                <p class="text-xs sm:text-sm text-white/90 font-medium mt-0.5">Order any <strong>4 or more jars</strong>
+                    to get <strong>100% FREE Home Delivery</strong> (Save ৳150)!</p>
             </div>
         </div>
         <div class="hidden sm:flex items-center shrink-0">
-            <span class="text-xs font-extrabold bg-white/15 text-white border border-white/30 px-3 py-1.5 rounded-xl">Auto Applied in Cart</span>
+            <span
+                class="text-xs font-extrabold bg-white/15 text-white border border-white/30 px-3 py-1.5 rounded-xl">Auto
+                Applied in Cart</span>
         </div>
     </div>
 
     <!-- Category Filter Tabs: Horizontal swipeable chips on mobile, centered row on desktop -->
     <div class="relative mb-6 sm:mb-8 -mx-3 sm:mx-0">
-        <div id="categoryPillsContainer" class="flex items-center overflow-x-auto no-scrollbar gap-2 px-3 sm:px-0 sm:flex-wrap sm:justify-center text-xs font-bold scroll-smooth pb-1">
-            <a href="{% url 'store:index' %}#pickle-menu" 
-               {% if not selected_cat %}id="activeCategoryPill"{% endif %}
-               class="shrink-0 whitespace-nowrap px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-full transition-all text-xs font-black active:scale-95 flex items-center gap-1.5 {% if not selected_cat %}bg-slate-950 text-white shadow-md ring-2 ring-slate-950/20{% else %}bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 shadow-2xs{% endif %}">
+        <div id="categoryPillsContainer"
+            class="flex items-center overflow-x-auto no-scrollbar gap-2 px-3 sm:px-0 sm:flex-wrap sm:justify-center text-xs font-bold scroll-smooth pb-1">
+            <a href="{% url 'store:index' %}#pickle-menu" {% if not selected_cat %}id="activeCategoryPill" {% endif %}
+                class="shrink-0 whitespace-nowrap px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-full transition-all text-xs font-black active:scale-95 flex items-center gap-1.5 {% if not selected_cat %}bg-slate-950 text-white shadow-md ring-2 ring-slate-950/20{% else %}bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 shadow-2xs{% endif %}">
                 <span>🥒 All Pickles</span>
-                <span class="px-1.5 py-0.5 rounded-full text-[10px] font-extrabold {% if not selected_cat %}bg-white/20 text-white{% else %}bg-slate-100 text-slate-600 border border-slate-200{% endif %}">
+                <span
+                    class="px-1.5 py-0.5 rounded-full text-[10px] font-extrabold {% if not selected_cat %}bg-white/20 text-white{% else %}bg-slate-100 text-slate-600 border border-slate-200{% endif %}">
                     {{ total_products_count }}
                 </span>
             </a>
             {% for cat in categories %}
-            <a href="{% url 'store:index' %}?category={{ cat.slug }}#pickle-menu" 
-               {% if selected_cat == cat.slug %}id="activeCategoryPill"{% endif %}
-               class="shrink-0 whitespace-nowrap px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-full transition-all text-xs font-black active:scale-95 flex items-center gap-1.5 {% if selected_cat == cat.slug %}bg-slate-950 text-white shadow-md ring-2 ring-slate-950/20{% else %}bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 shadow-2xs{% endif %}">
+            <a href="{% url 'store:index' %}?category={{ cat.slug }}#pickle-menu" {% if selected_cat==cat.slug
+                %}id="activeCategoryPill" {% endif %}
+                class="shrink-0 whitespace-nowrap px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-full transition-all text-xs font-black active:scale-95 flex items-center gap-1.5 {% if selected_cat == cat.slug %}bg-slate-950 text-white shadow-md ring-2 ring-slate-950/20{% else %}bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 shadow-2xs{% endif %}">
                 <span>{{ cat.name }}</span>
-                <span class="px-1.5 py-0.5 rounded-full text-[10px] font-extrabold {% if selected_cat == cat.slug %}bg-white/20 text-white{% else %}bg-slate-100 text-slate-600 border border-slate-200{% endif %}">
+                <span
+                    class="px-1.5 py-0.5 rounded-full text-[10px] font-extrabold {% if selected_cat == cat.slug %}bg-white/20 text-white{% else %}bg-slate-100 text-slate-600 border border-slate-200{% endif %}">
                     {{ cat.product_count }}
                 </span>
             </a>
@@ -479,57 +599,72 @@
     <!-- Products Grid (2 columns on mobile, 3 columns on desktop - Spacious & Premium) -->
     <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 lg:gap-8">
         {% for product in all_products %}
-        <div class="product-card bg-white rounded-2xl sm:rounded-3xl border transition-all duration-300 flex flex-col justify-between overflow-hidden group h-full relative {% if not product.is_in_stock or product.stock_count <= 0 %}border-slate-200/90 shadow-2xs{% elif product.custom_badge %}{% if 'season' in product.custom_badge|lower or 'ended' in product.custom_badge|lower or 'শেষ' in product.custom_badge %}card-flash-rose border-rose-400/90{% elif 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower or 'launch' in product.custom_badge|lower or 'নতুন' in product.custom_badge %}card-flash-emerald border-emerald-400/90{% else %}card-flash-gold border-amber-400/90{% endif %}{% else %}border-slate-200/90 shadow-2xs hover:shadow-lg{% endif %}">
-            
+        <div
+            class="product-card bg-white rounded-2xl sm:rounded-3xl border transition-all duration-300 flex flex-col justify-between overflow-hidden group h-full relative {% if not product.is_in_stock or product.stock_count <= 0 %}border-slate-200/90 shadow-2xs{% elif product.custom_badge %}{% if 'season' in product.custom_badge|lower or 'ended' in product.custom_badge|lower or 'শেষ' in product.custom_badge %}card-flash-rose border-rose-400/90{% elif 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower or 'launch' in product.custom_badge|lower or 'নতুন' in product.custom_badge %}card-flash-emerald border-emerald-400/90{% else %}card-flash-gold border-amber-400/90{% endif %}{% else %}border-slate-200/90 shadow-2xs hover:shadow-lg{% endif %}">
+
             <!-- Card Image Box -->
             <div class="relative aspect-square overflow-hidden bg-slate-100 border-b border-slate-150">
-                <a href="{% url 'store:product_detail' product.slug %}" class="block w-full h-full" aria-label="{{ product.name }}">
-                    <img src="{{ product.primary_image_url }}" alt="{{ product.name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" loading="lazy" decoding="async" width="1024" height="1024">
+                <a href="{% url 'store:product_detail' product.slug %}" class="block w-full h-full"
+                    aria-label="{{ product.name }}">
+                    <img src="{{ product.primary_image_url }}" alt="{{ product.name }}"
+                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+                        loading="lazy" decoding="async" width="1024" height="1024">
                 </a>
 
                 <!-- Top Left Badge: Stock Out (Single Clean Red Badge), Custom Badge, or Best Seller Ranking -->
-                <div class="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 z-10 pointer-events-none flex flex-col gap-1 max-w-[85%]">
-                    {% if not product.is_in_stock or product.stock_count <= 0 %}
-                    <span class="inline-flex items-center bg-red-600 text-white font-black text-[10px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md tracking-wide uppercase border border-red-500">
+                <div
+                    class="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 z-10 pointer-events-none flex flex-col gap-1 max-w-[85%]">
+                    {% if not product.is_in_stock or product.stock_count <= 0 %} <span
+                        class="inline-flex items-center bg-red-600 text-white font-black text-[10px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md tracking-wide uppercase border border-red-500">
                         <span>Stock Out</span>
-                    </span>
-                    {% elif product.custom_badge %}
-                        {% if 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower or 'launch' in product.custom_badge|lower or 'নতুন' in product.custom_badge %}
-                        <span class="shimmer-ribbon inline-flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 text-white font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md tracking-tight border border-emerald-400/50">
+                        </span>
+                        {% elif product.custom_badge %}
+                        {% if 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower or 'launch'
+                        in product.custom_badge|lower or 'নতুন' in product.custom_badge %}
+                        <span
+                            class="shimmer-ribbon inline-flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 text-white font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md tracking-tight border border-emerald-400/50">
                             <span class="relative flex h-1.5 w-1.5">
-                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-80"></span>
+                                <span
+                                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-80"></span>
                                 <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-white"></span>
                             </span>
                             <span>✨ New Arrival</span>
                         </span>
-                        {% elif 'season' in product.custom_badge|lower or 'ended' in product.custom_badge|lower or 'শেষ' in product.custom_badge %}
-                        <span class="inline-flex items-center gap-1.5 bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md tracking-tight border border-rose-400/50">
+                        {% elif 'season' in product.custom_badge|lower or 'ended' in product.custom_badge|lower or 'শেষ'
+                        in product.custom_badge %}
+                        <span
+                            class="inline-flex items-center gap-1.5 bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md tracking-tight border border-rose-400/50">
                             <i class="fa-solid fa-hourglass-half text-[8px] sm:text-[9px]"></i>
                             <span>🍂 Season Ending</span>
                         </span>
                         {% else %}
-                        <span class="inline-flex items-center gap-1 bg-amber-400 text-slate-950 font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md border border-amber-300 tracking-tight">
+                        <span
+                            class="inline-flex items-center gap-1 bg-amber-400 text-slate-950 font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md border border-amber-300 tracking-tight">
                             <span>{{ product.custom_badge }}</span>
                         </span>
                         {% endif %}
-                    {% elif top_best_sellers.0 and product.id == top_best_sellers.0.id %}
-                        <span class="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md border border-amber-400 tracking-tight ring-1 ring-amber-400/60 uppercase">
+                        {% elif top_best_sellers.0 and product.id == top_best_sellers.0.id %}
+                        <span
+                            class="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md border border-amber-400 tracking-tight ring-1 ring-amber-400/60 uppercase">
                             <i class="fa-solid fa-crown text-[8px] sm:text-[9px] text-amber-950"></i>
                             <span>#1 Best Seller</span>
                         </span>
-                    {% elif top_best_sellers.1 and product.id == top_best_sellers.1.id %}
-                        <span class="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-200 to-amber-100 text-slate-950 font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md border border-amber-300 tracking-tight ring-1 ring-amber-300/50 uppercase">
+                        {% elif top_best_sellers.1 and product.id == top_best_sellers.1.id %}
+                        <span
+                            class="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-200 to-amber-100 text-slate-950 font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md border border-amber-300 tracking-tight ring-1 ring-amber-300/50 uppercase">
                             <i class="fa-solid fa-medal text-[8px] sm:text-[9px] text-amber-800"></i>
                             <span>#2 Popular Pick</span>
                         </span>
-                    {% elif top_best_sellers.2 and product.id == top_best_sellers.2.id %}
-                        <span class="inline-flex items-center gap-1.5 bg-gradient-to-r from-emerald-200 to-emerald-100 text-emerald-950 font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md border border-emerald-300 tracking-tight ring-1 ring-emerald-400/50 uppercase">
+                        {% elif top_best_sellers.2 and product.id == top_best_sellers.2.id %}
+                        <span
+                            class="inline-flex items-center gap-1.5 bg-gradient-to-r from-emerald-200 to-emerald-100 text-emerald-950 font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md border border-emerald-300 tracking-tight ring-1 ring-emerald-400/50 uppercase">
                             <i class="fa-solid fa-star text-[8px] sm:text-[9px] text-emerald-800"></i>
                             <span>#3 Fan Favorite</span>
                         </span>
-                    {% else %}
+                        {% else %}
                         <!-- Only shown when NO other badge exists -->
-                        <span class="inline-flex items-center gap-1 bg-white/95 backdrop-blur-xs text-slate-800 font-black text-[8.5px] sm:text-[10px] px-2.5 py-0.5 rounded-full shadow-2xs border border-slate-200/80 tracking-tight">
+                        <span
+                            class="inline-flex items-center gap-1 bg-white/95 backdrop-blur-xs text-slate-800 font-black text-[8.5px] sm:text-[10px] px-2.5 py-0.5 rounded-full shadow-2xs border border-slate-200/80 tracking-tight">
                             {% if product.spice_level == 'MILD' %}🌿 Mild & Refreshing
                             {% elif product.spice_level == 'MEDIUM' %}🌶️ Medium Zest
                             {% elif product.spice_level == 'HOT' %}🔥 Hot & Tangy
@@ -537,18 +672,21 @@
                             {% else %}{{ product.get_spice_level_display }}
                             {% endif %}
                         </span>
-                    {% endif %}
+                        {% endif %}
                 </div>
 
                 <!-- Weight badge (Top Right) -->
-                <span class="absolute top-1.5 right-1.5 sm:top-3 sm:right-3 bg-slate-950/75 backdrop-blur-xs text-white text-[8.5px] sm:text-[10px] font-black px-1.5 sm:px-2 py-0.5 rounded-full shadow-xs pointer-events-none z-10 border border-white/20">
+                <span
+                    class="absolute top-1.5 right-1.5 sm:top-3 sm:right-3 bg-slate-950/75 backdrop-blur-xs text-white text-[8.5px] sm:text-[10px] font-black px-1.5 sm:px-2 py-0.5 rounded-full shadow-xs pointer-events-none z-10 border border-white/20">
                     {{ product.jar_weight_grams }}g
                 </span>
 
                 <!-- Refrigerate Immediately Badge (Bottom Left - Compact on Mobile) -->
-                <div class="absolute bottom-1.5 left-1.5 sm:bottom-2.5 sm:left-2.5 bg-slate-950/85 backdrop-blur-xs text-cyan-300 text-[7.5px] sm:text-[9px] font-black px-1.5 sm:px-2 py-0.5 rounded-full border border-cyan-400/25 flex items-center gap-1 shadow-xs pointer-events-none z-10">
+                <div
+                    class="absolute bottom-1.5 left-1.5 sm:bottom-2.5 sm:left-2.5 bg-slate-950/85 backdrop-blur-xs text-cyan-300 text-[7.5px] sm:text-[9px] font-black px-1.5 sm:px-2 py-0.5 rounded-full border border-cyan-400/25 flex items-center gap-1 shadow-xs pointer-events-none z-10">
                     <i class="fa-solid fa-snowflake text-cyan-400 text-[7px] sm:text-[8px] shrink-0"></i>
-                    <span class="tracking-tight uppercase">Refrigerate</span><span class="hidden sm:inline uppercase"> Immediately</span>
+                    <span class="tracking-tight uppercase">Refrigerate</span><span class="hidden sm:inline uppercase">
+                        Immediately</span>
                 </div>
             </div>
 
@@ -556,18 +694,23 @@
             <div class="p-2.5 sm:p-4 flex-1 flex flex-col justify-between gap-1.5 sm:gap-2.5">
                 <div class="space-y-1 sm:space-y-1.5">
                     <!-- Product Name (Uniform 2-line height for aligned grid) -->
-                    <h3 class="font-display font-black text-xs sm:text-base lg:text-lg text-slate-950 group-hover:text-emerald-700 transition leading-snug line-clamp-2 min-h-[32px] sm:min-h-[44px]">
+                    <h3
+                        class="font-display font-black text-xs sm:text-base lg:text-lg text-slate-950 group-hover:text-emerald-700 transition leading-snug line-clamp-2 min-h-[32px] sm:min-h-[44px]">
                         <a href="{% url 'store:product_detail' product.slug %}">{{ product.name }}</a>
                     </h3>
 
                     <!-- Cut style & Rating in one sleek, compact line -->
-                    <div class="flex items-center justify-between text-[10px] sm:text-xs text-slate-500 font-bold gap-1">
-                        <span class="text-emerald-900 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/80 text-[9px] sm:text-[10.5px] font-black truncate">
+                    <div
+                        class="flex items-center justify-between text-[10px] sm:text-xs text-slate-500 font-bold gap-1">
+                        <span
+                            class="text-emerald-900 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/80 text-[9px] sm:text-[10.5px] font-black truncate">
                             🥒 {{ product.get_cut_style_display }}
                         </span>
-                        <span class="text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200/80 flex items-center gap-1 text-[9px] sm:text-[10.5px] font-black shrink-0">
+                        <span
+                            class="text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200/80 flex items-center gap-1 text-[9px] sm:text-[10.5px] font-black shrink-0">
                             <i class="fa-solid fa-star text-amber-400 text-[8px] sm:text-[9px]"></i>
-                            <span>{% if product.reviews_count > 0 %}{{ product.average_rating }}{% else %}{{ product.crunch_rating|default:5 }}{% endif %}/5</span>
+                            <span>{% if product.reviews_count > 0 %}{{ product.average_rating }}{% else %}{{
+                                product.crunch_rating|default:5 }}{% endif %}/5</span>
                         </span>
                     </div>
                 </div>
@@ -575,33 +718,34 @@
                 <!-- Price and Add to Bag Footer Row (Mobile Side-by-Side, Zero Clutter) -->
                 <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-1 mt-auto">
                     <div class="min-w-0">
-                        <span class="font-display font-black text-sm sm:text-xl text-slate-950 block leading-tight">৳{{ product.price_bdt|floatformat:0 }}</span>
+                        <span class="font-display font-black text-sm sm:text-xl text-slate-950 block leading-tight">৳{{
+                            product.price_bdt|floatformat:0 }}</span>
                         {% if product.original_price_bdt and product.original_price_bdt > product.price_bdt %}
                         <div class="flex items-center gap-1 mt-0.5">
-                            <span class="text-[10px] sm:text-xs text-slate-400 line-through font-bold leading-none">৳{{ product.original_price_bdt|floatformat:0 }}</span>
-                            <span class="text-[8px] sm:text-[9px] font-black text-rose-700 bg-rose-50 border border-rose-200 px-1 py-0.2 rounded leading-none">-৳{{ product.discount_amount|floatformat:0 }}</span>
+                            <span class="text-[10px] sm:text-xs text-slate-400 line-through font-bold leading-none">৳{{
+                                product.original_price_bdt|floatformat:0 }}</span>
+                            <span
+                                class="text-[8px] sm:text-[9px] font-black text-rose-700 bg-rose-50 border border-rose-200 px-1 py-0.2 rounded leading-none">-৳{{
+                                product.discount_amount|floatformat:0 }}</span>
                         </div>
                         {% endif %}
                     </div>
 
                     <!-- Quick Add Button with AJAX OR Stock Out Disabled Button -->
-                    {% if not product.is_in_stock or product.stock_count <= 0 %}
-                    <button type="button" 
-                            disabled 
-                            class="h-8 sm:h-9 px-3 rounded-xl bg-slate-100 text-slate-400 font-bold text-[11px] sm:text-xs shadow-none cursor-not-allowed flex items-center justify-center border border-slate-200"
-                            aria-label="{{ product.name }} is out of stock">
+                    {% if not product.is_in_stock or product.stock_count <= 0 %} <button type="button" disabled
+                        class="h-8 sm:h-9 px-3 rounded-xl bg-slate-100 text-slate-400 font-bold text-[11px] sm:text-xs shadow-none cursor-not-allowed flex items-center justify-center border border-slate-200"
+                        aria-label="{{ product.name }} is out of stock">
                         <span>Stock Out</span>
-                    </button>
-                    {% else %}
-                    <button type="button" 
-                            onclick="ajaxAddToCart({{ product.id }}, 1, this)" 
+                        </button>
+                        {% else %}
+                        <button type="button" onclick="ajaxAddToCart({{ product.id }}, 1, this)"
                             class="h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl bg-[#15803d] hover:bg-[#166534] active:scale-95 text-white font-black text-[11px] sm:text-xs shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-1 cursor-pointer shrink-0 border border-emerald-600/30"
                             aria-label="Add {{ product.name }} to bag">
-                        <i class="fa-solid fa-plus text-[9px] sm:text-[10px]"></i>
-                        <span class="inline sm:hidden">Add</span>
-                        <span class="hidden sm:inline">Add to Bag</span>
-                    </button>
-                    {% endif %}
+                            <i class="fa-solid fa-plus text-[9px] sm:text-[10px]"></i>
+                            <span class="inline sm:hidden">Add</span>
+                            <span class="hidden sm:inline">Add to Bag</span>
+                        </button>
+                        {% endif %}
                 </div>
 
             </div>
@@ -616,70 +760,89 @@
 </section>
 
 <!-- American Pickles Benefits & Highlights -->
-<section class="py-10 sm:py-14 bg-gradient-to-b from-slate-50 to-emerald-50/40 px-3 sm:px-6 lg:px-8 border-y border-slate-200">
+<section
+    class="py-10 sm:py-14 bg-gradient-to-b from-slate-50 to-emerald-50/40 px-3 sm:px-6 lg:px-8 border-y border-slate-200">
     <div class="max-w-6xl mx-auto">
         <div class="text-center max-w-2xl mx-auto mb-6 sm:mb-10">
-            <span class="text-[11px] sm:text-xs font-black uppercase tracking-widest text-emerald-900 bg-emerald-100 border border-emerald-300 px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full inline-block">
+            <span
+                class="text-[11px] sm:text-xs font-black uppercase tracking-widest text-emerald-900 bg-emerald-100 border border-emerald-300 px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full inline-block">
                 Why You'll Love American Pickles 🥒
             </span>
             <h2 class="font-display font-black text-xl sm:text-3xl lg:text-4xl text-slate-950 mt-2.5 sm:mt-3">
                 The Unique Benefits of Artisanal Vinegar Pickles
             </h2>
             <p class="text-xs sm:text-sm text-slate-600 font-medium mt-1.5 sm:mt-2">
-                Crafted in small batches with hand-selected crisp local veggies, pure vinegar brine, and aromatic whole spices — made for serious crunch and unbeatable flavor!
+                Crafted in small batches with hand-selected crisp local veggies, pure vinegar brine, and aromatic whole
+                spices — made for serious crunch and unbeatable flavor!
             </p>
         </div>
 
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
             <!-- Benefit 1: Ultra Crunch -->
-            <div class="bg-white p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs hover:shadow-md hover:border-emerald-500 transition-all group flex flex-col">
-                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-base sm:text-xl mb-2.5 sm:mb-4 group-hover:scale-110 transition-transform shrink-0">
+            <div
+                class="bg-white p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs hover:shadow-md hover:border-emerald-500 transition-all group flex flex-col">
+                <div
+                    class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-base sm:text-xl mb-2.5 sm:mb-4 group-hover:scale-110 transition-transform shrink-0">
                     <i class="fa-solid fa-bolt"></i>
                 </div>
-                <h3 class="font-display font-black text-xs sm:text-base lg:text-lg text-slate-900 mb-1 sm:mb-2 leading-tight">
+                <h3
+                    class="font-display font-black text-xs sm:text-base lg:text-lg text-slate-900 mb-1 sm:mb-2 leading-tight">
                     Signature Crisp Snap
                 </h3>
                 <p class="text-[11px] sm:text-xs lg:text-sm text-slate-600 leading-snug sm:leading-relaxed">
-                    Cold-brined crisp local cucumbers retain their fresh, loud audible crunch in every single bite without ever going soggy.
+                    Cold-brined crisp local cucumbers retain their fresh, loud audible crunch in every single bite
+                    without ever going soggy.
                 </p>
             </div>
 
             <!-- Benefit 2: 100% Oil-Free -->
-            <div class="bg-white p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs hover:shadow-md hover:border-emerald-500 transition-all group flex flex-col">
-                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center text-base sm:text-xl mb-2.5 sm:mb-4 group-hover:scale-110 transition-transform shrink-0">
+            <div
+                class="bg-white p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs hover:shadow-md hover:border-emerald-500 transition-all group flex flex-col">
+                <div
+                    class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center text-base sm:text-xl mb-2.5 sm:mb-4 group-hover:scale-110 transition-transform shrink-0">
                     <i class="fa-solid fa-droplet-slash"></i>
                 </div>
-                <h3 class="font-display font-black text-xs sm:text-base lg:text-lg text-slate-900 mb-1 sm:mb-2 leading-tight">
+                <h3
+                    class="font-display font-black text-xs sm:text-base lg:text-lg text-slate-900 mb-1 sm:mb-2 leading-tight">
                     100% Oil-Free & Light
                 </h3>
                 <p class="text-[11px] sm:text-xs lg:text-sm text-slate-600 leading-snug sm:leading-relaxed">
-                    Zero heavy oils. Brined purely in filtered water, cane vinegar, Himalayan pink salt, garlic cloves, and whole mustard seeds.
+                    Zero heavy oils. Brined purely in filtered water, cane vinegar, Himalayan pink salt, garlic cloves,
+                    and whole mustard seeds.
                 </p>
             </div>
 
             <!-- Benefit 3: Perfect Food Pairing -->
-            <div class="bg-white p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs hover:shadow-md hover:border-emerald-500 transition-all group flex flex-col">
-                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center text-base sm:text-xl mb-2.5 sm:mb-4 group-hover:scale-110 transition-transform shrink-0">
+            <div
+                class="bg-white p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs hover:shadow-md hover:border-emerald-500 transition-all group flex flex-col">
+                <div
+                    class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center text-base sm:text-xl mb-2.5 sm:mb-4 group-hover:scale-110 transition-transform shrink-0">
                     <i class="fa-solid fa-burger"></i>
                 </div>
-                <h3 class="font-display font-black text-xs sm:text-base lg:text-lg text-slate-900 mb-1 sm:mb-2 leading-tight">
+                <h3
+                    class="font-display font-black text-xs sm:text-base lg:text-lg text-slate-900 mb-1 sm:mb-2 leading-tight">
                     Palate Cleanser & Booster
                 </h3>
                 <p class="text-[11px] sm:text-xs lg:text-sm text-slate-600 leading-snug sm:leading-relaxed">
-                    Pairs deliciously with Smash Burgers, Fried Chicken, Shawarmas, Tehari, Biryani, Bhuna Khichuri, Kebabs & Rice!
+                    Pairs deliciously with Smash Burgers, Fried Chicken, Shawarmas, Tehari, Biryani, Bhuna Khichuri,
+                    Kebabs & Rice!
                 </p>
             </div>
 
             <!-- Benefit 4: Low Calorie & Guilt-Free -->
-            <div class="bg-white p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs hover:shadow-md hover:border-emerald-500 transition-all group flex flex-col">
-                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-lime-100 text-lime-800 flex items-center justify-center text-base sm:text-xl mb-2.5 sm:mb-4 group-hover:scale-110 transition-transform shrink-0">
+            <div
+                class="bg-white p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs hover:shadow-md hover:border-emerald-500 transition-all group flex flex-col">
+                <div
+                    class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-lime-100 text-lime-800 flex items-center justify-center text-base sm:text-xl mb-2.5 sm:mb-4 group-hover:scale-110 transition-transform shrink-0">
                     <i class="fa-solid fa-heart-pulse"></i>
                 </div>
-                <h3 class="font-display font-black text-xs sm:text-base lg:text-lg text-slate-900 mb-1 sm:mb-2 leading-tight">
+                <h3
+                    class="font-display font-black text-xs sm:text-base lg:text-lg text-slate-900 mb-1 sm:mb-2 leading-tight">
                     Fresh & Guilt-Free Snacking
                 </h3>
                 <p class="text-[11px] sm:text-xs lg:text-sm text-slate-600 leading-snug sm:leading-relaxed">
-                    Naturally low calorie, refreshing, and packed with aromatic spices that aid digestion and elevate your meals.
+                    Naturally low calorie, refreshing, and packed with aromatic spices that aid digestion and elevate
+                    your meals.
                 </p>
             </div>
         </div>
@@ -689,7 +852,8 @@
 <!-- Customer Reviews Section -->
 <section id="customer-reviews" class="py-10 sm:py-14 px-3 sm:px-6 lg:px-8 max-w-7xl mx-auto scroll-mt-20">
     <div class="text-center max-w-2xl mx-auto mb-6 sm:mb-10">
-        <span class="text-[11px] sm:text-xs font-black uppercase tracking-widest text-amber-900 bg-amber-100 border border-amber-300 px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full inline-block">
+        <span
+            class="text-[11px] sm:text-xs font-black uppercase tracking-widest text-amber-900 bg-amber-100 border border-amber-300 px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full inline-block">
             Real Pickle Lovers Nationwide 🇧🇩
         </span>
         <h2 class="font-display font-black text-xl sm:text-3xl lg:text-4xl text-slate-950 mt-2.5 sm:mt-3">
@@ -702,22 +866,24 @@
 
     <!-- Reviews Container: Swipeable Carousel on mobile, Grid on desktop -->
     <div class="relative">
-        <div id="reviewsCarousel" class="flex sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 overflow-x-auto sm:overflow-visible no-scrollbar pb-3 pt-1 px-[7vw] sm:px-0 snap-x snap-mandatory scroll-smooth -mx-3 sm:mx-0">
+        <div id="reviewsCarousel"
+            class="flex sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 overflow-x-auto sm:overflow-visible no-scrollbar pb-3 pt-1 px-[7vw] sm:px-0 snap-x snap-mandatory scroll-smooth -mx-3 sm:mx-0">
             {% for review in recent_reviews %}
-            <div class="w-[86vw] max-w-sm sm:w-auto shrink-0 snap-center sm:shrink bg-white p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs flex flex-col justify-between space-y-3.5 sm:space-y-4 hover:shadow-md transition-all text-left">
+            <div
+                class="w-[86vw] max-w-sm sm:w-auto shrink-0 snap-center sm:shrink bg-white p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs flex flex-col justify-between space-y-3.5 sm:space-y-4 hover:shadow-md transition-all text-left">
                 <div>
                     <div class="flex items-center justify-between mb-2.5 sm:mb-3">
                         <div class="flex items-center gap-1 text-amber-400 text-sm">
                             {% for i in "12345" %}
-                                {% if forloop.counter <= review.rating %}
-                                    <i class="fa-solid fa-star text-amber-400"></i>
+                            {% if forloop.counter <= review.rating %} <i class="fa-solid fa-star text-amber-400"></i>
                                 {% else %}
-                                    <i class="fa-solid fa-star text-slate-200"></i>
+                                <i class="fa-solid fa-star text-slate-200"></i>
                                 {% endif %}
-                            {% endfor %}
-                            <span class="text-[11px] font-black text-slate-600 ml-1">({{ review.rating }}.0)</span>
+                                {% endfor %}
+                                <span class="text-[11px] font-black text-slate-600 ml-1">({{ review.rating }}.0)</span>
                         </div>
-                        <span class="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <span
+                            class="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
                             <i class="fa-solid fa-circle-check text-[9px] text-emerald-600"></i> Verified Customer
                         </span>
                     </div>
@@ -728,15 +894,20 @@
                     <!-- Attached Customer Screenshot or Photo -->
                     {% if review.image %}
                     <div class="pt-2">
-                        <button type="button" 
-                                onclick="openHomeReviewLightbox('{{ review.image_url }}', '{{ review.reviewer_name|escapejs }}', '{{ review.product.name|default:"Homemade Pickles"|escapejs }}')" 
-                                class="relative group/img block w-full rounded-xl overflow-hidden border border-emerald-200 bg-gray-50 aspect-16/9 cursor-pointer shadow-2xs hover:shadow-sm transition">
-                            <img src="{{ review.image_url }}" alt="Review photo by {{ review.reviewer_name }}" class="w-full h-full object-cover group-hover/img:scale-105 transition duration-300">
-                            <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end justify-between p-2 text-white">
-                                <span class="inline-flex items-center gap-1 text-[9px] font-black bg-black/60 backdrop-blur-xs px-2 py-0.5 rounded-full border border-white/20 text-white">
+                        <button type="button"
+                            onclick="openHomeReviewLightbox('{{ review.image_url }}', '{{ review.reviewer_name|escapejs }}', '{{ review.product.name|default:"
+                            Homemade Pickles"|escapejs }}')"
+                            class="relative group/img block w-full rounded-xl overflow-hidden border border-emerald-200 bg-gray-50 aspect-16/9 cursor-pointer shadow-2xs hover:shadow-sm transition">
+                            <img src="{{ review.image_url }}" alt="Review photo by {{ review.reviewer_name }}"
+                                class="w-full h-full object-cover group-hover/img:scale-105 transition duration-300">
+                            <div
+                                class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end justify-between p-2 text-white">
+                                <span
+                                    class="inline-flex items-center gap-1 text-[9px] font-black bg-black/60 backdrop-blur-xs px-2 py-0.5 rounded-full border border-white/20 text-white">
                                     <i class="fa-solid fa-camera text-amber-400"></i> Screenshot / Photo
                                 </span>
-                                <span class="w-6 h-6 rounded-full bg-white/20 backdrop-blur-xs flex items-center justify-center text-[10px] group-hover/img:scale-110 transition shadow-xs">
+                                <span
+                                    class="w-6 h-6 rounded-full bg-white/20 backdrop-blur-xs flex items-center justify-center text-[10px] group-hover/img:scale-110 transition shadow-xs">
                                     <i class="fa-solid fa-magnifying-glass-plus"></i>
                                 </span>
                             </div>
@@ -746,10 +917,13 @@
                 </div>
                 <div class="pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
                     <div class="min-w-0 pr-2">
-                        <span class="font-black text-slate-950 block text-xs sm:text-sm truncate">{{ review.reviewer_name }}</span>
-                        <span class="text-slate-500 font-semibold text-[11px] truncate block">📍 {{ review.reviewer_location|default:"Dhaka, Bangladesh" }}</span>
+                        <span class="font-black text-slate-950 block text-xs sm:text-sm truncate">{{
+                            review.reviewer_name }}</span>
+                        <span class="text-slate-500 font-semibold text-[11px] truncate block">📍 {{
+                            review.reviewer_location|default:"Dhaka, Bangladesh" }}</span>
                     </div>
-                    <span class="bg-emerald-100 text-emerald-900 font-extrabold px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] border border-emerald-300 truncate max-w-[140px] shrink-0">
+                    <span
+                        class="bg-emerald-100 text-emerald-900 font-extrabold px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] border border-emerald-300 truncate max-w-[140px] shrink-0">
                         🥒 {{ review.product.name|default:"All Pickles" }}
                     </span>
                 </div>
@@ -763,15 +937,21 @@
 
         <!-- Mobile Carousel Navigation Controls (Arrows + Dots) -->
         <div class="flex sm:hidden items-center justify-center gap-3 mt-3 mb-1">
-            <button type="button" onclick="scrollReviewsCarousel(-1)" class="w-8 h-8 rounded-full bg-white border border-slate-300 shadow-xs flex items-center justify-center text-slate-700 active:scale-90 transition hover:bg-slate-50" aria-label="Previous review">
+            <button type="button" onclick="scrollReviewsCarousel(-1)"
+                class="w-8 h-8 rounded-full bg-white border border-slate-300 shadow-xs flex items-center justify-center text-slate-700 active:scale-90 transition hover:bg-slate-50"
+                aria-label="Previous review">
                 <i class="fa-solid fa-chevron-left text-[11px]"></i>
             </button>
             <div id="reviewsCarouselDots" class="flex items-center gap-1.5">
                 {% for review in recent_reviews %}
-                <button type="button" onclick="scrollToReview({{ forloop.counter0 }})" class="review-dot h-2 rounded-full transition-all duration-300 {% if forloop.first %}bg-emerald-700 w-5{% else %}bg-slate-300 w-2{% endif %}" aria-label="Go to review {{ forloop.counter }}"></button>
+                <button type="button" onclick="scrollToReview({{ forloop.counter0 }})"
+                    class="review-dot h-2 rounded-full transition-all duration-300 {% if forloop.first %}bg-emerald-700 w-5{% else %}bg-slate-300 w-2{% endif %}"
+                    aria-label="Go to review {{ forloop.counter }}"></button>
                 {% endfor %}
             </div>
-            <button type="button" onclick="scrollReviewsCarousel(1)" class="w-8 h-8 rounded-full bg-white border border-slate-300 shadow-xs flex items-center justify-center text-slate-700 active:scale-90 transition hover:bg-slate-50" aria-label="Next review">
+            <button type="button" onclick="scrollReviewsCarousel(1)"
+                class="w-8 h-8 rounded-full bg-white border border-slate-300 shadow-xs flex items-center justify-center text-slate-700 active:scale-90 transition hover:bg-slate-50"
+                aria-label="Next review">
                 <i class="fa-solid fa-chevron-right text-[11px]"></i>
             </button>
         </div>
@@ -779,12 +959,14 @@
 
     <!-- View All Customer Reviews & Write Review CTA Buttons -->
     <div class="mt-6 sm:mt-8 text-center px-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-        <a href="{% url 'store:reviews' %}" class="inline-flex items-center justify-center gap-2 bg-[#092d18] hover:bg-[#0f4826] text-amber-300 font-display font-black text-xs sm:text-sm px-5 sm:px-8 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl border-2 border-emerald-500/50 shadow-xl shadow-emerald-950/20 hover:scale-[1.02] active:scale-95 transition-all max-w-full text-center">
+        <a href="{% url 'store:reviews' %}"
+            class="inline-flex items-center justify-center gap-2 bg-[#092d18] hover:bg-[#0f4826] text-amber-300 font-display font-black text-xs sm:text-sm px-5 sm:px-8 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl border-2 border-emerald-500/50 shadow-xl shadow-emerald-950/20 hover:scale-[1.02] active:scale-95 transition-all max-w-full text-center">
             <i class="fa-solid fa-star text-amber-400 shrink-0 text-xs sm:text-sm"></i>
             <span>View All Reviews ({{ total_reviews_count|default:"20+" }})</span>
             <i class="fa-solid fa-arrow-right text-[10px] sm:text-xs shrink-0"></i>
         </a>
-        <a href="{% url 'store:reviews' %}?next=/#customer-reviews#submit-review-section" class="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-display font-black text-xs sm:text-sm px-5 sm:px-8 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl border border-emerald-400 shadow-lg shadow-emerald-950/20 hover:scale-[1.02] active:scale-95 transition-all max-w-full text-center">
+        <a href="{% url 'store:reviews' %}?next=/#customer-reviews#submit-review-section"
+            class="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-display font-black text-xs sm:text-sm px-5 sm:px-8 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl border border-emerald-400 shadow-lg shadow-emerald-950/20 hover:scale-[1.02] active:scale-95 transition-all max-w-full text-center">
             <i class="fa-solid fa-pen-nib text-amber-300 shrink-0 text-xs sm:text-sm"></i>
             <span>Write a Review</span>
         </a>
@@ -792,64 +974,64 @@
 </section>
 
 <script>
-function scrollReviewsCarousel(direction) {
-    const container = document.getElementById('reviewsCarousel');
-    if (!container) return;
-    const card = container.querySelector('.snap-center');
-    const scrollAmount = card ? (card.offsetWidth + 16) : 300;
-    container.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
-}
-
-function scrollToReview(index) {
-    const container = document.getElementById('reviewsCarousel');
-    if (!container) return;
-    const cards = container.querySelectorAll('.snap-center');
-    if (cards[index]) {
-        cards[index].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    function scrollReviewsCarousel(direction) {
+        const container = document.getElementById('reviewsCarousel');
+        if (!container) return;
+        const card = container.querySelector('.snap-center');
+        const scrollAmount = card ? (card.offsetWidth + 16) : 300;
+        container.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
     }
-}
 
-document.addEventListener('DOMContentLoaded', function() {
-    const container = document.getElementById('reviewsCarousel');
-    const dots = document.querySelectorAll('.review-dot');
-    if (!container || !dots.length) return;
-
-    let scrollTimeout;
-    container.addEventListener('scroll', function() {
-        clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(function() {
-            const cards = container.querySelectorAll('.snap-center');
-            const containerCenter = container.scrollLeft + (container.offsetWidth / 2);
-            let closestIndex = 0;
-            let minDiff = Infinity;
-
-            cards.forEach(function(card, idx) {
-                const cardCenter = card.offsetLeft + (card.offsetWidth / 2);
-                const diff = Math.abs(containerCenter - cardCenter);
-                if (diff < minDiff) {
-                    minDiff = diff;
-                    closestIndex = idx;
-                }
-            });
-
-            dots.forEach(function(dot, idx) {
-                if (idx === closestIndex) {
-                    dot.className = 'review-dot h-2 rounded-full bg-emerald-700 w-5 transition-all duration-300';
-                } else {
-                    dot.className = 'review-dot h-2 rounded-full bg-slate-300 w-2 transition-all duration-300';
-                }
-            });
-        }, 30);
-    }, { passive: true });
-
-    // Horizontally scroll the category pills container ONLY if user specifically clicked/navigated to #pickle-menu
-    const activePill = document.getElementById('activeCategoryPill');
-    const pillContainer = document.getElementById('categoryPillsContainer');
-    if (activePill && pillContainer && window.location.hash === '#pickle-menu') {
-        const offset = activePill.offsetLeft - (pillContainer.offsetWidth / 2) + (activePill.offsetWidth / 2);
-        pillContainer.scrollLeft = Math.max(0, offset);
+    function scrollToReview(index) {
+        const container = document.getElementById('reviewsCarousel');
+        if (!container) return;
+        const cards = container.querySelectorAll('.snap-center');
+        if (cards[index]) {
+            cards[index].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
     }
-});
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const container = document.getElementById('reviewsCarousel');
+        const dots = document.querySelectorAll('.review-dot');
+        if (!container || !dots.length) return;
+
+        let scrollTimeout;
+        container.addEventListener('scroll', function () {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(function () {
+                const cards = container.querySelectorAll('.snap-center');
+                const containerCenter = container.scrollLeft + (container.offsetWidth / 2);
+                let closestIndex = 0;
+                let minDiff = Infinity;
+
+                cards.forEach(function (card, idx) {
+                    const cardCenter = card.offsetLeft + (card.offsetWidth / 2);
+                    const diff = Math.abs(containerCenter - cardCenter);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        closestIndex = idx;
+                    }
+                });
+
+                dots.forEach(function (dot, idx) {
+                    if (idx === closestIndex) {
+                        dot.className = 'review-dot h-2 rounded-full bg-emerald-700 w-5 transition-all duration-300';
+                    } else {
+                        dot.className = 'review-dot h-2 rounded-full bg-slate-300 w-2 transition-all duration-300';
+                    }
+                });
+            }, 30);
+        }, { passive: true });
+
+        // Horizontally scroll the category pills container ONLY if user specifically clicked/navigated to #pickle-menu
+        const activePill = document.getElementById('activeCategoryPill');
+        const pillContainer = document.getElementById('categoryPillsContainer');
+        if (activePill && pillContainer && window.location.hash === '#pickle-menu') {
+            const offset = activePill.offsetLeft - (pillContainer.offsetWidth / 2) + (activePill.offsetWidth / 2);
+            pillContainer.scrollLeft = Math.max(0, offset);
+        }
+    });
 </script>
 
 <!-- FAQ Accordion Section -->
@@ -859,58 +1041,82 @@ document.addEventListener('DOMContentLoaded', function() {
             <h2 class="font-display font-black text-2xl sm:text-3xl text-slate-950">
                 Frequently Asked Questions
             </h2>
-            <p class="text-xs sm:text-sm text-slate-700 font-medium mt-1">Everything you need to know about our jars, storage & delivery.</p>
+            <p class="text-xs sm:text-sm text-slate-700 font-medium mt-1">Everything you need to know about our jars,
+                storage & delivery.</p>
         </div>
 
         <div class="space-y-3">
-            <details class="group bg-white p-5 rounded-2xl border-2 border-slate-200 shadow-xs [&_summary::-webkit-details-marker]:hidden" open>
+            <details
+                class="group bg-white p-5 rounded-2xl border-2 border-slate-200 shadow-xs [&_summary::-webkit-details-marker]:hidden"
+                open>
                 <summary class="flex items-center justify-between cursor-pointer font-black text-sm text-slate-950">
                     <span>How long do Pickpickles jars last & how should I store them?</span>
-                    <i class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
+                    <i
+                        class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
                 </summary>
                 <p class="text-xs sm:text-sm text-slate-700 font-medium mt-3 leading-relaxed">
-                    Our natural vinegar & salt brine keeps the jar completely safe during delivery transit. Upon delivery, <strong>always keep the jar in the refrigerator</strong>. When refrigerated, our pickles stay ultra-crunchy, tangy, and fresh for <strong>up to 2 months</strong>! Always use a clean, dry utensil when serving.
+                    Our natural vinegar & salt brine keeps the jar completely safe during delivery transit. Upon
+                    delivery, <strong>always keep the jar in the refrigerator</strong>. When refrigerated, our pickles
+                    stay ultra-crunchy, tangy, and fresh for <strong>up to 2 months</strong>! Always use a clean, dry
+                    utensil when serving.
                 </p>
             </details>
 
-            <details class="group bg-white p-5 rounded-2xl border-2 border-slate-200 shadow-xs [&_summary::-webkit-details-marker]:hidden">
+            <details
+                class="group bg-white p-5 rounded-2xl border-2 border-slate-200 shadow-xs [&_summary::-webkit-details-marker]:hidden">
                 <summary class="flex items-center justify-between cursor-pointer font-black text-sm text-slate-950">
                     <span>What ingredients are used in Pickpickles?</span>
-                    <i class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
+                    <i
+                        class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
                 </summary>
                 <p class="text-xs sm:text-sm text-slate-700 font-medium mt-3 leading-relaxed">
-                    We hand-select crisp local cucumbers, sweet carrots, crunchy bell peppers, ruby beetroots, deshi onions, fresh green chillies, and juicy fruits like golden pineapples, ripe mangoes, seedless green grapes, and fresh quail eggs. Brined in filtered water, pure cane vinegar, Himalayan pink salt, brown cane sugar, fresh garlic cloves, dill herbs, bay leaves, yellow mustard seeds, black peppercorn, and crushed red chili flakes. 100% oil-free and handcrafted with love!
+                    We hand-select crisp local cucumbers, sweet carrots, crunchy bell peppers, ruby beetroots, deshi
+                    onions, fresh green chillies, and juicy fruits like golden pineapples, ripe mangoes, seedless green
+                    grapes, and fresh quail eggs. Brined in filtered water, pure cane vinegar, Himalayan pink salt,
+                    brown cane sugar, fresh garlic cloves, dill herbs, bay leaves, yellow mustard seeds, black
+                    peppercorn, and crushed red chili flakes. 100% oil-free and handcrafted with love!
                 </p>
             </details>
 
-            <details class="group bg-white p-5 rounded-2xl border-2 border-slate-200 shadow-xs [&_summary::-webkit-details-marker]:hidden">
+            <details
+                class="group bg-white p-5 rounded-2xl border-2 border-slate-200 shadow-xs [&_summary::-webkit-details-marker]:hidden">
                 <summary class="flex items-center justify-between cursor-pointer font-black text-sm text-slate-950">
                     <span>What is the delivery timeline and shipping charge?</span>
-                    <i class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
+                    <i
+                        class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
                 </summary>
                 <div class="text-xs sm:text-sm text-slate-700 font-medium mt-3 leading-relaxed space-y-2">
                     <p>
-                        🥒 <strong>Fresh Batch Preparation:</strong> We craft our pickles fresh in small batches upon order. Every jar undergoes natural cold curing & infusion to develop that signature crunchy snap and balanced tangy flavor.
+                        🥒 <strong>Fresh Batch Preparation:</strong> We craft our pickles fresh in small batches upon
+                        order. Every jar undergoes natural cold curing & infusion to develop that signature crunchy snap
+                        and balanced tangy flavor.
                     </p>
                     <p>
-                        🚚 <strong>Courier Transit to Doorstep:</strong> Once ready, your jar is bubble-wrapped securely and dispatched via our trusted courier partners directly to your doorstep.
+                        🚚 <strong>Courier Transit to Doorstep:</strong> Once ready, your jar is bubble-wrapped securely
+                        and dispatched via our trusted courier partners directly to your doorstep.
                     </p>
                     <p>
-                        ⏳ <strong>Total Delivery Timeline:</strong> Estimated delivery time is <strong>7 to 10 days</strong> from order confirmation to your doorstep nationwide across Bangladesh.
+                        ⏳ <strong>Total Delivery Timeline:</strong> Estimated delivery time is <strong>7 to 10
+                            days</strong> from order confirmation to your doorstep nationwide across Bangladesh.
                     </p>
                     <p>
-                        💵 <strong>Delivery Charges:</strong> <strong>FREE Delivery</strong> when you order <strong>4 or more jars</strong>! For orders of 1–3 jars, delivery is a flat <strong>৳150</strong> nationwide across Bangladesh (Inside & Outside Dhaka).
+                        💵 <strong>Delivery Charges:</strong> <strong>FREE Delivery</strong> when you order <strong>4 or
+                            more jars</strong>! For orders of 1–3 jars, delivery is a flat <strong>৳150</strong>
+                        nationwide across Bangladesh (Inside & Outside Dhaka).
                     </p>
                 </div>
             </details>
 
-            <details class="group bg-white p-5 rounded-2xl border-2 border-slate-200 shadow-xs [&_summary::-webkit-details-marker]:hidden">
+            <details
+                class="group bg-white p-5 rounded-2xl border-2 border-slate-200 shadow-xs [&_summary::-webkit-details-marker]:hidden">
                 <summary class="flex items-center justify-between cursor-pointer font-black text-sm text-slate-950">
                     <span>Can I pay via bKash or Cash on Delivery?</span>
-                    <i class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
+                    <i
+                        class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
                 </summary>
                 <p class="text-xs sm:text-sm text-slate-700 font-medium mt-3 leading-relaxed">
-                    Yes! We accept Cash on Delivery (COD) as well as direct bKash payments. You can select your preferred method during checkout.
+                    Yes! We accept Cash on Delivery (COD) as well as direct bKash payments. You can select your
+                    preferred method during checkout.
                 </p>
             </details>
         </div>
@@ -921,185 +1127,192 @@ document.addEventListener('DOMContentLoaded', function() {
 
 {% block extra_js %}
 <script>
-// Switch Hero Best 3 Pickles with Smooth Animated Carousel
-let heroPickleTimer = null;
-let currentHeroPickleIndex = 0;
-let isHeroHovered = false;
-const totalHeroPickles = {{ top_best_sellers|length|default:3 }};
-const HERO_CYCLE_DURATION = 5000; // 5.0 seconds showcase time
+    // Switch Hero Best 3 Pickles with Smooth Animated Carousel
+    let heroPickleTimer = null;
+    let currentHeroPickleIndex = 0;
+    let isHeroHovered = false;
+    const totalHeroPickles = {{ top_best_sellers| length |default: 3 }};
+    const HERO_CYCLE_DURATION = 5000; // 5.0 seconds showcase time
 
-function animatePillProgress(pillIndex) {
-    const allProgressBars = document.querySelectorAll('.hero-pill-progress-line');
-    allProgressBars.forEach((bar, idx) => {
-        bar.style.transition = 'none';
-        bar.style.width = '0%';
-        void bar.offsetWidth; // Force reflow so 0% is committed before transition starts
-        if (idx === pillIndex && !isHeroHovered) {
-            bar.style.transition = `width ${HERO_CYCLE_DURATION}ms linear`;
-            bar.style.width = '100%';
-        }
-    });
-}
-
-function handleFanCardClick(idx, event) {
-    if (idx !== currentHeroPickleIndex) {
-        if (event) event.preventDefault();
-        switchHeroPickle(idx, true);
-    }
-}
-
-function switchHeroPickle(index, isUserClick = true) {
-    if (totalHeroPickles <= 1) return;
-    currentHeroPickleIndex = (index + totalHeroPickles) % totalHeroPickles;
-
-    // 1. Update Pill buttons
-    const allPills = document.querySelectorAll('.hero-pill-btn');
-    allPills.forEach((btn, idx) => {
-        if (idx === currentHeroPickleIndex) {
-            btn.className = 'hero-pill-btn relative overflow-hidden flex-1 py-2 px-2.5 rounded-xl text-center cursor-pointer flex items-center justify-center gap-1.5 bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 font-black shadow-lg shadow-amber-400/25 ring-2 ring-amber-300/80 scale-[1.02]';
-        } else {
-            btn.className = 'hero-pill-btn relative overflow-hidden flex-1 py-2 px-2.5 rounded-xl text-center cursor-pointer flex items-center justify-center gap-1.5 text-emerald-200/85 hover:text-white hover:bg-white/10 font-bold';
-        }
-    });
-
-    // 2. Rotate 3D Stacked Fan Jar Deck
-    const fanCards = document.querySelectorAll('#heroFanDeck .hero-fan-card');
-    const rightIdx = (currentHeroPickleIndex + 1) % totalHeroPickles;
-    const leftIdx = (currentHeroPickleIndex - 1 + totalHeroPickles) % totalHeroPickles;
-
-    fanCards.forEach((card, idx) => {
-        card.classList.remove('is-center', 'is-left', 'is-right', 'is-hidden');
-        if (idx === currentHeroPickleIndex) {
-            card.classList.add('is-center');
-        } else if (idx === rightIdx) {
-            card.classList.add('is-right');
-        } else if (idx === leftIdx) {
-            card.classList.add('is-left');
-        } else {
-            card.classList.add('is-hidden');
-        }
-    });
-
-    // 3. Update Active Info Slide
-    const infoSlides = document.querySelectorAll('#heroInfoContainer .hero-info-slide');
-    infoSlides.forEach((slide, idx) => {
-        if (idx === currentHeroPickleIndex) {
-            slide.classList.add('is-active');
-        } else {
-            slide.classList.remove('is-active');
-        }
-    });
-
-    if (isUserClick) {
-        restartHeroAutoCycle();
-    } else {
-        animatePillProgress(currentHeroPickleIndex);
-    }
-}
-
-function prevHeroPickle() {
-    switchHeroPickle(currentHeroPickleIndex - 1, true);
-}
-
-function nextHeroPickle(isUserClick = false) {
-    switchHeroPickle(currentHeroPickleIndex + 1, isUserClick);
-}
-
-function startHeroAutoCycle() {
-    if (totalHeroPickles > 1 && !heroPickleTimer && !isHeroHovered) {
-        animatePillProgress(currentHeroPickleIndex);
-        heroPickleTimer = setInterval(() => nextHeroPickle(false), HERO_CYCLE_DURATION);
-    }
-}
-
-function stopHeroAutoCycle() {
-    if (heroPickleTimer) {
-        clearInterval(heroPickleTimer);
-        heroPickleTimer = null;
-    }
-    const allProgressBars = document.querySelectorAll('.hero-pill-progress-line');
-    allProgressBars.forEach(bar => {
-        bar.style.transition = 'none';
-        bar.style.width = '0%';
-    });
-}
-
-function restartHeroAutoCycle() {
-    stopHeroAutoCycle();
-    if (!isHeroHovered) {
-        startHeroAutoCycle();
-    }
-}
-
-// Start auto cycle immediately & pause on mouse hover / touch
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initHeroAutoCycle);
-} else {
-    initHeroAutoCycle();
-}
-
-function initHeroAutoCycle() {
-    startHeroAutoCycle();
-    const heroBox = document.getElementById('heroShowcaseContainer');
-    if (heroBox) {
-        heroBox.addEventListener('mouseenter', () => {
-            isHeroHovered = true;
-            stopHeroAutoCycle();
-        });
-        heroBox.addEventListener('mouseleave', () => {
-            isHeroHovered = false;
-            startHeroAutoCycle();
-        });
-
-        // Mobile touch swipe gesture
-        let touchStartX = 0;
-        heroBox.addEventListener('touchstart', (e) => {
-            touchStartX = e.changedTouches[0].screenX;
-        }, { passive: true });
-
-        heroBox.addEventListener('touchend', (e) => {
-            const touchEndX = e.changedTouches[0].screenX;
-            const diff = touchStartX - touchEndX;
-            if (Math.abs(diff) > 45) {
-                if (diff > 0) {
-                    nextHeroPickle(true);
-                } else {
-                    prevHeroPickle();
-                }
+    function animatePillProgress(pillIndex) {
+        const allProgressBars = document.querySelectorAll('.hero-pill-progress-line');
+        allProgressBars.forEach((bar, idx) => {
+            bar.style.transition = 'none';
+            bar.style.width = '0%';
+            void bar.offsetWidth; // Force reflow so 0% is committed before transition starts
+            if (idx === pillIndex && !isHeroHovered) {
+                bar.style.transition = `width ${HERO_CYCLE_DURATION}ms linear`;
+                bar.style.width = '100%';
             }
-        }, { passive: true });
+        });
     }
-}
 
-function openHomeReviewLightbox(url, reviewer, product) {
-    if (!url) return;
-    document.getElementById('homeReviewLightboxImg').src = url;
-    document.getElementById('homeReviewLightboxName').textContent = reviewer ? ('Feedback by ' + reviewer) : 'Customer Feedback Screenshot';
-    document.getElementById('homeReviewLightboxProduct').textContent = product ? ('🥒 ' + product) : '';
-    document.getElementById('homeReviewLightboxModal').classList.remove('hidden');
-}
+    function handleFanCardClick(idx, event) {
+        if (idx !== currentHeroPickleIndex) {
+            if (event) event.preventDefault();
+            switchHeroPickle(idx, true);
+        }
+    }
 
-function closeHomeReviewLightbox(e) {
-    if (e && e.target && e.target.id !== 'homeReviewLightboxModal' && !e.target.closest('button')) return;
-    document.getElementById('homeReviewLightboxModal').classList.add('hidden');
-    document.getElementById('homeReviewLightboxImg').src = '';
-}
+    function switchHeroPickle(index, isUserClick = true) {
+        if (totalHeroPickles <= 1) return;
+        currentHeroPickleIndex = (index + totalHeroPickles) % totalHeroPickles;
+
+        // 1. Update Pill buttons
+        const allPills = document.querySelectorAll('.hero-pill-btn');
+        allPills.forEach((btn, idx) => {
+            if (idx === currentHeroPickleIndex) {
+                btn.className = 'hero-pill-btn relative overflow-hidden flex-1 py-2 px-2.5 rounded-xl text-center cursor-pointer flex items-center justify-center gap-1.5 bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 font-black shadow-lg shadow-amber-400/25 ring-2 ring-amber-300/80 scale-[1.02]';
+            } else {
+                btn.className = 'hero-pill-btn relative overflow-hidden flex-1 py-2 px-2.5 rounded-xl text-center cursor-pointer flex items-center justify-center gap-1.5 text-emerald-200/85 hover:text-white hover:bg-white/10 font-bold';
+            }
+        });
+
+        // 2. Rotate 3D Stacked Fan Jar Deck
+        const fanCards = document.querySelectorAll('#heroFanDeck .hero-fan-card');
+        const rightIdx = (currentHeroPickleIndex + 1) % totalHeroPickles;
+        const leftIdx = (currentHeroPickleIndex - 1 + totalHeroPickles) % totalHeroPickles;
+
+        fanCards.forEach((card, idx) => {
+            card.classList.remove('is-center', 'is-left', 'is-right', 'is-hidden');
+            if (idx === currentHeroPickleIndex) {
+                card.classList.add('is-center');
+            } else if (idx === rightIdx) {
+                card.classList.add('is-right');
+            } else if (idx === leftIdx) {
+                card.classList.add('is-left');
+            } else {
+                card.classList.add('is-hidden');
+            }
+        });
+
+        // 3. Update Active Info Slide
+        const infoSlides = document.querySelectorAll('#heroInfoContainer .hero-info-slide');
+        infoSlides.forEach((slide, idx) => {
+            if (idx === currentHeroPickleIndex) {
+                slide.classList.add('is-active');
+            } else {
+                slide.classList.remove('is-active');
+            }
+        });
+
+        if (isUserClick) {
+            restartHeroAutoCycle();
+        } else {
+            animatePillProgress(currentHeroPickleIndex);
+        }
+    }
+
+    function prevHeroPickle() {
+        switchHeroPickle(currentHeroPickleIndex - 1, true);
+    }
+
+    function nextHeroPickle(isUserClick = false) {
+        switchHeroPickle(currentHeroPickleIndex + 1, isUserClick);
+    }
+
+    function startHeroAutoCycle() {
+        if (totalHeroPickles > 1 && !heroPickleTimer && !isHeroHovered) {
+            animatePillProgress(currentHeroPickleIndex);
+            heroPickleTimer = setInterval(() => nextHeroPickle(false), HERO_CYCLE_DURATION);
+        }
+    }
+
+    function stopHeroAutoCycle() {
+        if (heroPickleTimer) {
+            clearInterval(heroPickleTimer);
+            heroPickleTimer = null;
+        }
+        const allProgressBars = document.querySelectorAll('.hero-pill-progress-line');
+        allProgressBars.forEach(bar => {
+            bar.style.transition = 'none';
+            bar.style.width = '0%';
+        });
+    }
+
+    function restartHeroAutoCycle() {
+        stopHeroAutoCycle();
+        if (!isHeroHovered) {
+            startHeroAutoCycle();
+        }
+    }
+
+    // Start auto cycle immediately & pause on mouse hover / touch
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initHeroAutoCycle);
+    } else {
+        initHeroAutoCycle();
+    }
+
+    function initHeroAutoCycle() {
+        startHeroAutoCycle();
+        const heroBox = document.getElementById('heroShowcaseContainer');
+        if (heroBox) {
+            heroBox.addEventListener('mouseenter', () => {
+                isHeroHovered = true;
+                stopHeroAutoCycle();
+            });
+            heroBox.addEventListener('mouseleave', () => {
+                isHeroHovered = false;
+                startHeroAutoCycle();
+            });
+
+            // Mobile touch swipe gesture
+            let touchStartX = 0;
+            heroBox.addEventListener('touchstart', (e) => {
+                touchStartX = e.changedTouches[0].screenX;
+            }, { passive: true });
+
+            heroBox.addEventListener('touchend', (e) => {
+                const touchEndX = e.changedTouches[0].screenX;
+                const diff = touchStartX - touchEndX;
+                if (Math.abs(diff) > 45) {
+                    if (diff > 0) {
+                        nextHeroPickle(true);
+                    } else {
+                        prevHeroPickle();
+                    }
+                }
+            }, { passive: true });
+        }
+    }
+
+    function openHomeReviewLightbox(url, reviewer, product) {
+        if (!url) return;
+        document.getElementById('homeReviewLightboxImg').src = url;
+        document.getElementById('homeReviewLightboxName').textContent = reviewer ? ('Feedback by ' + reviewer) : 'Customer Feedback Screenshot';
+        document.getElementById('homeReviewLightboxProduct').textContent = product ? ('🥒 ' + product) : '';
+        document.getElementById('homeReviewLightboxModal').classList.remove('hidden');
+    }
+
+    function closeHomeReviewLightbox(e) {
+        if (e && e.target && e.target.id !== 'homeReviewLightboxModal' && !e.target.closest('button')) return;
+        document.getElementById('homeReviewLightboxModal').classList.add('hidden');
+        document.getElementById('homeReviewLightboxImg').src = '';
+    }
 </script>
 
 <!-- Fullscreen Lightbox Modal for Homepage Review Screenshots -->
-<div id="homeReviewLightboxModal" class="fixed inset-0 z-50 bg-black/85 hidden flex items-center justify-center p-3 sm:p-6 backdrop-blur-xs" onclick="closeHomeReviewLightbox(event)">
+<div id="homeReviewLightboxModal"
+    class="fixed inset-0 z-50 bg-black/85 hidden flex items-center justify-center p-3 sm:p-6 backdrop-blur-xs"
+    onclick="closeHomeReviewLightbox(event)">
     <div class="relative max-w-2xl w-full max-h-[92vh] flex flex-col items-center" onclick="event.stopPropagation()">
         <div class="w-full flex items-center justify-between pb-2 text-white">
             <div class="min-w-0 pr-3">
-                <span id="homeReviewLightboxName" class="text-xs sm:text-sm font-black block truncate">Customer Feedback Screenshot</span>
-                <span id="homeReviewLightboxProduct" class="text-[11px] text-emerald-300 font-semibold block truncate"></span>
+                <span id="homeReviewLightboxName" class="text-xs sm:text-sm font-black block truncate">Customer Feedback
+                    Screenshot</span>
+                <span id="homeReviewLightboxProduct"
+                    class="text-[11px] text-emerald-300 font-semibold block truncate"></span>
             </div>
-            <button type="button" onclick="closeHomeReviewLightbox()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm transition cursor-pointer">
+            <button type="button" onclick="closeHomeReviewLightbox()"
+                class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm transition cursor-pointer">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
-        <div class="w-full flex items-center justify-center overflow-hidden rounded-2xl bg-black border border-white/20 shadow-2xl p-1">
-            <img id="homeReviewLightboxImg" src="" alt="Review Screenshot" class="max-w-full max-h-[75vh] object-contain rounded-xl">
+        <div
+            class="w-full flex items-center justify-center overflow-hidden rounded-2xl bg-black border border-white/20 shadow-2xl p-1">
+            <img id="homeReviewLightboxImg" src="" alt="Review Screenshot"
+                class="max-w-full max-h-[75vh] object-contain rounded-xl">
         </div>
     </div>
 </div>
