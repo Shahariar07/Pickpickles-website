@@ -1187,9 +1187,7 @@ def adjust_inventory_for_order_status_change(order, old_status, new_status, user
                 deduct_qty = itm.quantity
                 new_stock = max(0, prev_stock - deduct_qty)
                 itm.product.stock_count = new_stock
-                if new_stock == 0:
-                    itm.product.is_in_stock = False
-                itm.product.save(update_fields=['stock_count', 'is_in_stock'])
+                itm.product.save(update_fields=['stock_count'])
 
                 StockLog.objects.create(
                     product=itm.product,
@@ -1214,8 +1212,7 @@ def adjust_inventory_for_order_status_change(order, old_status, new_status, user
                 restore_qty = itm.quantity
                 new_stock = prev_stock + restore_qty
                 itm.product.stock_count = new_stock
-                itm.product.is_in_stock = True
-                itm.product.save(update_fields=['stock_count', 'is_in_stock'])
+                itm.product.save(update_fields=['stock_count'])
 
                 StockLog.objects.create(
                     product=itm.product,
@@ -1323,8 +1320,9 @@ def order_detail(request, order_number):
         messages.success(request, f'Order #{order.order_number} details successfully updated.')
         return redirect('dashboard:order_detail', order_number=order.order_number)
 
-    from store.meta_capi import get_order_meta_sent_status
+    from store.meta_capi import get_order_meta_sent_status, get_order_meta_details
     meta_sent_info = get_order_meta_sent_status(order.order_number)
+    meta_details = get_order_meta_details(order)
 
     # Attach FIFO active selling batch to order items
     from dashboard.batch_fifo import calculate_all_products_fifo
@@ -1338,6 +1336,7 @@ def order_detail(request, order_number):
     return render(request, 'dashboard/order_detail.html', {
         'order': order,
         'meta_sent_info': meta_sent_info,
+        'meta_details': meta_details,
     })
 
 
@@ -2147,10 +2146,6 @@ def stock_manager(request):
                     prev_stock = product.stock_count
                     delta = new_stock - prev_stock
                     product.stock_count = new_stock
-                    if new_stock > 0 and not product.is_in_stock:
-                        product.is_in_stock = True
-                    elif new_stock == 0:
-                        product.is_in_stock = False
                     
                     if delta != 0:
                         StockLog.objects.create(
@@ -2307,11 +2302,7 @@ def stock_manager(request):
                 prev_stock = product.stock_count
                 new_stock = max(0, prev_stock + delta)
                 product.stock_count = new_stock
-                if new_stock > 0 and not product.is_in_stock:
-                    product.is_in_stock = True
-                elif new_stock == 0:
-                    product.is_in_stock = False
-                product.save()
+                product.save(update_fields=['stock_count'])
 
                 StockLog.objects.create(
                     product=product,
@@ -2765,8 +2756,7 @@ def production_batch_detail(request, batch_id):
                             prev_stock = prod.stock_count
                             new_stock = max(0, prev_stock + delta)
                             prod.stock_count = new_stock
-                            prod.is_in_stock = (new_stock > 0)
-                            prod.save(update_fields=['stock_count', 'is_in_stock'])
+                            prod.save(update_fields=['stock_count'])
 
                             if new_qty > 0:
                                 if existing_item:
@@ -2822,8 +2812,7 @@ def production_batch_detail(request, batch_id):
                 prev_stock = prod.stock_count
                 new_stock = max(0, prev_stock + delta)
                 prod.stock_count = new_stock
-                prod.is_in_stock = (new_stock > 0)
-                prod.save(update_fields=['stock_count', 'is_in_stock'])
+                prod.save(update_fields=['stock_count'])
 
                 sign = '+' if delta > 0 else ''
                 if new_qty > 0:
@@ -2914,9 +2903,7 @@ def production_batch_detail(request, batch_id):
                 prev_stock = prod.stock_count
                 new_stock = max(0, prev_stock - removed_qty)
                 prod.stock_count = new_stock
-                if new_stock == 0:
-                    prod.is_in_stock = False
-                prod.save(update_fields=['stock_count', 'is_in_stock'])
+                prod.save(update_fields=['stock_count'])
 
                 StockLog.objects.create(
                     product=prod,
@@ -3008,9 +2995,7 @@ def delete_production_batch(request, batch_id):
                     prev_stock = item.product.stock_count
                     new_stock = max(0, prev_stock - item.quantity)
                     item.product.stock_count = new_stock
-                    if new_stock == 0:
-                        item.product.is_in_stock = False
-                    item.product.save(update_fields=['stock_count', 'is_in_stock'])
+                    item.product.save(update_fields=['stock_count'])
 
         # Clean up any StockLogs referencing this batch
         StockLog.objects.filter(reference=batch_name).delete()
@@ -3400,9 +3385,7 @@ def sync_order_return_state(order_return, new_status, courier_fee=None, notes=No
                     prev_stock = item.product.stock_count
                     new_stock = max(0, prev_stock - item.quantity)
                     item.product.stock_count = new_stock
-                    if new_stock == 0:
-                        item.product.is_in_stock = False
-                    item.product.save(update_fields=['stock_count', 'is_in_stock'])
+                    item.product.save(update_fields=['stock_count'])
 
                     StockLog.objects.create(
                         product=item.product,
@@ -3465,9 +3448,7 @@ def sync_order_return_state(order_return, new_status, courier_fee=None, notes=No
                     prev_stock = item.product.stock_count
                     new_stock = max(0, prev_stock - item.quantity)
                     item.product.stock_count = new_stock
-                    if new_stock == 0:
-                        item.product.is_in_stock = False
-                    item.product.save(update_fields=['stock_count', 'is_in_stock'])
+                    item.product.save(update_fields=['stock_count'])
             order_return.is_restocked = False
 
     order_return.save()
@@ -3577,9 +3558,7 @@ def damage_returns_manager(request):
                     prev_stock = product.stock_count
                     new_stock = max(0, prev_stock - quantity)
                     product.stock_count = new_stock
-                    if new_stock == 0:
-                        product.is_in_stock = False
-                    product.save(update_fields=['stock_count', 'is_in_stock'])
+                    product.save(update_fields=['stock_count'])
 
                     StockLog.objects.create(
                         product=product,

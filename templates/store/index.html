@@ -494,7 +494,7 @@
                 </div>
                 <div>
                     <h4 class="font-black text-sm text-slate-900">Whole Artisan Spices</h4>
-                    <p class="text-xs text-slate-700 font-medium">Fresh garlic, bay leaves, mustard seed.</p>
+                    <p class="text-xs text-slate-700 font-medium">Whole aromatic herbs & select spices.</p>
                 </div>
             </div>
             <div class="flex flex-col sm:flex-row items-center gap-3">
@@ -602,13 +602,15 @@
                         loading="lazy" decoding="async" width="1024" height="1024">
                 </a>
 
-                <!-- Top Left Badge: Stock Out (Single Clean Red Badge), Custom Badge, or Best Seller Ranking -->
+                <!-- Top Left Badge: Pre-Order, Custom Badge, or Best Seller Ranking -->
                 <div
                     class="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 z-10 pointer-events-none flex flex-col gap-1 max-w-[85%]">
-                    {% if not product.is_in_stock or product.stock_count <= 0 %} <span
-                        class="inline-flex items-center bg-red-600 text-white font-black text-[10px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md tracking-wide uppercase border border-red-500">
-                        <span>Stock Out</span>
-                        </span>
+                    {% if not product.is_in_stock or product.stock_count <= 0 %}
+                    <span
+                        class="inline-flex items-center gap-1 bg-amber-500 text-slate-950 font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md border border-amber-400 tracking-tight">
+                        <i class="fa-solid fa-clock text-[8px] sm:text-[9px]"></i>
+                        <span>Pre-Order</span>
+                    </span>
                         {% elif product.custom_badge %}
                         {% if 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower or 'launch' in product.custom_badge|lower or 'নতুন' in product.custom_badge %}
                         <span
@@ -716,21 +718,14 @@
                         {% endif %}
                     </div>
 
-                    <!-- Quick Add Button with AJAX OR Stock Out Disabled Button -->
-                    {% if not product.is_in_stock or product.stock_count <= 0 %} <button type="button" disabled
-                        class="h-8 sm:h-9 px-3 rounded-xl bg-slate-100 text-slate-400 font-bold text-[11px] sm:text-xs shadow-none cursor-not-allowed flex items-center justify-center border border-slate-200"
-                        aria-label="{{ product.name }} is out of stock">
-                        <span>Stock Out</span>
-                        </button>
-                        {% else %}
-                        <button type="button" onclick="ajaxAddToCart({{ product.id }}, 1, this)"
-                            class="h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl bg-[#15803d] hover:bg-[#166534] active:scale-95 text-white font-black text-[11px] sm:text-xs shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-1 cursor-pointer shrink-0 border border-emerald-600/30"
-                            aria-label="Add {{ product.name }} to bag">
-                            <i class="fa-solid fa-plus text-[9px] sm:text-[10px]"></i>
-                            <span class="inline sm:hidden">Add</span>
-                            <span class="hidden sm:inline">Add to Bag</span>
-                        </button>
-                        {% endif %}
+                    <!-- Quick Add Button with AJAX (Always active to allow pre-order / backorders) -->
+                    <button type="button" onclick="ajaxAddToCart({{ product.id }}, 1, this)"
+                        class="h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl bg-[#15803d] hover:bg-[#166534] active:scale-95 text-white font-black text-[11px] sm:text-xs shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-1 cursor-pointer shrink-0 border border-emerald-600/30"
+                        aria-label="Add {{ product.name }} to bag">
+                        <i class="fa-solid fa-plus text-[9px] sm:text-[10px]"></i>
+                        <span class="inline sm:hidden">Add</span>
+                        <span class="hidden sm:inline">Add to Bag</span>
+                    </button>
                 </div>
 
             </div>
@@ -804,8 +799,7 @@
                     100% Oil-Free & Light
                 </h3>
                 <p class="text-[11px] sm:text-xs lg:text-sm text-slate-600 leading-snug sm:leading-relaxed">
-                    Zero heavy oils. Brined purely in filtered water, cane vinegar, Himalayan pink salt, garlic cloves,
-                    and whole mustard seeds.
+                    Zero heavy oils. Brined naturally in pure cane vinegar, mineral salt, and whole aromatic spices.
                 </p>
             </div>
 
@@ -1064,11 +1058,7 @@
                         class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
                 </summary>
                 <p class="text-xs sm:text-sm text-slate-700 font-medium mt-3 leading-relaxed">
-                    We hand-select crisp local cucumbers, sweet carrots, crunchy bell peppers, ruby beetroots, deshi
-                    onions, fresh green chillies, and juicy fruits like golden pineapples, ripe mangoes, seedless green
-                    grapes, and fresh quail eggs. Brined in filtered water, pure cane vinegar, Himalayan pink salt,
-                    brown cane sugar, fresh garlic cloves, dill herbs, bay leaves, yellow mustard seeds, black
-                    peppercorn, and crushed red chili flakes. 100% oil-free and handcrafted with love!
+                    We craft our pickles using 100% farm-fresh vegetables and seasonal fruits, cured naturally in an oil-free pure cane vinegar brine with select whole herbs and spices. All our pickles are free from artificial preservatives, heavy oils, or synthetic additives.
                 </p>
             </details>
 

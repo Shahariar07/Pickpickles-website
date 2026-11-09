@@ -44,8 +44,60 @@
         </div>
     </div>
 
-    <!-- FIFO Active Selling Batches Recommendation Banner -->
-    <div class="bg-gradient-to-r from-emerald-900 via-brand-900 to-emerald-950 rounded-2xl sm:rounded-3xl p-4 sm:p-6 text-white shadow-lg border border-emerald-500/30">
+    <!-- FIFO Active Selling Batches Recommendation Banner (Mobile Collapsible & Desktop Rich Grid) -->
+    <!-- Mobile: Collapsible Details (block sm:hidden) -->
+    <details class="group block sm:hidden bg-gradient-to-r from-emerald-950 to-gray-900 rounded-2xl border border-emerald-500/30 overflow-hidden text-white shadow-sm">
+        <summary class="w-full p-3.5 flex items-center justify-between text-left cursor-pointer list-none [&::-webkit-details-marker]:hidden select-none active:bg-white/5 transition">
+            <div class="flex items-center gap-2.5 min-w-0">
+                <span class="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 flex items-center justify-center text-sm shrink-0">
+                    <i class="fa-solid fa-boxes-packing"></i>
+                </span>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-1.5">
+                        <span class="font-extrabold text-xs text-white truncate">সেল ব্যাচ রিকমেন্ডেশন</span>
+                        <span class="px-1.5 py-0.2 rounded bg-emerald-400 text-emerald-950 font-black text-[9px]">FIFO</span>
+                    </div>
+                    <span class="text-[10px] text-emerald-300/80 block truncate">ট্যাপ করে ফ্লেভার ও ব্যাচ দেখুন</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+                <span class="text-[10px] font-bold text-emerald-300">{{ active_selling_batches|length }}টি আচার</span>
+                <i class="fa-solid fa-chevron-down text-emerald-300 text-xs transition-transform duration-200 group-open:rotate-180"></i>
+            </div>
+        </summary>
+        <div class="border-t border-white/10 p-3 space-y-2 max-h-72 overflow-y-auto">
+            {% for item in active_selling_batches %}
+            <div class="p-2.5 rounded-xl bg-white/5 border border-white/5 text-xs flex items-center justify-between gap-2">
+                <div class="min-w-0">
+                    <span class="font-bold text-white truncate block">{{ item.product_name }}</span>
+                    {% if item.batch_number and not item.is_sold_out %}
+                    <a href="{% if item.batch_id %}{% url 'dashboard:production_batch_detail' item.batch_id %}{% else %}#{% endif %}" class="inline-flex items-center gap-1 text-emerald-300 text-[11px] font-bold">
+                        <i class="fa-solid fa-tag text-[9px]"></i>
+                        <span>{{ item.batch_number }}</span>
+                    </a>
+                    {% else %}
+                    <span class="text-rose-300 text-[10px] font-bold">স্টক শেষ / নতুন ব্যাচ দিন</span>
+                    {% endif %}
+                </div>
+                <div class="text-right shrink-0">
+                    {% if not item.is_sold_out %}
+                    <span class="px-2 py-0.5 rounded-md bg-emerald-400 text-emerald-950 font-black text-[10px]">
+                        {{ item.remaining_in_batch }} বাকি
+                    </span>
+                    <span class="block text-[9px] text-emerald-200/70 mt-0.5">{{ item.percent_sold }}% বিক্রি</span>
+                    {% else %}
+                    <span class="px-2 py-0.5 rounded-md bg-rose-500/80 text-white font-black text-[9px]">Sold Out</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="py-3 text-center text-xs text-gray-400">কোনো একটিভ ব্যাচ পাওয়া যায়নি</div>
+            {% endfor %}
+        </div>
+    </details>
+
+    <!-- Desktop: Full Grid Banner (hidden sm:block) -->
+    <div class="hidden sm:block bg-gradient-to-r from-emerald-900 via-brand-900 to-emerald-950 rounded-2xl sm:rounded-3xl p-4 sm:p-6 text-white shadow-lg border border-emerald-500/30">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-emerald-500/20">
             <div class="flex items-center gap-3">
                 <span class="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 flex items-center justify-center text-lg shrink-0">
@@ -203,10 +255,107 @@
                     উৎপাদন ব্যাচ তালিকা (Batch Production Log)
                 </h3>
             </div>
-            <span class="text-xs font-bold text-gray-400">Showing {{ batches|length }} batches</span>
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-gray-400">Showing {{ batches|length }} batches</span>
+                <!-- Mobile Expand/Collapse All Button -->
+                <button type="button" onclick="toggleAllMobileBatches()" class="md:hidden text-[11px] font-bold text-brand-800 bg-brand-50 hover:bg-brand-100 px-2.5 py-1 rounded-lg border border-brand-200 flex items-center gap-1 active:scale-95 transition cursor-pointer">
+                    <i class="fa-solid fa-arrows-up-down text-[10px]"></i>
+                    <span id="toggleAllBatchesText">সবগুলো লুকান / খুলুন</span>
+                </button>
+            </div>
         </div>
 
-        <div class="overflow-x-auto">
+        <!-- 1. MOBILE VIEW: Collapsible Accordion Batch Cards (block md:hidden) -->
+        <div class="block md:hidden p-3 space-y-2.5 bg-gray-50/50">
+            {% for b in batches %}
+            <details class="mobile-batch-card group bg-white rounded-xl border border-gray-200 shadow-2xs overflow-hidden transition" {% if forloop.first %}open{% endif %}>
+                <summary class="p-3 flex items-center justify-between gap-2 cursor-pointer list-none [&::-webkit-details-marker]:hidden select-none active:bg-gray-50">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <span class="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center text-xs font-black shrink-0">
+                            <i class="fa-solid fa-layer-group"></i>
+                        </span>
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <span class="font-extrabold text-sm text-gray-900">{{ b.batch_number }}</span>
+                                {% if b.fifo_status == 'ACTIVE' %}
+                                <span class="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-emerald-100 text-emerald-900 border border-emerald-300">চলছে</span>
+                                {% elif b.fifo_status == 'COMPLETED' %}
+                                <span class="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-gray-100 text-gray-600">শেষ</span>
+                                {% else %}
+                                <span class="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-amber-50 text-amber-800">অপেক্ষমাণ</span>
+                                {% endif %}
+                            </div>
+                            <span class="text-[10px] text-gray-500 block mt-0.5">
+                                <i class="fa-regular fa-calendar-check text-emerald-600 text-[10px]"></i> {{ b.production_date|date:"d M, Y" }} • <strong class="text-gray-800">+{{ b.total_jars }} Jars</strong>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <div class="text-right">
+                            <span class="text-[10px] font-black {% if b.fifo_remaining > 0 %}text-emerald-700 bg-emerald-50 border border-emerald-200{% else %}text-gray-500 bg-gray-100{% endif %} px-2 py-0.5 rounded-md block leading-tight">
+                                বাকি: {{ b.fifo_remaining }}
+                            </span>
+                            <span class="text-[9px] text-gray-400 font-semibold block mt-0.5">{{ b.fifo_percent }}% বিক্রি</span>
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-gray-400 text-xs transition-transform duration-200 group-open:rotate-180"></i>
+                    </div>
+                </summary>
+
+                <!-- Collapsible Body Content -->
+                <div class="p-3 border-t border-gray-100 space-y-2.5 bg-gray-50/40 text-xs">
+                    <!-- Progress Bar -->
+                    <div>
+                        <div class="flex justify-between items-center text-[10.5px] text-gray-600 font-bold mb-1">
+                            <span>বিক্রি অগ্রগতি: {{ b.fifo_sold }}/{{ b.total_jars }} জার</span>
+                            <span class="text-brand-800 font-black">{{ b.fifo_percent }}%</span>
+                        </div>
+                        <div class="w-full h-1.5 rounded-full bg-gray-200 overflow-hidden">
+                            <div class="h-full {% if b.fifo_status == 'COMPLETED' %}bg-gray-400{% elif b.fifo_status == 'ACTIVE' %}bg-emerald-500{% else %}bg-amber-400{% endif %} rounded-full" style="width: {{ b.fifo_percent }}%;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Flavors Breakdown Chips -->
+                    <div>
+                        <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">উৎপাদিত আচারসমূহ:</span>
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            {% for item in b.items.all %}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10.5px] font-bold bg-white text-emerald-900 border border-emerald-200 shadow-2xs">
+                                <span>{{ item.product.name }}</span>
+                                <span class="bg-emerald-100 text-emerald-950 px-1 rounded text-[9.5px] font-black">+{{ item.quantity }}</span>
+                            </span>
+                            {% empty %}
+                            <span class="text-xs text-gray-400 italic">No item details</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    {% if b.notes %}
+                    <div class="bg-amber-50/80 p-2 rounded-lg border border-amber-200 text-[11px] text-amber-900">
+                        <i class="fa-solid fa-quote-left text-[9px] text-amber-500 mr-1"></i>{{ b.notes }}
+                    </div>
+                    {% endif %}
+
+                    <!-- Mobile Action Buttons -->
+                    <div class="pt-2 border-t border-gray-200 flex items-center justify-between gap-2">
+                        <a href="{% url 'dashboard:production_batch_detail' b.id %}" class="flex-1 bg-brand-800 hover:bg-brand-900 text-white font-bold text-xs py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition active:scale-95 shadow-2xs">
+                            <i class="fa-solid fa-eye text-xs"></i>
+                            <span>হিসাব দেখুন (View Details)</span>
+                        </a>
+                        <button type="button" onclick="confirmDeleteBatch('{{ b.id }}', '{{ b.batch_number|escapejs }}', '{{ b.total_jars }}')" class="bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs p-2 px-3 rounded-xl border border-rose-200 transition active:scale-95" title="Delete Batch">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </div>
+            </details>
+            {% empty %}
+            <div class="p-8 text-center text-gray-500 bg-white rounded-xl border border-gray-200">
+                <p class="text-xs font-semibold">কোনো ব্যাচ রেকর্ড পাওয়া যায়নি।</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- 2. DESKTOP VIEW: Full Data Table (hidden md:block) -->
+        <div class="hidden md:block overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-gray-50/80 border-b border-gray-200 text-[11px] font-black text-gray-500 uppercase tracking-wider">
@@ -585,6 +734,16 @@ function confirmDeleteBatch(batchId, batchName, jars) {
 
 function closeDeleteBatchModal() {
     document.getElementById('deleteBatchModal').classList.add('hidden');
+}
+
+function toggleAllMobileBatches() {
+    const cards = document.querySelectorAll('.mobile-batch-card');
+    const anyOpen = Array.from(cards).some(c => c.open);
+    cards.forEach(c => c.open = !anyOpen);
+    const txt = document.getElementById('toggleAllBatchesText');
+    if (txt) {
+        txt.textContent = anyOpen ? 'সবগুলো খুলুন' : 'সবগুলো লুকান';
+    }
 }
 </script>
 {% endblock %}

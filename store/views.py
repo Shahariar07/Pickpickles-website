@@ -20,7 +20,8 @@ from django.db.models.functions import Coalesce
 
 def index(request):
     # Auto-calculate top 3 best seller products based on total delivered/paid sales (matching dashboard ranking)
-    best_sellers_qs = Product.objects.annotate(
+    # Only visible products (is_in_stock=True) are displayed on the store homepage
+    best_sellers_qs = Product.objects.filter(is_in_stock=True).annotate(
         total_sold=Coalesce(
             Sum('order_items__quantity', filter=Q(order_items__order__is_deleted=False) & (
                 Q(order_items__order__order_status__in=['DELIVERED', 'OUT_FOR_DELIVERY']) |
@@ -36,7 +37,7 @@ def index(request):
         needed = 3 - len(top_best_sellers)
         existing_ids = [p.id for p in top_best_sellers]
         fallback_products = list(
-            Product.objects.exclude(id__in=existing_ids)
+            Product.objects.filter(is_in_stock=True).exclude(id__in=existing_ids)
             .order_by('-is_featured', 'id')[:needed]
         )
         top_best_sellers.extend(fallback_products)
@@ -68,8 +69,8 @@ def index(request):
         output_field=IntegerField()
     )
 
-    featured_products = Product.objects.filter(is_featured=True).order_by('id')
-    all_products = Product.objects.annotate(
+    featured_products = Product.objects.filter(is_featured=True, is_in_stock=True).order_by('id')
+    all_products = Product.objects.filter(is_in_stock=True).annotate(
         total_sold=Coalesce(
             Sum('order_items__quantity', filter=Q(order_items__order__is_deleted=False) & (
                 Q(order_items__order__order_status__in=['DELIVERED', 'OUT_FOR_DELIVERY']) |
@@ -92,7 +93,7 @@ def index(request):
         output_field=IntegerField()
     )
     categories = Category.objects.annotate(
-        product_count=Count('products', filter=Q(products__isnull=False)),
+        product_count=Count('products', filter=Q(products__is_in_stock=True)),
         display_order=category_order
     ).filter(product_count__gt=0).order_by('display_order', 'id')
     recent_reviews = Review.objects.filter(is_approved=True).select_related('product').order_by('-created_at')[:9]
@@ -120,15 +121,18 @@ def index(request):
 
 def product_detail(request, slug):
     product = get_object_or_404(Product, slug=slug)
+    if not product.is_in_stock and not (request.user.is_authenticated and request.user.is_staff):
+        messages.info(request, f'"{product.name}" বর্তমানে স্টোরে প্রদর্শিত নেই।')
+        return redirect('store:index')
     has_sale_badge = Case(
         When(Q(custom_badge__isnull=False) & ~Q(custom_badge=''), then=Value(1)),
         default=Value(0),
         output_field=IntegerField()
     )
-    related_products = Product.objects.exclude(id=product.id).annotate(has_sale_badge=has_sale_badge).order_by('-has_sale_badge', '-is_featured', 'id')[:3]
+    related_products = Product.objects.filter(is_in_stock=True).exclude(id=product.id).annotate(has_sale_badge=has_sale_badge).order_by('-has_sale_badge', '-is_featured', 'id')[:3]
     reviews = product.reviews.filter(is_approved=True).order_by('-created_at')
 
-    top_best_sellers_qs = Product.objects.annotate(
+    top_best_sellers_qs = Product.objects.filter(is_in_stock=True).annotate(
         total_sold=Coalesce(
             Sum('order_items__quantity', filter=Q(order_items__order__is_deleted=False) & (
                 Q(order_items__order__order_status__in=['DELIVERED', 'OUT_FOR_DELIVERY']) |
@@ -285,16 +289,15 @@ def cart_add(request, product_id):
     cart = Cart(request)
     product = get_object_or_404(Product, id=product_id)
 
-    if not product.is_in_stock or product.stock_count <= 0:
+    # If product is hidden from store (is_in_stock=False), do not allow cart addition
+    if not product.is_in_stock:
         if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('format') == 'json':
-            err_msg = f'Sorry, "{product.name}" is currently Out of Stock!'
             return JsonResponse({
                 'success': False,
-                'error': err_msg,
-                'message': err_msg,
+                'error': f'"{product.name}" বর্তমানে ওয়েবসাইটে উপলব্ধ নেই। (Item is currently not available)',
             }, status=400)
-        messages.error(request, f'Sorry, "{product.name}" is currently Out of Stock.')
-        return redirect(request.META.get('HTTP_REFERER') or 'store:index')
+        messages.error(request, f'"{product.name}" বর্তমানে ওয়েবসাইটে উপলব্ধ নেই।')
+        return redirect('store:index')
     
     try:
         raw_qty = int(request.POST.get('quantity', 1))
@@ -525,16 +528,6 @@ def checkout(request):
     billing_weight_kg = cart.get_billing_weight_kg()
 
     if request.method == 'POST':
-        # Stock verification: ensure no cart items are out of stock
-        out_of_stock_items = [
-            item['product'].name for item in cart
-            if not item['product'].is_in_stock or item['product'].stock_count <= 0
-        ]
-        if out_of_stock_items:
-            names = ', '.join(out_of_stock_items)
-            messages.error(request, f'Sorry, "{names}" in your bag is currently Out of Stock. Please remove it to proceed.')
-            return redirect('store:cart_view')
-
         # 1. Anti-Fraud & Security Verification (Honeypot, Blacklist, Rate Limiting)
         from store.security import check_rate_limit_and_blacklist, verify_cloudflare_turnstile, record_successful_order_rate
         
@@ -809,8 +802,8 @@ def sitemap_xml(request):
             'lastmod': timezone.now().strftime('%Y-%m-%d'),
         })
 
-    # 3. Dynamic Product detail pages
-    products = Product.objects.all().order_by('-updated_at')
+    # 3. Dynamic Product detail pages (only visible store products)
+    products = Product.objects.filter(is_in_stock=True).order_by('-updated_at')
     for product in products:
         lastmod = product.updated_at.strftime('%Y-%m-%d') if product.updated_at else timezone.now().strftime('%Y-%m-%d')
         urls.append({
@@ -1126,7 +1119,7 @@ def meta_catalog_csv(request):
     writer = csv.DictWriter(response, fieldnames=fields)
     writer.writeheader()
 
-    products = Product.objects.all().order_by('id')
+    products = Product.objects.filter(is_in_stock=True).order_by('id')
     for p in products:
         raw_img = p.primary_image_url.split('?')[0] if p.primary_image_url else ''
         if raw_img.startswith('/'):

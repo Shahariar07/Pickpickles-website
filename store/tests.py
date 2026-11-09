@@ -175,19 +175,27 @@ class CartTests(TestCase):
         self.assertEqual(cancel_log.resulting_stock, 50)
 
     def test_out_of_stock_product_visible_on_homepage(self):
-        # Mark product as out of stock
-        self.product.is_in_stock = False
+        # Product with 0 stock but is_in_stock=True (Visible) should be on homepage with Pre-Order
+        self.product.is_in_stock = True
         self.product.stock_count = 0
         self.product.save()
 
         response = self.client.get(reverse('store:index'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.product.name)
-        self.assertContains(response, "Stock Out")
+        self.assertContains(response, "Pre-Order")
 
-    def test_out_of_stock_cannot_be_added_to_cart(self):
+    def test_hidden_product_not_visible_on_homepage(self):
+        # Product marked as hidden from store (is_in_stock=False) should NOT be on homepage
         self.product.is_in_stock = False
-        self.product.stock_count = 0
+        self.product.save()
+
+        response = self.client.get(reverse('store:index'))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, self.product.name)
+
+    def test_hidden_product_cannot_be_added_to_cart(self):
+        self.product.is_in_stock = False
         self.product.save()
 
         url = reverse('store:cart_add', args=[self.product.id])
@@ -199,7 +207,7 @@ class CartTests(TestCase):
         self.assertEqual(response.status_code, 400)
         data = response.json()
         self.assertFalse(data['success'])
-        self.assertIn("out of stock", data['message'].lower())
+        self.assertIn("error", data)
 
     def test_steadfast_service_structure(self):
         from store.steadfast import SteadfastCourierService

@@ -225,7 +225,84 @@
             </div>
         </div>
 
-        <div class="overflow-x-auto">
+        <!-- 1. MOBILE VIEW: Flavor Cards (block md:hidden) -->
+        <div class="block md:hidden p-3 space-y-2.5 bg-gray-50/50">
+            {% for item in items %}
+            <div class="bg-white rounded-xl border border-gray-200 shadow-2xs p-3 space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        {% if item.product %}
+                        <img src="{{ item.product.primary_image_url }}" alt="{{ item.product.name }}" class="w-10 h-10 rounded-xl object-cover border border-gray-200 shrink-0">
+                        {% else %}
+                        <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center text-sm font-black shrink-0">
+                            <i class="fa-solid fa-jar"></i>
+                        </div>
+                        {% endif %}
+                        <div class="min-w-0">
+                            <span class="font-display font-black text-xs text-gray-900 block truncate">{{ item.product.name }}</span>
+                            <span class="text-[10px] text-gray-400 font-semibold">{{ item.product.category.name|default:"General Pickles" }}</span>
+                        </div>
+                    </div>
+                    <div>
+                        {% if item.fifo_status == 'ACTIVE' %}
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-900 border border-emerald-300">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                            <span>চলছে</span>
+                        </span>
+                        {% elif item.fifo_status == 'SOLD_OUT' %}
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600">
+                            <span>শেষ</span>
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800">
+                            <span>অপেক্ষমাণ</span>
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-1.5 text-center bg-gray-50 p-2 rounded-lg text-[11px]">
+                    <div>
+                        <span class="text-[9px] text-gray-400 font-bold uppercase block">উৎপাদিত</span>
+                        <strong class="text-gray-900">+{{ item.quantity }}</strong>
+                    </div>
+                    <div>
+                        <span class="text-[9px] text-gray-400 font-bold uppercase block">সেল হয়েছে</span>
+                        <strong class="text-amber-800">{{ item.fifo_sold }} ({{ item.fifo_percent }}%)</strong>
+                    </div>
+                    <div>
+                        <span class="text-[9px] text-gray-400 font-bold uppercase block">অবশিষ্ট</span>
+                        <strong class="{% if item.fifo_remaining > 0 %}text-emerald-700{% else %}text-gray-400{% endif %}">{{ item.fifo_remaining }}টি</strong>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between text-xs pt-1 border-t border-gray-100">
+                    <span class="text-[11px] text-gray-500">গুদাম স্টক: <strong>{{ item.product.stock_count }} jars</strong></span>
+                    <div class="flex items-center gap-1">
+                        {% if can_edit %}
+                        <button type="button" onclick="openQuickEditModal({{ item.id }}, '{{ item.product.name|escapejs }}', {{ item.quantity }}, {{ item.product.stock_count }})"
+                            class="px-2 py-1 rounded-lg bg-brand-50 hover:bg-brand-100 text-brand-800 border border-brand-200 text-[11px] font-bold cursor-pointer">
+                            <i class="fa-solid fa-pen-to-square"></i> এডিট
+                        </button>
+                        {% endif %}
+                        {% if can_delete %}
+                        <button type="button" onclick="openDeleteItemModal({{ item.id }}, '{{ item.product.name|escapejs }}', {{ item.quantity }})"
+                            class="p-1 px-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] cursor-pointer">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="py-6 text-center text-gray-400 text-xs">
+                এই ব্যাচে কোনো আচারের আইটেম রেকর্ড পাওয়া যায়নি।
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- 2. DESKTOP VIEW: Table (hidden md:block) -->
+        <div class="hidden md:block overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-gray-50/80 border-b border-gray-200 text-[11px] font-black text-gray-500 uppercase tracking-wider">

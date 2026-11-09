@@ -537,3 +537,99 @@ def send_meta_view_content_capi(request, product, event_id):
             logger.debug(f"[Meta CAPI ViewContent] Async send failed: {e}")
 
     threading.Thread(target=_worker, daemon=True).start()
+
+
+def get_order_meta_details(order):
+    """
+    Returns full breakdown of data packaged and dispatched to Meta CAPI / Pixel
+    for an order, including customer match keys, catalog contents, financial values,
+    and server transmission status.
+    """
+    tracking = get_order_tracking_keys(order.order_number)
+    sent_status = get_order_meta_sent_status(order.order_number)
+    env_fallback = _read_env_fallback()
+    pixel_id = (getattr(settings, 'META_PIXEL_ID', '') or env_fallback.get('META_PIXEL_ID', '') or '2165451210680943').strip()
+
+    cleaned_phone = _format_bd_phone(order.customer_phone)
+    raw_name = (order.customer_name or '').strip()
+    name_parts = raw_name.split()
+    fn = name_parts[0] if name_parts else ''
+    ln = ' '.join(name_parts[1:]) if len(name_parts) > 1 else ''
+    city = (order.delivery_city or 'Dhaka').strip()
+
+    client_ip = tracking.get('client_ip_address') or getattr(order, 'ip_address', '') or ''
+    client_ua = tracking.get('client_user_agent') or ''
+    fbp = tracking.get('fbp') or ''
+    fbc = tracking.get('fbc') or ''
+
+    contents = []
+    content_ids = []
+    total_qty = 0
+    try:
+        for itm in order.items.all():
+            cid = itm.product.catalog_id if (itm.product and getattr(itm.product, 'catalog_id', None)) else (f"JAR-{itm.product_id}" if itm.product_id else str(itm.product_name))
+            qty = int(itm.quantity or 1)
+            total_qty += qty
+            content_ids.append(cid)
+            contents.append({
+                'id': cid,
+                'name': itm.product_name or (itm.product.name if itm.product else 'Pickle Jar'),
+                'quantity': qty,
+                'item_price': float(itm.unit_price or 0)
+            })
+    except Exception:
+        total_qty = 1
+
+    raw_payload_preview = {
+        'event_name': 'Purchase',
+        'event_id': order.order_number,
+        'event_time': sent_status.get('sent_at') if sent_status else int(time.time()),
+        'action_source': 'website',
+        'event_source_url': 'https://www.pickpickles.xyz/checkout/',
+        'user_data': {
+            'country': ['[SHA-256: bd]'],
+            'external_id': [f'[SHA-256: {order.order_number}]'],
+            'ph': [f'[SHA-256: {cleaned_phone}]'] if cleaned_phone else [],
+            'fn': [f'[SHA-256: {fn}]'] if fn else [],
+            'ln': [f'[SHA-256: {ln}]'] if ln else [],
+            'ct': [f'[SHA-256: {city.lower()}]'] if city else [],
+            'em': [f'[SHA-256: {order.customer_email.lower()}]'] if order.customer_email else [],
+            'client_ip_address': client_ip or 'Auto-detected at checkout',
+            'client_user_agent': client_ua or 'Mobile Browser User-Agent',
+            'fbp': fbp or 'Browser Cookie (_fbp)',
+            'fbc': fbc or 'Ad Click ID (_fbc)',
+        },
+        'custom_data': {
+            'currency': 'BDT',
+            'value': float(order.total_amount or 0),
+            'order_id': order.order_number,
+            'content_type': 'product',
+            'content_ids': content_ids,
+            'contents': contents,
+            'num_items': total_qty or 1
+        }
+    }
+
+    return {
+        'pixel_id': pixel_id,
+        'event_name': 'Purchase',
+        'event_id': order.order_number,
+        'value': float(order.total_amount or 0),
+        'currency': 'BDT',
+        'cleaned_phone': cleaned_phone,
+        'customer_name': raw_name,
+        'first_name': fn,
+        'last_name': ln,
+        'customer_email': order.customer_email or '',
+        'city': city,
+        'client_ip': client_ip,
+        'client_ua': client_ua,
+        'fbp': fbp,
+        'fbc': fbc,
+        'content_ids': content_ids,
+        'contents': contents,
+        'total_items_count': total_qty,
+        'sent_status': sent_status,
+        'is_sent': bool(sent_status),
+        'raw_payload_json': json.dumps(raw_payload_preview, indent=2, ensure_ascii=False),
+    }
