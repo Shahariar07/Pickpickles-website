@@ -500,9 +500,9 @@
                     </span>
                     <div>
                         <h3 class="font-display font-black text-base sm:text-lg text-gray-900">
-                            Delivered Sales & Daily Confirmed Orders
+                            Daily Sales, Orders & Jars Trend
                         </h3>
-                        <p class="text-xs text-gray-400">ডেলিভারি হওয়া তারিখ অনুযায়ী আদায়কৃত সেলস (৳) এবং অর্ডার প্রাপ্তির তারিখ অনুযায়ী কনফার্মড অর্ডার</p>
+                        <p class="text-xs text-gray-400">ডেলিভারি হওয়া তারিখ অনুযায়ী আদায়কৃত সেলস (৳), কনফার্মড অর্ডার এবং অর্ডারকৃত জারের মোট সংখ্যা</p>
                     </div>
                 </div>
                 <div class="flex flex-wrap items-center gap-2 text-xs font-bold">
@@ -511,6 +511,9 @@
                     </span>
                     <span class="inline-flex items-center gap-1.5 text-indigo-800 bg-indigo-50 px-2.5 py-1 rounded-xl border border-indigo-200 text-xs">
                         <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 inline-block shadow-2xs"></span> Confirmed Orders
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 text-amber-900 bg-amber-50 px-2.5 py-1 rounded-xl border border-amber-300 text-xs">
+                        <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block shadow-2xs"></span> 🫙 Jars Ordered (জার সংখ্যা)
                     </span>
                 </div>
             </div>
@@ -1127,6 +1130,22 @@ document.addEventListener("DOMContentLoaded", function () {
                         pointBorderColor: '#ffffff',
                         pointBorderWidth: 1.5,
                         yAxisID: 'y1'
+                    },
+                    {
+                        label: 'Jars Ordered',
+                        data: data.jarsData || [],
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.08)',
+                        fill: false,
+                        tension: 0.35,
+                        borderWidth: 2.4,
+                        borderDash: [5, 4],
+                        pointRadius: 4.5,
+                        pointHoverRadius: 7,
+                        pointBackgroundColor: '#f59e0b',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 1.5,
+                        yAxisID: 'y1'
                     }
                 ]
             },
@@ -1145,6 +1164,9 @@ document.addEventListener("DOMContentLoaded", function () {
                         cornerRadius: 10,
                         callbacks: {
                             label: function (context) {
+                                if (context.dataset.label.includes('Jars')) {
+                                    return ` 🫙 ${context.parsed.y} Jar(s) Ordered`;
+                                }
                                 if (context.dataset.label.includes('Orders')) {
                                     return ` 📦 ${context.parsed.y} Confirmed Order(s)`;
                                 }
@@ -1175,13 +1197,13 @@ document.addEventListener("DOMContentLoaded", function () {
                         display: true,
                         position: 'right',
                         beginAtZero: true,
-                        suggestedMax: Math.max(...(data.ordersData || [0]), 5),
+                        suggestedMax: Math.max(...(data.ordersData || [0]), ...(data.jarsData || [0]), 5),
                         grid: { drawOnChartArea: false },
                         ticks: {
                             font: { size: 10 },
                             stepSize: 1,
                             precision: 0,
-                            callback: value => value + (value === 1 ? ' order' : ' orders')
+                            callback: value => value
                         }
                     }
                 }

@@ -3,6 +3,7 @@ import re
 import uuid
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 from django.utils.text import slugify
 
 
@@ -479,15 +480,171 @@ def detect_dhaka_and_city(address: str) -> tuple:
     return 'OUTSIDE_DHAKA', 'Outside Dhaka'
 
 
+class PromotionSetting(models.Model):
+    APPLY_MODE_CHOICES = [
+        ('EXACT', 'Exactly Minimum Jars (e.g. exactly 2 jars)'),
+        ('AT_LEAST', 'Minimum Jars or More (e.g. 2 or more jars)'),
+    ]
+
+    is_active = models.BooleanField(default=True, help_text="Master switch to activate or pause store promotions.")
+    campaign_name = models.CharField(max_length=200, default="Special Seasonal Offer", help_text="Campaign name for dashboard reference.")
+    
+    # 1. Hero & Menu Badges
+    hero_badge_text = models.CharField(max_length=255, default="🎁 2 Jars Flat ৳100 OFF", blank=True, help_text="Badge text displayed in Hero section and menu.")
+    hero_badge_enabled = models.BooleanField(default=True, help_text="Show badge in Hero section.")
+
+    # 2. Announcement Bar
+    announcement_bar_text = models.CharField(max_length=300, default="🎁 2 Jars Flat ৳100 OFF • 🚚 Nationwide Delivery Flat ৳150!", blank=True, help_text="Header announcement text.")
+    announcement_bar_enabled = models.BooleanField(default=True, help_text="Show top announcement bar.")
+
+    # 3. Bundle / Volume Discount
+    bundle_discount_enabled = models.BooleanField(default=True, help_text="Enable multi-jar bundle discount.")
+    bundle_min_jars = models.PositiveIntegerField(default=2, help_text="Number of jars needed to trigger discount.")
+    bundle_discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('100.00'), help_text="Discount amount in ৳.")
+    bundle_discount_label = models.CharField(max_length=200, default="2-Jar Flat ৳100 OFF", blank=True, help_text="Discount breakdown label.")
+    bundle_apply_mode = models.CharField(max_length=20, choices=APPLY_MODE_CHOICES, default='EXACT', help_text="Apply discount on exact quantity or minimum threshold.")
+
+    # 4. Delivery Rules
+    standard_delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('150.00'), help_text="Standard flat delivery fee nationwide.")
+    free_delivery_enabled = models.BooleanField(default=False, help_text="Enable free delivery on threshold.")
+    free_delivery_min_jars = models.PositiveIntegerField(default=4, help_text="Minimum jars needed for free delivery.")
+    delivery_notice_text = models.CharField(max_length=255, default="Flat ৳150 nationwide delivery across Bangladesh.", blank=True, help_text="Delivery notice note in cart drawer and checkout.")
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Promotion & Offer Setting"
+        verbose_name_plural = "Promotion & Offer Settings"
+
+    def __str__(self):
+        return f"{self.campaign_name} ({'Active' if self.is_active else 'Disabled'})"
+
+    @classmethod
+    def get_settings(cls):
+        try:
+            obj = cls.objects.first()
+            if not obj:
+                obj = cls.objects.create()
+            return obj
+        except Exception:
+            return cls()
+
+    def get_discount_label(self) -> str:
+        """
+        Dynamically returns the discount label ensuring the displayed amount 
+        always matches bundle_discount_amount.
+        """
+        amount_int = int(self.bundle_discount_amount) if self.bundle_discount_amount == int(self.bundle_discount_amount) else f"{self.bundle_discount_amount:.2f}"
+        
+        if not self.bundle_discount_label:
+            return f"{self.bundle_min_jars}-Jar Flat ৳{amount_int} OFF"
+        
+        import re
+        if re.search(r'৳\s*\d+', self.bundle_discount_label):
+            return re.sub(r'৳\s*\d+', f"৳{amount_int}", self.bundle_discount_label)
+        
+        return self.bundle_discount_label
+
+    def save(self, *args, **kwargs):
+        import re
+        if self.bundle_discount_amount > Decimal('0.00'):
+            amount_int = int(self.bundle_discount_amount) if self.bundle_discount_amount == int(self.bundle_discount_amount) else f"{self.bundle_discount_amount:.0f}"
+            if self.bundle_discount_label and re.search(r'৳\s*\d+', self.bundle_discount_label):
+                self.bundle_discount_label = re.sub(r'৳\s*\d+', f"৳{amount_int}", self.bundle_discount_label)
+            elif not self.bundle_discount_label:
+                self.bundle_discount_label = f"{self.bundle_min_jars}-Jar Flat ৳{amount_int} OFF"
+        super().save(*args, **kwargs)
+
+    def calculate_discount(self, total_items: int, subtotal: Decimal = Decimal('0.00')) -> Decimal:
+        if not self.is_active or not self.bundle_discount_enabled or self.bundle_discount_amount <= Decimal('0.00'):
+            return Decimal('0.00')
+        if self.bundle_apply_mode == 'EXACT':
+            if total_items == self.bundle_min_jars:
+                return self.bundle_discount_amount
+        else:
+            if total_items >= self.bundle_min_jars:
+                return self.bundle_discount_amount
+        return Decimal('0.00')
+
+    def calculate_delivery_fee(self, total_items: int = 1, weight_grams: int = 600, zone: str = 'INSIDE_DHAKA') -> Decimal:
+        if self.is_active and self.free_delivery_enabled and total_items >= self.free_delivery_min_jars:
+            return Decimal('0.00')
+        return self.standard_delivery_fee
+
+
 def calculate_pathao_delivery_fee(weight_grams: int = 600, zone: str = 'INSIDE_DHAKA', total_items: int = 1) -> Decimal:
     """
-    Calculates delivery fee.
-    Special Offer: Order 4 or more items and get FREE delivery!
-    Otherwise: Flat ৳150 nationwide across Bangladesh (Inside & Outside Dhaka).
+    Standard Delivery Fee Calculation via active PromotionSetting.
     """
-    if total_items >= 4:
-        return Decimal('0.00')
-    return Decimal('150.00')
+    promo = PromotionSetting.get_settings()
+    return promo.calculate_delivery_fee(total_items=total_items, weight_grams=weight_grams, zone=zone)
+
+
+class Coupon(models.Model):
+    DISCOUNT_TYPE_CHOICES = [
+        ('FIXED', 'Fixed Amount (৳)'),
+        ('PERCENT', 'Percentage (%)'),
+    ]
+
+    code = models.CharField(max_length=50, unique=True, help_text="Coupon code in uppercase (e.g. CRUNCH50)")
+    discount_type = models.CharField(max_length=10, choices=DISCOUNT_TYPE_CHOICES, default='FIXED')
+    discount_value = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('50.00'), help_text="Discount value in ৳ or %")
+    min_jars = models.PositiveIntegerField(default=1, help_text="Minimum jars required to use this coupon.")
+    min_subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), help_text="Minimum cart subtotal in ৳ required.")
+    is_active = models.BooleanField(default=True, help_text="Whether this coupon is active.")
+    usage_limit = models.PositiveIntegerField(null=True, blank=True, help_text="Max uses. Leave empty for unlimited.")
+    used_count = models.PositiveIntegerField(default=0, help_text="Times this coupon has been redeemed.")
+    valid_from = models.DateTimeField(null=True, blank=True, help_text="Start date.")
+    valid_to = models.DateTimeField(null=True, blank=True, help_text="Expiry date.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Coupon"
+        verbose_name_plural = "Coupons"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        val = f"৳{int(self.discount_value)}" if self.discount_type == 'FIXED' else f"{int(self.discount_value)}%"
+        return f"{self.code} ({val} OFF)"
+
+    def save(self, *args, **kwargs):
+        if self.code:
+            self.code = self.code.strip().upper()
+        super().save(*args, **kwargs)
+
+    def is_valid_now(self):
+        if not self.is_active:
+            return False, "This coupon is currently inactive."
+        if self.usage_limit is not None and self.used_count >= self.usage_limit:
+            return False, "This coupon has reached its maximum redemption limit."
+        from django.utils import timezone
+        now = timezone.now()
+        if self.valid_from and now < self.valid_from:
+            return False, "This coupon is not yet active."
+        if self.valid_to and now > self.valid_to:
+            return False, "This coupon has expired."
+        return True, ""
+
+    def calculate_discount(self, subtotal, total_items: int):
+        valid, msg = self.is_valid_now()
+        if not valid:
+            return Decimal('0.00'), msg
+        subtotal_dec = Decimal(str(subtotal or '0.00'))
+        min_sub_dec = Decimal(str(self.min_subtotal or '0.00'))
+        discount_val = Decimal(str(self.discount_value or '0.00'))
+
+        if total_items < self.min_jars:
+            return Decimal('0.00'), f"This coupon requires at least {self.min_jars} jar{'s' if self.min_jars > 1 else ''} in your cart."
+        if subtotal_dec < min_sub_dec:
+            return Decimal('0.00'), f"This coupon requires a minimum cart subtotal of ৳{min_sub_dec:.0f}."
+
+        if self.discount_type == 'PERCENT':
+            discount = (subtotal_dec * discount_val) / Decimal('100.00')
+        else:
+            discount = discount_val
+
+        discount = min(subtotal_dec, discount)
+        return Decimal(str(discount)).quantize(Decimal('0.01')), ""
 
 
 class Order(models.Model):
@@ -537,6 +694,7 @@ class Order(models.Model):
     delivery_fee = models.DecimalField(max_digits=8, decimal_places=2, default=150.00)
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    coupon_code = models.CharField(max_length=50, blank=True, null=True, help_text="Coupon code applied to this order")
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     
     # Courier Integration (Pathao & Steadfast)
@@ -1381,4 +1539,5 @@ class Review(models.Model):
     def __str__(self):
         prod = f" on {self.product.name}" if self.product else ""
         return f"{self.reviewer_name}{prod} ({self.rating}★)"
+
 

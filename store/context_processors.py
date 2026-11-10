@@ -4,7 +4,7 @@ import hashlib
 import json
 from django.conf import settings
 from .cart import Cart
-from .models import Category
+from .models import Category, PromotionSetting
 
 
 def _get_dynamic_static_version():
@@ -214,6 +214,7 @@ def cart_context(request):
         'strict_admin_only_edit': strict_admin_only_edit,
         'strict_admin_only_dispatch': strict_admin_only_dispatch,
         'is_admin_user': bool(getattr(request, 'user', None) and request.user.is_authenticated and request.user.is_superuser),
+        'promo_settings': PromotionSetting.get_settings(),
     }
 
     try:
@@ -222,18 +223,33 @@ def cart_context(request):
                 'cart': [],
                 'cart_total_items': 0,
                 'cart_subtotal': 0,
+                'cart_discount': 0,
+                'delivery_fee': 150,
                 'free_delivery_unlocked': False,
-                'items_needed_for_free_delivery': 4,
+                'items_needed_for_free_delivery': 0,
                 **base_context,
             }
         cart = Cart(request)
+        promo = base_context.get('promo_settings') or PromotionSetting.get_settings()
+        discount = cart.get_discount()
+        delivery_fee = cart.get_delivery_fee()
+        free_unlocked = cart.is_free_delivery()
+        items_needed = cart.items_needed_for_free_delivery()
+        coupon_code = cart.get_coupon_code()
+        coupon_disc = cart.get_coupon_discount()
+        bundle_disc = cart.get_bundle_discount()
         return {
             'cart': cart,
             'cart_total_items': len(cart),
             'cart_subtotal': cart.get_subtotal(),
-            'cart_discount': cart.get_discount(),
-            'free_delivery_unlocked': cart.is_free_delivery(),
-            'items_needed_for_free_delivery': cart.items_needed_for_free_delivery(),
+            'cart_discount': discount,
+            'cart_bundle_discount': bundle_disc,
+            'cart_coupon_discount': coupon_disc,
+            'applied_coupon_code': coupon_code,
+            'cart_delivery_fee': delivery_fee,
+            'delivery_fee': delivery_fee,
+            'free_delivery_unlocked': free_unlocked,
+            'items_needed_for_free_delivery': items_needed,
             **base_context,
         }
     except Exception:
@@ -242,7 +258,8 @@ def cart_context(request):
             'cart_total_items': 0,
             'cart_subtotal': 0,
             'cart_discount': 0,
+            'delivery_fee': 150,
             'free_delivery_unlocked': False,
-            'items_needed_for_free_delivery': 4,
+            'items_needed_for_free_delivery': 0,
             **base_context,
         }

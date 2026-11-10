@@ -9,9 +9,31 @@ from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from .models import Product, Category, Order, OrderItem, Review
+from .models import Product, Category, Order, OrderItem, Review, PromotionSetting
 from .cart import Cart
 from .forms import CheckoutForm, ReviewForm
+
+
+def _get_promo_payload():
+    promo = PromotionSetting.get_settings()
+    is_active = bool(promo.is_active)
+    return {
+        'is_active': is_active,
+        'campaign_name': promo.campaign_name,
+        'hero_badge_text': promo.hero_badge_text if is_active else '',
+        'hero_badge_enabled': bool(promo.hero_badge_enabled and is_active),
+        'announcement_bar_text': promo.announcement_bar_text if is_active else '',
+        'announcement_bar_enabled': bool(promo.announcement_bar_enabled and is_active),
+        'bundle_discount_enabled': bool(promo.bundle_discount_enabled and is_active),
+        'bundle_min_jars': promo.bundle_min_jars,
+        'bundle_discount_amount': float(promo.bundle_discount_amount) if is_active else 0.0,
+        'bundle_discount_label': promo.get_discount_label() if is_active else '',
+        'bundle_apply_mode': promo.bundle_apply_mode,
+        'standard_delivery_fee': float(promo.standard_delivery_fee),
+        'free_delivery_enabled': bool(promo.free_delivery_enabled and is_active),
+        'free_delivery_min_jars': promo.free_delivery_min_jars,
+        'delivery_notice_text': promo.delivery_notice_text,
+    }
 
 
 from django.db.models import Count, Q, Sum, Value, IntegerField, Case, When
@@ -344,6 +366,7 @@ def cart_add(request, product_id):
             'grand_total': float(cart.get_total_price('INSIDE_DHAKA')),
             'free_delivery_unlocked': cart.is_free_delivery(),
             'items_needed_for_free_delivery': cart.items_needed_for_free_delivery(),
+            'offer_info': _get_promo_payload(),
             'items': items_data,
             'added_product': {
                 'id': product.id,
@@ -399,6 +422,7 @@ def cart_remove(request, product_id):
             'grand_total': float(cart.get_total_price('INSIDE_DHAKA')),
             'free_delivery_unlocked': cart.is_free_delivery(),
             'items_needed_for_free_delivery': cart.items_needed_for_free_delivery(),
+            'offer_info': _get_promo_payload(),
             'items': items_data,
         })
 
@@ -410,43 +434,51 @@ def cart_remove(request, product_id):
 def cart_update_ajax(request):
     cart = Cart(request)
     try:
-        data = json.loads(request.body)
-        raw_key = str(data.get('item_key') or data.get('product_id'))
-        action = data.get('action') # 'increase', 'decrease', 'remove'
+        data = json.loads(request.body) if request.body else {}
+        action = data.get('action') # 'increase', 'decrease', 'remove', 'sync', 'get_cart'
         zone = data.get('zone', 'INSIDE_DHAKA')
-        
-        # Check if raw_key exists directly in cart
-        if raw_key in cart.cart:
-            cart_key = raw_key
-            pid = cart.cart[cart_key].get('product_id', cart_key.split('_')[0])
-            variant = cart.cart[cart_key].get('variant', '')
-        else:
-            matching = [k for k, v in cart.cart.items() if k == raw_key or str(v.get('product_id')) == raw_key]
-            if matching:
-                cart_key = matching[0]
+        raw_key = str(data.get('item_key') or data.get('product_id') or '').strip()
+
+        item_qty = 0
+        item_total = 0.0
+        cart_key = raw_key
+
+        if action not in ('sync', 'get_cart') and raw_key and raw_key != 'None':
+            # Check if raw_key exists directly in cart
+            if raw_key in cart.cart:
+                cart_key = raw_key
                 pid = cart.cart[cart_key].get('product_id', cart_key.split('_')[0])
                 variant = cart.cart[cart_key].get('variant', '')
             else:
-                cart_key = raw_key
-                pid = raw_key
-                variant = None
+                matching = [k for k, v in cart.cart.items() if k == raw_key or str(v.get('product_id')) == raw_key]
+                if matching:
+                    cart_key = matching[0]
+                    pid = cart.cart[cart_key].get('product_id', cart_key.split('_')[0])
+                    variant = cart.cart[cart_key].get('variant', '')
+                else:
+                    cart_key = raw_key
+                    pid = raw_key
+                    variant = None
 
-        product = get_object_or_404(Product, id=pid)
-        current_qty = cart.cart.get(cart_key, {}).get('quantity', 0)
-        
-        if action == 'increase':
-            if current_qty < 100:
-                cart.add(product=product, quantity=1, override_quantity=False, variant=variant)
-        elif action == 'decrease':
-            if current_qty > 1:
-                cart.add(product=product, quantity=current_qty - 1, override_quantity=True, variant=variant)
-            else:
+            product = get_object_or_404(Product, id=pid)
+            current_qty = cart.cart.get(cart_key, {}).get('quantity', 0)
+            
+            if action == 'increase':
+                if current_qty < 100:
+                    cart.add(product=product, quantity=1, override_quantity=False, variant=variant)
+            elif action == 'decrease':
+                if current_qty > 1:
+                    cart.add(product=product, quantity=current_qty - 1, override_quantity=True, variant=variant)
+                else:
+                    cart.remove(cart_key)
+            elif action == 'remove':
                 cart.remove(cart_key)
-        elif action == 'remove':
-            cart.remove(cart_key)
 
-        item_qty = cart.cart.get(cart_key, {}).get('quantity', 0)
-        item_total = float(Decimal(cart.cart.get(cart_key, {}).get('price', 0)) * item_qty) if cart_key in cart.cart else 0
+            item_qty = cart.cart.get(cart_key, {}).get('quantity', 0)
+            item_total = float(Decimal(cart.cart.get(cart_key, {}).get('price', 0)) * item_qty) if cart_key in cart.cart else 0
+        else:
+            item_qty = len(cart)
+            item_total = float(cart.get_subtotal())
 
         items_data = [
             {
@@ -482,6 +514,7 @@ def cart_update_ajax(request):
             'grand_total': grand_total,
             'free_delivery_unlocked': cart.is_free_delivery(),
             'items_needed_for_free_delivery': cart.items_needed_for_free_delivery(),
+            'offer_info': _get_promo_payload(),
             'item_quantity': item_qty,
             'item_total': item_total,
             'item_key': cart_key,
@@ -514,7 +547,83 @@ def shipping_calc_ajax(request):
         'total': float(total),
         'free_delivery_unlocked': cart.is_free_delivery(),
         'items_needed_for_free_delivery': cart.items_needed_for_free_delivery(),
+        'offer_info': _get_promo_payload(),
     })
+
+
+@require_POST
+def apply_coupon_ajax(request):
+    cart = Cart(request)
+    try:
+        data = {}
+        if request.body:
+            try:
+                data = json.loads(request.body)
+            except Exception:
+                pass
+        if not data:
+            data = request.POST
+        code = (data.get('coupon_code') or '').strip()
+        zone = data.get('zone', 'INSIDE_DHAKA')
+        success, message, coupon_discount = cart.apply_coupon(code)
+        
+        delivery_fee = float(cart.get_delivery_fee(zone))
+        subtotal = float(cart.get_subtotal())
+        discount = float(cart.get_discount())
+        grand_total = float(cart.get_total_price(zone))
+
+        return JsonResponse({
+            'success': success,
+            'message': message,
+            'coupon_code': cart.get_coupon_code(),
+            'coupon_discount': float(cart.get_coupon_discount()),
+            'bundle_discount': float(cart.get_bundle_discount()),
+            'cart_discount': discount,
+            'cart_subtotal': subtotal,
+            'delivery_fee': delivery_fee,
+            'grand_total': grand_total,
+            'free_delivery_unlocked': cart.is_free_delivery(),
+            'offer_info': _get_promo_payload(),
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=200)
+
+
+@require_POST
+def remove_coupon_ajax(request):
+    cart = Cart(request)
+    try:
+        data = {}
+        if request.body:
+            try:
+                data = json.loads(request.body)
+            except Exception:
+                pass
+        if not data:
+            data = request.POST
+        zone = data.get('zone', 'INSIDE_DHAKA')
+        cart.remove_coupon()
+
+        delivery_fee = float(cart.get_delivery_fee(zone))
+        subtotal = float(cart.get_subtotal())
+        discount = float(cart.get_discount())
+        grand_total = float(cart.get_total_price(zone))
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Coupon removed.',
+            'coupon_code': '',
+            'coupon_discount': 0.0,
+            'bundle_discount': float(cart.get_bundle_discount()),
+            'cart_discount': discount,
+            'cart_subtotal': subtotal,
+            'delivery_fee': delivery_fee,
+            'grand_total': grand_total,
+            'free_delivery_unlocked': cart.is_free_delivery(),
+            'offer_info': _get_promo_payload(),
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=200)
 
 
 def checkout(request):
@@ -557,6 +666,7 @@ def checkout(request):
             order.discount_amount = discount
             order.delivery_fee = delivery_fee
             order.total_amount = total
+            order.coupon_code = cart.get_coupon_code() or None
             
             # Payment status determination
             if order.payment_method == 'COD':
@@ -565,6 +675,12 @@ def checkout(request):
                 order.payment_status = 'PENDING_VERIFICATION'
                 
             order.save()
+
+            # Record coupon redemption
+            coupon = cart.get_coupon()
+            if coupon:
+                coupon.used_count += 1
+                coupon.save(update_fields=['used_count'])
 
             # Record customer's Meta Match Keys (fbp, fbc, mobile User-Agent, real IP) at checkout
             # Saved persistently until admin verifies & accepts the order, guaranteeing high EMQ without fake data
@@ -632,11 +748,15 @@ def checkout(request):
         'form': form,
         'cart_subtotal': subtotal,
         'cart_discount': discount,
+        'cart_bundle_discount': cart.get_bundle_discount(),
+        'cart_coupon_discount': cart.get_coupon_discount(),
+        'applied_coupon_code': cart.get_coupon_code(),
         'cart_total_items': len(cart),
         'total_weight_grams': total_weight_grams,
         'total_weight_kg': total_weight_kg,
         'billing_weight_kg': billing_weight_kg,
         'delivery_fee': delivery_fee,
+        'cart_delivery_fee': delivery_fee,
         'delivery_fee_inside': delivery_fee_inside,
         'delivery_fee_outside': delivery_fee_outside,
         'grand_total': total,

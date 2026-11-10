@@ -1,0 +1,887 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Offers & Campaign Manager | Pickpickles Dashboard{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+    <!-- Top Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-3xl border border-gray-200 shadow-xs">
+        <div class="min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black {% if promo.is_active %}bg-emerald-100 text-emerald-900 border border-emerald-300{% else %}bg-gray-100 text-gray-700 border border-gray-300{% endif %}">
+                    <span class="w-2 h-2 rounded-full {% if promo.is_active %}bg-emerald-500 animate-pulse{% else %}bg-gray-400{% endif %}"></span>
+                    {% if promo.is_active %}Promotion Active Live{% else %}Promotions Paused{% endif %}
+                </span>
+                <span class="text-xs text-gray-400 font-semibold">• Last updated {{ promo.updated_at|date:"M d, Y, h:i A" }}</span>
+            </div>
+            <h1 class="font-display font-black text-xl sm:text-2xl lg:text-3xl text-gray-900 mt-2">
+                Offers & Campaign Manager
+            </h1>
+            <p class="text-xs sm:text-sm text-gray-500 mt-1">
+                Configure offers, hero badges, discounts, and delivery rules in real time across the website without touching code.
+            </p>
+        </div>
+
+        <div class="flex items-center gap-3 shrink-0">
+            <a href="{% url 'store:index' %}" target="_blank" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs px-4 py-2.5 rounded-xl border border-gray-300 flex items-center gap-2 transition active:scale-95">
+                <i class="fa-solid fa-arrow-up-right-from-square text-gray-500 text-xs"></i>
+                <span>View Live Store</span>
+            </a>
+            <a href="{% url 'store:cart_view' %}" target="_blank" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs px-4 py-2.5 rounded-xl border border-gray-300 flex items-center gap-2 transition active:scale-95">
+                <i class="fa-solid fa-cart-shopping text-gray-500 text-xs"></i>
+                <span>Test Cart</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Segmented Tab Navigation -->
+    <div class="flex items-center gap-2 p-1.5 bg-gray-100/90 rounded-2xl border border-gray-200/90 w-fit">
+        <button type="button" onclick="switchOfferTab('campaign')" id="tabBtnCampaign"
+            class="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black transition-all shadow-xs bg-white text-gray-900 border border-gray-200 cursor-pointer">
+            <i class="fa-solid fa-bullhorn text-amber-500"></i>
+            <span>Automated Offers & Campaign</span>
+            {% if promo.is_active %}
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            {% else %}
+            <span class="w-2 h-2 rounded-full bg-gray-400"></span>
+            {% endif %}
+        </button>
+        <button type="button" onclick="switchOfferTab('coupons')" id="tabBtnCoupons"
+            class="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all text-gray-600 hover:text-gray-900 cursor-pointer">
+            <i class="fa-solid fa-ticket text-brand-600"></i>
+            <span>Coupons & Promo Codes</span>
+            <span class="bg-gray-200 text-gray-700 text-[10px] font-black px-2 py-0.5 rounded-full">{{ coupons|length }}</span>
+        </button>
+    </div>
+
+    <!-- Main Offer Configuration Form -->
+    <form method="POST" action="{% url 'dashboard:offer_manager' %}" class="space-y-6" id="offerManagerForm">
+        {% csrf_token %}
+
+        <!-- 1. Master Toggle & Campaign Info -->
+        <div class="bg-white rounded-3xl border border-gray-200 shadow-xs p-5 sm:p-7 space-y-5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-gray-100">
+                <div class="flex items-start gap-3.5">
+                    <div class="w-11 h-11 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl shrink-0 border border-amber-200">
+                        <i class="fa-solid fa-bullhorn"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-display font-bold text-lg text-gray-900">Campaign Master Switch</h2>
+                        <p class="text-xs text-gray-500 mt-0.5">Toggle this switch to instantly turn on or off all store-wide promotions.</p>
+                    </div>
+                </div>
+
+                <!-- Toggle Switch -->
+                <label class="relative inline-flex items-center cursor-pointer select-none shrink-0">
+                    <input type="checkbox" name="is_active" value="1" class="sr-only peer" id="masterActiveToggle" {% if promo.is_active %}checked{% endif %} {% if is_view_only %}disabled{% endif %} onchange="onMasterToggleChange()">
+                    <div class="w-14 h-8 bg-gray-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-6 peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-emerald-600 shadow-inner"></div>
+                    <span class="ml-3 text-xs font-black text-gray-800" id="masterStatusLabel">{% if promo.is_active %}Campaign Active{% else %}Campaign Paused (All OFF){% endif %}</span>
+                </label>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1.5" for="campaign_name">Campaign / Offer Name</label>
+                    <input type="text" name="campaign_name" id="campaign_name" value="{{ promo.campaign_name }}" required
+                        class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition"
+                        placeholder="e.g. 2 Jars Flat ৳100 OFF Campaign" {% if is_view_only %}readonly{% endif %}>
+                    <p class="text-[11px] text-gray-400 mt-1">Internal reference name for this campaign.</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1.5">Promotion Scope</label>
+                    <div class="p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-600 flex items-center gap-2">
+                        <i class="fa-solid fa-globe text-emerald-600"></i>
+                        <span>Auto-syncs across: <strong>Hero Menu, Announcement Bar, Drawer Cart, /cart/ and /checkout/</strong>.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Coupon Switcher Pill in Campaign View -->
+        <div class="bg-gradient-to-r from-purple-50/80 via-purple-50/40 to-slate-50 border border-purple-200/90 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center text-lg shrink-0 border border-purple-200">
+                    <i class="fa-solid fa-ticket"></i>
+                </div>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                        <h4 class="font-display font-black text-sm text-purple-950">Coupons & Promo Codes</h4>
+                        <span class="text-[10px] font-black bg-purple-200/80 text-purple-900 px-2 py-0.5 rounded-full">{{ coupons|length }} Configured</span>
+                    </div>
+                    <p class="text-xs text-purple-700/90 font-medium mt-0.5">Custom promo codes customers can enter at checkout for instant savings.</p>
+                </div>
+            </div>
+            <button type="button" onclick="switchOfferTab('coupons')" class="bg-purple-900 hover:bg-purple-950 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition active:scale-95 shrink-0 flex items-center gap-2 cursor-pointer shadow-xs">
+                <i class="fa-solid fa-list-check text-purple-300 text-xs"></i>
+                <span>Manage Coupon Codes</span>
+                <i class="fa-solid fa-arrow-right text-[10px]"></i>
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <!-- 2. Hero Section & Menu Badge -->
+            <div class="bg-white rounded-3xl border border-gray-200 shadow-xs p-5 sm:p-6 space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-sm border border-amber-200">
+                            <i class="fa-solid fa-award"></i>
+                        </div>
+                        <h3 class="font-display font-bold text-base text-gray-900">1. Hero & Menu Badges</h3>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer select-none">
+                        <input type="checkbox" name="hero_badge_enabled" value="1" class="sr-only peer" id="heroBadgeToggle" {% if promo.hero_badge_enabled %}checked{% endif %} {% if is_view_only %}disabled{% endif %} onchange="updateLivePreview()">
+                        <div class="w-10 h-6 bg-gray-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-4 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                    </label>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1.5" for="hero_badge_text">Badge Text (Displayed in Hero & Menu)</label>
+                    <input type="text" name="hero_badge_text" id="hero_badge_text" value="{{ promo.hero_badge_text }}"
+                        class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition"
+                        placeholder="e.g. 🎁 2 Jars Flat ৳100 OFF" {% if is_view_only %}readonly{% endif %} oninput="updateLivePreview()">
+                    <p class="text-[11px] text-gray-400 mt-1">Appears as an animated high-contrast golden badge on the Homepage Hero.</p>
+                </div>
+
+                <!-- Live Preview Pill -->
+                <div class="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                    <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Hero Badge Live Preview</span>
+                    <div class="flex items-center gap-2">
+                        <div id="previewHeroBadge" class="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 text-slate-950 border-2 border-amber-200 px-3.5 py-1.5 rounded-full text-xs font-black shadow-md">
+                            <i class="fa-solid fa-gift"></i>
+                            <span id="previewHeroBadgeText">{{ promo.hero_badge_text|default:"🎁 2 Jars Flat ৳100 OFF" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Top Announcement Bar -->
+            <div class="bg-white rounded-3xl border border-gray-200 shadow-xs p-5 sm:p-6 space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm border border-emerald-200">
+                            <i class="fa-solid fa-scroll"></i>
+                        </div>
+                        <h3 class="font-display font-bold text-base text-gray-900">2. Top Announcement Bar</h3>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer select-none">
+                        <input type="checkbox" name="announcement_bar_enabled" value="1" class="sr-only peer" id="announcementBarToggle" {% if promo.announcement_bar_enabled %}checked{% endif %} {% if is_view_only %}disabled{% endif %} onchange="updateLivePreview()">
+                        <div class="w-10 h-6 bg-gray-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-4 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                    </label>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1.5" for="announcement_bar_text">Announcement Bar Text</label>
+                    <input type="text" name="announcement_bar_text" id="announcement_bar_text" value="{{ promo.announcement_bar_text }}"
+                        class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3.5 py-2.5 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition"
+                        placeholder="e.g. 🎁 2 Jars Flat ৳100 OFF • 🚚 Nationwide Delivery Flat ৳150!" {% if is_view_only %}readonly{% endif %} oninput="updateLivePreview()">
+                    <p class="text-[11px] text-gray-400 mt-1">Displayed at the very top of every website page.</p>
+                </div>
+
+                <!-- Live Preview Bar -->
+                <div class="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
+                    <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Top Bar Live Preview</span>
+                    <div id="previewAnnouncementBar" class="bg-[#092d18] border border-[#0f4826] text-white text-[11px] font-semibold py-1.5 px-3 rounded-xl text-center truncate">
+                        <span class="text-amber-300 font-extrabold" id="previewAnnouncementText">{{ promo.announcement_bar_text|default:"🎁 2 Jars Flat ৳100 OFF • 🚚 Nationwide Delivery Flat ৳150!" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Bundle / Multi-Jar Discount -->
+            <div class="bg-white rounded-3xl border border-gray-200 shadow-xs p-5 sm:p-6 space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-sm border border-purple-200">
+                            <i class="fa-solid fa-tag"></i>
+                        </div>
+                        <h3 class="font-display font-bold text-base text-gray-900">3. Multi-Jar Discount Rules</h3>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer select-none">
+                        <input type="checkbox" name="bundle_discount_enabled" value="1" class="sr-only peer" id="bundleDiscountToggle" {% if promo.bundle_discount_enabled %}checked{% endif %} {% if is_view_only %}disabled{% endif %} onchange="updateLivePreview()">
+                        <div class="w-10 h-6 bg-gray-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-4 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                    </label>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1" for="bundle_min_jars">Min Jars Needed</label>
+                        <input type="number" name="bundle_min_jars" id="bundle_min_jars" value="{{ promo.bundle_min_jars }}" min="1" max="50" required
+                            class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition"
+                            {% if is_view_only %}readonly{% endif %} oninput="updateLivePreview()">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1" for="bundle_discount_amount">Discount Amount (৳)</label>
+                        <input type="number" step="1" name="bundle_discount_amount" id="bundle_discount_amount" value="{{ promo.bundle_discount_amount|floatformat:0 }}" min="0" required
+                            class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition"
+                            {% if is_view_only %}readonly{% endif %} oninput="updateLivePreview()">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1" for="bundle_apply_mode">Apply Mode</label>
+                    <select name="bundle_apply_mode" id="bundle_apply_mode" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition" {% if is_view_only %}disabled{% endif %} onchange="updateLivePreview()">
+                        <option value="EXACT" {% if promo.bundle_apply_mode == 'EXACT' %}selected{% endif %}>Exactly Minimum Jars (e.g. only when cart has exactly 2 jars)</option>
+                        <option value="AT_LEAST" {% if promo.bundle_apply_mode == 'AT_LEAST' %}selected{% endif %}>Minimum Jars or More (e.g. 2, 3, 4, 5+ jars all get discount)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1" for="bundle_discount_label">Discount Line-Item Label</label>
+                    <input type="text" name="bundle_discount_label" id="bundle_discount_label" value="{{ promo.bundle_discount_label }}"
+                        class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition"
+                        placeholder="e.g. 2-Jar Flat ৳100 OFF" {% if is_view_only %}readonly{% endif %}>
+                    <p class="text-[11px] text-gray-400 mt-1">This label appears on cart drawer, cart page, and invoice breakdown.</p>
+                </div>
+            </div>
+
+            <!-- 5. Delivery Rules & Free Shipping -->
+            <div class="bg-white rounded-3xl border border-gray-200 shadow-xs p-5 sm:p-6 space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-sm border border-blue-200">
+                            <i class="fa-solid fa-truck"></i>
+                        </div>
+                        <h3 class="font-display font-bold text-base text-gray-900">4. Nationwide Delivery Settings</h3>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1" for="standard_delivery_fee">Flat Delivery Fee (৳)</label>
+                        <input type="number" step="1" name="standard_delivery_fee" id="standard_delivery_fee" value="{{ promo.standard_delivery_fee|floatformat:0 }}" min="0" required
+                            class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition"
+                            {% if is_view_only %}readonly{% endif %} oninput="updateLivePreview()">
+                        <p class="text-[10px] text-gray-400 mt-0.5">Standard fee across all 64 districts.</p>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="text-xs font-bold text-gray-700" for="free_delivery_min_jars">Free Delivery Jars</label>
+                            <label class="relative inline-flex items-center cursor-pointer select-none">
+                                <input type="checkbox" name="free_delivery_enabled" value="1" class="sr-only peer" id="freeDeliveryToggle" {% if promo.free_delivery_enabled %}checked{% endif %} {% if is_view_only %}disabled{% endif %} onchange="updateLivePreview()">
+                                <div class="w-8 h-4 bg-gray-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-4 peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-emerald-600"></div>
+                            </label>
+                        </div>
+                        <input type="number" name="free_delivery_min_jars" id="free_delivery_min_jars" value="{{ promo.free_delivery_min_jars }}" min="1" max="50" required
+                            class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition"
+                            {% if is_view_only %}readonly{% endif %} oninput="updateLivePreview()">
+                        <p class="text-[10px] text-gray-400 mt-0.5">Toggle switch to activate free delivery.</p>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1" for="delivery_notice_text">Delivery Notice Text</label>
+                    <input type="text" name="delivery_notice_text" id="delivery_notice_text" value="{{ promo.delivery_notice_text }}"
+                        class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition"
+                        placeholder="Flat ৳150 nationwide delivery across Bangladesh." {% if is_view_only %}readonly{% endif %}>
+                    <p class="text-[11px] text-gray-400 mt-1">Displayed in cart drawer and checkout delivery pill.</p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 6. Real-Time Cart Simulator & Verification Table -->
+        <div class="bg-white rounded-3xl border border-gray-200 shadow-xs p-5 sm:p-7 space-y-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center text-lg border border-emerald-200">
+                    <i class="fa-solid fa-calculator"></i>
+                </div>
+                <div>
+                    <h3 class="font-display font-bold text-base text-gray-900">Live Customer Cart Simulation</h3>
+                    <p class="text-xs text-gray-500">Preview what a customer sees in their cart with the currently configured rules (assuming ৳350/jar):</p>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-gray-50 text-gray-600 font-bold uppercase text-[10px] border-b border-gray-200">
+                        <tr>
+                            <th class="p-3">Jar Count</th>
+                            <th class="p-3">Subtotal</th>
+                            <th class="p-3">Discount</th>
+                            <th class="p-3">Delivery Fee</th>
+                            <th class="p-3">Total Payable</th>
+                            <th class="p-3">Active Customer Experience</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 font-semibold" id="simTableBody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Form Submit Actions -->
+        <div class="sticky bottom-4 z-20 bg-white/95 backdrop-blur-md p-4 rounded-2xl border border-gray-200 shadow-xl flex items-center justify-between gap-4">
+            <div class="flex items-center gap-2 text-xs text-gray-500">
+                <i class="fa-solid fa-circle-info text-brand-600"></i>
+                <span>Changes take effect immediately on all pages and cart popups upon saving.</span>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button type="button" onclick="location.reload()" class="px-4 py-2.5 rounded-xl border border-gray-300 text-gray-700 text-xs font-bold hover:bg-gray-50 transition active:scale-95">
+                    Reset
+                </button>
+                {% if not is_view_only %}
+                <button type="submit" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-6 py-2.5 rounded-xl shadow-md shadow-brand-600/30 flex items-center gap-2 transition active:scale-95 cursor-pointer">
+                    <i class="fa-solid fa-floppy-disk text-brand-accent"></i>
+                    <span>Save & Apply Offers</span>
+                </button>
+                {% else %}
+                <button type="button" disabled class="bg-gray-300 text-gray-500 text-xs font-bold px-6 py-2.5 rounded-xl cursor-not-allowed">
+                    View-Only Mode
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+    </form>
+
+    <!-- 7. Coupons & Promo Codes Management Section (Tabbed) -->
+    <div class="bg-white rounded-3xl border border-gray-200 shadow-xs p-5 sm:p-7 space-y-6 hidden" id="couponsSection">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-gray-100">
+            <div class="flex items-start gap-3.5">
+                <div class="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl shrink-0 border border-emerald-200">
+                    <i class="fa-solid fa-ticket"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="font-display font-bold text-lg text-gray-900">Coupons & Promo Codes</h2>
+                        <span class="text-xs font-black bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full">{{ coupons|length }} Saved</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-0.5">Create custom promo codes that customers can enter at checkout or in the cart drawer.</p>
+                </div>
+            </div>
+
+            <button type="button" onclick="toggleCouponModal(true)" {% if is_view_only %}disabled{% endif %}
+                class="bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md shadow-brand-600/20 flex items-center gap-2 transition active:scale-95 shrink-0 cursor-pointer disabled:bg-gray-300 disabled:cursor-not-allowed">
+                <i class="fa-solid fa-plus text-brand-accent"></i>
+                <span>Create New Coupon</span>
+            </button>
+        </div>
+
+        <!-- Coupons Table -->
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-gray-50 text-gray-600 font-bold uppercase text-[10px] border-b border-gray-200">
+                    <tr>
+                        <th class="p-3">Coupon Code</th>
+                        <th class="p-3">Discount</th>
+                        <th class="p-3">Requirements</th>
+                        <th class="p-3">Usage</th>
+                        <th class="p-3">Status</th>
+                        <th class="p-3 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 font-semibold">
+                    {% for c in coupons %}
+                    <tr class="hover:bg-gray-50/80 transition">
+                        <td class="p-3">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2.5 py-1 bg-slate-900 text-amber-300 font-mono font-black text-xs rounded-lg tracking-wider border border-slate-700">
+                                    {{ c.code }}
+                                </span>
+                            </div>
+                        </td>
+                        <td class="p-3">
+                            {% if c.discount_type == 'PERCENT' %}
+                            <span class="font-black text-emerald-700 text-sm">{{ c.discount_value|floatformat:0 }}% OFF</span>
+                            {% else %}
+                            <span class="font-black text-emerald-700 text-sm">৳{{ c.discount_value|floatformat:0 }} OFF</span>
+                            {% endif %}
+                        </td>
+                        <td class="p-3 text-gray-600 space-y-0.5">
+                            <div>• Min Jars: <strong>{{ c.min_jars }} jar{% if c.min_jars > 1 %}s{% endif %}</strong></div>
+                            {% if c.min_subtotal > 0 %}
+                            <div>• Min Subtotal: <strong>৳{{ c.min_subtotal|floatformat:0 }}</strong></div>
+                            {% endif %}
+                        </td>
+                        <td class="p-3 text-gray-700">
+                            <div><strong class="text-gray-900">{{ c.used_count }}</strong> / {% if c.usage_limit %}{{ c.usage_limit }}{% else %}∞ Unlimited{% endif %}</div>
+                            <span class="text-[10px] text-gray-400">orders used</span>
+                        </td>
+                        <td class="p-3">
+                            <form method="POST" action="{% url 'dashboard:offer_manager' %}" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="toggle_coupon">
+                                <input type="hidden" name="coupon_id" value="{{ c.id }}">
+                                <button type="submit" {% if is_view_only %}disabled{% endif %} class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black cursor-pointer transition active:scale-95 {% if c.is_active %}bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-300{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300{% endif %}">
+                                    <span class="w-1.5 h-1.5 rounded-full {% if c.is_active %}bg-emerald-500{% else %}bg-gray-400{% endif %}"></span>
+                                    <span>{% if c.is_active %}Active{% else %}Inactive{% endif %}</span>
+                                </button>
+                            </form>
+                        </td>
+                        <td class="p-3 text-right">
+                            <div class="flex items-center justify-end gap-1">
+                                <button type="button" onclick="openEditCouponModal('{{ c.id }}', '{{ c.code }}', '{{ c.discount_type }}', '{{ c.discount_value|floatformat:2 }}', '{{ c.min_jars }}', '{{ c.min_subtotal|floatformat:2 }}', '{{ c.usage_limit|default:'' }}', {{ c.is_active|yesno:'true,false' }})" {% if is_view_only %}disabled{% endif %} class="p-1.5 text-gray-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition cursor-pointer" title="Edit Coupon">
+                                    <i class="fa-solid fa-pen-to-square text-sm"></i>
+                                </button>
+                                <button type="button" onclick="openDeleteCouponModal('{{ c.id }}', '{{ c.code|escapejs }}')" {% if is_view_only %}disabled{% endif %} class="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer" title="Delete Coupon">
+                                    <i class="fa-solid fa-trash-can text-sm"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="p-8 text-center text-gray-400">
+                            <div class="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-2 text-xl border border-gray-200">
+                                🎟️
+                            </div>
+                            <p class="font-bold text-gray-700">No custom coupons created yet.</p>
+                            <p class="text-xs text-gray-400 mt-1">Click "Create New Coupon" to offer special customer discount codes.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Create Coupon Modal -->
+    <div id="couponModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl border border-gray-200 shadow-2xl max-w-lg w-full p-6 space-y-5">
+            <div class="flex items-center justify-between pb-4 border-b border-gray-100">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-base border border-emerald-200">
+                        <i class="fa-solid fa-ticket"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-display font-bold text-base text-gray-900">Create New Coupon</h3>
+                        <p class="text-xs text-gray-400">Generate a new promo code for campaigns.</p>
+                    </div>
+                </div>
+                <button type="button" onclick="toggleCouponModal(false)" class="text-gray-400 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100 transition cursor-pointer">
+                    ✕
+                </button>
+            </div>
+
+            <form method="POST" action="{% url 'dashboard:offer_manager' %}" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create_coupon">
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-bold text-gray-700 mb-1" for="new_coupon_code">Coupon Code *</label>
+                        <input type="text" name="coupon_code" id="new_coupon_code" required placeholder="e.g. PICKLE50, EID2026"
+                            class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3.5 py-2.5 text-xs font-mono font-black text-gray-900 uppercase focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition">
+                        <p class="text-[10px] text-gray-400 mt-1">Codes are case-insensitive and converted to UPPERCASE automatically.</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1" for="new_discount_type">Discount Type</label>
+                        <select name="discount_type" id="new_discount_type" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition">
+                            <option value="FIXED">Flat ৳ Amount OFF</option>
+                            <option value="PERCENT">Percentage (%) OFF</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1" for="new_discount_value">Discount Value *</label>
+                        <input type="number" step="0.5" name="discount_value" id="new_discount_value" value="50.00" min="1" required
+                            class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1" for="new_min_jars">Min Jars in Cart</label>
+                        <input type="number" name="min_jars" id="new_min_jars" value="1" min="1" max="50" required
+                            class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1" for="new_min_subtotal">Min Subtotal (৳)</label>
+                        <input type="number" step="1" name="min_subtotal" id="new_min_subtotal" value="0" min="0"
+                            class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition">
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-bold text-gray-700 mb-1" for="new_usage_limit">Total Usage Limit (Optional)</label>
+                        <input type="number" name="usage_limit" id="new_usage_limit" placeholder="Leave empty for unlimited redemptions" min="1"
+                            class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3.5 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition">
+                    </div>
+
+                    <div class="sm:col-span-2 pt-1">
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" name="is_active" value="1" checked class="w-4 h-4 text-brand-600 rounded-md border-gray-300 focus:ring-brand-500">
+                            <span class="text-xs font-bold text-gray-800">Activate coupon immediately upon creation</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-4 border-t border-gray-100">
+                    <button type="button" onclick="toggleCouponModal(false)" class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 text-xs font-bold hover:bg-gray-50 transition cursor-pointer">
+                        Cancel
+                    </button>
+                    <button type="submit" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-5 py-2 rounded-xl shadow-md transition active:scale-95 cursor-pointer">
+                        Save Coupon
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Coupon Modal -->
+    <div id="editCouponModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl border border-gray-200 shadow-2xl max-w-lg w-full p-6 space-y-5">
+            <div class="flex items-center justify-between pb-4 border-b border-gray-100">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-base border border-purple-200">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-display font-bold text-base text-gray-900">Edit Coupon</h3>
+                        <p class="text-xs text-gray-400">Update promo code rules, discount, or requirements.</p>
+                    </div>
+                </div>
+                <button type="button" onclick="toggleEditCouponModal(false)" class="text-gray-400 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100 transition cursor-pointer">
+                    ✕
+                </button>
+            </div>
+
+            <form method="POST" action="{% url 'dashboard:offer_manager' %}" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="edit_coupon">
+                <input type="hidden" name="coupon_id" id="edit_coupon_id">
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-bold text-gray-700 mb-1" for="edit_coupon_code">Coupon Code *</label>
+                        <input type="text" name="coupon_code" id="edit_coupon_code" required
+                            class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3.5 py-2.5 text-xs font-mono font-black text-gray-900 uppercase focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition">
+                        <p class="text-[10px] text-gray-400 mt-1">Codes are converted to UPPERCASE automatically.</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1" for="edit_discount_type">Discount Type</label>
+                        <select name="discount_type" id="edit_discount_type" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition">
+                            <option value="FIXED">Flat ৳ Amount OFF</option>
+                            <option value="PERCENT">Percentage (%) OFF</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1" for="edit_discount_value">Discount Value *</label>
+                        <input type="number" step="0.5" name="discount_value" id="edit_discount_value" min="1" required
+                            class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1" for="edit_min_jars">Min Jars in Cart</label>
+                        <input type="number" name="min_jars" id="edit_min_jars" min="1" max="50" required
+                            class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1" for="edit_min_subtotal">Min Subtotal (৳)</label>
+                        <input type="number" step="1" name="min_subtotal" id="edit_min_subtotal" min="0"
+                            class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition">
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-bold text-gray-700 mb-1" for="edit_usage_limit">Total Usage Limit (Optional)</label>
+                        <input type="number" name="usage_limit" id="edit_usage_limit" placeholder="Leave empty for unlimited redemptions" min="1"
+                            class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3.5 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition">
+                    </div>
+
+                    <div class="sm:col-span-2 pt-1">
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" name="is_active" id="edit_is_active" value="1" class="w-4 h-4 text-brand-600 rounded-md border-gray-300 focus:ring-brand-500">
+                            <span class="text-xs font-bold text-gray-800">Coupon is currently active</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-4 border-t border-gray-100">
+                    <button type="button" onclick="toggleEditCouponModal(false)" class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 text-xs font-bold hover:bg-gray-50 transition cursor-pointer">
+                        Cancel
+                    </button>
+                    <button type="submit" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-5 py-2 rounded-xl shadow-md transition active:scale-95 cursor-pointer">
+                        Update Coupon
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Coupon Confirmation Modal -->
+    <div id="deleteCouponModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl border border-gray-200 shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div class="flex items-center gap-3.5 pb-3 border-b border-gray-100">
+                <div class="w-11 h-11 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center text-xl shrink-0 border border-rose-200">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <div>
+                    <h3 class="font-display font-black text-base text-gray-900">Delete Coupon</h3>
+                    <p class="text-xs text-gray-400">Permanently remove this promotional code.</p>
+                </div>
+            </div>
+
+            <p class="text-xs text-gray-600 leading-relaxed">
+                Are you sure you want to permanently delete coupon <span id="deleteCouponCodeBadge" class="px-2 py-0.5 bg-slate-900 text-amber-300 font-mono font-black text-xs rounded-lg tracking-wider"></span>? Customers will no longer be able to use it at checkout.
+            </p>
+
+            <form method="POST" action="{% url 'dashboard:offer_manager' %}" class="flex items-center justify-end gap-2 pt-2" id="deleteCouponForm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete_coupon">
+                <input type="hidden" name="coupon_id" id="delete_coupon_id">
+
+                <button type="button" onclick="toggleDeleteCouponModal(false)" class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 text-xs font-bold hover:bg-gray-50 transition active:scale-95 cursor-pointer">
+                    Cancel
+                </button>
+                <button type="submit" class="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-5 py-2 rounded-xl shadow-md shadow-rose-600/30 transition active:scale-95 cursor-pointer flex items-center gap-1.5">
+                    <i class="fa-solid fa-trash-can text-xs"></i>
+                    <span>Delete Coupon</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    function onMasterToggleChange() {
+        const isActive = document.getElementById('masterActiveToggle').checked;
+        const heroToggle = document.getElementById('heroBadgeToggle');
+        const announceToggle = document.getElementById('announcementBarToggle');
+        const bundleToggle = document.getElementById('bundleDiscountToggle');
+        const freeDeliveryToggle = document.getElementById('freeDeliveryToggle');
+
+        if (!isActive) {
+            // Master Campaign is turned OFF -> Immediately turn OFF and uncheck all sub-switches
+            if (heroToggle) heroToggle.checked = false;
+            if (announceToggle) announceToggle.checked = false;
+            if (bundleToggle) bundleToggle.checked = false;
+            if (freeDeliveryToggle) freeDeliveryToggle.checked = false;
+        }
+        updateLivePreview();
+    }
+
+    function updateLivePreview() {
+        const isActive = document.getElementById('masterActiveToggle').checked;
+        const heroBadgeText = document.getElementById('hero_badge_text').value.trim() || '🎁 Special Offer';
+        const heroBadgeEnabled = document.getElementById('heroBadgeToggle').checked && isActive;
+        
+        const announceText = document.getElementById('announcement_bar_text').value.trim() || 'Special Offer';
+        const announceEnabled = document.getElementById('announcementBarToggle').checked && isActive;
+
+        const bundleEnabled = document.getElementById('bundleDiscountToggle').checked && isActive;
+        const bundleMin = parseInt(document.getElementById('bundle_min_jars').value, 10) || 2;
+        const bundleDiscount = parseFloat(document.getElementById('bundle_discount_amount').value) || 0;
+        const bundleMode = document.getElementById('bundle_apply_mode').value;
+
+        const standardFee = parseFloat(document.getElementById('standard_delivery_fee').value) || 150;
+        const freeDeliveryEnabled = document.getElementById('freeDeliveryToggle').checked && isActive;
+        const freeDeliveryMin = parseInt(document.getElementById('free_delivery_min_jars').value, 10) || 4;
+
+        // Status Label
+        const masterStatusLabel = document.getElementById('masterStatusLabel');
+        if (masterStatusLabel) {
+            masterStatusLabel.innerText = isActive ? 'Campaign Active' : 'Campaign Paused (All OFF)';
+            masterStatusLabel.className = isActive ? 'ml-3 text-xs font-black text-emerald-700' : 'ml-3 text-xs font-black text-rose-600';
+        }
+
+        // Hero Badge Preview
+        const previewHeroBadge = document.getElementById('previewHeroBadge');
+        const previewHeroBadgeText = document.getElementById('previewHeroBadgeText');
+        if (previewHeroBadge && previewHeroBadgeText) {
+            previewHeroBadgeText.innerText = heroBadgeText;
+            previewHeroBadge.style.opacity = heroBadgeEnabled ? '1' : '0.35';
+        }
+
+        // Announcement Preview
+        const previewAnnounce = document.getElementById('previewAnnouncementBar');
+        const previewAnnounceText = document.getElementById('previewAnnouncementText');
+        if (previewAnnounce && previewAnnounceText) {
+            previewAnnounceText.innerText = announceText;
+            previewAnnounce.style.opacity = announceEnabled ? '1' : '0.35';
+        }
+
+        // Recompute Simulator Table
+        const tbody = document.getElementById('simTableBody');
+        if (tbody) {
+            const jarCounts = [1, 2, 3, 4, 5];
+            const pricePerJar = 350;
+            let rowsHtml = '';
+
+            jarCounts.forEach(jars => {
+                const subtotal = jars * pricePerJar;
+                
+                // Discount calculation
+                let discount = 0;
+                if (bundleEnabled && bundleDiscount > 0) {
+                    if (bundleMode === 'EXACT') {
+                        if (jars === bundleMin) discount = bundleDiscount;
+                    } else {
+                        if (jars >= bundleMin) discount = bundleDiscount;
+                    }
+                }
+
+                // Delivery calculation
+                let delivery = standardFee;
+                if (freeDeliveryEnabled && jars >= freeDeliveryMin) {
+                    delivery = 0;
+                }
+
+                const total = Math.max(0, subtotal - discount + delivery);
+
+                let badgeHtml = '<span class="text-gray-400">Regular order</span>';
+                if (discount > 0 && delivery === 0) {
+                    badgeHtml = '<span class="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 font-black text-[11px] border border-emerald-300">🔥 Discount + FREE Delivery</span>';
+                } else if (discount > 0) {
+                    badgeHtml = `<span class="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-black text-[11px] border border-amber-300">🎁 ৳${discount.toFixed(0)} OFF Unlocked</span>`;
+                } else if (delivery === 0) {
+                    badgeHtml = '<span class="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-black text-[11px] border border-emerald-300">🚚 FREE Delivery</span>';
+                }
+
+                rowsHtml += `
+                    <tr class="hover:bg-gray-50/80 transition ${jars === bundleMin ? 'bg-amber-50/40' : ''}">
+                        <td class="p-3 font-bold text-gray-900">${jars} Jar${jars > 1 ? 's' : ''}</td>
+                        <td class="p-3 text-gray-700">৳${subtotal.toFixed(0)}</td>
+                        <td class="p-3 ${discount > 0 ? 'text-emerald-700 font-black' : 'text-gray-400'}">
+                            ${discount > 0 ? `-৳${discount.toFixed(0)}` : '৳0'}
+                        </td>
+                        <td class="p-3 ${delivery === 0 ? 'text-emerald-700 font-black' : 'text-gray-700'}">
+                            ${delivery === 0 ? 'FREE (৳0)' : `৳${delivery.toFixed(0)}`}
+                        </td>
+                        <td class="p-3 font-display font-black text-gray-900 text-sm">৳${total.toFixed(0)}</td>
+                        <td class="p-3">${badgeHtml}</td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = rowsHtml;
+        }
+    }
+
+    function syncLabelWithDiscount() {
+        const amt = parseFloat(document.getElementById('bundle_discount_amount').value) || 0;
+        const minJars = parseInt(document.getElementById('bundle_min_jars').value, 10) || 2;
+        const labelInput = document.getElementById('bundle_discount_label');
+        if (labelInput) {
+            const current = labelInput.value.trim();
+            if (!current || /৳\s*\d+/.test(current) || /^\d+-Jar Flat/i.test(current)) {
+                labelInput.value = `${minJars}-Jar Flat ৳${amt.toFixed(0)} OFF`;
+            }
+        }
+    }
+
+    function switchOfferTab(tabName) {
+        const campaignTab = document.getElementById('offerManagerForm');
+        const couponsTab = document.getElementById('couponsSection');
+        const tabBtnCampaign = document.getElementById('tabBtnCampaign');
+        const tabBtnCoupons = document.getElementById('tabBtnCoupons');
+
+        if (tabName === 'coupons') {
+            if (campaignTab) campaignTab.classList.add('hidden');
+            if (couponsTab) couponsTab.classList.remove('hidden');
+            
+            if (tabBtnCampaign) {
+                tabBtnCampaign.className = "flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all text-gray-600 hover:text-gray-900 cursor-pointer";
+            }
+            if (tabBtnCoupons) {
+                tabBtnCoupons.className = "flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black transition-all shadow-xs bg-white text-gray-900 border border-gray-200 cursor-pointer";
+            }
+            if (history.replaceState) {
+                history.replaceState(null, null, '#coupons');
+            } else {
+                location.hash = 'coupons';
+            }
+        } else {
+            if (campaignTab) campaignTab.classList.remove('hidden');
+            if (couponsTab) couponsTab.classList.add('hidden');
+
+            if (tabBtnCampaign) {
+                tabBtnCampaign.className = "flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black transition-all shadow-xs bg-white text-gray-900 border border-gray-200 cursor-pointer";
+            }
+            if (tabBtnCoupons) {
+                tabBtnCoupons.className = "flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all text-gray-600 hover:text-gray-900 cursor-pointer";
+            }
+            if (history.replaceState) {
+                history.replaceState(null, null, '#campaign');
+            } else {
+                location.hash = 'campaign';
+            }
+        }
+    }
+
+    function toggleCouponModal(show) {
+        const modal = document.getElementById('couponModal');
+        if (modal) {
+            if (show) modal.classList.remove('hidden');
+            else modal.classList.add('hidden');
+        }
+    }
+
+    function openEditCouponModal(id, code, type, value, minJars, minSubtotal, usageLimit, isActive) {
+        const idEl = document.getElementById('edit_coupon_id');
+        const codeEl = document.getElementById('edit_coupon_code');
+        const typeEl = document.getElementById('edit_discount_type');
+        const valEl = document.getElementById('edit_discount_value');
+        const jarsEl = document.getElementById('edit_min_jars');
+        const subEl = document.getElementById('edit_min_subtotal');
+        const limitEl = document.getElementById('edit_usage_limit');
+        const activeEl = document.getElementById('edit_is_active');
+
+        if (idEl) idEl.value = id;
+        if (codeEl) codeEl.value = code;
+        if (typeEl) typeEl.value = type;
+        if (valEl) valEl.value = parseFloat(value) || 0;
+        if (jarsEl) jarsEl.value = minJars || 1;
+        if (subEl) subEl.value = parseFloat(minSubtotal) || 0;
+        if (limitEl) limitEl.value = usageLimit || '';
+        if (activeEl) activeEl.checked = Boolean(isActive);
+
+        toggleEditCouponModal(true);
+    }
+
+    function toggleEditCouponModal(show) {
+        const modal = document.getElementById('editCouponModal');
+        if (modal) {
+            if (show) modal.classList.remove('hidden');
+            else modal.classList.add('hidden');
+        }
+    }
+
+    function openDeleteCouponModal(id, code) {
+        const idEl = document.getElementById('delete_coupon_id');
+        const badgeEl = document.getElementById('deleteCouponCodeBadge');
+        if (idEl) idEl.value = id;
+        if (badgeEl) badgeEl.innerText = code;
+        toggleDeleteCouponModal(true);
+    }
+
+    function toggleDeleteCouponModal(show) {
+        const modal = document.getElementById('deleteCouponModal');
+        if (modal) {
+            if (show) modal.classList.remove('hidden');
+            else modal.classList.add('hidden');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        if (window.location.hash === '#coupons') {
+            switchOfferTab('coupons');
+        } else {
+            switchOfferTab('campaign');
+        }
+
+        const amtInput = document.getElementById('bundle_discount_amount');
+        const minJarsInput = document.getElementById('bundle_min_jars');
+        if (amtInput) {
+            amtInput.addEventListener('input', function() {
+                syncLabelWithDiscount();
+                updateLivePreview();
+            });
+        }
+        if (minJarsInput) {
+            minJarsInput.addEventListener('input', function() {
+                syncLabelWithDiscount();
+                updateLivePreview();
+            });
+        }
+        updateLivePreview();
+    });
+</script>
+{% endblock %}

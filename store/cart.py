@@ -1,7 +1,7 @@
 import math
 from decimal import Decimal
 from django.conf import settings
-from .models import Product, calculate_pathao_delivery_fee
+from .models import Product, calculate_pathao_delivery_fee, PromotionSetting, Coupon
 
 
 class Cart:
@@ -178,20 +178,78 @@ class Cart:
         return max(1, math.ceil(total_g / 1000.0))
 
     def is_free_delivery(self):
-        return len(self) >= 4
+        promo = PromotionSetting.get_settings()
+        return promo.is_active and promo.free_delivery_enabled and len(self) >= promo.free_delivery_min_jars
 
     def items_needed_for_free_delivery(self):
-        return max(0, 4 - len(self))
+        promo = PromotionSetting.get_settings()
+        if not (promo.is_active and promo.free_delivery_enabled):
+            return 0
+        return max(0, promo.free_delivery_min_jars - len(self))
 
     def get_delivery_fee(self, zone='INSIDE_DHAKA'):
-        return calculate_pathao_delivery_fee(self.get_total_weight_grams(), zone, total_items=len(self))
+        if self.is_free_delivery():
+            return Decimal('0.00')
+        promo = PromotionSetting.get_settings()
+        return promo.calculate_delivery_fee(len(self), self.get_total_weight_grams(), zone)
+
+    def get_coupon_code(self) -> str:
+        return (self.session.get('coupon_code') or '').strip().upper()
+
+    def get_coupon(self):
+        code = self.get_coupon_code()
+        if not code:
+            return None
+        try:
+            coupon = Coupon.objects.filter(code__iexact=code, is_active=True).first()
+            if coupon and coupon.is_valid_now()[0]:
+                return coupon
+        except Exception:
+            pass
+        return None
+
+    def get_coupon_discount(self) -> Decimal:
+        coupon = self.get_coupon()
+        if not coupon:
+            return Decimal('0.00')
+        discount, err = coupon.calculate_discount(self.get_subtotal(), len(self))
+        if err:
+            return Decimal('0.00')
+        return discount
+
+    def get_bundle_discount(self) -> Decimal:
+        promo = PromotionSetting.get_settings()
+        return promo.calculate_discount(len(self), self.get_subtotal())
 
     def get_discount(self):
-        # Flat ৳100 discount ONLY when total jars == 2
-        # For 3 jars or 4+ jars, discount is 0 (4+ jars get FREE delivery)
-        if len(self) == 2:
-            return Decimal('100.00')
-        return Decimal('0.00')
+        bundle_disc = self.get_bundle_discount()
+        coupon_disc = self.get_coupon_discount()
+        return min(self.get_subtotal(), bundle_disc + coupon_disc)
+
+    def apply_coupon(self, code: str):
+        code = (code or '').strip().upper()
+        if not code:
+            return False, "Please enter a coupon code.", Decimal('0.00')
+        try:
+            coupon = Coupon.objects.filter(code__iexact=code).first()
+            if not coupon:
+                return False, f"Coupon '{code}' does not exist.", Decimal('0.00')
+            valid, msg = coupon.is_valid_now()
+            if not valid:
+                return False, msg, Decimal('0.00')
+            discount, err = coupon.calculate_discount(self.get_subtotal(), len(self))
+            if err:
+                return False, err, Decimal('0.00')
+            self.session['coupon_code'] = coupon.code
+            self.session.modified = True
+            return True, f"🎉 Coupon '{coupon.code}' applied! You saved ৳{discount:.0f}.", discount
+        except Exception as e:
+            return False, str(e), Decimal('0.00')
+
+    def remove_coupon(self):
+        if 'coupon_code' in self.session:
+            del self.session['coupon_code']
+            self.session.modified = True
 
     def get_total_price(self, zone='INSIDE_DHAKA'):
         subtotal = self.get_subtotal()

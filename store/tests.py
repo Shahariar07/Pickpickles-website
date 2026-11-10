@@ -6,6 +6,8 @@ from decimal import Decimal
 
 class CartTests(TestCase):
     def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
         self.client = Client()
         self.category = Category.objects.create(name="Classic Crisp", slug="classic-crisp")
         self.product = Product.objects.create(
@@ -23,18 +25,16 @@ class CartTests(TestCase):
         from django.test import override_settings
 
         with override_settings(PATHAO_CLIENT_ID=''):
-            # 1-3 items: Flat ৳150 nationwide across all weights and zones
+            # Flat ৳150 nationwide across all weights, quantities, and zones
             self.assertEqual(calculate_pathao_delivery_fee(600, 'INSIDE_DHAKA', total_items=1), Decimal('150.00'))
             self.assertEqual(calculate_pathao_delivery_fee(600, 'OUTSIDE_DHAKA', total_items=1), Decimal('150.00'))
             self.assertEqual(calculate_pathao_delivery_fee(1200, 'INSIDE_DHAKA', total_items=2), Decimal('150.00'))
             self.assertEqual(calculate_pathao_delivery_fee(1200, 'OUTSIDE_DHAKA', total_items=2), Decimal('150.00'))
             self.assertEqual(calculate_pathao_delivery_fee(1800, 'INSIDE_DHAKA', total_items=3), Decimal('150.00'))
-            
-            # 4 or more items: 100% FREE Delivery (৳0.00)
-            self.assertEqual(calculate_pathao_delivery_fee(2400, 'INSIDE_DHAKA', total_items=4), Decimal('0.00'))
-            self.assertEqual(calculate_pathao_delivery_fee(3600, 'INSIDE_DHAKA', total_items=6), Decimal('0.00'))
-            self.assertEqual(calculate_pathao_delivery_fee(3600, 'OUTSIDE_DHAKA', total_items=6), Decimal('0.00'))
-            self.assertEqual(calculate_pathao_delivery_fee(6000, 'OUTSIDE_DHAKA', total_items=10), Decimal('0.00'))
+            self.assertEqual(calculate_pathao_delivery_fee(2400, 'INSIDE_DHAKA', total_items=4), Decimal('150.00'))
+            self.assertEqual(calculate_pathao_delivery_fee(3600, 'INSIDE_DHAKA', total_items=6), Decimal('150.00'))
+            self.assertEqual(calculate_pathao_delivery_fee(3600, 'OUTSIDE_DHAKA', total_items=6), Decimal('150.00'))
+            self.assertEqual(calculate_pathao_delivery_fee(6000, 'OUTSIDE_DHAKA', total_items=10), Decimal('150.00'))
 
     def test_free_delivery_on_four_items_in_cart_and_checkout(self):
         from store.models import Order
@@ -50,14 +50,14 @@ class CartTests(TestCase):
         data = response.json()
         self.assertTrue(data['success'])
         self.assertEqual(data['cart_total_items'], 4)
-        self.assertTrue(data['free_delivery_unlocked'])
+        self.assertFalse(data['free_delivery_unlocked'])
         self.assertEqual(data['items_needed_for_free_delivery'], 0)
-        self.assertEqual(data['delivery_fee'], 0.0)
-        self.assertEqual(data['grand_total'], 4 * 380.0)
+        self.assertEqual(data['delivery_fee'], 150.0)
+        self.assertEqual(data['grand_total'], 4 * 380.0 + 150.0)
 
         # Complete checkout
         checkout_data = {
-            'customer_name': 'Free Delivery Customer',
+            'customer_name': 'Flat Delivery Customer',
             'customer_phone': '01799887766',
             'delivery_address': 'Sector 4, Uttara',
             'delivery_city': 'Dhaka',
@@ -69,9 +69,9 @@ class CartTests(TestCase):
         self.assertEqual(res.status_code, 302)
 
         order = Order.objects.latest('created_at')
-        self.assertEqual(order.delivery_fee, Decimal('0.00'))
+        self.assertEqual(order.delivery_fee, Decimal('150.00'))
         self.assertEqual(order.subtotal, Decimal('1520.00'))
-        self.assertEqual(order.total_amount, Decimal('1520.00'))
+        self.assertEqual(order.total_amount, Decimal('1670.00'))
 
     def test_pathao_service_structure(self):
         from store.pathao import PathaoCourierService
@@ -470,7 +470,7 @@ class CartTests(TestCase):
         self.assertEqual(cart.get_delivery_fee(), Decimal('150.00'))
         self.assertEqual(cart.get_total_price(), Decimal('530.00'))  # 380 + 150
 
-        # 2 Jars (Flat 100 discount applies!)
+        # 2 Jars (Bundle discount ৳100 applies when promo active)
         cart, _ = get_fresh_cart()
         cart.add(self.product, quantity=2)
         self.assertEqual(len(cart), 2)
@@ -488,25 +488,25 @@ class CartTests(TestCase):
         self.assertEqual(cart.get_subtotal(), Decimal('1140.00'))
         self.assertEqual(cart.get_total_price(), Decimal('1290.00'))  # 1140 + 150
 
-        # 4 Jars (Discount does NOT apply, FREE delivery applies!)
+        # 4 Jars (Discount does NOT apply, flat ৳150 delivery applies)
         cart, _ = get_fresh_cart()
         cart.add(self.product, quantity=4)
         self.assertEqual(len(cart), 4)
         self.assertEqual(cart.get_discount(), Decimal('0.00'))
-        self.assertEqual(cart.get_delivery_fee(), Decimal('0.00'))
-        self.assertTrue(cart.is_free_delivery())
+        self.assertEqual(cart.get_delivery_fee(), Decimal('150.00'))
+        self.assertFalse(cart.is_free_delivery())
         self.assertEqual(cart.get_subtotal(), Decimal('1520.00'))
-        self.assertEqual(cart.get_total_price(), Decimal('1520.00'))  # 1520 + 0
+        self.assertEqual(cart.get_total_price(), Decimal('1670.00'))  # 1520 + 150
 
-        # 5 Jars (Discount does NOT apply, FREE delivery applies!)
+        # 5 Jars (Discount does NOT apply, flat ৳150 delivery applies)
         cart, _ = get_fresh_cart()
         cart.add(self.product, quantity=5)
         self.assertEqual(len(cart), 5)
         self.assertEqual(cart.get_discount(), Decimal('0.00'))
-        self.assertEqual(cart.get_delivery_fee(), Decimal('0.00'))
-        self.assertTrue(cart.is_free_delivery())
+        self.assertEqual(cart.get_delivery_fee(), Decimal('150.00'))
+        self.assertFalse(cart.is_free_delivery())
         self.assertEqual(cart.get_subtotal(), Decimal('1900.00'))
-        self.assertEqual(cart.get_total_price(), Decimal('1900.00'))
+        self.assertEqual(cart.get_total_price(), Decimal('2050.00'))  # 1900 + 150
 
     def test_checkout_order_creation_with_two_jar_discount(self):
         """
@@ -565,3 +565,165 @@ class CartTests(TestCase):
         self.assertEqual(order.discount_amount, Decimal('0.00'))
         self.assertEqual(order.delivery_fee, Decimal('150.00'))
         self.assertEqual(order.total_amount, Decimal('1290.00'))
+
+    def test_dynamic_promotion_setting_controls_discount_and_free_delivery(self):
+        """
+        Verify that changing PromotionSetting in database dynamically updates cart discount and free delivery.
+        """
+        from store.models import PromotionSetting
+        from store.cart import Cart
+        from django.test import RequestFactory
+        from django.contrib.sessions.middleware import SessionMiddleware
+        
+        promo = PromotionSetting.get_settings()
+        factory = RequestFactory()
+        req = factory.get('/')
+        middleware = SessionMiddleware(lambda r: None)
+        middleware.process_request(req)
+        req.session.save()
+
+        cart = Cart(req)
+        cart.add(self.product, quantity=2)
+        # Default: active, 2 jars = ৳100 off
+        self.assertEqual(cart.get_discount(), Decimal('100.00'))
+
+        # Deactivate promotion
+        promo.is_active = False
+        promo.save()
+        self.assertEqual(cart.get_discount(), Decimal('0.00'))
+
+        # Re-activate and change rule to 3 jars = ৳150 off
+        promo.is_active = True
+        promo.bundle_min_jars = 3
+        promo.bundle_discount_amount = Decimal('150.00')
+        promo.free_delivery_enabled = True
+        promo.free_delivery_min_jars = 4
+        promo.save()
+
+        # 2 jars now has 0 discount
+        self.assertEqual(cart.get_discount(), Decimal('0.00'))
+        self.assertFalse(cart.is_free_delivery())
+
+        # 3 jars gets ৳150 discount
+        cart.add(self.product, quantity=1)
+        self.assertEqual(len(cart), 3)
+        self.assertEqual(cart.get_discount(), Decimal('150.00'))
+        self.assertFalse(cart.is_free_delivery())
+        self.assertEqual(cart.get_delivery_fee(), Decimal('150.00'))
+
+        # 4 jars gets free delivery
+        cart.add(self.product, quantity=1)
+        self.assertEqual(len(cart), 4)
+        self.assertTrue(cart.is_free_delivery())
+        self.assertEqual(cart.get_delivery_fee(), Decimal('0.00'))
+
+    def test_free_delivery_checkout_delivery_fee_is_zero(self):
+        """
+        Verify that when free delivery is enabled and unlocked, checkout saves 0.00 delivery fee.
+        """
+        from store.models import PromotionSetting, Order
+        promo = PromotionSetting.get_settings()
+        promo.is_active = True
+        promo.free_delivery_enabled = True
+        promo.free_delivery_min_jars = 4
+        promo.save()
+
+        # Add 4 jars to cart
+        self.client.post(reverse('store:cart_add', args=[self.product.id]), {'quantity': 4})
+        
+        # Check GET checkout page context
+        get_res = self.client.get(reverse('store:checkout'))
+        self.assertEqual(get_res.status_code, 200)
+        self.assertTrue(get_res.context['free_delivery_unlocked'])
+        self.assertEqual(get_res.context['cart_delivery_fee'], Decimal('0.00'))
+
+        # Post checkout order
+        checkout_data = {
+            'customer_name': 'Free Delivery Customer',
+            'customer_phone': '01711002233',
+            'delivery_address': 'House 1, Road 2, Dhanmondi',
+            'delivery_city': 'Dhaka',
+            'delivery_zone': 'INSIDE_DHAKA',
+            'payment_method': 'COD',
+        }
+        with override_settings(CLOUDFLARE_TURNSTILE_SECRET_KEY=''):
+            res = self.client.post(reverse('store:checkout'), checkout_data)
+        self.assertEqual(res.status_code, 302)
+
+        order = Order.objects.latest('created_at')
+        self.assertEqual(order.delivery_fee, Decimal('0.00'))
+        self.assertEqual(order.subtotal, Decimal('1520.00'))
+        # Subtotal 1520 - bundle discount (default 100 on 2+ jars) + 0 delivery = 1420
+        expected_total = order.subtotal - order.discount_amount + Decimal('0.00')
+        self.assertEqual(order.total_amount, expected_total)
+
+    def test_coupon_apply_remove_and_checkout(self):
+        """
+        Verify coupon creation, AJAX apply, remove, and order association with discount.
+        """
+        from store.models import Coupon, Order
+        coupon = Coupon.objects.create(
+            code='TESTSAVE50',
+            discount_type='FIXED',
+            discount_value=Decimal('50.00'),
+            min_jars=2,
+            is_active=True
+        )
+
+        # Add 2 jars to cart (subtotal = 760)
+        self.client.post(reverse('store:cart_add', args=[self.product.id]), {'quantity': 2})
+
+        # Apply coupon via AJAX
+        import json
+        res = self.client.post(
+            reverse('store:apply_coupon_ajax'),
+            data=json.dumps({'coupon_code': 'TESTSAVE50'}),
+            content_type='application/json',
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertTrue(data['success'], f"Coupon failed with msg: {data.get('message')}")
+        self.assertEqual(data['coupon_code'], 'TESTSAVE50')
+        self.assertEqual(data['coupon_discount'], 50.0)
+
+        # Remove coupon via AJAX
+        res_rem = self.client.post(
+            reverse('store:remove_coupon_ajax'),
+            data=json.dumps({}),
+            content_type='application/json',
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        self.assertEqual(res_rem.status_code, 200)
+        data_rem = res_rem.json()
+        self.assertTrue(data_rem['success'])
+        self.assertEqual(data_rem['coupon_code'], '')
+        self.assertEqual(data_rem['coupon_discount'], 0.0)
+
+        # Re-apply coupon and complete checkout
+        self.client.post(
+            reverse('store:apply_coupon_ajax'),
+            data=json.dumps({'coupon_code': 'TESTSAVE50'}),
+            content_type='application/json',
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+
+        checkout_data = {
+            'customer_name': 'Coupon Customer',
+            'customer_phone': '01811223344',
+            'delivery_address': 'Banani 11',
+            'delivery_city': 'Dhaka',
+            'delivery_zone': 'INSIDE_DHAKA',
+            'payment_method': 'COD',
+        }
+        with override_settings(CLOUDFLARE_TURNSTILE_SECRET_KEY=''):
+            res_order = self.client.post(reverse('store:checkout'), checkout_data)
+        self.assertEqual(res_order.status_code, 302)
+
+        order = Order.objects.latest('created_at')
+        self.assertEqual(order.coupon_code, 'TESTSAVE50')
+        coupon.refresh_from_db()
+        self.assertEqual(coupon.used_count, 1)
+        # Total discount = bundle discount (100) + coupon discount (50) = 150
+        self.assertEqual(order.discount_amount, Decimal('150.00'))
+

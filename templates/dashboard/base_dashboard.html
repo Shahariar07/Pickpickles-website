@@ -309,6 +309,18 @@
                             <i class="fa-solid fa-sliders text-[10px] text-brand-accent/60"></i>
                         </div>
                         <nav class="space-y-1 text-xs font-bold">
+                            <!-- Offers & Campaigns -->
+                            <a href="{% url 'dashboard:offer_manager' %}"
+                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'offer_manager' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-amber-300 hover:text-white hover:bg-brand-800{% endif %}">
+                                <i class="fa-solid fa-gift text-amber-400 text-sm w-4 text-center"></i>
+                                <span>Offers & Campaigns</span>
+                                {% if promo_settings.is_active %}
+                                <span class="ml-auto px-1.5 py-0.5 text-[9px] font-black bg-emerald-500/30 text-emerald-300 rounded border border-emerald-400/40">Active</span>
+                                {% else %}
+                                <span class="ml-auto px-1.5 py-0.5 text-[9px] font-black bg-gray-700/60 text-gray-400 rounded">Off</span>
+                                {% endif %}
+                            </a>
+
                             <!-- Pickle Categories -->
                             <a href="{% url 'dashboard:pickle_categories' %}"
                                 class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'pickle_categories' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">

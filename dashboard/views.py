@@ -17,7 +17,7 @@ from decimal import Decimal
 from django.core.cache import cache
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib.auth.models import User
-from store.models import Order, OrderItem, Product, Category, Review, calculate_pathao_delivery_fee
+from store.models import Order, OrderItem, Product, Category, Review, calculate_pathao_delivery_fee, PromotionSetting, Coupon
 from store.pathao import PathaoCourierService
 from store.steadfast import SteadfastCourierService
 from .models import Expense, ExpenseCategory, DamageLog, OrderReturn, StockLog, ProductionBatch, BatchItem, BlacklistedCustomer, StaffSecurityProfile, DashboardSecurityConfig, PriceHistory
@@ -470,11 +470,12 @@ def dashboard_index(request):
         Q(delivered_at__isnull=True, updated_at__gte=start_plot_dt)
     ).values('delivered_at', 'updated_at', 'created_at', 'total_amount'))
 
-    # Calculate daily total jars ordered (sum of item quantities in confirmed/active orders by created_at)
+    # Calculate daily total jars ordered (sum of item quantities in active orders by created_at)
     incoming_jars_qs = list(OrderItem.objects.filter(
         order__created_at__gte=start_plot_dt,
-        order__is_deleted=False,
-        order__order_status__in=['CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED']
+        order__is_deleted=False
+    ).exclude(
+        order__order_status='CANCELLED'
     ).values('order__created_at', 'quantity'))
 
     daily_orders_map = {}
@@ -6274,6 +6275,169 @@ def send_test_push_api(request):
             }, status=400)
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required(login_url='dashboard:login')
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def offer_manager(request):
+    promo = PromotionSetting.get_settings()
+    is_view_only = is_view_only_user(request.user)
+
+    if request.method == 'POST':
+        if not can_user_edit(request.user):
+            messages.error(request, 'Permission Denied: অফার ও ক্যাম্পেইন সেটিংস পরিবর্তন করার অনুমতি নেই। (View-Only Mode)')
+            return redirect('dashboard:offer_manager')
+
+        action = request.POST.get('action')
+
+        # 1. Create Coupon
+        if action == 'create_coupon':
+            try:
+                code = request.POST.get('coupon_code', '').strip().upper()
+                if not code:
+                    messages.error(request, 'Coupon code is required.')
+                    return redirect('dashboard:offer_manager')
+                if Coupon.objects.filter(code__iexact=code).exists():
+                    messages.error(request, f'Coupon code "{code}" already exists!')
+                    return redirect('dashboard:offer_manager')
+                
+                discount_type = request.POST.get('discount_type', 'FIXED')
+                discount_value = Decimal(str(request.POST.get('discount_value', '50.00')).strip() or '0.00')
+                min_jars = max(1, int(request.POST.get('min_jars', 1)))
+                min_subtotal = Decimal(str(request.POST.get('min_subtotal', '0.00')).strip() or '0.00')
+                usage_limit_raw = request.POST.get('usage_limit', '').strip()
+                usage_limit = int(usage_limit_raw) if usage_limit_raw else None
+                is_active = request.POST.get('is_active') == '1'
+
+                Coupon.objects.create(
+                    code=code,
+                    discount_type=discount_type,
+                    discount_value=discount_value,
+                    min_jars=min_jars,
+                    min_subtotal=min_subtotal,
+                    usage_limit=usage_limit,
+                    is_active=is_active,
+                )
+                messages.success(request, f'🎉 Coupon "{code}" created successfully!')
+            except Exception as e:
+                messages.error(request, f'Error creating coupon: {str(e)}')
+            return redirect(f"{reverse('dashboard:offer_manager')}#coupons")
+
+        # 2. Toggle Coupon Status
+        elif action == 'toggle_coupon':
+            cid = request.POST.get('coupon_id')
+            c = get_object_or_404(Coupon, id=cid)
+            c.is_active = not c.is_active
+            c.save(update_fields=['is_active'])
+            status_text = 'activated' if c.is_active else 'deactivated'
+            messages.success(request, f'Coupon "{c.code}" has been {status_text}.')
+            return redirect(f"{reverse('dashboard:offer_manager')}#coupons")
+
+        # 3. Delete Coupon
+        elif action == 'delete_coupon':
+            cid = request.POST.get('coupon_id')
+            c = get_object_or_404(Coupon, id=cid)
+            code = c.code
+            c.delete()
+            messages.success(request, f'Coupon "{code}" deleted successfully.')
+            return redirect(f"{reverse('dashboard:offer_manager')}#coupons")
+
+        # 4. Edit Coupon
+        elif action == 'edit_coupon':
+            try:
+                cid = request.POST.get('coupon_id')
+                c = get_object_or_404(Coupon, id=cid)
+                new_code = request.POST.get('coupon_code', '').strip().upper()
+                if not new_code:
+                    messages.error(request, 'Coupon code cannot be empty.')
+                    return redirect(f"{reverse('dashboard:offer_manager')}#coupons")
+
+                # Check uniqueness if code is changed
+                if new_code != c.code and Coupon.objects.filter(code__iexact=new_code).exclude(id=c.id).exists():
+                    messages.error(request, f'Coupon code "{new_code}" already exists!')
+                    return redirect(f"{reverse('dashboard:offer_manager')}#coupons")
+
+                c.code = new_code
+                c.discount_type = request.POST.get('discount_type', 'FIXED')
+                c.discount_value = Decimal(str(request.POST.get('discount_value', '50.00')).strip() or '0.00')
+                c.min_jars = max(1, int(request.POST.get('min_jars', 1)))
+                c.min_subtotal = Decimal(str(request.POST.get('min_subtotal', '0.00')).strip() or '0.00')
+                usage_limit_raw = request.POST.get('usage_limit', '').strip()
+                c.usage_limit = int(usage_limit_raw) if usage_limit_raw else None
+                c.is_active = request.POST.get('is_active') == '1'
+                c.save()
+
+                messages.success(request, f'🎉 Coupon "{c.code}" updated successfully!')
+            except Exception as e:
+                messages.error(request, f'Error updating coupon: {str(e)}')
+            return redirect(f"{reverse('dashboard:offer_manager')}#coupons")
+
+        # 5. Standard Offer / Promotion Settings Save
+        try:
+            is_active = request.POST.get('is_active') == '1'
+            promo.is_active = is_active
+            promo.campaign_name = request.POST.get('campaign_name', '').strip() or 'Special Seasonal Offer'
+            
+            if not is_active:
+                # Campaign is OFF -> Turn all promotional features OFF at once
+                promo.hero_badge_enabled = False
+                promo.announcement_bar_enabled = False
+                promo.bundle_discount_enabled = False
+                promo.free_delivery_enabled = False
+            else:
+                # 1. Hero & Menu Badges
+                promo.hero_badge_enabled = request.POST.get('hero_badge_enabled') == '1'
+                promo.hero_badge_text = request.POST.get('hero_badge_text', '').strip()
+
+                # 2. Top Announcement Bar
+                promo.announcement_bar_enabled = request.POST.get('announcement_bar_enabled') == '1'
+                promo.announcement_bar_text = request.POST.get('announcement_bar_text', '').strip()
+
+                # 3. Bundle / Volume Discount
+                promo.bundle_discount_enabled = request.POST.get('bundle_discount_enabled') == '1'
+                promo.bundle_min_jars = max(1, int(request.POST.get('bundle_min_jars', 2)))
+                promo.bundle_discount_amount = Decimal(str(request.POST.get('bundle_discount_amount', '100.00')).strip() or '0.00')
+                raw_label = request.POST.get('bundle_discount_label', '').strip()
+                import re
+                amount_str = f"{promo.bundle_discount_amount:.0f}"
+                if not raw_label:
+                    promo.bundle_discount_label = f'{promo.bundle_min_jars}-Jar Flat ৳{amount_str} OFF'
+                elif re.search(r'৳\s*\d+', raw_label):
+                    promo.bundle_discount_label = re.sub(r'৳\s*\d+', f'৳{amount_str}', raw_label)
+                else:
+                    promo.bundle_discount_label = raw_label
+                promo.bundle_apply_mode = request.POST.get('bundle_apply_mode', 'EXACT')
+                if promo.bundle_apply_mode not in ('EXACT', 'AT_LEAST'):
+                    promo.bundle_apply_mode = 'EXACT'
+
+                # 4. Delivery Rules
+                promo.free_delivery_enabled = request.POST.get('free_delivery_enabled') == '1'
+                promo.free_delivery_min_jars = max(1, int(request.POST.get('free_delivery_min_jars', 4)))
+
+            promo.standard_delivery_fee = Decimal(str(request.POST.get('standard_delivery_fee', '150.00')).strip() or '150.00')
+            promo.delivery_notice_text = request.POST.get('delivery_notice_text', '').strip()
+
+            promo.save()
+            if not is_active:
+                messages.warning(request, '🛑 ক্যাম্পেইন এবং সকল অফার একযোগে বন্ধ (OFF) করা হয়েছে। (All promotions paused live.)')
+            else:
+                messages.success(request, '🎉 অফার ও ক্যাম্পেইন সেটিংস সফলভাবে আপডেট হয়েছে! (Offers & Campaign settings saved successfully.)')
+        except Exception as e:
+            messages.error(request, f'ত্রুটি: {str(e)}')
+
+        return redirect('dashboard:offer_manager')
+
+    coupons = Coupon.objects.all().order_by('-created_at')
+
+    context = {
+        'title': 'Offers & Campaign Manager',
+        'promo': promo,
+        'coupons': coupons,
+        'is_view_only': is_view_only,
+        'can_delete': not is_view_only,
+    }
+    return render(request, 'dashboard/offer_manager.html', context)
+
 
 
 
