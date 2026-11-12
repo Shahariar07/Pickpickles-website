@@ -151,7 +151,7 @@ def product_detail(request, slug):
         default=Value(0),
         output_field=IntegerField()
     )
-    related_products = Product.objects.filter(is_in_stock=True).exclude(id=product.id).annotate(has_sale_badge=has_sale_badge).order_by('-has_sale_badge', '-is_featured', 'id')[:3]
+    related_products = Product.objects.filter(is_in_stock=True).exclude(id=product.id).annotate(has_sale_badge=has_sale_badge).order_by('-has_sale_badge', '-is_featured', 'id')[:6]
     reviews = product.reviews.filter(is_approved=True).order_by('-created_at')
 
     top_best_sellers_qs = Product.objects.filter(is_in_stock=True).annotate(

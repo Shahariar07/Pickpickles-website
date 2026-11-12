@@ -1265,38 +1265,68 @@ class Order(models.Model):
         # Otherwise, keep original digits for foreign numbers entered without +
         return digits
 
+    def _get_whatsapp_price_details_text(self):
+        """
+        Returns a concise, structured breakdown of the order financials:
+        Subtotal, Delivery Fee, Discount (if any), Total Payable & Payment Status.
+        """
+        def _fmt(amt):
+            if amt is None:
+                return "0"
+            try:
+                dec = Decimal(str(amt))
+                return f"{dec:.0f}" if dec == dec.to_integral() else f"{dec:.2f}"
+            except Exception:
+                return str(amt)
+
+        lines = [
+            f"• Subtotal: ৳{_fmt(self.subtotal)}",
+            f"• Delivery Fee: ৳{_fmt(self.delivery_fee)}",
+        ]
+        if self.discount_amount and self.discount_amount > Decimal('0.00'):
+            lines.append(f"• Discount: -৳{_fmt(self.discount_amount)}")
+
+        if self.payment_status == 'PAID':
+            pay_str = "Paid"
+            if self.payment_method == 'BKASH_ONLINE':
+                pay_str = "Paid via bKash Online"
+            elif self.payment_method in ('BKASH', 'NAGAD'):
+                pay_str = f"Paid via {self.get_payment_method_display()}"
+            lines.append(f"• *Total Paid:* ৳{_fmt(self.total_amount)} ({pay_str})")
+        else:
+            lines.append(f"• *Total Payable:* ৳{_fmt(self.total_amount)} (Cash on Delivery)")
+
+        return "\n".join(lines)
+
     def get_whatsapp_order_confirmation_message(self):
         """
-        Generates order confirmation WhatsApp message with items, delivery info, and direct review link in English.
+        Generates order confirmation WhatsApp message with items, complete price breakdown,
+        and review link.
         """
         items_list = []
         for itm in self.items.all():
             items_list.append(f"🥒 {itm.product_name} x {itm.quantity}")
         items_text = "\n".join(items_list) if items_list else "🥒 Pickpickles Homemade Jars"
+        price_details = self._get_whatsapp_price_details_text()
 
-        payment_line = "✅ *Payment:* Paid" if self.payment_status == 'PAID' else f"💵 *Payment Method:* Cash on Delivery (COD) — ৳{self.total_amount}"
-
-        msg = f"""🥒 *Pickpickles — Order Confirmation* 🎉✨
+        msg = f"""🥒 *Pickpickles — Order Confirmation* 🎉
 
 Dear *{self.customer_name}*,
+Thank you! Your order *#{self.order_number}* has been received.
 
-Thank you for your order! Your Pickpickles order *#{self.order_number}* has been successfully received.
-
-📋 *Order Details:*
+📋 *Items:*
 {items_text}
-{payment_line}
-🚚 *Delivery Address:* {self.delivery_address}, {self.delivery_city}
 
-Each jar of our artisanal pickles is handcrafted and fresh-brined in small batches for exceptional taste and crunch (Estimated delivery: 7-10 days).
+💰 *Price Details:*
+{price_details}
 
-⭐ *Read Customer Reviews or Share Yours:*
-🌐 https://pickpickles.xyz/reviews/
+🚚 *Address:* {self.delivery_address}, {self.delivery_city}
+⏳ *Estimated Delivery:* 7–10 days (fresh small-batch brining).
 
-If you need any assistance or have special instructions, simply reply to this WhatsApp message. 💚
+⭐ *Customer Reviews:* https://pickpickles.xyz/reviews/
 
-Warm regards,
-*Team Pickpickles*
-🌐 pickpickles.xyz | 📞 +8801794271523"""
+Need any help? Just reply to this message! 💚
+*Team Pickpickles* | 01794271523"""
         return msg.strip()
 
     @property
@@ -1314,42 +1344,40 @@ Warm regards,
 
     def get_whatsapp_shipping_instruction_message(self):
         """
-        Generates a concise, polite & professional WhatsApp message with order dispatch details,
-        key storage tips, and direct review link in English.
+        Generates a concise WhatsApp message with order dispatch details, complete price breakdown,
+        quick storage tips, and review link.
         """
         items_list = []
         for itm in self.items.all():
             items_list.append(f"🥒 {itm.product_name} x {itm.quantity}")
         items_text = "\n".join(items_list) if items_list else "🥒 Pickpickles Homemade Jars"
+        price_details = self._get_whatsapp_price_details_text()
 
-        payment_line = "✅ *Payment:* Paid" if self.payment_status == 'PAID' else f"💵 *Payment Method:* Cash on Delivery (COD) — ৳{self.total_amount}"
+        tracking_code = self.steadfast_tracking_code or self.pathao_tracking_code
+        courier_name = self.get_courier_provider_display() if self.courier_provider else "Courier"
+        tracking_line = f"\n📦 *Tracking:* {tracking_code} ({courier_name})" if tracking_code else ""
 
-        msg = f"""🥒 *Pickpickles — Order Dispatched Update* 🚚✨
+        msg = f"""🥒 *Pickpickles — Order Dispatched* 🚚
 
 Dear *{self.customer_name}*,
+Your order *#{self.order_number}* has been freshly prepared and dispatched via courier!
 
-Great news! Your Pickpickles order *#{self.order_number}* has been freshly prepared and dispatched via courier to your address.
-
-📋 *Order Summary:*
+📋 *Items:*
 {items_text}
-{payment_line}
 
-🧊 *Care & Storage Guidelines:*
-• Please refrigerate the jar immediately upon arrival to preserve peak freshness and signature crisp crunch.
-• Always use a clean, completely dry spoon when serving.
+💰 *Price Details:*
+{price_details}
 
-⭐ *Your Review & Feedback:*
-Once you've tasted your pickles, we would love to hear your thoughts!
-🌟 *Easy Ways to Review:*
-• 💬 Simply reply right here in this chat with your rating (1-5 ⭐) & feedback!
-• 🌐 Leave a review on our website: https://pickpickles.xyz/reviews/
-• 📘 Review us on our Facebook page: https://facebook.com/pickpickles07
+📍 *Address:* {self.delivery_address}, {self.delivery_city}{tracking_line}
 
-Your satisfaction means the world to us. Enjoy every crunchy bite! 💚
+🧊 *Care Tips:*
+• Refrigerate immediately upon arrival for maximum crunch!
+• Always serve with a clean, dry spoon.
 
-Warm regards,
-*Team Pickpickles*
-🌐 pickpickles.xyz | 📞 +8801794271523"""
+⭐ *Feedback:* We'd love your review at https://pickpickles.xyz/reviews/ or reply here!
+
+Enjoy your pickles! 💚
+*Team Pickpickles* | 01794271523"""
         return msg.strip()
 
     @property
@@ -1367,26 +1395,19 @@ Warm regards,
 
     def get_whatsapp_feedback_message(self):
         """
-        Generates an elegant, respectful feedback request message with direct review link in English.
+        Generates a short, elegant review request WhatsApp message.
         """
-        msg = f"""🥒 *Pickpickles — Your Thoughts & Experience* ⭐✨
+        msg = f"""🥒 *Pickpickles — Quick Review* ⭐
 
 Dear *{self.customer_name}*,
+We hope you enjoyed your handcrafted pickles! How was your experience with the taste & crunch?
 
-Warm greetings! We hope you have safely received your handcrafted pickles from Pickpickles and are enjoying them.
+⭐ *Leave a quick review:*
+• Simply reply here with your rating (1-5 ⭐) & feedback
+• Or review at: https://pickpickles.xyz/reviews/
 
-How was your experience with the flavor, crunch, and our service? We would deeply appreciate your review!
-
-🌟 *Easy Ways to Review:*
-• 💬 Simply reply right here in this chat with your rating (1-5 ⭐) & feedback!
-• 🌐 Leave a review on our website: https://pickpickles.xyz/reviews/
-• 📘 Review us on our Facebook page: https://facebook.com/pickpickles07
-
-As an artisanal small-batch brand, every review helps us grow and serve you better! 💚
-
-With gratitude,
-*Team Pickpickles*
-🌐 pickpickles.xyz"""
+Thank you for supporting artisanal homemade pickles! 💚
+*Team Pickpickles*"""
         return msg.strip()
 
     @property
@@ -1404,28 +1425,20 @@ With gratitude,
 
     def get_whatsapp_1month_review_request_message(self):
         """
-        Generates a polite, highly professional 1-month follow-up message requesting review with direct link in English.
+        Generates a concise 1-month follow-up review request WhatsApp message.
         """
-        msg = f"""🥒 *Pickpickles — We'd Love Your Review!* ⭐✨
+        msg = f"""🥒 *Pickpickles — We'd Love Your Review!* ⭐
 
 Dear *{self.customer_name}*,
+Hope your jars brought great flavor and crunch to your meals! 💚
 
-Warm greetings from Pickpickles! A little while ago, you received our homemade artisanal pickles. We hope every jar brought delicious flavors and crisp crunch to your meals! 💚
+Could you share a quick review of your experience?
+• Reply right here with your rating (1-5 ⭐) & feedback
+• Website: https://pickpickles.xyz/reviews/
+• Facebook: https://facebook.com/pickpickles07
 
-Your honest review helps fellow food lovers discover us and helps us keep perfecting our recipes.
-
-It takes just 1 minute to share your thoughts:
-
-🌟 *Easy Ways to Review:*
-• 💬 Simply reply right here in this chat with your rating (1-5 ⭐) & feedback!
-• 🌐 Leave a review on our website: https://pickpickles.xyz/reviews/
-• 📘 Review us on our Facebook page: https://facebook.com/pickpickles07
-
-Thank you for being a valued part of the Pickpickles community!
-
-Warm regards,
-*Team Pickpickles*
-🌐 pickpickles.xyz | 📞 +8801794271523"""
+Thank you for being part of Pickpickles!
+*Team Pickpickles* | 01794271523"""
         return msg.strip()
 
     @property

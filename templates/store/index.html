@@ -579,152 +579,95 @@
         </div>
     </div>
 
-    <!-- Products Grid (2 columns on mobile, 3 columns on desktop - Spacious & Premium) -->
-    <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 lg:gap-8">
+    <!-- Products Grid (2 columns on mobile, 4 columns on desktop) -->
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
         {% for product in all_products %}
-        <div
-            class="product-card bg-white rounded-2xl sm:rounded-3xl border transition-all duration-300 flex flex-col justify-between overflow-hidden group h-full relative {% if not product.is_in_stock or product.stock_count <= 0 %}border-slate-200/90 shadow-2xs{% elif product.custom_badge %}{% if 'season' in product.custom_badge|lower or 'ended' in product.custom_badge|lower or 'শেষ' in product.custom_badge %}card-flash-rose border-rose-400/90{% elif 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower or 'launch' in product.custom_badge|lower or 'নতুন' in product.custom_badge %}card-flash-emerald border-emerald-400/90{% else %}card-flash-gold border-amber-400/90{% endif %}{% else %}border-slate-200/90 shadow-2xs hover:shadow-lg{% endif %}">
-
-            <!-- Card Image Box -->
-            <div class="relative aspect-square overflow-hidden bg-slate-100 border-b border-slate-150">
-                <a href="{% url 'store:product_detail' product.slug %}" class="block w-full h-full"
-                    aria-label="{{ product.name }}">
-                    <img src="{{ product.primary_image_url }}" alt="{{ product.name }}"
-                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
-                        loading="lazy" decoding="async" width="1024" height="1024">
-                </a>
-
-                <!-- Top Left Badge: Pre-Order, Custom Badge, or Best Seller Ranking -->
-                <div
-                    class="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 z-10 pointer-events-none flex flex-col gap-1 max-w-[85%]">
-                    {% if not product.is_in_stock or product.stock_count <= 0 %}
-                    <span
-                        class="inline-flex items-center gap-1 bg-amber-500 text-slate-950 font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md border border-amber-400 tracking-tight">
-                        <i class="fa-solid fa-clock text-[8px] sm:text-[9px]"></i>
-                        <span>Pre-Order</span>
-                    </span>
+        <div class="product-card bg-white rounded-2xl border border-slate-200/90 hover:border-emerald-400 p-2.5 sm:p-3 shadow-2xs hover:shadow-md transition-all duration-300 flex flex-col justify-between group h-full relative">
+            <div>
+                <!-- Image Box -->
+                <a href="{% url 'store:product_detail' product.slug %}" class="block relative aspect-square rounded-xl overflow-hidden bg-slate-50 mb-2 sm:mb-2.5 border border-slate-100 group-hover:scale-[1.02] transition-transform">
+                    <img src="{{ product.primary_image_url }}" alt="{{ product.name }}" class="w-full h-full object-cover" loading="lazy" decoding="async">
+                    
+                    <!-- Top Left Badges -->
+                    <div class="absolute top-1.5 left-1.5 z-10 pointer-events-none flex flex-col gap-1 max-w-[82%]">
+                        {% if not product.is_in_stock or product.stock_count <= 0 %}
+                        <span class="inline-flex items-center gap-1 bg-amber-500 text-slate-950 font-black text-[8.5px] sm:text-[9.5px] px-2 py-0.5 rounded-md shadow-xs">
+                            <i class="fa-solid fa-clock text-[7.5px]"></i> Pre-Order
+                        </span>
                         {% elif product.custom_badge %}
-                        {% if 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower or 'launch' in product.custom_badge|lower or 'নতুন' in product.custom_badge %}
-                        <span
-                            class="shimmer-ribbon inline-flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 text-white font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md tracking-tight border border-emerald-400/50">
-                            <span class="relative flex h-1.5 w-1.5">
-                                <span
-                                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-80"></span>
-                                <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-white"></span>
+                            {% if 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower or 'launch' in product.custom_badge|lower or 'নতুন' in product.custom_badge %}
+                            <span class="shimmer-ribbon inline-flex items-center gap-1 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-[8.5px] sm:text-[9.5px] px-2 py-0.5 rounded-md shadow-xs">
+                                ✨ New
                             </span>
-                            <span>✨ New Arrival</span>
-                        </span>
-                        {% elif 'season' in product.custom_badge|lower or 'ended' in product.custom_badge|lower or 'শেষ' in product.custom_badge %}
-                        <span
-                            class="inline-flex items-center gap-1.5 bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md tracking-tight border border-rose-400/50">
-                            <i class="fa-solid fa-hourglass-half text-[8px] sm:text-[9px]"></i>
-                            <span>🍂 Season Ending</span>
-                        </span>
-                        {% else %}
-                        <span
-                            class="inline-flex items-center gap-1 bg-amber-400 text-slate-950 font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md border border-amber-300 tracking-tight">
-                            <span>{{ product.custom_badge }}</span>
-                        </span>
-                        {% endif %}
+                            {% elif 'season' in product.custom_badge|lower or 'ended' in product.custom_badge|lower or 'শেষ' in product.custom_badge %}
+                            <span class="inline-flex items-center gap-1 bg-gradient-to-r from-rose-600 to-red-600 text-white font-black text-[8.5px] sm:text-[9.5px] px-2 py-0.5 rounded-md shadow-xs">
+                                🍂 Season End
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1 bg-amber-400 text-slate-950 font-black text-[8.5px] sm:text-[9.5px] px-2 py-0.5 rounded-md shadow-xs">
+                                {{ product.custom_badge }}
+                            </span>
+                            {% endif %}
                         {% elif top_best_sellers.0 and product.id == top_best_sellers.0.id %}
-                        <span
-                            class="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md border border-amber-400 tracking-tight ring-1 ring-amber-400/60 uppercase">
-                            <i class="fa-solid fa-crown text-[8px] sm:text-[9px] text-amber-950"></i>
-                            <span>#1 Best Seller</span>
+                        <span class="inline-flex items-center gap-1 bg-gradient-to-r from-amber-400 to-amber-300 text-slate-950 font-black text-[8.5px] sm:text-[9.5px] px-2 py-0.5 rounded-md shadow-xs uppercase">
+                            👑 #1 Best
                         </span>
                         {% elif top_best_sellers.1 and product.id == top_best_sellers.1.id %}
-                        <span
-                            class="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-200 to-amber-100 text-slate-950 font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md border border-amber-300 tracking-tight ring-1 ring-amber-300/50 uppercase">
-                            <i class="fa-solid fa-medal text-[8px] sm:text-[9px] text-amber-800"></i>
-                            <span>#2 Popular Pick</span>
+                        <span class="inline-flex items-center gap-1 bg-gradient-to-r from-amber-200 to-amber-100 text-slate-950 font-black text-[8.5px] sm:text-[9.5px] px-2 py-0.5 rounded-md shadow-xs uppercase">
+                            🥈 #2 Pick
                         </span>
                         {% elif top_best_sellers.2 and product.id == top_best_sellers.2.id %}
-                        <span
-                            class="inline-flex items-center gap-1.5 bg-gradient-to-r from-emerald-200 to-emerald-100 text-emerald-950 font-black text-[9px] sm:text-xs px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-md border border-emerald-300 tracking-tight ring-1 ring-emerald-400/50 uppercase">
-                            <i class="fa-solid fa-star text-[8px] sm:text-[9px] text-emerald-800"></i>
-                            <span>#3 Fan Favorite</span>
+                        <span class="inline-flex items-center gap-1 bg-gradient-to-r from-emerald-200 to-emerald-100 text-emerald-950 font-black text-[8.5px] sm:text-[9.5px] px-2 py-0.5 rounded-md shadow-xs uppercase">
+                            ⭐ #3 Fav
                         </span>
-                        {% else %}
-                        <!-- Only shown when NO other badge exists -->
-                        <span
-                            class="inline-flex items-center gap-1 bg-white/95 backdrop-blur-xs text-slate-800 font-black text-[8.5px] sm:text-[10px] px-2.5 py-0.5 rounded-full shadow-2xs border border-slate-200/80 tracking-tight">
-                            {% if product.spice_level == 'MILD' %}🌿 Mild & Refreshing
-                            {% elif product.spice_level == 'MEDIUM' %}🌶️ Medium Zest
-                            {% elif product.spice_level == 'HOT' %}🔥 Hot & Tangy
-                            {% elif product.spice_level == 'NAGA' %}💣 Fire Naga Hot
-                            {% else %}{{ product.get_spice_level_display }}
-                            {% endif %}
-                        </span>
-                        {% endif %}
-                </div>
-
-                <!-- Weight badge (Top Right) -->
-                <span
-                    class="absolute top-1.5 right-1.5 sm:top-3 sm:right-3 bg-slate-950/75 backdrop-blur-xs text-white text-[8.5px] sm:text-[10px] font-black px-1.5 sm:px-2 py-0.5 rounded-full shadow-xs pointer-events-none z-10 border border-white/20">
-                    {{ product.jar_weight_grams }}g
-                </span>
-
-                <!-- Refrigerate Immediately Badge (Bottom Left - Compact on Mobile) -->
-                <div
-                    class="absolute bottom-1.5 left-1.5 sm:bottom-2.5 sm:left-2.5 bg-slate-950/85 backdrop-blur-xs text-cyan-300 text-[7.5px] sm:text-[9px] font-black px-1.5 sm:px-2 py-0.5 rounded-full border border-cyan-400/25 flex items-center gap-1 shadow-xs pointer-events-none z-10">
-                    <i class="fa-solid fa-snowflake text-cyan-400 text-[7px] sm:text-[8px] shrink-0"></i>
-                    <span class="tracking-tight uppercase">Refrigerate</span><span class="hidden sm:inline uppercase">
-                        Immediately</span>
-                </div>
-            </div>
-
-            <!-- Card Body (Clean, Balanced & Uniform) -->
-            <div class="p-2.5 sm:p-4 flex-1 flex flex-col justify-between gap-1.5 sm:gap-2.5">
-                <div class="space-y-1 sm:space-y-1.5">
-                    <!-- Product Name (Uniform 2-line height for aligned grid) -->
-                    <h3
-                        class="font-display font-black text-xs sm:text-base lg:text-lg text-slate-950 group-hover:text-emerald-700 transition leading-snug line-clamp-2 min-h-[32px] sm:min-h-[44px]">
-                        <a href="{% url 'store:product_detail' product.slug %}">{{ product.name }}</a>
-                    </h3>
-
-                    <!-- Cut style & Rating in one sleek, compact line -->
-                    <div
-                        class="flex items-center justify-between text-[10px] sm:text-xs text-slate-500 font-bold gap-1">
-                        <span
-                            class="text-emerald-900 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/80 text-[9px] sm:text-[10.5px] font-black truncate">
-                            🥒 {{ product.get_cut_style_display }}
-                        </span>
-                        <span
-                            class="text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200/80 flex items-center gap-1 text-[9px] sm:text-[10.5px] font-black shrink-0">
-                            <i class="fa-solid fa-star text-amber-400 text-[8px] sm:text-[9px]"></i>
-                            <span>{% if product.reviews_count > 0 %}{{ product.average_rating }}{% else %}{{ product.crunch_rating|default:5 }}{% endif %}/5</span>
-                        </span>
-                    </div>
-                </div>
-
-                <!-- Price and Add to Bag Footer Row (Mobile Side-by-Side, Zero Clutter) -->
-                <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-1 mt-auto">
-                    <div class="min-w-0">
-                        <span class="font-display font-black text-sm sm:text-xl text-slate-950 block leading-tight">৳{{ product.price_bdt|floatformat:0 }}</span>
-                        {% if product.original_price_bdt and product.original_price_bdt > product.price_bdt %}
-                        <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                            <span class="text-[10px] sm:text-xs text-slate-400 line-through font-bold leading-none">৳{{ product.original_price_bdt|floatformat:0 }}</span>
-                            <span
-                                class="text-[8px] sm:text-[9.5px] font-black text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded leading-none whitespace-nowrap">Save ৳{{ product.discount_amount|floatformat:0 }}</span>
-                        </div>
                         {% endif %}
                     </div>
 
-                    <!-- Quick Add Button with AJAX (Always active to allow pre-order / backorders) -->
-                    <button type="button" onclick="ajaxAddToCart({{ product.id }}, 1, this)"
-                        class="h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl bg-[#15803d] hover:bg-[#166534] active:scale-95 text-white font-black text-[11px] sm:text-xs shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-1 cursor-pointer shrink-0 border border-emerald-600/30"
-                        aria-label="Add {{ product.name }} to bag">
-                        <i class="fa-solid fa-plus text-[9px] sm:text-[10px]"></i>
-                        <span class="inline sm:hidden">Add</span>
-                        <span class="hidden sm:inline">Add to Bag</span>
-                    </button>
-                </div>
+                    <!-- Top Right: Weight badge -->
+                    <span class="absolute top-1.5 right-1.5 bg-slate-950/85 text-white text-[8.5px] sm:text-[9.5px] font-black px-1.5 sm:px-2 py-0.5 rounded-md shadow-2xs pointer-events-none">
+                        {{ product.jar_weight_grams }}g
+                    </span>
 
+                    <!-- Bottom Left: Refrigerate Badge -->
+                    <span class="absolute bottom-1.5 left-1.5 bg-slate-950/85 text-cyan-300 text-[7px] sm:text-[8px] font-black px-1.5 py-0.5 rounded-md border border-cyan-400/25 flex items-center gap-0.5 shadow-2xs pointer-events-none">
+                        <i class="fa-solid fa-snowflake text-[6.5px] text-cyan-400"></i>
+                        <span>Refrigerate</span>
+                    </span>
+                </a>
+
+                <!-- Product Name -->
+                <a href="{% url 'store:product_detail' product.slug %}" class="font-display font-black text-xs sm:text-base text-slate-900 group-hover:text-emerald-700 transition line-clamp-1 block leading-snug">
+                    {{ product.name }}
+                </a>
+
+                <!-- Tagline -->
+                <p class="text-[11px] text-slate-500 line-clamp-1 mt-0.5 font-medium">
+                    {{ product.tagline }}
+                </p>
             </div>
 
+            <!-- Card Footer: Price + Quick Add -->
+            <div class="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between gap-1.5">
+                <div class="min-w-0">
+                    <span class="font-display font-black text-sm sm:text-base text-emerald-950 block leading-tight">৳{{ product.price_bdt|floatformat:0 }}</span>
+                    {% if product.original_price_bdt and product.original_price_bdt > product.price_bdt %}
+                    <div class="flex items-center gap-1 leading-none mt-0.5">
+                        <span class="text-[9.5px] sm:text-[10px] text-slate-400 line-through font-bold">৳{{ product.original_price_bdt|floatformat:0 }}</span>
+                        <span class="text-[8px] font-black text-rose-700 bg-rose-50 px-1 py-0.2 rounded">Save ৳{{ product.discount_amount|floatformat:0 }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <button type="button" onclick="quickAddToCart({{ product.id }}, 1, this)"
+                    class="bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white text-xs font-black px-2.5 sm:px-3 py-1.5 rounded-xl transition flex items-center gap-1 shadow-2xs cursor-pointer shrink-0"
+                    aria-label="Add {{ product.name }} to bag">
+                    <i class="fa-solid fa-plus text-[9.5px]"></i>
+                    <span>Add</span>
+                </button>
+            </div>
         </div>
         {% empty %}
-        <div class="col-span-2 lg:col-span-3 text-center py-12">
+        <div class="col-span-2 md:col-span-3 lg:col-span-4 text-center py-12">
             <p class="text-slate-600 font-medium">No pickles in this category yet. Check back soon!</p>
         </div>
         {% endfor %}
