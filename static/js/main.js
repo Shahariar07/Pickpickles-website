@@ -341,11 +341,8 @@ async function ajaxAddToCart(productId, quantity = 1, btnEl = null, variant = ''
             if (data.items) {
                 renderCartDrawer(data.items, data.cart_subtotal, data.cart_discount);
             }
-            
-            // Auto popup cart drawer smoothly so user immediately sees updated items & checkout button
-            toggleCartDrawer(true);
 
-            // Display added toast message as additional confirmation
+            // Display toast confirmation instead of auto-popping the cart drawer
             const addedName = (data.added_product && data.added_product.name) ? data.added_product.name : 'Pickle';
             showToast(`🥒 "${addedName}" added to your bag!`);
             
@@ -553,3 +550,255 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// Global Coupon Code Management (Checkout View)
+async function applyCouponCode(inputId) {
+    const inputEl = document.getElementById(inputId) || document.getElementById('checkoutCouponInput');
+    const code = inputEl ? inputEl.value.trim().toUpperCase() : '';
+    
+    const msgEl = document.getElementById('checkoutCouponMsg');
+    const showMsg = (text, isError = false) => {
+        if (!msgEl) return;
+        msgEl.innerHTML = text;
+        msgEl.className = isError 
+            ? 'text-[11px] font-bold mt-1.5 text-rose-600 block' 
+            : 'text-[11px] font-bold mt-1.5 text-emerald-700 block';
+    };
+
+    if (!code) {
+        showMsg('<i class="fa-solid fa-circle-exclamation"></i> Please enter a coupon code.', true);
+        if (inputEl) inputEl.focus();
+        return;
+    }
+
+    const token = getCsrfToken();
+    let currentZone = 'INSIDE_DHAKA';
+    const zoneChecked = document.querySelector('input[name="delivery_zone"]:checked');
+    if (zoneChecked && zoneChecked.value) {
+        currentZone = zoneChecked.value;
+    }
+
+    try {
+        const response = await fetch('/cart/apply-coupon/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': token,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                coupon_code: code,
+                zone: currentZone
+            })
+        });
+
+        let data;
+        try {
+            data = await response.json();
+        } catch (jsonErr) {
+            showMsg('<i class="fa-solid fa-triangle-exclamation"></i> Could not parse response from server.', true);
+            return;
+        }
+
+        if (data.success) {
+            showMsg(data.message || 'Coupon applied successfully!', false);
+            
+            // Sync Coupon Badge & Input
+            const group = document.getElementById('checkoutCouponInputGroup');
+            const badge = document.getElementById('checkoutCouponAppliedBadge');
+            const codeText = document.getElementById('checkoutCouponCodeText');
+            const discCode = document.getElementById('checkoutCouponDiscountCode');
+            const input = document.getElementById('checkoutCouponInput');
+
+            if (group) group.classList.add('hidden');
+            if (badge) badge.classList.remove('hidden');
+            if (codeText) codeText.innerText = data.coupon_code || code;
+            if (discCode) discCode.innerText = data.coupon_code || code;
+            if (input) input.value = '';
+
+            // Update Global Variables
+            const bundleDiscVal = parseFloat(data.bundle_discount || 0);
+            const couponDiscVal = parseFloat(data.coupon_discount || 0);
+            const subtotalVal = parseFloat(data.cart_subtotal || 0);
+            const deliveryFee = parseFloat(data.delivery_fee || 0);
+            const isFree = data.free_delivery_unlocked || deliveryFee === 0;
+
+            window.configuredBundleDiscount = bundleDiscVal;
+            window.configuredCouponDiscount = couponDiscVal;
+            window.subtotalValue = subtotalVal;
+            window.isFreeDelivery = isFree;
+            window.configuredDeliveryFee = isFree ? 0.0 : deliveryFee;
+
+            // Direct DOM Updates: Subtotal
+            const subEl = document.getElementById('checkoutSubtotal');
+            if (subEl) subEl.innerText = subtotalVal.toFixed(2);
+
+            // 1. Special Offer / Bundle Discount Row
+            const bundleRow = document.getElementById('checkoutBundleDiscountRow');
+            const bundleAmountEl = document.getElementById('checkoutBundleDiscount');
+            if (bundleRow) {
+                if (bundleDiscVal > 0) {
+                    bundleRow.classList.remove('hidden');
+                    if (bundleAmountEl) bundleAmountEl.innerText = bundleDiscVal.toFixed(2);
+                } else {
+                    bundleRow.classList.add('hidden');
+                }
+            }
+
+            // 2. Separate Coupon Discount Row
+            const couponRow = document.getElementById('checkoutCouponDiscountRow');
+            const couponAmountEl = document.getElementById('checkoutCouponDiscount');
+            if (couponRow) {
+                if (couponDiscVal > 0) {
+                    couponRow.classList.remove('hidden');
+                    if (couponAmountEl) couponAmountEl.innerText = couponDiscVal.toFixed(2);
+                } else {
+                    couponRow.classList.add('hidden');
+                }
+            }
+
+            // Delivery Fee
+            const feeEl = document.getElementById('checkoutDeliveryFee');
+            const noteEl = document.getElementById('checkoutDeliveryNote');
+            if (feeEl) {
+                if (isFree) {
+                    feeEl.className = "font-black text-emerald-700 text-sm";
+                    feeEl.innerText = "FREE";
+                    if (noteEl) noteEl.innerHTML = '<strong class="text-emerald-700">🎉 Congratulations! You unlocked FREE delivery.</strong>';
+                } else {
+                    feeEl.className = "font-black text-slate-900 text-sm";
+                    feeEl.innerText = `৳${deliveryFee.toFixed(2)}`;
+                }
+            }
+
+            // Total Payable
+            const grandTotal = parseFloat(data.grand_total || 0);
+            const totalEls = [
+                document.getElementById('checkoutTotal'),
+                document.getElementById('bkashDueAmount'),
+                document.getElementById('mobileSummaryTotal')
+            ];
+            totalEls.forEach(el => {
+                if (el) el.innerText = grandTotal.toFixed(2);
+            });
+
+            if (typeof updateDeliveryFee === 'function') {
+                try { updateDeliveryFee(); } catch (e) { console.error(e); }
+            }
+
+        } else {
+            showMsg(`<i class="fa-solid fa-circle-xmark"></i> ${data.message || 'Invalid coupon code.'}`, true);
+        }
+    } catch (err) {
+        console.error('Error applying coupon:', err);
+        showMsg('<i class="fa-solid fa-triangle-exclamation"></i> Network error applying coupon. Please try again.', true);
+    }
+}
+
+async function removeCouponCode() {
+    const token = getCsrfToken();
+    let currentZone = 'INSIDE_DHAKA';
+    const zoneChecked = document.querySelector('input[name="delivery_zone"]:checked');
+    if (zoneChecked && zoneChecked.value) {
+        currentZone = zoneChecked.value;
+    }
+
+    try {
+        const response = await fetch('/cart/remove-coupon/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': token,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                zone: currentZone
+            })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            const msgEl = document.getElementById('checkoutCouponMsg');
+            if (msgEl) {
+                msgEl.innerText = '';
+                msgEl.classList.add('hidden');
+            }
+
+            const group = document.getElementById('checkoutCouponInputGroup');
+            const badge = document.getElementById('checkoutCouponAppliedBadge');
+            const codeText = document.getElementById('checkoutCouponCodeText');
+            const discCode = document.getElementById('checkoutCouponDiscountCode');
+            const input = document.getElementById('checkoutCouponInput');
+
+            if (group) group.classList.remove('hidden');
+            if (badge) badge.classList.add('hidden');
+            if (codeText) codeText.innerText = '';
+            if (discCode) discCode.innerText = '';
+            if (input) input.value = '';
+
+            // Update Global Variables
+            const bundleDiscVal = parseFloat(data.bundle_discount || 0);
+            const couponDiscVal = 0.0;
+            const subtotalVal = parseFloat(data.cart_subtotal || 0);
+            const deliveryFee = parseFloat(data.delivery_fee || 0);
+            const isFree = data.free_delivery_unlocked || deliveryFee === 0;
+
+            window.configuredBundleDiscount = bundleDiscVal;
+            window.configuredCouponDiscount = couponDiscVal;
+            window.subtotalValue = subtotalVal;
+            window.isFreeDelivery = isFree;
+            window.configuredDeliveryFee = isFree ? 0.0 : deliveryFee;
+
+            // Direct DOM Updates: Subtotal
+            const subEl = document.getElementById('checkoutSubtotal');
+            if (subEl) subEl.innerText = subtotalVal.toFixed(2);
+
+            // Hide Coupon Discount Row
+            const couponRow = document.getElementById('checkoutCouponDiscountRow');
+            if (couponRow) couponRow.classList.add('hidden');
+
+            // Bundle Discount Row
+            const bundleRow = document.getElementById('checkoutBundleDiscountRow');
+            const bundleAmountEl = document.getElementById('checkoutBundleDiscount');
+            if (bundleRow) {
+                if (bundleDiscVal > 0) {
+                    bundleRow.classList.remove('hidden');
+                    if (bundleAmountEl) bundleAmountEl.innerText = bundleDiscVal.toFixed(2);
+                } else {
+                    bundleRow.classList.add('hidden');
+                }
+            }
+
+            // Delivery Fee
+            const feeEl = document.getElementById('checkoutDeliveryFee');
+            const noteEl = document.getElementById('checkoutDeliveryNote');
+            if (feeEl) {
+                if (isFree) {
+                    feeEl.className = "font-black text-emerald-700 text-sm";
+                    feeEl.innerText = "FREE";
+                    if (noteEl) noteEl.innerHTML = '<strong class="text-emerald-700">🎉 Congratulations! You unlocked FREE delivery.</strong>';
+                } else {
+                    feeEl.className = "font-black text-slate-900 text-sm";
+                    feeEl.innerText = `৳${deliveryFee.toFixed(2)}`;
+                }
+            }
+
+            // Total Payable
+            const grandTotal = parseFloat(data.grand_total || 0);
+            const totalEls = [
+                document.getElementById('checkoutTotal'),
+                document.getElementById('bkashDueAmount'),
+                document.getElementById('mobileSummaryTotal')
+            ];
+            totalEls.forEach(el => {
+                if (el) el.innerText = grandTotal.toFixed(2);
+            });
+
+            if (typeof updateDeliveryFee === 'function') {
+                try { updateDeliveryFee(); } catch (e) { console.error(e); }
+            }
+        }
+    } catch (err) {
+        console.error('Error removing coupon:', err);
+    }
+}

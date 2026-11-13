@@ -309,3 +309,105 @@ class ManualOrderOfferAndCouponTests(TestCase):
         order2 = Order.objects.order_by('-id').first()
         self.assertEqual(order2.discount_amount, Decimal('0.00'))
         self.assertEqual(order2.total_amount, Decimal('1050.00'))
+
+        # 4. Advance Payment (BKASH) gets 5% discount in manual order too
+        promo.advance_payment_discount_enabled = True
+        promo.advance_payment_discount_percent = Decimal('5.00')
+        promo.save()
+        res_adv = self.client.post(reverse('dashboard:create_manual_order'), {
+            'customer_name': 'Advance Buyer',
+            'customer_phone': '01711114444',
+            'delivery_address': 'Uttara 7',
+            'delivery_city': 'Dhaka',
+            'delivery_zone': 'INSIDE_DHAKA',
+            'payment_method': 'BKASH',
+            'product_id': [str(self.product.id)],
+            'quantity': ['2'],
+            'apply_offers_present': '1',
+            'apply_offers': '1',
+        })
+        self.assertEqual(res_adv.status_code, 302)
+        order_adv = Order.objects.order_by('-id').first()
+        self.assertEqual(order_adv.discount_amount, Decimal('45.00'))  # 5% of 900.00
+        self.assertEqual(order_adv.total_amount, Decimal('1005.00'))  # 900 - 45 + 150
+
+        # 5. Offer manager saves advance payment offer toggle & percent
+        res_offer = self.client.post(reverse('dashboard:offer_manager'), {
+            'is_active': '1',
+            'campaign_name': 'Advance Campaign',
+            'bundle_min_jars': '2',
+            'bundle_discount_amount': '100',
+            'bundle_apply_mode': 'EXACT',
+            'standard_delivery_fee': '150',
+            'free_delivery_min_jars': '4',
+            'advance_payment_discount_enabled': '1',
+            'advance_payment_discount_percent': '5',
+            'advance_payment_discount_label': '5% Advance Payment OFF',
+        })
+        self.assertEqual(res_offer.status_code, 302)
+        promo.refresh_from_db()
+        self.assertTrue(promo.advance_payment_discount_enabled)
+        self.assertEqual(promo.advance_payment_discount_percent, Decimal('5.00'))
+
+    def test_dashboard_index_shows_jars_sold_and_queue_jars(self):
+        """Dashboard KPI tiles display accurate delivered (sold) jars & active queue jars, excluding cancelled/deleted."""
+        from store.models import Order, OrderItem
+        # Create orders: 1 DELIVERED (3 jars), 1 PENDING UNPAID (2 jars), 1 CANCELLED (5 jars), 1 SOFT-DELETED (4 jars)
+        o_del = Order.objects.create(
+            customer_name='Delivered Buyer',
+            customer_phone='01710000001',
+            delivery_address='Dhaka',
+            delivery_city='Dhaka',
+            order_status='DELIVERED',
+            subtotal=Decimal('1350.00'),
+            delivery_fee=Decimal('150.00'),
+            total_amount=Decimal('1500.00'),
+        )
+        OrderItem.objects.create(order=o_del, product=self.product, product_name=self.product.name, quantity=3, unit_price=Decimal('450.00'), total_price=Decimal('1350.00'))
+
+        o_queue = Order.objects.create(
+            customer_name='Queue Buyer',
+            customer_phone='01710000002',
+            delivery_address='Dhaka',
+            delivery_city='Dhaka',
+            order_status='PENDING',
+            payment_status='UNPAID',
+            subtotal=Decimal('900.00'),
+            delivery_fee=Decimal('150.00'),
+            total_amount=Decimal('1050.00'),
+        )
+        OrderItem.objects.create(order=o_queue, product=self.product, product_name=self.product.name, quantity=2, unit_price=Decimal('450.00'), total_price=Decimal('900.00'))
+
+        o_cancel = Order.objects.create(
+            customer_name='Cancelled Buyer',
+            customer_phone='01710000003',
+            delivery_address='Dhaka',
+            delivery_city='Dhaka',
+            order_status='CANCELLED',
+            payment_status='PAID',
+            subtotal=Decimal('2250.00'),
+            delivery_fee=Decimal('0.00'),
+            total_amount=Decimal('2250.00'),
+        )
+        OrderItem.objects.create(order=o_cancel, product=self.product, product_name=self.product.name, quantity=5, unit_price=Decimal('450.00'), total_price=Decimal('2250.00'))
+
+        o_deleted = Order.objects.create(
+            customer_name='Deleted Buyer',
+            customer_phone='01710000004',
+            delivery_address='Dhaka',
+            delivery_city='Dhaka',
+            order_status='DELIVERED',
+            is_deleted=True,
+            subtotal=Decimal('1800.00'),
+            delivery_fee=Decimal('0.00'),
+            total_amount=Decimal('1800.00'),
+        )
+        OrderItem.objects.create(order=o_deleted, product=self.product, product_name=self.product.name, quantity=4, unit_price=Decimal('450.00'), total_price=Decimal('1800.00'))
+
+        res = self.client.get(reverse('dashboard:index'))
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.context['delivered_jars_sold'], 3)
+        self.assertEqual(res.context['pipeline_jars_sold'], 2)
+        self.assertEqual(res.context['total_jars_sold'], 5)
+        self.assertContains(res, 'Total Jars Sold')
+        self.assertContains(res, 'In Queue')

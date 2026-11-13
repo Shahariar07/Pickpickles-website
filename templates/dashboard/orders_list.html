@@ -2018,12 +2018,19 @@
                     <input type="hidden" name="apply_offers_present" value="1">
                     <div class="flex items-center justify-between gap-2 flex-wrap">
                         <label class="inline-flex items-center gap-2 cursor-pointer select-none">
-                            <input type="checkbox" name="apply_offers" id="manualApplyOffersCheckbox" value="1" {% if promo_setting.is_active and promo_setting.bundle_discount_enabled %}checked{% endif %} onchange="calculateManualOrderTotal()" class="w-4 h-4 rounded text-emerald-600 border-gray-300 focus:ring-emerald-500">
+                            <input type="checkbox" name="apply_offers" id="manualApplyOffersCheckbox" value="1" {% if promo_setting.is_active %}{% if promo_setting.bundle_discount_enabled or promo_setting.advance_payment_discount_enabled %}checked{% endif %}{% endif %} onchange="calculateManualOrderTotal()" class="w-4 h-4 rounded text-emerald-600 border-gray-300 focus:ring-emerald-500">
                             <span class="font-bold text-gray-800 text-xs">
-                                {% if promo_setting.is_active and promo_setting.bundle_discount_enabled %}
-                                🎁 Apply Store Offer: <span class="text-emerald-700">{{ promo_setting.get_discount_label }}</span>
+                                {% if promo_setting.is_active %}
+                                    {% if promo_setting.bundle_discount_enabled or promo_setting.advance_payment_discount_enabled %}
+                                    🎁 Apply Store Offers:
+                                        {% if promo_setting.bundle_discount_enabled %}<span class="text-emerald-700">{{ promo_setting.get_discount_label }}</span>{% endif %}
+                                        {% if promo_setting.bundle_discount_enabled and promo_setting.advance_payment_discount_enabled %}<span class="text-gray-400 mx-1">•</span>{% endif %}
+                                        {% if promo_setting.advance_payment_discount_enabled %}<span class="text-pink-700">{{ promo_setting.get_advance_payment_label }} (bKash)</span>{% endif %}
+                                    {% else %}
+                                    <span class="text-gray-400">Store Offers are OFF in Offer Manager</span>
+                                    {% endif %}
                                 {% else %}
-                                <span class="text-gray-400">Store Bundle Offer is OFF in Offer Manager</span>
+                                <span class="text-gray-400">Campaign &amp; Store Offers are OFF</span>
                                 {% endif %}
                             </span>
                         </label>
@@ -2079,6 +2086,14 @@
 
                     </div>
 
+                    <div id="manualSummaryAdvanceRow" class="hidden flex justify-between text-pink-700 font-bold">
+
+                        <span id="manualSummaryAdvanceLabel">Advance Payment Offer:</span>
+
+                        <span id="manualSummaryAdvanceDiscount">-৳0</span>
+
+                    </div>
+
                     <div class="flex justify-between text-gray-600">
 
                         <span>Delivery Charge:</span>
@@ -2109,11 +2124,11 @@
 
                     <label class="font-bold text-gray-700 block mb-1">Payment Method</label>
 
-                    <select name="payment_method" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
+                    <select name="payment_method" id="manualPaymentMethodSelect" onchange="calculateManualOrderTotal()" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
 
                         <option value="COD" selected>Cash on Delivery (COD)</option>
 
-                        <option value="BKASH">bKash Personal (Send Money)</option>
+                        <option value="BKASH">bKash Personal (Send Money){% if promo_setting.is_active and promo_setting.advance_payment_discount_enabled %} — {{ promo_setting.advance_payment_discount_percent|floatformat:0 }}% OFF{% endif %}</option>
 
                     </select>
 
@@ -3109,7 +3124,7 @@ function openManualOrderModal() {
 
     const offerCheckbox = document.getElementById('manualApplyOffersCheckbox');
     if (offerCheckbox) {
-        offerCheckbox.checked = !!(MANUAL_OFFER_CONFIG.is_active && MANUAL_OFFER_CONFIG.bundle_discount_enabled);
+        offerCheckbox.checked = !!(MANUAL_OFFER_CONFIG.is_active && (MANUAL_OFFER_CONFIG.bundle_discount_enabled || MANUAL_OFFER_CONFIG.advance_payment_discount_enabled));
     }
 
     document.getElementById('manualOrderModal').classList.remove('hidden');
@@ -3361,7 +3376,17 @@ function calculateManualOrderTotal(isManualFeeChange = false) {
         }
     }
 
-    const totalDiscount = Math.min(subtotal, bundleDiscount + couponDiscount);
+    const paymentMethodEl = document.getElementById('manualPaymentMethodSelect');
+    const selectedPayMethod = paymentMethodEl ? paymentMethodEl.value : 'COD';
+    let advanceDiscount = 0;
+    if (shouldApplyOffers && promoActive && MANUAL_OFFER_CONFIG.advance_payment_discount_enabled && selectedPayMethod !== 'COD') {
+        const advPct = parseFloat(MANUAL_OFFER_CONFIG.advance_payment_discount_percent || 0);
+        if (advPct > 0) {
+            advanceDiscount = Math.min(subtotal, Math.round(((subtotal * advPct) / 100) * 100) / 100);
+        }
+    }
+
+    const totalDiscount = Math.min(subtotal, bundleDiscount + couponDiscount + advanceDiscount);
     const grandTotal = Math.max(0, subtotal - totalDiscount + deliveryFee);
 
     const offerRow = document.getElementById('manualSummaryOfferRow');
@@ -3392,6 +3417,21 @@ function calculateManualOrderTotal(isManualFeeChange = false) {
             couponDiscEl.textContent = '-৳' + couponDiscount.toFixed(0);
         } else {
             couponRow.classList.add('hidden');
+        }
+    }
+
+    const advRow = document.getElementById('manualSummaryAdvanceRow');
+    const advLabelEl = document.getElementById('manualSummaryAdvanceLabel');
+    const advDiscEl = document.getElementById('manualSummaryAdvanceDiscount');
+    if (advRow && advDiscEl) {
+        if (advanceDiscount > 0) {
+            advRow.classList.remove('hidden');
+            if (advLabelEl) {
+                advLabelEl.textContent = (MANUAL_OFFER_CONFIG.advance_payment_discount_label || '5% Advance Payment OFF') + ':';
+            }
+            advDiscEl.textContent = '-৳' + advanceDiscount.toFixed(2).replace(/\.00$/, '');
+        } else {
+            advRow.classList.add('hidden');
         }
     }
 

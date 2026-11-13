@@ -346,21 +346,21 @@
             </div>
         </div>
 
-        <!-- Metric 4: Total Jars Sold -->
+        <!-- Metric 4: Total Jars Sold (Delivered / Paid) -->
         <div class="bg-white p-3 rounded-2xl border border-brand-200/90 bg-brand-50/20 shadow-2xs hover:shadow-xs transition-all">
             <div class="flex items-center justify-between">
-                <span class="text-[9px] font-extrabold text-brand-900 uppercase tracking-wider">Total Jars</span>
+                <span class="text-[9px] font-extrabold text-brand-900 uppercase tracking-wider">Total Jars Sold</span>
                 <span class="w-6 h-6 rounded-lg bg-brand-100 text-brand-800 flex items-center justify-center text-[10px]">
                     <i class="fa-solid fa-jar"></i>
                 </span>
             </div>
             <div class="mt-1.5 flex items-baseline gap-1">
-                <span class="font-display font-black text-base sm:text-lg text-brand-900 tracking-tight">{{ total_jars_sold }}</span>
+                <span class="font-display font-black text-base sm:text-lg text-brand-900 tracking-tight">{{ delivered_jars_sold }}</span>
                 <span class="text-[10px] font-bold text-brand-700">Jars</span>
             </div>
             <div class="text-[9px] text-gray-500 mt-1.5 pt-1.5 border-t border-brand-100 flex items-center justify-between">
-                <span>Delivered: <strong class="text-emerald-700 font-black">{{ delivered_jars_sold }}</strong></span>
-                <span>Queue: <strong class="text-amber-700 font-black">{{ pipeline_jars_sold }}</strong></span>
+                <span>Queue: <strong class="text-amber-700 font-black">{{ pipeline_jars_sold }} Jars</strong></span>
+                <span>All: <strong class="text-gray-700 font-black">{{ total_jars_sold }}</strong></span>
             </div>
         </div>
 
@@ -398,20 +398,21 @@
             </div>
         </div>
 
-        <!-- Metric 7: Pending Action Queue -->
+        <!-- Metric 7: In Queue (Active Jars & Pending Orders) -->
         <div class="bg-white p-3 rounded-2xl border border-amber-200/90 bg-amber-50/30 shadow-2xs hover:shadow-xs transition-all">
             <div class="flex items-center justify-between">
-                <span class="text-[9px] font-extrabold text-amber-900 uppercase tracking-wider">Pending Action</span>
+                <span class="text-[9px] font-extrabold text-amber-900 uppercase tracking-wider">In Queue</span>
                 <span class="w-6 h-6 rounded-lg bg-amber-200/80 text-amber-950 flex items-center justify-center text-[10px]">
                     <i class="fa-solid fa-clock-rotate-left"></i>
                 </span>
             </div>
-            <div class="mt-1.5">
-                <span class="font-display font-black text-base sm:text-lg text-amber-900 tracking-tight">{{ pending_count }}</span>
+            <div class="mt-1.5 flex items-baseline gap-1">
+                <span class="font-display font-black text-base sm:text-lg text-amber-900 tracking-tight">{{ pipeline_jars_sold }}</span>
+                <span class="text-[10px] font-bold text-amber-800">Jars</span>
             </div>
             <div class="text-[9px] text-amber-800 font-semibold mt-1.5 pt-1.5 border-t border-amber-200/70 flex items-center justify-between">
-                <span>Packing:</span>
-                <span class="font-black text-brand-800">{{ packing_count|add:out_for_delivery_count }} orders</span>
+                <span>Pending: <strong class="text-amber-950 font-black">{{ pending_count }}</strong></span>
+                <span class="font-black text-brand-800">Active: {{ confirmed_count|add:packing_count|add:out_for_delivery_count }} ord</span>
             </div>
         </div>
 

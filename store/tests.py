@@ -373,12 +373,22 @@ class CartTests(TestCase):
         self.assertIn('Mahmudul Hasan', fb_msg)
         self.assertIn('experience', fb_msg.lower())
         self.assertIn('https://pickpickles.xyz/reviews/', fb_msg)
+        self.assertIn('https://facebook.com/pickpickles07', fb_msg)
+        self.assertIn('5% off', fb_msg.lower())
+        self.assertIn('next order', fb_msg.lower())
+        self.assertIn('not here in chat', fb_msg.lower())
+        self.assertNotIn('reply here', fb_msg.lower())
         self.assertTrue(order.whatsapp_feedback_url.startswith('https://api.whatsapp.com/send?phone=8801712345678&text=') or order.whatsapp_feedback_url.startswith('https://wa.me/8801712345678?text='))
 
         month_msg = order.get_whatsapp_1month_review_request_message()
         self.assertIn('Mahmudul Hasan', month_msg)
         self.assertIn('Facebook', month_msg)
         self.assertIn('https://pickpickles.xyz/reviews/', month_msg)
+        self.assertIn('https://facebook.com/pickpickles07', month_msg)
+        self.assertIn('5% off', month_msg.lower())
+        self.assertIn('next order', month_msg.lower())
+        self.assertIn('not here in chat', month_msg.lower())
+        self.assertNotIn('reply right here', month_msg.lower())
 
         confirm_msg = order.get_whatsapp_order_confirmation_message()
         self.assertIn('Mahmudul Hasan', confirm_msg)
@@ -726,4 +736,47 @@ class CartTests(TestCase):
         self.assertEqual(coupon.used_count, 1)
         # Total discount = bundle discount (100) + coupon discount (50) = 150
         self.assertEqual(order.discount_amount, Decimal('150.00'))
+
+    def test_advance_payment_discount_on_checkout(self):
+        from django.test import override_settings
+        from store.models import Category, Product, Order, PromotionSetting
+
+        promo = PromotionSetting.get_settings()
+        promo.is_active = True
+        promo.bundle_discount_enabled = False
+        promo.advance_payment_discount_enabled = True
+        promo.advance_payment_discount_percent = Decimal('5.00')
+        promo.standard_delivery_fee = Decimal('150.00')
+        promo.save()
+
+        cat, _ = Category.objects.get_or_create(name='Advance Cat', defaults={'slug': 'advance-cat'})
+        prod = Product.objects.create(
+            category=cat,
+            name='Naga Advance Pickle',
+            slug='naga-advance-pickle',
+            price_bdt=Decimal('500.00'),
+            stock_count=15,
+            is_in_stock=True,
+        )
+
+        self.client.post(reverse('store:cart_add', args=[prod.id]), {'quantity': 2})
+
+        checkout_data = {
+            'customer_name': 'Bkash Buyer',
+            'customer_phone': '01755667788',
+            'delivery_address': 'Gulshan 1',
+            'delivery_city': 'Dhaka',
+            'delivery_zone': 'INSIDE_DHAKA',
+            'payment_method': 'BKASH',
+            'payment_sender_number': '01755667788',
+            'payment_trx_id': 'TRXADV1234',
+        }
+        with override_settings(CLOUDFLARE_TURNSTILE_SECRET_KEY=''):
+            res_order = self.client.post(reverse('store:checkout'), checkout_data)
+        self.assertEqual(res_order.status_code, 302)
+
+        order = Order.objects.latest('created_at')
+        self.assertEqual(order.subtotal, Decimal('1000.00'))
+        self.assertEqual(order.discount_amount, Decimal('50.00'))  # 5% of 1000
+        self.assertEqual(order.total_amount, Decimal('1100.00'))   # 1000 - 50 + 150
 

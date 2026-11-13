@@ -150,14 +150,23 @@
                                     <input type="radio" name="payment_method" value="BKASH" class="text-pink-600 focus:ring-pink-500 w-4 h-4 mt-0.5 sm:mt-0 shrink-0" onchange="togglePaymentInputs('BKASH')">
                                     <div class="flex-1 min-w-0">
                                         <div class="flex items-center justify-between gap-2">
-                                            <div class="flex items-center gap-2">
+                                            <div class="flex items-center gap-2 flex-wrap">
                                                 <span class="font-black text-sm text-slate-950">bKash Payment</span>
                                                 <span class="text-[10px] bg-[#e2136e] text-white font-black px-2 py-0.5 rounded-full tracking-wider uppercase">Advance</span>
+                                                {% if promo_settings.is_active and promo_settings.advance_payment_discount_enabled and promo_settings.advance_payment_discount_percent > 0 %}
+                                                <span class="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-300 font-black px-2 py-0.5 rounded-full tracking-wide">
+                                                    🎁 {{ promo_settings.advance_payment_discount_percent|floatformat:0 }}% OFF
+                                                </span>
+                                                {% endif %}
                                             </div>
                                             <span class="text-base font-mono font-black text-[#e2136e] shrink-0">bKash</span>
                                         </div>
                                         <p class="text-xs text-slate-500 font-medium mt-1">
+                                            {% if promo_settings.is_active and promo_settings.advance_payment_discount_enabled and promo_settings.advance_payment_discount_percent > 0 %}
+                                            Pay via bKash advance and get <strong class="text-pink-700">{{ promo_settings.advance_payment_discount_percent|floatformat:0 }}% extra discount</strong> instantly!
+                                            {% else %}
                                             100% advance payment via bKash personal Send Money.
+                                            {% endif %}
                                         </p>
                                     </div>
                                 </label>
@@ -340,6 +349,15 @@
                                 <span class="font-black text-sm text-purple-700">-৳<span id="checkoutCouponDiscount">{{ cart_coupon_discount|floatformat:2 }}</span></span>
                             </div>
 
+                            <!-- 3. Advance Payment Discount Row -->
+                            <div id="checkoutAdvanceDiscountRow" class="hidden flex justify-between items-center text-pink-700 font-bold bg-pink-50/70 px-2.5 py-1.5 rounded-xl border border-pink-200">
+                                <span class="flex items-center gap-1.5">
+                                    <i class="fa-solid fa-wallet text-pink-600"></i>
+                                    <span id="checkoutAdvanceDiscountLabel">{{ promo_settings.get_advance_payment_label|default:"5% Advance Payment OFF" }}</span>
+                                </span>
+                                <span class="font-black text-sm text-pink-700">-৳<span id="checkoutAdvanceDiscount">0.00</span></span>
+                            </div>
+
                             <div class="flex justify-between items-center text-slate-600 font-medium">
                                 <div>
                                     <span>Nationwide Delivery</span>
@@ -459,12 +477,23 @@
         updateDeliveryFee();
     }
 
-    function updateDeliveryFee() {
+    window.advanceDiscountEnabled = {% if promo_settings.is_active and promo_settings.advance_payment_discount_enabled %}true{% else %}false{% endif %};
+    window.advanceDiscountPercent = parseFloat("{{ promo_settings.advance_payment_discount_percent|default:0 }}") || 0;
+
+    function updateDeliveryFee(skipToggleRefresh = false) {
         const fee = calculateDeliveryFee(window.totalWeightGrams, 'INSIDE_DHAKA');
         const bundleDiscount = window.configuredBundleDiscount !== undefined ? window.configuredBundleDiscount : (parseFloat("{{ cart_bundle_discount|default:0 }}") || 0);
         const couponDiscount = window.configuredCouponDiscount !== undefined ? window.configuredCouponDiscount : (parseFloat("{{ cart_coupon_discount|default:0 }}") || 0);
         const subtotal = window.subtotalValue !== undefined ? window.subtotalValue : (parseFloat("{{ cart_subtotal|default:0 }}") || 0);
-        const total = Math.max(0, subtotal - bundleDiscount - couponDiscount + fee);
+        const currentMethod = document.querySelector('input[name="payment_method"]:checked')?.value || 'COD';
+
+        let advanceDiscount = 0;
+        if (window.advanceDiscountEnabled && window.advanceDiscountPercent > 0 && currentMethod !== 'COD') {
+            advanceDiscount = Math.min(subtotal, Math.round(((subtotal * window.advanceDiscountPercent) / 100) * 100) / 100);
+        }
+
+        const totalDiscount = Math.min(subtotal, bundleDiscount + couponDiscount + advanceDiscount);
+        const total = Math.max(0, subtotal - totalDiscount + fee);
 
         // 1. Bundle Discount Row
         const bundleRow = document.getElementById('checkoutBundleDiscountRow');
@@ -487,6 +516,18 @@
                 if (couponAmountEl) couponAmountEl.innerText = couponDiscount.toFixed(2);
             } else {
                 couponRow.classList.add('hidden');
+            }
+        }
+
+        // 3. Advance Payment Discount Row
+        const advanceRow = document.getElementById('checkoutAdvanceDiscountRow');
+        const advanceAmountEl = document.getElementById('checkoutAdvanceDiscount');
+        if (advanceRow) {
+            if (advanceDiscount > 0) {
+                advanceRow.classList.remove('hidden');
+                if (advanceAmountEl) advanceAmountEl.innerText = advanceDiscount.toFixed(2);
+            } else {
+                advanceRow.classList.add('hidden');
             }
         }
 
@@ -517,8 +558,14 @@
         if (mobileTotalEl) mobileTotalEl.innerText = total.toFixed(2);
 
         // Refresh button text amount
-        const currentMethod = document.querySelector('input[name="payment_method"]:checked')?.value || 'COD';
-        togglePaymentInputs(currentMethod);
+        if (!skipToggleRefresh) {
+            togglePaymentInputs(currentMethod, true);
+        } else {
+            const submitText = document.getElementById('submitBtnText');
+            if (submitText && currentMethod === 'BKASH') {
+                submitText.innerHTML = `Confirm Order with bKash (৳${total.toFixed(2)})`;
+            }
+        }
     }
 
     function copyNumber(text, btnId) {
@@ -538,13 +585,17 @@
         });
     }
 
-    function togglePaymentInputs(method) {
+    function togglePaymentInputs(method, skipRecalc = false) {
         const bkashBox = document.getElementById('bkashPaymentDetails');
         const codLabel = document.getElementById('payCodLabel');
         const bkashLabel = document.getElementById('payBkashLabel');
         const submitBtn = document.getElementById('submitOrderBtn');
         const submitText = document.getElementById('submitBtnText');
         const submitNote = document.getElementById('submitNote');
+
+        if (!skipRecalc) {
+            updateDeliveryFee(true);
+        }
         const totalText = document.getElementById('checkoutTotal').innerText;
 
         const bkashSender = document.getElementById('bkash_sender');

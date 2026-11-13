@@ -33,6 +33,9 @@ def _get_promo_payload():
         'free_delivery_enabled': bool(promo.free_delivery_enabled and is_active),
         'free_delivery_min_jars': promo.free_delivery_min_jars,
         'delivery_notice_text': promo.delivery_notice_text,
+        'advance_payment_discount_enabled': bool(promo.advance_payment_discount_enabled and is_active),
+        'advance_payment_discount_percent': float(promo.advance_payment_discount_percent or 0) if is_active else 0.0,
+        'advance_payment_discount_label': promo.get_advance_payment_label() if is_active else '',
     }
 
 
@@ -656,11 +659,14 @@ def checkout(request):
         if form.is_valid():
             order = form.save(commit=False)
             
+            promo = PromotionSetting.get_settings()
             subtotal = cart.get_subtotal()
-            discount = cart.get_discount()
+            bundle_coupon_discount = cart.get_discount()
+            advance_discount = promo.calculate_advance_payment_discount(subtotal, order.payment_method)
+            discount = min(subtotal, bundle_coupon_discount + advance_discount)
             delivery_zone = form.cleaned_data.get('delivery_zone') or 'INSIDE_DHAKA'
             delivery_fee = cart.get_delivery_fee(delivery_zone)
-            total = cart.get_total_price(delivery_zone)
+            total = max(Decimal('0.00'), subtotal - discount + delivery_fee)
             
             order.subtotal = subtotal
             order.discount_amount = discount

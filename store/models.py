@@ -510,6 +510,11 @@ class PromotionSetting(models.Model):
     free_delivery_min_jars = models.PositiveIntegerField(default=4, help_text="Minimum jars needed for free delivery.")
     delivery_notice_text = models.CharField(max_length=255, default="Flat ৳150 nationwide delivery across Bangladesh.", blank=True, help_text="Delivery notice note in cart drawer and checkout.")
 
+    # 5. Advance Payment Offer
+    advance_payment_discount_enabled = models.BooleanField(default=True, help_text="Enable extra percentage discount on advance payment (bKash/Nagad).")
+    advance_payment_discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('5.00'), help_text="Percentage discount on subtotal for advance payments.")
+    advance_payment_discount_label = models.CharField(max_length=200, default="5% Advance Payment OFF", blank=True, help_text="Discount breakdown label for advance payment.")
+
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -545,6 +550,16 @@ class PromotionSetting(models.Model):
         
         return self.bundle_discount_label
 
+    def get_advance_payment_label(self) -> str:
+        pct = self.advance_payment_discount_percent or Decimal('0.00')
+        pct_str = str(int(pct)) if pct == int(pct) else f"{pct:.2f}".rstrip('0').rstrip('.')
+        if not self.advance_payment_discount_label:
+            return f"{pct_str}% Advance Payment OFF"
+        import re
+        if re.search(r'\d+(?:\.\d+)?\s*%', self.advance_payment_discount_label):
+            return re.sub(r'\d+(?:\.\d+)?\s*%', f"{pct_str}%", self.advance_payment_discount_label)
+        return self.advance_payment_discount_label
+
     def save(self, *args, **kwargs):
         import re
         if self.bundle_discount_amount > Decimal('0.00'):
@@ -553,7 +568,27 @@ class PromotionSetting(models.Model):
                 self.bundle_discount_label = re.sub(r'৳\s*\d+', f"৳{amount_int}", self.bundle_discount_label)
             elif not self.bundle_discount_label:
                 self.bundle_discount_label = f"{self.bundle_min_jars}-Jar Flat ৳{amount_int} OFF"
+        if self.advance_payment_discount_percent > Decimal('0.00'):
+            pct = self.advance_payment_discount_percent
+            pct_str = str(int(pct)) if pct == int(pct) else f"{pct:.2f}".rstrip('0').rstrip('.')
+            if self.advance_payment_discount_label and re.search(r'\d+(?:\.\d+)?\s*%', self.advance_payment_discount_label):
+                self.advance_payment_discount_label = re.sub(r'\d+(?:\.\d+)?\s*%', f"{pct_str}%", self.advance_payment_discount_label)
+            elif not self.advance_payment_discount_label:
+                self.advance_payment_discount_label = f"{pct_str}% Advance Payment OFF"
         super().save(*args, **kwargs)
+
+    def calculate_advance_payment_discount(self, subtotal: Decimal = Decimal('0.00'), payment_method: str = 'COD') -> Decimal:
+        method = (payment_method or 'COD').strip().upper()
+        if (
+            not self.is_active
+            or not self.advance_payment_discount_enabled
+            or (self.advance_payment_discount_percent or Decimal('0.00')) <= Decimal('0.00')
+            or method == 'COD'
+        ):
+            return Decimal('0.00')
+        subtotal_dec = Decimal(str(subtotal or '0.00'))
+        discount = (subtotal_dec * Decimal(str(self.advance_payment_discount_percent))) / Decimal('100.00')
+        return min(subtotal_dec, discount).quantize(Decimal('0.01'))
 
     def calculate_discount(self, total_items: int, subtotal: Decimal = Decimal('0.00')) -> Decimal:
         if not self.is_active or not self.bundle_discount_enabled or self.bundle_discount_amount <= Decimal('0.00'):
@@ -1389,16 +1424,19 @@ Need any help? Just reply to this message! 💚
 
     def get_whatsapp_feedback_message(self):
         """
-        Generates a short, elegant review request WhatsApp message.
+        Generates a short, elegant review request WhatsApp message directing customers
+        to leave reviews on both Website and Facebook for a 5% next-order discount.
         """
         msg = f"""🥒 *Pickpickles — Quick Review* ⭐
 
 Dear *{self.customer_name}*,
 We hope you enjoyed your handcrafted pickles! How was your experience with the taste & crunch?
 
-⭐ *Leave a quick review:*
-• Simply reply here with your rating (1-5 ⭐) & feedback
-• Or review at: https://pickpickles.xyz/reviews/
+⭐ *Please leave your review on BOTH our Website & Facebook (not here in chat):*
+• 🌐 Website: https://pickpickles.xyz/reviews/
+• 👍 Facebook: https://facebook.com/pickpickles07
+
+🎁 *Special Reward:* Leave a review on *BOTH* our Website & Facebook to unlock *5% OFF* on your next order!
 
 Thank you for supporting artisanal homemade pickles! 💚
 *Team Pickpickles*"""
@@ -1419,17 +1457,19 @@ Thank you for supporting artisanal homemade pickles! 💚
 
     def get_whatsapp_1month_review_request_message(self):
         """
-        Generates a concise 1-month follow-up review request WhatsApp message.
+        Generates a concise 1-month follow-up review request WhatsApp message
+        directing customers to Website & Facebook for a 5% next-order discount.
         """
         msg = f"""🥒 *Pickpickles — We'd Love Your Review!* ⭐
 
 Dear *{self.customer_name}*,
 Hope your jars brought great flavor and crunch to your meals! 💚
 
-Could you share a quick review of your experience?
-• Reply right here with your rating (1-5 ⭐) & feedback
-• Website: https://pickpickles.xyz/reviews/
-• Facebook: https://facebook.com/pickpickles07
+⭐ *Please share your review on BOTH our Website & Facebook (not here in chat):*
+• 🌐 Website: https://pickpickles.xyz/reviews/
+• 👍 Facebook: https://facebook.com/pickpickles07
+
+🎁 *Special Reward:* Review us on *BOTH* our Website & Facebook and get *5% OFF* on your next order!
 
 Thank you for being part of Pickpickles!
 *Team Pickpickles* | 01794271523"""

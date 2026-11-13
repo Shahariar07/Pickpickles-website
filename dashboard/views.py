@@ -449,9 +449,9 @@ def dashboard_index(request):
     delivered_count = status_counts_dict.get('DELIVERED', 0)
     cancelled_count = status_counts_dict.get('CANCELLED', 0)
     
-    # Advanced KPIs (Single aggregation query for jars across all periodic cohorts)
-    jar_stats = OrderItem.objects.aggregate(
-        delivered_jars=Sum('quantity', filter=Q(order__order_status='DELIVERED') | Q(order__payment_status='PAID')),
+    # Advanced KPIs (Single aggregation query for jars across all active non-deleted orders)
+    jar_stats = OrderItem.objects.filter(order__is_deleted=False).aggregate(
+        delivered_jars=Sum('quantity', filter=(Q(order__order_status='DELIVERED') | Q(order__payment_status='PAID')) & ~Q(order__order_status='CANCELLED')),
         total_jars=Sum('quantity', filter=~Q(order__order_status='CANCELLED')),
         pipeline_jars=Sum('quantity', filter=~Q(order__order_status__in=['DELIVERED', 'CANCELLED']) & ~Q(order__payment_status='PAID')),
 
@@ -1234,6 +1234,9 @@ def orders_list(request):
         'standard_delivery_fee': float(promo_setting.standard_delivery_fee if promo_setting.standard_delivery_fee is not None else 150),
         'free_delivery_enabled': bool(promo_setting.is_active and promo_setting.free_delivery_enabled),
         'free_delivery_min_jars': int(promo_setting.free_delivery_min_jars or 4),
+        'advance_payment_discount_enabled': bool(promo_setting.is_active and promo_setting.advance_payment_discount_enabled),
+        'advance_payment_discount_percent': float(promo_setting.advance_payment_discount_percent or 0),
+        'advance_payment_discount_label': promo_setting.get_advance_payment_label() if (promo_setting.is_active and promo_setting.advance_payment_discount_enabled) else '',
         'coupons': [
             {
                 'code': c.code,
@@ -1868,7 +1871,9 @@ def create_manual_order(request):
                 applied_coupon = coupon_obj
                 coupon_discount = c_disc
 
-            discount_amount = min(subtotal, bundle_discount + coupon_discount)
+            advance_discount = promo.calculate_advance_payment_discount(subtotal, payment_method) if apply_offers else Decimal('0.00')
+
+            discount_amount = min(subtotal, bundle_discount + coupon_discount + advance_discount)
             total_amount = max(Decimal('0.00'), subtotal - discount_amount + delivery_fee)
 
             order = Order.objects.create(
@@ -6522,6 +6527,7 @@ def offer_manager(request):
                 promo.announcement_bar_enabled = False
                 promo.bundle_discount_enabled = False
                 promo.free_delivery_enabled = False
+                promo.advance_payment_discount_enabled = False
             else:
                 # 1. Hero & Menu Badges
                 promo.hero_badge_enabled = request.POST.get('hero_badge_enabled') == '1'
@@ -6551,6 +6557,20 @@ def offer_manager(request):
                 # 4. Delivery Rules
                 promo.free_delivery_enabled = request.POST.get('free_delivery_enabled') == '1'
                 promo.free_delivery_min_jars = max(1, int(request.POST.get('free_delivery_min_jars', 4)))
+
+                # 5. Advance Payment Offer
+                promo.advance_payment_discount_enabled = request.POST.get('advance_payment_discount_enabled') == '1'
+                adv_pct_raw = str(request.POST.get('advance_payment_discount_percent', '5')).strip() or '0'
+                adv_pct = max(Decimal('0.00'), min(Decimal('100.00'), Decimal(adv_pct_raw)))
+                promo.advance_payment_discount_percent = adv_pct
+                adv_label_raw = request.POST.get('advance_payment_discount_label', '').strip()
+                pct_str = str(int(adv_pct)) if adv_pct == int(adv_pct) else f"{adv_pct:.2f}".rstrip('0').rstrip('.')
+                if not adv_label_raw:
+                    promo.advance_payment_discount_label = f"{pct_str}% Advance Payment OFF"
+                elif re.search(r'\d+(?:\.\d+)?\s*%', adv_label_raw):
+                    promo.advance_payment_discount_label = re.sub(r'\d+(?:\.\d+)?\s*%', f"{pct_str}%", adv_label_raw)
+                else:
+                    promo.advance_payment_discount_label = adv_label_raw
 
             promo.standard_delivery_fee = Decimal(str(request.POST.get('standard_delivery_fee', '150.00')).strip() or '150.00')
             promo.delivery_notice_text = request.POST.get('delivery_notice_text', '').strip()

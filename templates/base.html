@@ -713,12 +713,15 @@
             "standard_delivery_fee": {{ promo_settings.standard_delivery_fee|default:150 }},
             "free_delivery_enabled": {{ promo_settings.free_delivery_enabled|yesno:"true,false" }},
             "free_delivery_min_jars": {{ promo_settings.free_delivery_min_jars|default:4 }},
-            "delivery_notice_text": "{{ promo_settings.delivery_notice_text|escapejs }}"
+            "delivery_notice_text": "{{ promo_settings.delivery_notice_text|escapejs }}",
+            "advance_payment_discount_enabled": {{ promo_settings.advance_payment_discount_enabled|yesno:"true,false" }},
+            "advance_payment_discount_percent": {{ promo_settings.advance_payment_discount_percent|default:5 }},
+            "advance_payment_discount_label": "{{ promo_settings.get_advance_payment_label|escapejs }}"
         }
     </script>
 
     <!-- Main JavaScript with Auto Versioning (Cache Busting) -->
-    <script src="{% static 'js/main.js' %}?v=4jars_emq_20261107_{{ STATIC_VERSION }}"></script>
+    <script src="{% static 'js/main.js' %}?v=no_cart_autopop_20261113_{{ STATIC_VERSION }}"></script>
     <script>
         // Ensure drawer footer with Proceed to Checkout is visible when cart has items
         document.addEventListener('DOMContentLoaded', function() {

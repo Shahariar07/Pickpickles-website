@@ -245,6 +245,13 @@
                         </div>
                         <h3 class="font-display font-bold text-base text-gray-900">4. Nationwide Delivery Settings</h3>
                     </div>
+                    <label class="relative inline-flex items-center gap-2 cursor-pointer select-none shrink-0" title="Enable / Disable Free Delivery">
+                        <span class="text-[11px] font-bold text-gray-600">Free Delivery</span>
+                        <span class="relative inline-flex items-center">
+                            <input type="checkbox" name="free_delivery_enabled" value="1" class="sr-only peer" id="freeDeliveryToggle" {% if promo.free_delivery_enabled %}checked{% endif %} {% if is_view_only %}disabled{% endif %} onchange="updateLivePreview()">
+                            <div class="w-10 h-6 bg-gray-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-4 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                        </span>
+                    </label>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
@@ -257,17 +264,11 @@
                     </div>
 
                     <div>
-                        <div class="flex items-center justify-between mb-1">
-                            <label class="text-xs font-bold text-gray-700" for="free_delivery_min_jars">Free Delivery Jars</label>
-                            <label class="relative inline-flex items-center cursor-pointer select-none">
-                                <input type="checkbox" name="free_delivery_enabled" value="1" class="sr-only peer" id="freeDeliveryToggle" {% if promo.free_delivery_enabled %}checked{% endif %} {% if is_view_only %}disabled{% endif %} onchange="updateLivePreview()">
-                                <div class="w-8 h-4 bg-gray-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-4 peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-emerald-600"></div>
-                            </label>
-                        </div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1" for="free_delivery_min_jars">Free Delivery Jars</label>
                         <input type="number" name="free_delivery_min_jars" id="free_delivery_min_jars" value="{{ promo.free_delivery_min_jars }}" min="1" max="50" required
                             class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition"
                             {% if is_view_only %}readonly{% endif %} oninput="updateLivePreview()">
-                        <p class="text-[10px] text-gray-400 mt-0.5">Toggle switch to activate free delivery.</p>
+                        <p class="text-[10px] text-gray-400 mt-0.5">Minimum jars to unlock free delivery (use toggle above).</p>
                     </div>
                 </div>
 
@@ -277,6 +278,42 @@
                         class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition"
                         placeholder="Flat ৳150 nationwide delivery across Bangladesh." {% if is_view_only %}readonly{% endif %}>
                     <p class="text-[11px] text-gray-400 mt-1">Displayed in cart drawer and checkout delivery pill.</p>
+                </div>
+            </div>
+
+            <!-- 5. Advance Payment Offer (Percentage Discount) -->
+            <div class="lg:col-span-2 bg-white rounded-3xl border border-gray-200 shadow-xs p-5 sm:p-6 space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center text-sm border border-pink-200">
+                            <i class="fa-solid fa-wallet"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-display font-bold text-base text-gray-900">5. Advance Payment Offer (অ্যাডভান্স পেমেন্ট ডিসকাউন্ট)</h3>
+                            <p class="text-[11px] text-gray-400">Customers paying in advance via bKash/Nagad get an automatic percentage discount on checkout &amp; manual orders.</p>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer select-none shrink-0">
+                        <input type="checkbox" name="advance_payment_discount_enabled" value="1" class="sr-only peer" id="advancePaymentToggle" {% if promo.advance_payment_discount_enabled %}checked{% endif %} {% if is_view_only %}disabled{% endif %} onchange="updateLivePreview()">
+                        <div class="w-10 h-6 bg-gray-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-4 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
+                    </label>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1" for="advance_payment_discount_percent">Advance Discount (%)</label>
+                        <input type="number" step="0.5" min="0" max="100" name="advance_payment_discount_percent" id="advance_payment_discount_percent" value="{{ promo.advance_payment_discount_percent|floatformat:0 }}" required
+                            class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition"
+                            {% if is_view_only %}readonly{% endif %} oninput="syncAdvanceLabel(); updateLivePreview()">
+                        <p class="text-[10px] text-gray-400 mt-1">Default: 5% off on product subtotal when paying in advance (not COD).</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1" for="advance_payment_discount_label">Advance Discount Label</label>
+                        <input type="text" name="advance_payment_discount_label" id="advance_payment_discount_label" value="{{ promo.advance_payment_discount_label }}"
+                            class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition"
+                            placeholder="e.g. 5% Advance Payment OFF" {% if is_view_only %}readonly{% endif %}>
+                        <p class="text-[10px] text-gray-400 mt-1">Shown at checkout and on manual order pricing breakdown.</p>
+                    </div>
                 </div>
             </div>
 
@@ -647,6 +684,7 @@
         const announceToggle = document.getElementById('announcementBarToggle');
         const bundleToggle = document.getElementById('bundleDiscountToggle');
         const freeDeliveryToggle = document.getElementById('freeDeliveryToggle');
+        const advanceToggle = document.getElementById('advancePaymentToggle');
 
         if (!isActive) {
             // Master Campaign is turned OFF -> Immediately turn OFF and uncheck all sub-switches
@@ -654,8 +692,20 @@
             if (announceToggle) announceToggle.checked = false;
             if (bundleToggle) bundleToggle.checked = false;
             if (freeDeliveryToggle) freeDeliveryToggle.checked = false;
+            if (advanceToggle) advanceToggle.checked = false;
         }
         updateLivePreview();
+    }
+
+    function syncAdvanceLabel() {
+        const pctEl = document.getElementById('advance_payment_discount_percent');
+        const labelEl = document.getElementById('advance_payment_discount_label');
+        if (!pctEl || !labelEl) return;
+        const pct = parseFloat(pctEl.value) || 0;
+        const current = labelEl.value.trim();
+        if (!current || /\d+(?:\.\d+)?\s*%/.test(current)) {
+            labelEl.value = `${pct}% Advance Payment OFF`;
+        }
     }
 
     function updateLivePreview() {
@@ -674,6 +724,10 @@
         const standardFee = parseFloat(document.getElementById('standard_delivery_fee').value) || 150;
         const freeDeliveryEnabled = document.getElementById('freeDeliveryToggle').checked && isActive;
         const freeDeliveryMin = parseInt(document.getElementById('free_delivery_min_jars').value, 10) || 4;
+        const advanceToggleEl = document.getElementById('advancePaymentToggle');
+        const advanceEnabled = advanceToggleEl ? (advanceToggleEl.checked && isActive) : false;
+        const advancePctEl = document.getElementById('advance_payment_discount_percent');
+        const advancePct = advancePctEl ? (parseFloat(advancePctEl.value) || 0) : 0;
 
         // Status Label
         const masterStatusLabel = document.getElementById('masterStatusLabel');
@@ -725,6 +779,8 @@
                 }
 
                 const total = Math.max(0, subtotal - discount + delivery);
+                const advanceDisc = (advanceEnabled && advancePct > 0) ? Math.round((subtotal * advancePct) / 100) : 0;
+                const advanceTotal = Math.max(0, subtotal - Math.min(subtotal, discount + advanceDisc) + delivery);
 
                 let badgeHtml = '<span class="text-gray-400">Regular order</span>';
                 if (discount > 0 && delivery === 0) {
@@ -733,6 +789,9 @@
                     badgeHtml = `<span class="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-black text-[11px] border border-amber-300">🎁 ৳${discount.toFixed(0)} OFF Unlocked</span>`;
                 } else if (delivery === 0) {
                     badgeHtml = '<span class="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-black text-[11px] border border-emerald-300">🚚 FREE Delivery</span>';
+                }
+                if (advanceDisc > 0) {
+                    badgeHtml += ` <span class="px-2 py-0.5 rounded-md bg-pink-100 text-pink-800 font-black text-[10px] border border-pink-200 ml-1">💳 Advance: ৳${advanceTotal.toFixed(0)} (-৳${advanceDisc})</span>`;
                 }
 
                 rowsHtml += `
