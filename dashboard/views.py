@@ -3,6 +3,7 @@ import json
 import datetime
 from datetime import timedelta
 import math
+import time
 from collections import defaultdict
 import calendar
 from django.shortcuts import render, get_object_or_404, redirect
@@ -148,47 +149,125 @@ def can_user_dispatch(user):
     return True
 
 
+def _build_login_attempt_context(client_ip, failed_attempts, unlock_at=None, now_ts=None, max_attempts=5, turnstile_error=None):
+    """Build context variables expected by templates/dashboard/login.html for rate-limit & error UI."""
+    current_ts = now_ts if now_ts is not None else time.time()
+    is_locked = failed_attempts >= max_attempts
+    remaining_lock_seconds = 0
+    remaining_lock_minutes = 0
+
+    if is_locked:
+        if unlock_at:
+            remaining_lock_seconds = max(0, int(unlock_at - current_ts))
+            if remaining_lock_seconds <= 0:
+                is_locked = False
+        else:
+            remaining_lock_seconds = 900
+
+        if is_locked:
+            remaining_lock_minutes = max(1, math.ceil(remaining_lock_seconds / 60))
+
+    effective_attempts = min(failed_attempts, max_attempts) if failed_attempts > 0 else 0
+    remaining_attempts = max(0, max_attempts - effective_attempts)
+
+    return {
+        'is_locked': is_locked,
+        'failed_attempts': effective_attempts,
+        'remaining_attempts': remaining_attempts,
+        'max_attempts': max_attempts,
+        'remaining_lock_minutes': remaining_lock_minutes,
+        'remaining_lock_seconds': remaining_lock_seconds,
+        'client_ip': client_ip or 'Unknown',
+        'turnstile_error': turnstile_error,
+    }
+
+
 def dashboard_login(request):
     if request.user.is_authenticated and request.user.is_staff:
         return redirect('dashboard:index')
 
-    if request.method == 'POST':
-        from django.utils.http import url_has_allowed_host_and_scheme
-        from store.security import verify_cloudflare_turnstile, get_client_ip
+    from django.utils.http import url_has_allowed_host_and_scheme
+    from store.security import verify_cloudflare_turnstile, get_client_ip
 
+    MAX_LOGIN_ATTEMPTS = 5
+    LOCKOUT_SECONDS = 900
+
+    client_ip = get_client_ip(request)
+    safe_ip = client_ip or 'unknown'
+    login_fail_key = f"dashboard_login_fail_{safe_ip}"
+
+    now_ts = time.time()
+    cached_state = cache.get(login_fail_key)
+    failed_attempts = 0
+    unlock_at = None
+
+    if isinstance(cached_state, dict):
+        failed_attempts = int(cached_state.get('count', 0) or 0)
+        unlock_at = cached_state.get('unlock_at')
+        if unlock_at and now_ts >= unlock_at:
+            cache.delete(login_fail_key)
+            failed_attempts = 0
+            unlock_at = None
+    elif isinstance(cached_state, int) and cached_state > 0:
+        failed_attempts = cached_state
+        if failed_attempts >= MAX_LOGIN_ATTEMPTS:
+            unlock_at = now_ts + LOCKOUT_SECONDS
+
+    turnstile_error = None
+
+    if request.method == 'POST':
         # 1. Brute-Force Login Rate Limiting (Max 5 failed attempts per 15 minutes per IP)
-        client_ip = get_client_ip(request)
-        login_fail_key = f"dashboard_login_fail_{client_ip}" if client_ip else None
-        if login_fail_key and cache.get(login_fail_key, 0) >= 5:
-            messages.error(request, "Too many failed login attempts. Please wait 15 minutes before trying again.")
-            return render(request, 'dashboard/login.html')
+        if failed_attempts >= MAX_LOGIN_ATTEMPTS:
+            context = _build_login_attempt_context(
+                client_ip, failed_attempts, unlock_at=unlock_at, now_ts=now_ts, max_attempts=MAX_LOGIN_ATTEMPTS
+            )
+            return render(request, 'dashboard/login.html', context)
 
         # 2. Cloudflare Turnstile Bot Protection
         is_turnstile_valid, cf_err = verify_cloudflare_turnstile(request, expected_action="login")
         if not is_turnstile_valid:
-            messages.error(request, cf_err or "Please complete the Cloudflare security check.")
-            return render(request, 'dashboard/login.html')
+            turnstile_error = cf_err or "Please complete the Cloudflare security check."
+            context = _build_login_attempt_context(
+                client_ip,
+                failed_attempts,
+                unlock_at=unlock_at,
+                now_ts=now_ts,
+                max_attempts=MAX_LOGIN_ATTEMPTS,
+                turnstile_error=turnstile_error,
+            )
+            return render(request, 'dashboard/login.html', context)
 
         username = request.POST.get('username')
         password = request.POST.get('password')
         user = authenticate(request, username=username, password=password)
-        
+
         if user is not None and (user.is_staff or user.is_superuser):
-            if login_fail_key:
-                cache.delete(login_fail_key)
+            cache.delete(login_fail_key)
             login(request, user)
             messages.success(request, f'Welcome back, {user.username}!')
-            raw_next = request.GET.get('next') or ''
+            raw_next = request.GET.get('next') or request.POST.get('next') or ''
             if raw_next and url_has_allowed_host_and_scheme(raw_next, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
                 return redirect(raw_next)
             return redirect('dashboard:index')
         else:
-            if login_fail_key:
-                current_fails = cache.get(login_fail_key, 0)
-                cache.set(login_fail_key, current_fails + 1, timeout=900)  # 15 minutes lockout window
-            messages.error(request, 'Invalid credentials or non-staff account.')
+            failed_attempts += 1
+            if failed_attempts >= MAX_LOGIN_ATTEMPTS:
+                unlock_at = unlock_at or (now_ts + LOCKOUT_SECONDS)
+            cache.set(
+                login_fail_key,
+                {'count': failed_attempts, 'unlock_at': unlock_at},
+                timeout=LOCKOUT_SECONDS,
+            )
 
-    return render(request, 'dashboard/login.html')
+    context = _build_login_attempt_context(
+        client_ip,
+        failed_attempts,
+        unlock_at=unlock_at,
+        now_ts=now_ts,
+        max_attempts=MAX_LOGIN_ATTEMPTS,
+        turnstile_error=turnstile_error,
+    )
+    return render(request, 'dashboard/login.html', context)
 
 
 def dashboard_logout(request):
@@ -584,8 +663,9 @@ def dashboard_index(request):
         x['name']
     ))
 
-    product_labels = [p['name'] for p in product_stats]
-    product_qty_data = [p['quantity'] for p in product_stats]
+    top_products = product_stats[:10]
+    product_labels = [p['name'] for p in top_products]
+    product_qty_data = [p['quantity'] for p in top_products]
 
     if not product_labels:
         product_labels = ['No Products Added']
@@ -1139,6 +1219,33 @@ def orders_list(request):
         else:
             o.order_seq_label = f"{seq}th Order"
 
+    promo_setting = PromotionSetting.get_settings()
+    active_coupons = [
+        c for c in Coupon.objects.filter(is_active=True).order_by('-created_at')
+        if c.is_valid_now()[0]
+    ]
+    manual_offer_config = {
+        'is_active': bool(promo_setting.is_active),
+        'bundle_discount_enabled': bool(promo_setting.is_active and promo_setting.bundle_discount_enabled),
+        'bundle_min_jars': int(promo_setting.bundle_min_jars or 2),
+        'bundle_discount_amount': float(promo_setting.bundle_discount_amount or 0),
+        'bundle_discount_label': promo_setting.get_discount_label() if (promo_setting.is_active and promo_setting.bundle_discount_enabled) else '',
+        'bundle_apply_mode': promo_setting.bundle_apply_mode,
+        'standard_delivery_fee': float(promo_setting.standard_delivery_fee if promo_setting.standard_delivery_fee is not None else 150),
+        'free_delivery_enabled': bool(promo_setting.is_active and promo_setting.free_delivery_enabled),
+        'free_delivery_min_jars': int(promo_setting.free_delivery_min_jars or 4),
+        'coupons': [
+            {
+                'code': c.code,
+                'discount_type': c.discount_type,
+                'discount_value': float(c.discount_value or 0),
+                'min_jars': int(c.min_jars or 1),
+                'min_subtotal': float(c.min_subtotal or 0),
+            }
+            for c in active_coupons
+        ],
+    }
+
     context = {
         'orders': page_obj,
         'page_obj': page_obj,
@@ -1165,6 +1272,9 @@ def orders_list(request):
         'status_choices': Order.ORDER_STATUS_CHOICES,
         'payment_status_choices': Order.PAYMENT_STATUS_CHOICES,
         'products': Product.objects.all(),
+        'promo_setting': promo_setting,
+        'manual_coupons': active_coupons,
+        'manual_offer_config_json': json.dumps(manual_offer_config),
     }
     return render(request, 'dashboard/orders_list.html', context)
 
@@ -1735,7 +1845,30 @@ def create_manual_order(request):
             except Exception:
                 delivery_fee = default_fee
 
-            discount_amount = Decimal('100.00') if total_items_count == 2 else Decimal('0.00')
+            promo = PromotionSetting.get_settings()
+            if request.POST.get('apply_offers_present') == '1':
+                apply_offers = (request.POST.get('apply_offers') == '1')
+            else:
+                apply_offers = True
+
+            bundle_discount = promo.calculate_discount(total_items_count, subtotal) if apply_offers else Decimal('0.00')
+
+            raw_coupon_code = (request.POST.get('coupon_code') or '').strip().upper()
+            applied_coupon = None
+            coupon_discount = Decimal('0.00')
+            if raw_coupon_code:
+                coupon_obj = Coupon.objects.filter(code__iexact=raw_coupon_code).first()
+                if not coupon_obj:
+                    messages.error(request, f"Invalid coupon code '{raw_coupon_code}'. Please check and try again.")
+                    return redirect('dashboard:orders')
+                c_disc, c_err = coupon_obj.calculate_discount(subtotal, total_items_count)
+                if c_err:
+                    messages.error(request, f"Coupon '{coupon_obj.code}': {c_err}")
+                    return redirect('dashboard:orders')
+                applied_coupon = coupon_obj
+                coupon_discount = c_disc
+
+            discount_amount = min(subtotal, bundle_discount + coupon_discount)
             total_amount = max(Decimal('0.00'), subtotal - discount_amount + delivery_fee)
 
             order = Order.objects.create(
@@ -1747,6 +1880,7 @@ def create_manual_order(request):
                 delivery_fee=delivery_fee,
                 subtotal=subtotal,
                 discount_amount=discount_amount,
+                coupon_code=applied_coupon.code if applied_coupon else None,
                 total_amount=total_amount,
                 payment_method=payment_method,
                 payment_status=payment_status,
@@ -1755,6 +1889,10 @@ def create_manual_order(request):
                 customer_notes=customer_notes,
                 admin_notes=admin_notes
             )
+
+            if applied_coupon:
+                applied_coupon.used_count += 1
+                applied_coupon.save(update_fields=['used_count'])
 
             # Create OrderItems (Stock is deducted upon physical dispatch/delivery)
             for itm in valid_items:

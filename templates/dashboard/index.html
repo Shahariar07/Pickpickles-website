@@ -615,7 +615,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
             <!-- Chart 4: Top Selling Pickle Varieties (Horizontal Bar) -->
-            <div class="bg-white p-5 sm:p-6 rounded-3xl border border-gray-200/90 shadow-sm space-y-3.5">
+            <div class="bg-white p-4 sm:p-6 rounded-3xl border border-gray-200/90 shadow-sm space-y-3.5">
                 <div class="flex items-center justify-between pb-3 border-b border-gray-100 flex-wrap gap-2">
                     <div class="flex items-center gap-3">
                         <span class="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center text-sm font-black border border-amber-200">
@@ -637,7 +637,7 @@
                     {% endif %}
                 </div>
 
-                <div class="relative h-80 sm:h-96 w-full">
+                <div id="topProductsChartContainer" class="relative h-[380px] sm:h-96 w-full">
                     <canvas id="topProductsChart"></canvas>
                 </div>
             </div>
@@ -1413,22 +1413,31 @@ document.addEventListener("DOMContentLoaded", function () {
     const productsEl = document.getElementById('topProductsChart');
     if (productsEl) {
         const productsCtx = productsEl.getContext('2d');
+        const isMobileView = window.innerWidth < 640;
         const barPalette = [
             '#1b4332', '#245a43', '#2d6a4f', '#367b5c', '#40916c',
             '#4aa27a', '#52b788', '#63c093', '#74c69d', '#88cdac'
         ];
-        const maxQty = Math.max(...(data.productQtyData || [0]), 5);
+        const rawProductLabels = (data.productLabels && data.productLabels.length > 0 ? data.productLabels : ['No Products']).slice(0, 10);
+        const rawProductQtyData = (data.productQtyData && data.productQtyData.length > 0 ? data.productQtyData : [0]).slice(0, 10);
+        const topProductsContainer = document.getElementById('topProductsChartContainer');
+        if (topProductsContainer && isMobileView && rawProductLabels.length > 5) {
+            topProductsContainer.style.height = Math.max(360, rawProductLabels.length * 38) + 'px';
+        }
+        const maxQty = Math.max(...rawProductQtyData, 5);
         new Chart(productsCtx, {
             type: 'bar',
             data: {
-                labels: data.productLabels && data.productLabels.length > 0 ? data.productLabels : ['No Products'],
+                labels: rawProductLabels,
                 datasets: [{
                     label: 'Jars Sold',
-                    data: data.productQtyData && data.productQtyData.length > 0 ? data.productQtyData : [0],
-                    backgroundColor: (data.productLabels || []).map((_, i) => barPalette[i % barPalette.length]),
+                    data: rawProductQtyData,
+                    backgroundColor: rawProductLabels.map((_, i) => barPalette[i % barPalette.length]),
                     borderRadius: 8,
                     borderSkipped: false,
-                    maxBarThickness: 20
+                    barPercentage: 0.72,
+                    categoryPercentage: 0.84,
+                    maxBarThickness: isMobileView ? 18 : 22
                 }]
             },
             options: {
@@ -1442,6 +1451,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         padding: 10,
                         cornerRadius: 10,
                         callbacks: {
+                            title: items => (items && items.length ? rawProductLabels[items[0].dataIndex] : ''),
                             label: ctx => ` Total Sold: ${ctx.parsed.x} Jars`
                         }
                     }
@@ -1452,14 +1462,25 @@ document.addEventListener("DOMContentLoaded", function () {
                         suggestedMax: maxQty,
                         grid: { color: '#f1f5f9' },
                         ticks: {
-                            font: { size: 10 },
-                            stepSize: 1,
+                            font: { size: isMobileView ? 9 : 10 },
+                            maxTicksLimit: isMobileView ? 6 : 10,
+                            stepSize: maxQty <= 10 ? 1 : undefined,
                             precision: 0
                         }
                     },
                     y: {
                         grid: { display: false },
-                        ticks: { font: { weight: 'bold', size: 11 } }
+                        ticks: {
+                            autoSkip: false,
+                            font: { weight: 'bold', size: isMobileView ? 10 : 11 },
+                            callback: function (value, index) {
+                                const label = rawProductLabels[index] || this.getLabelForValue(value);
+                                if (isMobileView && typeof label === 'string' && label.length > 18) {
+                                    return label.slice(0, 17) + '…';
+                                }
+                                return label;
+                            }
+                        }
                     }
                 }
             }

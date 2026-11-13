@@ -453,7 +453,7 @@
                                 <span class="font-display font-black text-2xl sm:text-3xl text-amber-300 drop-shadow-sm">৳{{ hero_pickle.price_bdt|floatformat:0 }}</span>
                                 {% if hero_pickle.original_price_bdt and hero_pickle.original_price_bdt > hero_pickle.price_bdt %}
                                 <span class="text-sm line-through text-emerald-300/60 font-bold">৳{{ hero_pickle.original_price_bdt|floatformat:0 }}</span>
-                                <span class="text-[10px] sm:text-xs font-black bg-rose-500 text-white px-2 py-0.5 rounded-full border border-rose-400/50 shadow-2xs">Save ৳{{ hero_pickle.discount_amount|floatformat:0 }}</span>
+                                <span class="text-xs sm:text-sm font-black bg-rose-500 text-white px-2.5 py-0.5 rounded-full border border-rose-400/50 shadow-2xs">Save ৳{{ hero_pickle.discount_amount|floatformat:0 }}</span>
                                 {% endif %}
                             </div>
                             <div class="pt-2 flex items-center justify-center gap-2">
@@ -651,9 +651,9 @@
                 <div class="min-w-0">
                     <span class="font-display font-black text-sm sm:text-base text-emerald-950 block leading-tight">৳{{ product.price_bdt|floatformat:0 }}</span>
                     {% if product.original_price_bdt and product.original_price_bdt > product.price_bdt %}
-                    <div class="flex items-center gap-1 leading-none mt-0.5">
-                        <span class="text-[9.5px] sm:text-[10px] text-slate-400 line-through font-bold">৳{{ product.original_price_bdt|floatformat:0 }}</span>
-                        <span class="text-[8px] font-black text-rose-700 bg-rose-50 px-1 py-0.2 rounded">Save ৳{{ product.discount_amount|floatformat:0 }}</span>
+                    <div class="flex items-center gap-1.5 flex-wrap leading-tight mt-1">
+                        <span class="text-[11px] sm:text-xs text-slate-400 line-through font-bold">৳{{ product.original_price_bdt|floatformat:0 }}</span>
+                        <span class="text-[11px] sm:text-xs font-black text-rose-700 bg-rose-100/90 border border-rose-200 px-1.5 sm:px-2 py-0.5 rounded-md sm:rounded-full whitespace-nowrap">Save ৳{{ product.discount_amount|floatformat:0 }}</span>
                     </div>
                     {% endif %}
                 </div>

@@ -1915,11 +1915,11 @@
 
                         <label class="font-bold text-gray-700">Delivery Fee (৳)</label>
 
-                        <span id="manualFreeDeliveryBadge" class="hidden text-[10px] font-extrabold text-emerald-700 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md">🎉 FREE (4+ Jars)</span>
+                        <span id="manualFreeDeliveryBadge" class="hidden text-[10px] font-extrabold text-emerald-700 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md">🎉 FREE ({{ promo_setting.free_delivery_min_jars|default:4 }}+ Jars)</span>
 
                     </div>
 
-                    <input type="number" step="1" min="0" name="delivery_fee" id="manualDeliveryFeeInput" value="150" oninput="calculateManualOrderTotal(true)" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
+                    <input type="number" step="1" min="0" name="delivery_fee" id="manualDeliveryFeeInput" value="{{ promo_setting.standard_delivery_fee|default:150|floatformat:0 }}" oninput="calculateManualOrderTotal(true)" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
 
                 </div>
 
@@ -2013,6 +2013,44 @@
 
 
 
+                <!-- Offers & Coupons Control -->
+                <div class="bg-white rounded-xl p-3.5 border border-emerald-200/80 space-y-3 shadow-sm">
+                    <input type="hidden" name="apply_offers_present" value="1">
+                    <div class="flex items-center justify-between gap-2 flex-wrap">
+                        <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" name="apply_offers" id="manualApplyOffersCheckbox" value="1" {% if promo_setting.is_active and promo_setting.bundle_discount_enabled %}checked{% endif %} onchange="calculateManualOrderTotal()" class="w-4 h-4 rounded text-emerald-600 border-gray-300 focus:ring-emerald-500">
+                            <span class="font-bold text-gray-800 text-xs">
+                                {% if promo_setting.is_active and promo_setting.bundle_discount_enabled %}
+                                🎁 Apply Store Offer: <span class="text-emerald-700">{{ promo_setting.get_discount_label }}</span>
+                                {% else %}
+                                <span class="text-gray-400">Store Bundle Offer is OFF in Offer Manager</span>
+                                {% endif %}
+                            </span>
+                        </label>
+                        {% if promo_setting.is_active and promo_setting.bundle_discount_enabled %}
+                        <span id="manualOfferAppliedBadge" class="hidden text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">Active</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="pt-2 border-t border-gray-100 space-y-2">
+                        <label class="font-bold text-gray-700 block text-[11px]">
+                            <i class="fa-solid fa-ticket text-amber-600 mr-1"></i> Coupon Offer (Optional)
+                        </label>
+                        <div class="flex flex-col sm:flex-row gap-2">
+                            <input type="text" name="coupon_code" id="manualCouponCodeInput" placeholder="Enter coupon code (e.g. PICKLE50)" oninput="calculateManualOrderTotal()" class="flex-1 bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-mono font-bold uppercase text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
+                            {% if manual_coupons %}
+                            <select id="manualCouponQuickSelect" onchange="selectManualCoupon(this.value)" class="sm:w-52 bg-amber-50/70 border border-amber-200 rounded-xl px-2.5 py-2 text-xs font-bold text-gray-800 focus:outline-none">
+                                <option value="">-- Select Active Coupon --</option>
+                                {% for c in manual_coupons %}
+                                <option value="{{ c.code }}">{{ c.code }} ({% if c.discount_type == 'FIXED' %}৳{{ c.discount_value|floatformat:0 }}{% else %}{{ c.discount_value|floatformat:0 }}%{% endif %} OFF{% if c.min_jars > 1 %}, {{ c.min_jars }}+ Jars{% endif %})</option>
+                                {% endfor %}
+                            </select>
+                            {% endif %}
+                        </div>
+                        <p id="manualCouponStatusMsg" class="hidden text-[11px] font-semibold"></p>
+                    </div>
+                </div>
+
                 <!-- Order Pricing Summary Card -->
 
                 <div class="bg-white rounded-xl p-3.5 border border-gray-200 text-xs space-y-1.5 shadow-sm">
@@ -2025,11 +2063,27 @@
 
                     </div>
 
+                    <div id="manualSummaryOfferRow" class="hidden flex justify-between text-emerald-700 font-bold">
+
+                        <span id="manualSummaryOfferLabel">Offer Discount:</span>
+
+                        <span id="manualSummaryOfferDiscount">-৳0</span>
+
+                    </div>
+
+                    <div id="manualSummaryCouponRow" class="hidden flex justify-between text-amber-700 font-bold">
+
+                        <span id="manualSummaryCouponLabel">Coupon Discount:</span>
+
+                        <span id="manualSummaryCouponDiscount">-৳0</span>
+
+                    </div>
+
                     <div class="flex justify-between text-gray-600">
 
                         <span>Delivery Charge:</span>
 
-                        <span class="font-bold text-gray-900" id="manualSummaryDelivery">৳150</span>
+                        <span class="font-bold text-gray-900" id="manualSummaryDelivery">৳{{ promo_setting.standard_delivery_fee|default:150|floatformat:0 }}</span>
 
                     </div>
 
@@ -2037,7 +2091,7 @@
 
                         <span>Total Payable:</span>
 
-                        <span class="text-brand-700 font-black text-base" id="manualSummaryGrandTotal">৳150</span>
+                        <span class="text-brand-700 font-black text-base" id="manualSummaryGrandTotal">৳{{ promo_setting.standard_delivery_fee|default:150|floatformat:0 }}</span>
 
                     </div>
 
@@ -3037,13 +3091,26 @@
 
 <script>
 
+const MANUAL_OFFER_CONFIG = {{ manual_offer_config_json|default:"{}"|safe }};
+
 let manualDeliveryFeeUserOverridden = false;
 
-
+function selectManualCoupon(code) {
+    const input = document.getElementById('manualCouponCodeInput');
+    if (input) {
+        input.value = code || '';
+    }
+    calculateManualOrderTotal();
+}
 
 function openManualOrderModal() {
 
     manualDeliveryFeeUserOverridden = false;
+
+    const offerCheckbox = document.getElementById('manualApplyOffersCheckbox');
+    if (offerCheckbox) {
+        offerCheckbox.checked = !!(MANUAL_OFFER_CONFIG.is_active && MANUAL_OFFER_CONFIG.bundle_discount_enabled);
+    }
 
     document.getElementById('manualOrderModal').classList.remove('hidden');
 
@@ -3208,89 +3275,140 @@ function calculateManualOrderTotal(isManualFeeChange = false) {
 
 
     const deliveryInput = document.getElementById('manualDeliveryFeeInput');
-
     const freeBadge = document.getElementById('manualFreeDeliveryBadge');
 
-    
-
     if (isManualFeeChange) {
-
         manualDeliveryFeeUserOverridden = true;
-
     }
 
-
+    const promoActive = !!MANUAL_OFFER_CONFIG.is_active;
+    const freeDelEnabled = promoActive && !!MANUAL_OFFER_CONFIG.free_delivery_enabled;
+    const freeDelMinJars = parseInt(MANUAL_OFFER_CONFIG.free_delivery_min_jars || 4, 10);
+    const stdDeliveryFee = parseFloat(MANUAL_OFFER_CONFIG.standard_delivery_fee != null ? MANUAL_OFFER_CONFIG.standard_delivery_fee : 150);
+    const qualifiesFreeDelivery = freeDelEnabled && totalJars >= freeDelMinJars;
 
     if (!manualDeliveryFeeUserOverridden && deliveryInput) {
-
-        if (totalJars >= 4) {
-
-            deliveryInput.value = 0;
-
-        } else {
-
-            deliveryInput.value = 150;
-
-        }
-
+        deliveryInput.value = qualifiesFreeDelivery ? 0 : Math.round(stdDeliveryFee);
     }
 
-
-
-    let deliveryFee = deliveryInput ? (parseFloat(deliveryInput.value) || 0) : (totalJars >= 4 ? 0 : 150);
-
+    let deliveryFee = deliveryInput ? (parseFloat(deliveryInput.value) || 0) : (qualifiesFreeDelivery ? 0 : stdDeliveryFee);
     if (deliveryFee < 0) deliveryFee = 0;
 
-
-
     if (freeBadge) {
-
-        if (totalJars >= 4 || deliveryFee === 0) {
-
+        if (qualifiesFreeDelivery || deliveryFee === 0) {
             freeBadge.classList.remove('hidden');
-
         } else {
-
             freeBadge.classList.add('hidden');
-
         }
-
     }
 
+    // Store bundle offer calculation (mirrors PromotionSetting.calculate_discount)
+    const applyOffersEl = document.getElementById('manualApplyOffersCheckbox');
+    const shouldApplyOffers = applyOffersEl ? applyOffersEl.checked : true;
+    let bundleDiscount = 0;
+    if (shouldApplyOffers && promoActive && MANUAL_OFFER_CONFIG.bundle_discount_enabled) {
+        const minJars = parseInt(MANUAL_OFFER_CONFIG.bundle_min_jars || 2, 10);
+        const amt = parseFloat(MANUAL_OFFER_CONFIG.bundle_discount_amount || 0);
+        if (amt > 0) {
+            if (MANUAL_OFFER_CONFIG.bundle_apply_mode === 'EXACT') {
+                if (totalJars === minJars) bundleDiscount = amt;
+            } else {
+                if (totalJars >= minJars) bundleDiscount = amt;
+            }
+        }
+    }
 
+    // Coupon offer calculation
+    const couponInput = document.getElementById('manualCouponCodeInput');
+    const couponStatusEl = document.getElementById('manualCouponStatusMsg');
+    const rawCoupon = couponInput ? couponInput.value.trim().toUpperCase() : '';
+    let couponDiscount = 0;
 
-    const grandTotal = subtotal + deliveryFee;
+    if (couponStatusEl) {
+        couponStatusEl.className = 'hidden text-[11px] font-semibold';
+        couponStatusEl.textContent = '';
+    }
 
+    if (rawCoupon) {
+        const coupons = Array.isArray(MANUAL_OFFER_CONFIG.coupons) ? MANUAL_OFFER_CONFIG.coupons : [];
+        const matched = coupons.find(c => (c.code || '').toUpperCase() === rawCoupon);
+        if (!matched) {
+            if (couponStatusEl) {
+                couponStatusEl.textContent = '⚠️ Coupon not found or inactive.';
+                couponStatusEl.className = 'text-[11px] font-semibold text-rose-600';
+            }
+        } else if (totalJars < (matched.min_jars || 1)) {
+            if (couponStatusEl) {
+                couponStatusEl.textContent = `⚠️ Requires at least ${matched.min_jars} jar(s).`;
+                couponStatusEl.className = 'text-[11px] font-semibold text-amber-700';
+            }
+        } else if (subtotal < (matched.min_subtotal || 0)) {
+            if (couponStatusEl) {
+                couponStatusEl.textContent = `⚠️ Minimum subtotal ৳${Math.round(matched.min_subtotal)} required.`;
+                couponStatusEl.className = 'text-[11px] font-semibold text-amber-700';
+            }
+        } else {
+            if (matched.discount_type === 'PERCENT') {
+                couponDiscount = (subtotal * (matched.discount_value || 0)) / 100;
+            } else {
+                couponDiscount = matched.discount_value || 0;
+            }
+            couponDiscount = Math.min(subtotal, Math.round(couponDiscount));
+            if (couponStatusEl) {
+                couponStatusEl.textContent = `✅ Coupon '${matched.code}' applied (-৳${couponDiscount.toFixed(0)})`;
+                couponStatusEl.className = 'text-[11px] font-semibold text-emerald-700';
+            }
+        }
+    }
 
+    const totalDiscount = Math.min(subtotal, bundleDiscount + couponDiscount);
+    const grandTotal = Math.max(0, subtotal - totalDiscount + deliveryFee);
+
+    const offerRow = document.getElementById('manualSummaryOfferRow');
+    const offerLabelEl = document.getElementById('manualSummaryOfferLabel');
+    const offerDiscEl = document.getElementById('manualSummaryOfferDiscount');
+    const offerBadge = document.getElementById('manualOfferAppliedBadge');
+    if (offerRow && offerDiscEl) {
+        if (bundleDiscount > 0) {
+            offerRow.classList.remove('hidden');
+            if (offerLabelEl) {
+                offerLabelEl.textContent = (MANUAL_OFFER_CONFIG.bundle_discount_label || 'Offer Discount') + ':';
+            }
+            offerDiscEl.textContent = '-৳' + bundleDiscount.toFixed(0);
+            if (offerBadge) offerBadge.classList.remove('hidden');
+        } else {
+            offerRow.classList.add('hidden');
+            if (offerBadge) offerBadge.classList.add('hidden');
+        }
+    }
+
+    const couponRow = document.getElementById('manualSummaryCouponRow');
+    const couponLabelEl = document.getElementById('manualSummaryCouponLabel');
+    const couponDiscEl = document.getElementById('manualSummaryCouponDiscount');
+    if (couponRow && couponDiscEl) {
+        if (couponDiscount > 0) {
+            couponRow.classList.remove('hidden');
+            if (couponLabelEl) couponLabelEl.textContent = `Coupon (${rawCoupon}):`;
+            couponDiscEl.textContent = '-৳' + couponDiscount.toFixed(0);
+        } else {
+            couponRow.classList.add('hidden');
+        }
+    }
 
     const countEl = document.getElementById('manualSummaryItemCount');
-
     const subtotalEl = document.getElementById('manualSummarySubtotal');
-
     const deliveryEl = document.getElementById('manualSummaryDelivery');
-
     const grandTotalEl = document.getElementById('manualSummaryGrandTotal');
 
-
-
     if (countEl) countEl.textContent = totalJars;
-
     if (subtotalEl) subtotalEl.textContent = '৳' + subtotal.toFixed(0);
-
     if (deliveryEl) {
-
-        if (deliveryFee === 0 || totalJars >= 4) {
-
+        if (deliveryFee === 0) {
             deliveryEl.innerHTML = '<span class="text-emerald-700 font-black">FREE (৳0)</span>';
-
         } else {
-
             deliveryEl.textContent = '৳' + deliveryFee.toFixed(0);
-
         }
-
     }
-
     if (grandTotalEl) grandTotalEl.textContent = '৳' + grandTotal.toFixed(0);
 
 }

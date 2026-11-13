@@ -229,7 +229,7 @@
                         <span class="font-display font-black text-2xl sm:text-3xl text-emerald-950">৳{{ product.price_bdt|floatformat:0 }}</span>
                         {% if product.original_price_bdt and product.original_price_bdt > product.price_bdt %}
                         <span class="text-base line-through text-slate-400 font-bold">৳{{ product.original_price_bdt|floatformat:0 }}</span>
-                        <span class="text-[11px] font-black bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full">
+                        <span class="text-xs sm:text-sm font-black bg-rose-100 text-rose-700 border border-rose-200 px-2.5 py-1 rounded-full">
                             Save ৳{{ product.discount_amount|floatformat:0 }}
                         </span>
                         {% endif %}

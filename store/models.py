@@ -1344,40 +1344,34 @@ Need any help? Just reply to this message! 💚
 
     def get_whatsapp_shipping_instruction_message(self):
         """
-        Generates a concise WhatsApp message with order dispatch details, complete price breakdown,
-        quick storage tips, and review link.
+        Generates a short, crisp WhatsApp message when an order is handed over to courier.
         """
         items_list = []
         for itm in self.items.all():
-            items_list.append(f"🥒 {itm.product_name} x {itm.quantity}")
-        items_text = "\n".join(items_list) if items_list else "🥒 Pickpickles Homemade Jars"
-        price_details = self._get_whatsapp_price_details_text()
+            items_list.append(f"{itm.product_name} x {itm.quantity}")
+        items_text = ", ".join(items_list) if items_list else "Pickpickles Homemade Jars"
+
+        try:
+            dec_total = Decimal(str(self.total_amount or 0))
+            total_str = f"{dec_total:.0f}" if dec_total == dec_total.to_integral() else f"{dec_total:.2f}"
+        except Exception:
+            total_str = str(self.total_amount or 0)
+
+        pay_label = "Paid" if self.payment_status == 'PAID' else "COD Payable"
 
         tracking_code = self.steadfast_tracking_code or self.pathao_tracking_code
         courier_name = self.get_courier_provider_display() if self.courier_provider else "Courier"
-        tracking_line = f"\n📦 *Tracking:* {tracking_code} ({courier_name})" if tracking_code else ""
+        tracking_line = f"📦 Tracking: {tracking_code} ({courier_name})\n" if tracking_code else ""
 
-        msg = f"""🥒 *Pickpickles — Order Dispatched* 🚚
-
-Dear *{self.customer_name}*,
-Your order *#{self.order_number}* has been freshly prepared and dispatched via courier!
-
-📋 *Items:*
-{items_text}
-
-💰 *Price Details:*
-{price_details}
-
-📍 *Address:* {self.delivery_address}, {self.delivery_city}{tracking_line}
-
-🧊 *Care Tips:*
-• Refrigerate immediately upon arrival for maximum crunch!
-• Always serve with a clean, dry spoon.
-
-⭐ *Feedback:* We'd love your review at https://pickpickles.xyz/reviews/ or reply here!
-
-Enjoy your pickles! 💚
-*Team Pickpickles* | 01794271523"""
+        msg = (
+            f"🥒 *Pickpickles — Order Dispatched* 🚚\n\n"
+            f"Hi *{self.customer_name}*, your order *#{self.order_number}* ({items_text}) has been handed over to courier!\n"
+            f"{tracking_line}"
+            f"💰 {pay_label}: ৳{total_str}\n\n"
+            f"🧊 *Care:* Refrigerate on arrival & use a clean, dry spoon.\n"
+            f"⭐ *Feedback:* https://pickpickles.xyz/reviews/\n"
+            f"— *Team Pickpickles*"
+        )
         return msg.strip()
 
     @property
