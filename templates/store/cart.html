@@ -134,6 +134,36 @@
                         </div>
                     </div>
 
+                    {% if promo_settings.is_active %}
+                    {% if promo_settings.bundle_discount_enabled or promo_settings.free_delivery_enabled or promo_settings.advance_payment_discount_enabled %}
+                    <!-- Active Dashboard Offers Highlights -->
+                    <div id="pageCartActiveOffers" class="p-3 rounded-2xl bg-amber-50/80 border border-amber-200/90 text-[11px] text-amber-950 space-y-1.5 font-semibold">
+                        <p class="font-black uppercase tracking-wider text-[10px] text-amber-800 flex items-center gap-1.5">
+                            <i class="fa-solid fa-tags text-amber-600"></i>
+                            <span>Active Store Offers ({{ promo_settings.campaign_name|default:"Special Offer" }})</span>
+                        </p>
+                        {% if promo_settings.bundle_discount_enabled and promo_settings.bundle_discount_amount > 0 %}
+                        <p class="flex items-center gap-1.5">
+                            <span class="shrink-0">🎁</span>
+                            <span><strong>{{ promo_settings.get_discount_label }}</strong> — applied automatically on {{ promo_settings.bundle_min_jars }}{% if promo_settings.bundle_apply_mode == 'AT_LEAST' %}+{% endif %} jar{% if promo_settings.bundle_min_jars > 1 %}s{% endif %}!</span>
+                        </p>
+                        {% endif %}
+                        {% if promo_settings.free_delivery_enabled %}
+                        <p class="flex items-center gap-1.5">
+                            <span class="shrink-0">🚚</span>
+                            <span><strong>FREE Delivery</strong> automatically unlocked on {{ promo_settings.free_delivery_min_jars }}+ jars!</span>
+                        </p>
+                        {% endif %}
+                        {% if promo_settings.advance_payment_discount_enabled and promo_settings.advance_payment_discount_percent > 0 %}
+                        <p class="flex items-center gap-1.5">
+                            <span class="shrink-0">💳</span>
+                            <span><strong>{{ promo_settings.get_advance_payment_label }}</strong> — extra {{ promo_settings.advance_payment_discount_percent|floatformat:0 }}% OFF when paying via bKash/Nagad at checkout!</span>
+                        </p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    {% endif %}
+
                     <!-- Price Calculations Breakdown -->
                     <div class="border-t border-slate-200/80 pt-4 space-y-2 text-xs">
                         <div class="flex justify-between text-slate-600 font-medium">
@@ -141,7 +171,7 @@
                             <span class="font-black text-slate-900 text-sm">৳<span id="pageCartSubtotal">{{ cart_subtotal }}</span></span>
                         </div>
 
-                        <div id="pageCartDiscountRow" class="{% if not cart_discount or cart_discount <= 0 %}hidden{% endif %} flex justify-between items-center text-emerald-700 font-bold">
+                        <div id="pageCartDiscountRow" class="{% if not cart_discount or cart_discount <= 0 %}hidden{% endif %} flex justify-between items-center text-emerald-700 font-bold bg-emerald-50/70 px-2.5 py-1.5 rounded-xl border border-emerald-200/80">
                             <span class="flex items-center gap-1.5">
                                 <span id="pageCartDiscountLabel">🎁 {{ promo_settings.get_discount_label|default:"Special Discount" }}</span>
                             </span>

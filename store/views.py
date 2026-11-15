@@ -121,7 +121,7 @@ def index(request):
         product_count=Count('products', filter=Q(products__is_in_stock=True)),
         display_order=category_order
     ).filter(product_count__gt=0).order_by('display_order', 'id')
-    recent_reviews = Review.objects.filter(is_approved=True).select_related('product').order_by('-created_at')[:9]
+    recent_reviews = Review.objects.filter(is_approved=True).select_related('product').order_by('-created_at')[:6]
     total_reviews_count = Review.objects.filter(is_approved=True).count()
     
     # Filter by category if selected
@@ -362,6 +362,9 @@ def cart_add(request, product_id):
             'cart_total_items': len(cart),
             'cart_subtotal': float(cart.get_subtotal()),
             'cart_discount': float(cart.get_discount()),
+            'cart_bundle_discount': float(cart.get_bundle_discount()),
+            'cart_coupon_discount': float(cart.get_coupon_discount()),
+            'applied_coupon_code': cart.get_coupon_code(),
             'total_weight_grams': cart.get_total_weight_grams(),
             'total_weight_kg': cart.get_total_weight_kg(),
             'billing_weight_kg': cart.get_billing_weight_kg(),
@@ -418,6 +421,9 @@ def cart_remove(request, product_id):
             'cart_total_items': len(cart),
             'cart_subtotal': float(cart.get_subtotal()),
             'cart_discount': float(cart.get_discount()),
+            'cart_bundle_discount': float(cart.get_bundle_discount()),
+            'cart_coupon_discount': float(cart.get_coupon_discount()),
+            'applied_coupon_code': cart.get_coupon_code(),
             'total_weight_grams': cart.get_total_weight_grams(),
             'total_weight_kg': cart.get_total_weight_kg(),
             'billing_weight_kg': cart.get_billing_weight_kg(),
@@ -510,6 +516,9 @@ def cart_update_ajax(request):
             'cart_total_items': len(cart),
             'cart_subtotal': subtotal,
             'cart_discount': discount,
+            'cart_bundle_discount': float(cart.get_bundle_discount()),
+            'cart_coupon_discount': float(cart.get_coupon_discount()),
+            'applied_coupon_code': cart.get_coupon_code(),
             'total_weight_grams': cart.get_total_weight_grams(),
             'total_weight_kg': cart.get_total_weight_kg(),
             'billing_weight_kg': cart.get_billing_weight_kg(),

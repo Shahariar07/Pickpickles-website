@@ -777,7 +777,7 @@
 
 <!-- Customer Reviews Section -->
 <section id="customer-reviews" class="py-10 sm:py-14 px-3 sm:px-6 lg:px-8 max-w-7xl mx-auto scroll-mt-20">
-    <div class="text-center max-w-2xl mx-auto mb-6 sm:mb-10">
+    <div class="text-center max-w-2xl mx-auto mb-6 sm:mb-8">
         <span
             class="text-[11px] sm:text-xs font-black uppercase tracking-widest text-amber-900 bg-amber-100 border border-amber-300 px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full inline-block">
             Real Pickle Lovers Nationwide 🇧🇩
@@ -785,99 +785,110 @@
         <h2 class="font-display font-black text-xl sm:text-3xl lg:text-4xl text-slate-950 mt-2.5 sm:mt-3">
             What Foodies Across Bangladesh Are Saying
         </h2>
-        <p class="text-xs sm:text-sm text-slate-600 font-medium mt-1.5 sm:mt-2">
-            Loved by burger enthusiasts, home chefs, and foodies from all across Bangladesh!
-        </p>
+        <div class="mt-2.5 inline-flex flex-wrap items-center justify-center gap-2 sm:gap-3 bg-white border border-slate-200 px-3.5 py-1.5 rounded-full shadow-2xs text-xs font-bold text-slate-700">
+            <span class="inline-flex items-center gap-1 text-amber-500">
+                <i class="fa-solid fa-star"></i>
+                <i class="fa-solid fa-star"></i>
+                <i class="fa-solid fa-star"></i>
+                <i class="fa-solid fa-star"></i>
+                <i class="fa-solid fa-star"></i>
+                <span class="text-slate-900 font-black ml-0.5">Top Rated</span>
+            </span>
+            <span class="text-slate-300">•</span>
+            <span class="text-emerald-800 font-extrabold">{{ total_reviews_count|default:"20+" }} Verified Reviews</span>
+        </div>
     </div>
 
-    <!-- Reviews Container: Swipeable Carousel on mobile, Grid on desktop -->
-    <div class="relative">
+    <!-- Single-Row Horizontal Reviews Slider (1 card mobile, 2 tablet, 3 desktop) -->
+    <div class="relative group/reviews">
         <div id="reviewsCarousel"
-            class="flex sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 overflow-x-auto sm:overflow-visible no-scrollbar pb-3 pt-1 px-[7vw] sm:px-0 snap-x snap-mandatory scroll-smooth -mx-3 sm:mx-0">
+            class="flex gap-4 sm:gap-5 overflow-x-auto no-scrollbar pb-3 pt-1 px-[7vw] sm:px-1 snap-x snap-mandatory scroll-smooth -mx-3 sm:mx-0">
             {% for review in recent_reviews %}
             <div
-                class="w-[86vw] max-w-sm sm:w-auto shrink-0 snap-center sm:shrink bg-white p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs flex flex-col justify-between space-y-3.5 sm:space-y-4 hover:shadow-md transition-all text-left">
+                class="review-slide-card w-[86vw] max-w-sm sm:max-w-none sm:w-[calc((100%-1.25rem)/2)] lg:w-[calc((100%-2.5rem)/3)] shrink-0 snap-center sm:snap-start bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md hover:border-emerald-200 flex flex-col justify-between transition-all duration-200 text-left">
                 <div>
-                    <div class="flex items-center justify-between mb-2.5 sm:mb-3">
-                        <div class="flex items-center gap-1 text-amber-400 text-sm">
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <div class="flex items-center gap-0.5 text-amber-400 text-xs sm:text-sm">
                             {% for i in "12345" %}
-                            {% if forloop.counter <= review.rating %} <i class="fa-solid fa-star text-amber-400"></i>
-                                {% else %}
-                                <i class="fa-solid fa-star text-slate-200"></i>
-                                {% endif %}
-                                {% endfor %}
-                                <span class="text-[11px] font-black text-slate-600 ml-1">({{ review.rating }}.0)</span>
+                            {% if forloop.counter <= review.rating %}<i class="fa-solid fa-star text-amber-400"></i>{% else %}<i class="fa-solid fa-star text-slate-200"></i>{% endif %}
+                            {% endfor %}
+                            <span class="text-[11px] font-black text-slate-600 ml-1">({{ review.rating }}.0)</span>
                         </div>
                         <span
-                            class="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
-                            <i class="fa-solid fa-circle-check text-[9px] text-emerald-600"></i> Verified Customer
+                            class="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full inline-flex items-center gap-1 shrink-0">
+                            <i class="fa-solid fa-circle-check text-[9px] text-emerald-600"></i> Verified
                         </span>
                     </div>
-                    <p class="text-xs sm:text-sm text-slate-800 font-medium italic leading-relaxed">
+
+                    <p class="text-[13px] sm:text-sm text-slate-700 font-medium leading-relaxed line-clamp-4">
                         "{{ review.comment }}"
                     </p>
 
-                    <!-- Attached Customer Screenshot or Photo -->
+                    <!-- Compact Attached Customer Photo / Screenshot Pill -->
                     {% if review.image %}
-                    <div class="pt-2">
-                        <button type="button"
-                            onclick="openHomeReviewLightbox('{{ review.image_url }}', '{{ review.reviewer_name|escapejs }}', '{{ review.product.name|default:'Homemade Pickles'|escapejs }}')"
-                            class="relative group/img block w-full rounded-xl overflow-hidden border border-emerald-200 bg-gray-50 aspect-16/9 cursor-pointer shadow-2xs hover:shadow-sm transition">
+                    <button type="button"
+                        onclick="openHomeReviewLightbox('{{ review.image_url }}', '{{ review.reviewer_name|escapejs }}', '{{ review.product.name|default:'Homemade Pickles'|escapejs }}')"
+                        class="mt-3 w-full flex items-center gap-3 p-2 rounded-xl bg-emerald-50/70 hover:bg-emerald-50 border border-emerald-200/80 transition cursor-pointer group/img text-left">
+                        <div class="w-12 h-12 rounded-lg overflow-hidden border border-emerald-200 bg-white shrink-0">
                             <img src="{{ review.image_url }}" alt="Review photo by {{ review.reviewer_name }}"
                                 class="w-full h-full object-cover group-hover/img:scale-105 transition duration-300">
-                            <div
-                                class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end justify-between p-2 text-white">
-                                <span
-                                    class="inline-flex items-center gap-1 text-[9px] font-black bg-black/60 backdrop-blur-xs px-2 py-0.5 rounded-full border border-white/20 text-white">
-                                    <i class="fa-solid fa-camera text-amber-400"></i> Screenshot / Photo
-                                </span>
-                                <span
-                                    class="w-6 h-6 rounded-full bg-white/20 backdrop-blur-xs flex items-center justify-center text-[10px] group-hover/img:scale-110 transition shadow-xs">
-                                    <i class="fa-solid fa-magnifying-glass-plus"></i>
-                                </span>
-                            </div>
-                        </button>
-                    </div>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <span class="block text-[11px] font-black text-emerald-950 truncate">Customer Photo</span>
+                            <span class="block text-[10px] font-semibold text-emerald-700">Tap to view full image</span>
+                        </div>
+                        <span class="w-7 h-7 rounded-lg bg-white border border-emerald-200 text-emerald-700 flex items-center justify-center text-[11px] shrink-0 shadow-2xs group-hover/img:scale-105 transition">
+                            <i class="fa-solid fa-magnifying-glass-plus"></i>
+                        </span>
+                    </button>
                     {% endif %}
                 </div>
-                <div class="pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
-                    <div class="min-w-0 pr-2">
-                        <span class="font-black text-slate-950 block text-xs sm:text-sm truncate">{{ review.reviewer_name }}</span>
-                        <span class="text-slate-500 font-semibold text-[11px] truncate block">📍 {{ review.reviewer_location|default:"Dhaka, Bangladesh" }}</span>
+
+                <div class="pt-3.5 mt-4 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-8 h-8 rounded-full bg-emerald-900 text-amber-300 font-display font-black text-xs flex items-center justify-center shrink-0">
+                            {{ review.reviewer_name|slice:":1"|upper }}
+                        </div>
+                        <div class="min-w-0">
+                            <span class="font-black text-slate-950 block text-xs sm:text-sm truncate">{{ review.reviewer_name }}</span>
+                            <span class="text-slate-500 font-semibold text-[11px] truncate block">📍 {{ review.reviewer_location|default:"Dhaka, Bangladesh" }}</span>
+                        </div>
                     </div>
                     <span
-                        class="bg-emerald-100 text-emerald-900 font-extrabold px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] border border-emerald-300 truncate max-w-[140px] shrink-0">
+                        class="bg-emerald-50 text-emerald-900 font-bold px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] border border-emerald-200 truncate max-w-[130px] shrink-0">
                         🥒 {{ review.product.name|default:"All Pickles" }}
                     </span>
                 </div>
             </div>
             {% empty %}
-            <div class="w-full col-span-2 lg:col-span-3 text-center py-6 text-slate-600 font-medium text-sm">
+            <div class="w-full text-center py-6 text-slate-600 font-medium text-sm">
                 Be the first to try and review our freshly brined homemade pickles!
             </div>
             {% endfor %}
         </div>
 
-        <!-- Mobile Carousel Navigation Controls (Arrows + Dots) -->
-        <div class="flex sm:hidden items-center justify-center gap-3 mt-3 mb-1">
+        <!-- Unified Slider Navigation Controls (Arrows + Dots) for Desktop & Mobile -->
+        {% if recent_reviews|length > 1 %}
+        <div class="flex items-center justify-center gap-3 mt-3 mb-1">
             <button type="button" onclick="scrollReviewsCarousel(-1)"
-                class="w-8 h-8 rounded-full bg-white border border-slate-300 shadow-xs flex items-center justify-center text-slate-700 active:scale-90 transition hover:bg-slate-50"
+                class="w-8 h-8 rounded-full bg-white border border-slate-300 shadow-xs flex items-center justify-center text-slate-700 active:scale-90 transition hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-800 cursor-pointer"
                 aria-label="Previous review">
                 <i class="fa-solid fa-chevron-left text-[11px]"></i>
             </button>
             <div id="reviewsCarouselDots" class="flex items-center gap-1.5">
                 {% for review in recent_reviews %}
                 <button type="button" onclick="scrollToReview({{ forloop.counter0 }})"
-                    class="review-dot h-2 rounded-full transition-all duration-300 {% if forloop.first %}bg-emerald-700 w-5{% else %}bg-slate-300 w-2{% endif %}"
+                    class="review-dot h-2 rounded-full transition-all duration-300 cursor-pointer {% if forloop.first %}bg-emerald-700 w-5{% else %}bg-slate-300 w-2 hover:bg-slate-400{% endif %}"
                     aria-label="Go to review {{ forloop.counter }}"></button>
                 {% endfor %}
             </div>
             <button type="button" onclick="scrollReviewsCarousel(1)"
-                class="w-8 h-8 rounded-full bg-white border border-slate-300 shadow-xs flex items-center justify-center text-slate-700 active:scale-90 transition hover:bg-slate-50"
+                class="w-8 h-8 rounded-full bg-white border border-slate-300 shadow-xs flex items-center justify-center text-slate-700 active:scale-90 transition hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-800 cursor-pointer"
                 aria-label="Next review">
                 <i class="fa-solid fa-chevron-right text-[11px]"></i>
             </button>
         </div>
+        {% endif %}
     </div>
 
     <!-- View All Customer Reviews & Write Review CTA Buttons -->
@@ -900,17 +911,28 @@
     function scrollReviewsCarousel(direction) {
         const container = document.getElementById('reviewsCarousel');
         if (!container) return;
-        const card = container.querySelector('.snap-center');
-        const scrollAmount = card ? (card.offsetWidth + 16) : 300;
-        container.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
+        const card = container.querySelector('.review-slide-card');
+        const gap = window.innerWidth >= 640 ? 20 : 16;
+        const scrollAmount = card ? (card.offsetWidth + gap) : 320;
+        const maxScroll = container.scrollWidth - container.clientWidth;
+        if (direction > 0 && container.scrollLeft >= maxScroll - 8) {
+            container.scrollTo({ left: 0, behavior: 'smooth' });
+        } else if (direction < 0 && container.scrollLeft <= 8) {
+            container.scrollTo({ left: maxScroll, behavior: 'smooth' });
+        } else {
+            container.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
+        }
     }
 
     function scrollToReview(index) {
         const container = document.getElementById('reviewsCarousel');
         if (!container) return;
-        const cards = container.querySelectorAll('.snap-center');
+        const cards = container.querySelectorAll('.review-slide-card');
         if (cards[index]) {
-            cards[index].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            const targetLeft = window.innerWidth >= 640
+                ? cards[index].offsetLeft - 4
+                : cards[index].offsetLeft - ((container.clientWidth - cards[index].offsetWidth) / 2);
+            container.scrollTo({ left: Math.max(0, targetLeft), behavior: 'smooth' });
         }
     }
 
@@ -923,14 +945,19 @@
         container.addEventListener('scroll', function () {
             clearTimeout(scrollTimeout);
             scrollTimeout = setTimeout(function () {
-                const cards = container.querySelectorAll('.snap-center');
-                const containerCenter = container.scrollLeft + (container.offsetWidth / 2);
+                const cards = container.querySelectorAll('.review-slide-card');
+                const isDesktop = window.innerWidth >= 640;
+                const refPoint = isDesktop
+                    ? container.scrollLeft + 24
+                    : container.scrollLeft + (container.offsetWidth / 2);
                 let closestIndex = 0;
                 let minDiff = Infinity;
 
                 cards.forEach(function (card, idx) {
-                    const cardCenter = card.offsetLeft + (card.offsetWidth / 2);
-                    const diff = Math.abs(containerCenter - cardCenter);
+                    const cardPos = isDesktop
+                        ? card.offsetLeft
+                        : card.offsetLeft + (card.offsetWidth / 2);
+                    const diff = Math.abs(refPoint - cardPos);
                     if (diff < minDiff) {
                         minDiff = diff;
                         closestIndex = idx;
@@ -939,9 +966,9 @@
 
                 dots.forEach(function (dot, idx) {
                     if (idx === closestIndex) {
-                        dot.className = 'review-dot h-2 rounded-full bg-emerald-700 w-5 transition-all duration-300';
+                        dot.className = 'review-dot h-2 rounded-full bg-emerald-700 w-5 transition-all duration-300 cursor-pointer';
                     } else {
-                        dot.className = 'review-dot h-2 rounded-full bg-slate-300 w-2 transition-all duration-300';
+                        dot.className = 'review-dot h-2 rounded-full bg-slate-300 w-2 hover:bg-slate-400 transition-all duration-300 cursor-pointer';
                     }
                 });
             }, 30);

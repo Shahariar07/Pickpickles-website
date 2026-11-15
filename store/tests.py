@@ -780,3 +780,73 @@ class CartTests(TestCase):
         self.assertEqual(order.discount_amount, Decimal('50.00'))  # 5% of 1000
         self.assertEqual(order.total_amount, Decimal('1100.00'))   # 1000 - 50 + 150
 
+    def test_cart_page_and_ajax_expose_active_dashboard_offers(self):
+        import json
+        from store.models import PromotionSetting, Category, Product
+
+        promo = PromotionSetting.get_settings()
+        promo.is_active = True
+        promo.campaign_name = 'Pickle Fest Offer'
+        promo.bundle_discount_enabled = True
+        promo.bundle_min_jars = 2
+        promo.bundle_discount_amount = Decimal('120.00')
+        promo.bundle_apply_mode = 'AT_LEAST'
+        promo.free_delivery_enabled = True
+        promo.free_delivery_min_jars = 3
+        promo.standard_delivery_fee = Decimal('100.00')
+        promo.advance_payment_discount_enabled = True
+        promo.advance_payment_discount_percent = Decimal('7.00')
+        promo.save()
+
+        cat, _ = Category.objects.get_or_create(name='Offer Cart Cat', defaults={'slug': 'offer-cart-cat'})
+        prod = Product.objects.create(
+            category=cat,
+            name='Dill Jar Offer',
+            slug='dill-jar-offer',
+            price_bdt=Decimal('400.00'),
+            stock_count=20,
+            is_in_stock=True,
+        )
+
+        # Add 2 jars via AJAX -> bundle discount should apply, delivery fee 100
+        res_add = self.client.post(
+            f"{reverse('store:cart_add', args=[prod.id])}?format=json",
+            {'quantity': 2},
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        self.assertEqual(res_add.status_code, 200)
+        add_data = res_add.json()
+        self.assertEqual(add_data['cart_discount'], 120.0)
+        self.assertEqual(add_data['cart_bundle_discount'], 120.0)
+        self.assertEqual(add_data['delivery_fee'], 100.0)
+        self.assertFalse(add_data['free_delivery_unlocked'])
+        self.assertEqual(add_data['grand_total'], 780.0)
+        self.assertEqual(add_data['offer_info']['bundle_discount_amount'], 120.0)
+        self.assertTrue(add_data['offer_info']['free_delivery_enabled'])
+
+        # Increase to 3 jars via AJAX -> both bundle discount AND free delivery unlocked
+        res_upd = self.client.post(
+            reverse('store:cart_update_ajax'),
+            data=json.dumps({'product_id': str(prod.id), 'action': 'increase'}),
+            content_type='application/json',
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        self.assertEqual(res_upd.status_code, 200)
+        upd_data = res_upd.json()
+        self.assertEqual(upd_data['cart_discount'], 120.0)
+        self.assertEqual(upd_data['delivery_fee'], 0.0)
+        self.assertTrue(upd_data['free_delivery_unlocked'])
+        self.assertEqual(upd_data['grand_total'], 1080.0)
+
+        # Cart page renders active offers, discount row & drawer promo totals
+        cart_res = self.client.get(reverse('store:cart_view'))
+        self.assertEqual(cart_res.status_code, 200)
+        html = cart_res.content.decode('utf-8')
+        self.assertIn('Pickle Fest Offer', html)
+        self.assertIn('pageCartActiveOffers', html)
+        self.assertIn('drawerOfferReminder', html)
+        self.assertIn('-৳<span id="pageCartDiscount">120.00</span>', html)
+        self.assertIn('-৳<span id="drawerDiscount">120.00</span>', html)
+        self.assertIn('<span id="drawerEstimatedTotal">1080.00</span>', html)
+
+

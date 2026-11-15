@@ -224,6 +224,10 @@ def cart_context(request):
                 'cart_total_items': 0,
                 'cart_subtotal': 0,
                 'cart_discount': 0,
+                'cart_bundle_discount': 0,
+                'cart_coupon_discount': 0,
+                'applied_coupon_code': '',
+                'cart_grand_total': 0,
                 'delivery_fee': 150,
                 'free_delivery_unlocked': False,
                 'items_needed_for_free_delivery': 0,
@@ -238,6 +242,7 @@ def cart_context(request):
         coupon_code = cart.get_coupon_code()
         coupon_disc = cart.get_coupon_discount()
         bundle_disc = cart.get_bundle_discount()
+        cart_grand_total = cart.get_total_price('INSIDE_DHAKA')
         return {
             'cart': cart,
             'cart_total_items': len(cart),
@@ -246,6 +251,7 @@ def cart_context(request):
             'cart_bundle_discount': bundle_disc,
             'cart_coupon_discount': coupon_disc,
             'applied_coupon_code': coupon_code,
+            'cart_grand_total': cart_grand_total,
             'cart_delivery_fee': delivery_fee,
             'delivery_fee': delivery_fee,
             'free_delivery_unlocked': free_unlocked,
@@ -258,6 +264,10 @@ def cart_context(request):
             'cart_total_items': 0,
             'cart_subtotal': 0,
             'cart_discount': 0,
+            'cart_bundle_discount': 0,
+            'cart_coupon_discount': 0,
+            'applied_coupon_code': '',
+            'cart_grand_total': 0,
             'delivery_fee': 150,
             'free_delivery_unlocked': False,
             'items_needed_for_free_delivery': 0,

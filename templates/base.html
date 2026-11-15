@@ -191,7 +191,7 @@
 </head>
 
 <body
-    class="bg-gray-50 text-slate-900 font-sans antialiased pb-20 md:pb-0 flex flex-col min-h-screen overflow-x-hidden">
+    class="bg-gray-50 text-slate-900 font-sans antialiased pb-20 md:pb-0 flex flex-col min-h-screen overflow-x-clip" style="overflow-x: clip;">
     <div style="display:none;" id="globalCsrfContainer">{% csrf_token %}</div>
 
     <!-- ========================================================== -->
@@ -290,11 +290,10 @@
                 </div>
 
                 <!-- Desktop Navigation Links -->
-                <nav class="hidden md:flex items-center gap-7 font-semibold text-sm text-gray-700">
+                <nav class="hidden md:flex items-center gap-7 font-semibold text-sm text-gray-700 whitespace-nowrap">
                     <a href="{% url 'store:index' %}" class="hover:text-brand-600 transition-colors">Our Pickles</a>
                     <a href="{% url 'store:index' %}#pickle-menu" class="hover:text-brand-600 transition-colors">Shop Flavors</a>
                     <a href="{% url 'store:about_story' %}" class="hover:text-brand-600 transition-colors">Story & FAQ</a>
-                    <a href="{% url 'store:policies' %}" class="hover:text-brand-600 transition-colors">Policies</a>
                     <a href="{% url 'store:reviews' %}" class="hover:text-brand-600 transition-colors flex items-center gap-1">
                         <i class="fa-solid fa-star text-amber-500 text-xs"></i>
                         <span>Reviews</span>
@@ -661,16 +660,34 @@
         </div>
 
         <!-- Drawer Footer with Subtotal & Checkout Button -->
-        <div id="cartDrawerFooter" class="p-4 sm:p-5 border-t border-gray-100 bg-white space-y-3 {% if cart|length == 0 %}hidden{% endif %}">
-            <div class="flex items-center justify-between text-sm">
+        <div id="cartDrawerFooter" class="p-4 sm:p-5 border-t border-gray-100 bg-white space-y-2.5 {% if cart|length == 0 %}hidden{% endif %}">
+            <div class="flex items-center justify-between text-xs sm:text-sm">
                 <span class="text-gray-500 font-medium">Subtotal</span>
-                <span class="font-display font-extrabold text-lg text-gray-900">৳<span id="drawerSubtotal">{{ cart_subtotal }}</span></span>
+                <span class="font-display font-bold text-gray-900">৳<span id="drawerSubtotal">{{ cart_subtotal }}</span></span>
             </div>
-            <div id="drawerDiscountRow" class="{% if not cart_discount or cart_discount <= 0 %}hidden{% endif %} flex items-center justify-between text-xs text-emerald-700 font-bold">
+            <div id="drawerDiscountRow" class="{% if not cart_discount or cart_discount <= 0 %}hidden{% endif %} flex items-center justify-between text-xs text-emerald-700 font-bold bg-emerald-50/80 px-2.5 py-1.5 rounded-lg border border-emerald-200/80">
                 <span id="drawerDiscountLabel">🎁 {{ promo_settings.get_discount_label|default:"Special Offer Discount" }}</span>
                 <span>-৳<span id="drawerDiscount">{{ cart_discount|floatformat:2 }}</span></span>
             </div>
-            <p class="text-[11px] text-center font-medium" id="drawerDeliveryNote">
+            <div class="flex items-center justify-between text-xs text-gray-500 font-medium">
+                <span>Nationwide Delivery</span>
+                <span id="drawerDeliveryFee" class="{% if free_delivery_unlocked or delivery_fee == 0 %}text-emerald-700 font-black{% else %}text-gray-700 font-bold{% endif %}">
+                    {% if free_delivery_unlocked or delivery_fee == 0 %}FREE{% else %}৳{{ delivery_fee|floatformat:2 }}{% endif %}
+                </span>
+            </div>
+            <div class="flex items-center justify-between text-sm pt-2 border-t border-gray-100">
+                <span class="font-bold text-gray-900">Estimated Total</span>
+                <span class="font-display font-black text-lg text-emerald-800">৳<span id="drawerEstimatedTotal">{{ cart_grand_total|floatformat:2 }}</span></span>
+            </div>
+            <div id="drawerOfferReminder" class="{% if not promo_settings.is_active %}hidden{% endif %} {% if not promo_settings.bundle_discount_enabled and not promo_settings.free_delivery_enabled and not promo_settings.advance_payment_discount_enabled %}hidden{% endif %} text-[11px] bg-amber-50/90 border border-amber-200 text-amber-950 rounded-xl px-3 py-2 font-semibold space-y-0.5">
+                {% if promo_settings.is_active and promo_settings.advance_payment_discount_enabled and promo_settings.advance_payment_discount_percent > 0 %}
+                <p class="flex items-center gap-1.5"><span class="shrink-0">💳</span><span>Extra <strong>{{ promo_settings.advance_payment_discount_percent|floatformat:0 }}% OFF</strong> on bKash/Nagad advance payment at checkout!</span></p>
+                {% endif %}
+                {% if promo_settings.is_active and promo_settings.bundle_discount_enabled and promo_settings.bundle_discount_amount > 0 %}
+                <p id="drawerBundleOfferHint" class="flex items-center gap-1.5"><span class="shrink-0">🎁</span><span>{{ promo_settings.get_discount_label }}</span></p>
+                {% endif %}
+            </div>
+            <p class="text-[11px] text-center font-medium hidden" id="drawerDeliveryNote">
                 <span class="text-slate-700 font-bold">🚚 {{ promo_settings.delivery_notice_text|default:"Flat ৳150 nationwide delivery across Bangladesh." }}</span>
             </p>
             <a href="{% url 'store:checkout' %}"
