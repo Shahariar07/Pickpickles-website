@@ -459,7 +459,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 pt-1">
             {% for prod in low_stock_products %}
             <div class="bg-white hover:bg-rose-50/40 p-2.5 rounded-xl border border-rose-200 shadow-2xs transition flex items-center gap-2.5 group">
-                <img src="{{ prod.primary_image_url }}" alt="{{ prod.name }}" class="w-11 h-11 rounded-xl object-cover border border-rose-100 shrink-0 shadow-2xs">
+                <img src="{{ prod.primary_image_url }}" alt="{{ prod.name }}" onerror="this.onerror=null;this.src='/static/images/pickle_default.png'" class="w-11 h-11 rounded-xl object-cover border border-rose-100 shrink-0 shadow-2xs">
                 <div class="min-w-0 flex-1">
                     <h4 class="font-bold text-gray-900 text-xs truncate" title="{{ prod.name }}">{{ prod.name }}</h4>
                     
@@ -961,11 +961,7 @@
                         </td>
                         <td class="py-3 px-3">
                             <div class="flex items-center gap-2">
-                                {% if rec.product.image_url %}
-                                <img src="{{ rec.product.image_url }}" alt="{{ rec.product.name }}" class="w-8 h-8 rounded-lg object-cover border border-gray-200 shrink-0">
-                                {% else %}
-                                <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-xs shrink-0">🥒</div>
-                                {% endif %}
+                                <img src="{{ rec.product.primary_image_url }}" alt="{{ rec.product.name }}" onerror="this.onerror=null;this.src='/static/images/pickle_default.png'" class="w-8 h-8 rounded-lg object-cover border border-gray-200 shrink-0">
                                 <div class="min-w-0">
                                     <a href="{% url 'dashboard:product_price_history' rec.product.id %}" class="font-bold text-gray-900 hover:text-brand-700 block truncate" title="View this product's price history">
                                         {{ rec.product.name }}

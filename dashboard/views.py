@@ -2120,6 +2120,7 @@ def stock_manager(request):
                 
                 product.is_in_stock = request.POST.get('is_in_stock') in ['on', 'true', '1', True]
                 product.is_featured = request.POST.get('is_featured') in ['on', 'true', '1', True]
+                product.show_stock_count = request.POST.get('show_stock_count') in ['on', 'true', '1', True]
                 custom_badge_val = request.POST.get('custom_badge')
                 if custom_badge_val is not None:
                     product.custom_badge = custom_badge_val.strip()
@@ -2208,6 +2209,7 @@ def stock_manager(request):
                 
                 is_in_stock = request.POST.get('is_in_stock') in ['on', 'true', '1', True]
                 is_featured = request.POST.get('is_featured') in ['on', 'true', '1', True]
+                show_stock_count = request.POST.get('show_stock_count') in ['on', 'true', '1', True]
                 
                 custom_badge = request.POST.get('custom_badge', '').strip()
                 image_url = request.POST.get('image_url', '').strip()
@@ -2233,6 +2235,7 @@ def stock_manager(request):
                     target_stock_level=target_stock_level,
                     is_in_stock=is_in_stock,
                     is_featured=is_featured,
+                    show_stock_count=show_stock_count,
                     custom_badge=custom_badge,
                     image_url=image_url if (image_url and not image_url.endswith('pickle_default.png')) else '',
                     ingredients=ingredients or "Fresh Local Cucumbers, Pure Cane Vinegar, Himalayan Pink Salt, Garlic, Spices.",
@@ -2265,6 +2268,18 @@ def stock_manager(request):
             product.is_in_stock = not product.is_in_stock
             product.save()
             messages.success(request, f'Updated stock availability for "{product.name}".')
+            return redirect('dashboard:stock_manager')
+
+        # 4b. TOGGLE SHOW REMAINING JAR COUNT ON STOREFRONT
+        elif action == 'toggle_show_stock':
+            if not can_user_edit(request.user):
+                messages.error(request, 'Permission Denied: স্টক কাউন্ট প্রদর্শনের সেটিংস পরিবর্তনের অনুমতি নেই।')
+                return redirect('dashboard:stock_manager')
+            product = get_object_or_404(Product, id=product_id)
+            product.show_stock_count = not product.show_stock_count
+            product.save(update_fields=['show_stock_count'])
+            status_text = 'সক্রিয় (ON)' if product.show_stock_count else 'বন্ধ (OFF)'
+            messages.success(request, f'"{product.name}"-এর অবশিষ্ট জার সংখ্যা হোমপেজে দেখানো {status_text} করা হয়েছে।')
             return redirect('dashboard:stock_manager')
 
         # 5. QUICK PRICE & STOCK UPDATE

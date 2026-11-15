@@ -86,6 +86,7 @@ class Product(models.Model):
     
     is_featured = models.BooleanField(default=False, db_index=True)
     is_in_stock = models.BooleanField(default=True, db_index=True)
+    show_stock_count = models.BooleanField(default=False, help_text="Show remaining jar count publicly on the homepage & product page.")
     custom_badge = models.CharField(max_length=80, blank=True, default='', help_text="Promotional or urgency badge (e.g. '🥭 Final Season Batch!', '🔥 Limited Stock!')")
     stock_count = models.PositiveIntegerField(default=50, db_index=True)
     min_stock_threshold = models.PositiveIntegerField(default=15, help_text="Alert if stock falls below this number")

@@ -411,3 +411,64 @@ class ManualOrderOfferAndCouponTests(TestCase):
         self.assertEqual(res.context['total_jars_sold'], 5)
         self.assertContains(res, 'Total Jars Sold')
         self.assertContains(res, 'In Queue')
+
+    def test_toggle_show_stock_count_displays_on_homepage_only_when_active(self):
+        """Admin can toggle remaining jar display per specific product; homepage shows count only when enabled."""
+        from store.models import Product
+
+        other = Product.objects.create(
+            category=self.category,
+            name='Hidden Stock Jar',
+            slug='hidden-stock-jar',
+            price_bdt=Decimal('400.00'),
+            stock_count=17,
+            is_in_stock=True,
+            show_stock_count=False,
+        )
+        self.product.stock_count = 4
+        self.product.is_in_stock = True
+        self.product.show_stock_count = False
+        self.product.save()
+
+        # Initially neither jar shows remaining count on homepage
+        home_before = self.client.get(reverse('store:index'))
+        self.assertEqual(home_before.status_code, 200)
+        self.assertNotContains(home_before, 'Only 4 Jars Left')
+        self.assertNotContains(home_before, '17 Jars Left')
+
+        # Toggle ON for self.product via Edit Product form inside Stock Manager
+        res_edit_on = self.client.post(reverse('dashboard:stock_manager'), {
+            'action': 'edit_product',
+            'product_id': self.product.id,
+            'name': self.product.name,
+            'price_bdt': str(self.product.price_bdt),
+            'stock_count': '4',
+            'is_in_stock': 'on',
+            'show_stock_count': 'on',
+        })
+        self.assertEqual(res_edit_on.status_code, 302)
+        self.product.refresh_from_db()
+        other.refresh_from_db()
+        self.assertTrue(self.product.show_stock_count)
+        self.assertFalse(other.show_stock_count)
+
+        # Homepage & product detail now show remaining jars ONLY for self.product
+        home_after = self.client.get(reverse('store:index'))
+        self.assertContains(home_after, 'Only 4 Jars Left')
+        self.assertNotContains(home_after, '17 Jars Left')
+
+        detail_after = self.client.get(reverse('store:product_detail', args=[self.product.slug]))
+        self.assertContains(detail_after, 'Only 4 Jars Left')
+
+        # Uncheck via Edit Product form -> hides from homepage
+        self.client.post(reverse('dashboard:stock_manager'), {
+            'action': 'edit_product',
+            'product_id': self.product.id,
+            'name': self.product.name,
+            'price_bdt': str(self.product.price_bdt),
+            'stock_count': '4',
+            'is_in_stock': 'on',
+        })
+        home_off = self.client.get(reverse('store:index'))
+        self.assertNotContains(home_off, 'Only 4 Jars Left')
+

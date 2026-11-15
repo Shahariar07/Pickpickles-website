@@ -470,6 +470,7 @@
                         neededStock: '{{ product.needed_stock }}',
                         isInStock: {{ product.is_in_stock|yesno:'true,false' }},
                         isFeatured: {{ product.is_featured|yesno:'true,false' }},
+                        showStockCount: {{ product.show_stock_count|yesno:'true,false' }},
                         imageUrl: '{{ product.image_url|escapejs }}',
                         primaryImageUrl: '{{ product.primary_image_url|escapejs }}',
                         ingredients: '{{ product.ingredients|escapejs }}',
@@ -716,6 +717,7 @@
                                         neededStock: '{{ product.needed_stock }}',
                                         isInStock: {{ product.is_in_stock|yesno:'true,false' }},
                                         isFeatured: {{ product.is_featured|yesno:'true,false' }},
+                                        showStockCount: {{ product.show_stock_count|yesno:'true,false' }},
                                         imageUrl: '{{ product.image_url|escapejs }}',
                                         primaryImageUrl: '{{ product.primary_image_url|escapejs }}',
                                         ingredients: '{{ product.ingredients|escapejs }}',
@@ -955,15 +957,28 @@
                     <input type="text" id="edit_pairing_suggestions" name="pairing_suggestions" placeholder="Smash Burgers, Biryani, Tehari..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
                 </div>
 
-                <div class="sm:col-span-2 flex items-center gap-5 pt-1">
-                    <label class="flex items-center gap-2 cursor-pointer font-bold text-gray-800">
-                        <input type="checkbox" id="edit_is_in_stock" name="is_in_stock" class="w-4 h-4 text-brand-600 rounded">
-                        <span>Visible & In-Stock</span>
-                    </label>
+                <div class="sm:col-span-2 space-y-3 pt-1">
+                    <div class="flex flex-wrap items-center gap-5">
+                        <label class="flex items-center gap-2 cursor-pointer font-bold text-gray-800">
+                            <input type="checkbox" id="edit_is_in_stock" name="is_in_stock" class="w-4 h-4 text-brand-600 rounded">
+                            <span>Visible & In-Stock</span>
+                        </label>
 
-                    <label class="flex items-center gap-2 cursor-pointer font-bold text-gray-800">
-                        <input type="checkbox" id="edit_is_featured" name="is_featured" class="w-4 h-4 text-brand-600 rounded">
-                        <span>Featured on Homepage</span>
+                        <label class="flex items-center gap-2 cursor-pointer font-bold text-gray-800">
+                            <input type="checkbox" id="edit_is_featured" name="is_featured" class="w-4 h-4 text-brand-600 rounded">
+                            <span>Featured on Homepage</span>
+                        </label>
+                    </div>
+
+                    <label class="flex items-center justify-between gap-3 cursor-pointer p-3 rounded-xl bg-amber-50/90 border border-amber-200 hover:bg-amber-50 transition">
+                        <div>
+                            <span class="font-black text-amber-950 block text-xs">🫙 Show Remaining Jars on Homepage</span>
+                            <span class="text-[11px] text-amber-800/80 font-medium">অন থাকলে হোমপেজ ও প্রোডাক্ট পেজে এই জারের অবশিষ্ট স্টক সংখ্যা দেখাবে</span>
+                        </div>
+                        <div class="relative inline-flex items-center shrink-0">
+                            <input type="checkbox" id="edit_show_stock_count" name="show_stock_count" class="sr-only peer">
+                            <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                        </div>
                     </label>
                 </div>
             </div>
@@ -1148,7 +1163,7 @@
                     <input type="text" name="pairing_suggestions" placeholder="Smash Burgers, Biryani, Tehari..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white">
                 </div>
 
-                <div class="sm:col-span-2 flex items-center gap-5 pt-1">
+                <div class="sm:col-span-2 flex flex-wrap items-center gap-5 pt-1">
                     <label class="flex items-center gap-2 cursor-pointer font-bold text-gray-800">
                         <input type="checkbox" name="is_in_stock" checked class="w-4 h-4 text-brand-600 rounded">
                         <span>In-Stock & Visible</span>
@@ -1157,6 +1172,11 @@
                     <label class="flex items-center gap-2 cursor-pointer font-bold text-gray-800">
                         <input type="checkbox" name="is_featured" class="w-4 h-4 text-brand-600 rounded">
                         <span>Featured on Homepage</span>
+                    </label>
+
+                    <label class="flex items-center gap-2 cursor-pointer font-bold text-amber-900 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl">
+                        <input type="checkbox" name="show_stock_count" class="w-4 h-4 text-amber-600 rounded">
+                        <span>🫙 Show Remaining Jars on Homepage</span>
                     </label>
                 </div>
             </div>
@@ -1510,6 +1530,7 @@ function openEditModal(prod) {
     
     setChecked('edit_is_in_stock', prod.isInStock);
     setChecked('edit_is_featured', prod.isFeatured);
+    setChecked('edit_show_stock_count', prod.showStockCount);
 
     const preview = document.getElementById('edit_img_preview');
     if (preview) {

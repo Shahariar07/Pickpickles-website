@@ -168,11 +168,7 @@
     {% if selected_product %}
     <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div class="flex items-center gap-3">
-            {% if selected_product.image_url %}
-            <img src="{{ selected_product.image_url }}" alt="{{ selected_product.name }}" class="w-12 h-12 rounded-xl object-cover border border-amber-200 shadow-2xs">
-            {% else %}
-            <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-black text-lg">🥒</div>
-            {% endif %}
+            <img src="{{ selected_product.primary_image_url }}" alt="{{ selected_product.name }}" onerror="this.onerror=null;this.src='/static/images/pickle_default.png'" class="w-12 h-12 rounded-xl object-cover border border-amber-200 shadow-2xs">
             <div>
                 <span class="text-[10px] font-black uppercase text-amber-800 tracking-wider">Filtered Product</span>
                 <h3 class="font-display font-black text-gray-900 text-base leading-snug">{{ selected_product.name }}</h3>
@@ -240,11 +236,7 @@
                         <!-- Product -->
                         <td class="py-3 px-3">
                             <div class="flex items-center gap-2.5">
-                                {% if rec.product.image_url %}
-                                <img src="{{ rec.product.image_url }}" alt="{{ rec.product.name }}" class="w-8 h-8 rounded-lg object-cover border border-gray-200 shrink-0">
-                                {% else %}
-                                <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-xs shrink-0">🥒</div>
-                                {% endif %}
+                                <img src="{{ rec.product.primary_image_url }}" alt="{{ rec.product.name }}" onerror="this.onerror=null;this.src='/static/images/pickle_default.png'" class="w-8 h-8 rounded-lg object-cover border border-gray-200 shrink-0">
                                 <div class="min-w-0">
                                     <a href="{% url 'dashboard:product_price_history' rec.product.id %}" class="font-bold text-gray-900 hover:text-brand-700 block truncate" title="Filter this product">
                                         {{ rec.product.name }}

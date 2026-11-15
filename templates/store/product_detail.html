@@ -209,6 +209,13 @@
                     <span>✨ {{ product.custom_badge }}</span>
                 </span>
                 {% endif %}
+
+                {% if product.show_stock_count and product.is_in_stock and product.stock_count > 0 %}
+                <span class="inline-flex items-center gap-1.5 font-black text-xs px-3 py-1 rounded-full border {% if product.stock_count <= 5 %}bg-rose-50 text-rose-700 border-rose-200{% else %}bg-amber-50 text-amber-900 border-amber-200{% endif %}">
+                    <span class="w-1.5 h-1.5 rounded-full {% if product.stock_count <= 5 %}bg-rose-500 animate-pulse{% else %}bg-amber-500{% endif %}"></span>
+                    <span>{% if product.stock_count <= 10 %}🔥 Only {{ product.stock_count }} Jar{% if product.stock_count != 1 %}s{% endif %} Left{% else %}🫙 {{ product.stock_count }} Jars Left{% endif %}</span>
+                </span>
+                {% endif %}
             </div>
 
             <!-- Title & Tagline -->
