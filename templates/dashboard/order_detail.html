@@ -51,6 +51,14 @@
 
             <!-- Right: Unified Action Toolbar (Single Clean Row) -->
             <div class="flex items-center gap-2 shrink-0 flex-wrap">
+                {% if can_edit %}
+                <button type="button" onclick="openEditOrderModal()"
+                    class="h-9 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3.5 rounded-xl shadow-xs inline-flex items-center gap-1.5 transition cursor-pointer active:scale-95" title="Edit Order Items, Discount, Delivery Fee & Customer">
+                    <i class="fa-solid fa-pen-to-square text-xs"></i>
+                    <span>Edit Order</span>
+                </button>
+                {% endif %}
+
                 <!-- 1. Print Slip -->
                 <a href="{% url 'dashboard:order_invoice' order.order_number %}" target="_blank"
                     class="h-9 bg-gray-900 hover:bg-black text-white text-xs font-bold px-3.5 rounded-xl shadow-xs inline-flex items-center gap-1.5 transition active:scale-95">
@@ -602,14 +610,23 @@
 
         <!-- RIGHT COLUMN (7 Cols): ORDERED PICKLE JARS & FINANCIAL SUMMARY ("dan a order dao") -->
         <div class="lg:col-span-7 bg-white p-4 sm:p-6 rounded-3xl border border-gray-200 shadow-xs space-y-4">
-            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-3 gap-2 flex-wrap">
                 <h3 class="font-display font-black text-sm sm:text-base text-gray-900 flex items-center gap-2">
                     <span class="w-8 h-8 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center text-sm font-black shrink-0">🫙</span>
                     <span>Ordered Pickle Jars ({{ order.total_items_count }} Jars)</span>
                 </h3>
-                <span class="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 sm:px-3 py-1 rounded-xl shrink-0">
-                    <i class="fa-solid fa-weight-scale text-emerald-600 mr-1"></i>{{ order.total_weight_kg }} kg Total
-                </span>
+                <div class="flex items-center gap-2 shrink-0">
+                    {% if can_edit %}
+                    <button type="button" onclick="openEditOrderModal()"
+                        class="text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 px-2.5 sm:px-3 py-1 rounded-xl inline-flex items-center gap-1.5 transition cursor-pointer active:scale-95">
+                        <i class="fa-solid fa-pen-to-square text-[11px]"></i>
+                        <span>Edit Items / Price</span>
+                    </button>
+                    {% endif %}
+                    <span class="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 sm:px-3 py-1 rounded-xl shrink-0">
+                        <i class="fa-solid fa-weight-scale text-emerald-600 mr-1"></i>{{ order.total_weight_kg }} kg Total
+                    </span>
+                </div>
             </div>
 
             <!-- Jars Cards List -->
@@ -1080,6 +1097,257 @@
     </div>
 </div>
 
+<!-- FULL MANUAL ORDER EDIT MODAL (ADMIN) -->
+{% if can_edit %}
+<div id="editOrderModal" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-3 sm:p-4 backdrop-blur-xs">
+    <div class="bg-white rounded-3xl max-w-3xl w-full p-5 sm:p-7 space-y-4 shadow-2xl relative max-h-[93vh] overflow-y-auto">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3.5 sticky top-0 bg-white z-10">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-black">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                </div>
+                <div>
+                    <h3 class="font-display font-black text-lg text-gray-900">Edit Order Manually</h3>
+                    <p class="text-[11px] text-gray-500">Order <span class="font-mono font-bold text-gray-800">#{{ order.order_number }}</span> • Modify items, quantities, price, discount, delivery fee &amp; status</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeEditOrderModal()" class="text-gray-400 hover:text-gray-700 text-lg p-1.5 rounded-xl hover:bg-gray-100 cursor-pointer transition">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        {% if order.active_courier %}
+        <div class="bg-amber-50 border border-amber-300 rounded-2xl p-3 text-xs text-amber-900 flex items-start gap-2.5">
+            <i class="fa-solid fa-triangle-exclamation text-amber-600 mt-0.5 shrink-0"></i>
+            <div>
+                <strong>Courier Notice:</strong> এই অর্ডারটি ইতিমধ্যে <strong>{{ order.active_courier_name }}</strong>-এ বুক করা আছে ({{ order.active_consignment_id }})। এখানে প্রোডাক্ট বা COD অ্যামাউন্ট পরিবর্তন করলে প্রয়োজনে কুরিয়ার প্যানেলেও আপডেট করে নেবেন।
+            </div>
+        </div>
+        {% endif %}
+
+        <form action="{% url 'dashboard:edit_order_manual' order.order_number %}" method="POST" id="editOrderManualForm" class="space-y-4 text-xs">
+            {% csrf_token %}
+
+            <!-- Customer & Address -->
+            <div class="bg-gray-50/70 border border-gray-200 rounded-2xl p-4 space-y-3">
+                <h4 class="font-display font-black text-xs text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <i class="fa-solid fa-user text-brand-700"></i>
+                    <span>Customer &amp; Delivery Address</span>
+                </h4>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="font-bold text-gray-700 block mb-1">Customer Name *</label>
+                        <input type="text" name="customer_name" value="{{ order.customer_name }}" required class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:ring-2 focus:ring-brand-500">
+                    </div>
+                    <div>
+                        <label class="font-bold text-gray-700 block mb-1">Phone Number *</label>
+                        <input type="tel" name="customer_phone" value="{{ order.customer_phone }}" required class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:ring-2 focus:ring-brand-500">
+                    </div>
+                    <div>
+                        <label class="font-bold text-gray-700 block mb-1">Customer Email</label>
+                        <input type="email" name="customer_email" value="{{ order.customer_email|default:'' }}" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:ring-2 focus:ring-brand-500">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="sm:col-span-2">
+                        <label class="font-bold text-gray-700 block mb-1">Street Address *</label>
+                        <input type="text" name="delivery_address" value="{{ order.delivery_address }}" required class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-medium focus:ring-2 focus:ring-brand-500">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="font-bold text-gray-700 block mb-1">City *</label>
+                            <input type="text" name="delivery_city" value="{{ order.delivery_city }}" required class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:ring-2 focus:ring-brand-500">
+                        </div>
+                        <div>
+                            <label class="font-bold text-gray-700 block mb-1">Zone</label>
+                            <select name="delivery_zone" id="editOrderZoneSelect" onchange="recalculateEditOrderTotals()" class="w-full bg-white border border-gray-300 rounded-xl px-2.5 py-2 text-gray-900 font-bold focus:ring-2 focus:ring-brand-500">
+                                <option value="INSIDE_DHAKA" {% if order.delivery_zone == 'INSIDE_DHAKA' %}selected{% endif %}>Inside Dhaka</option>
+                                <option value="OUTSIDE_DHAKA" {% if order.delivery_zone == 'OUTSIDE_DHAKA' %}selected{% endif %}>Outside Dhaka</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ordered Items Editor -->
+            <div class="bg-gray-50/70 border border-gray-200 rounded-2xl p-4 space-y-3">
+                <div class="flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                        <h4 class="font-display font-black text-xs text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fa-solid fa-cubes-stacked text-brand-700"></i>
+                            <span>Ordered Pickle Jars *</span>
+                        </h4>
+                        <p class="text-[11px] text-gray-500">Add, remove, change product, quantity or custom unit price</p>
+                    </div>
+                    <button type="button" onclick="addEditOrderItem()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs shadow-xs transition cursor-pointer active:scale-95">
+                        <i class="fa-solid fa-plus text-[10px]"></i>
+                        <span>Add Product</span>
+                    </button>
+                </div>
+
+                <div id="editOrderItemsContainer" class="space-y-2.5">
+                    {% for item in order.items.all %}
+                    <div class="edit-order-item-row bg-white p-3 rounded-xl border border-gray-200 shadow-2xs flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                        <input type="hidden" name="existing_item_id" value="{{ item.id }}">
+                        <div class="flex-1 min-w-0">
+                            <label class="block text-[10px] font-bold text-gray-400 mb-0.5 sm:hidden">Product</label>
+                            <select name="product_id" onchange="onEditOrderProductChange(this)" class="edit-product-select w-full bg-gray-50 border border-gray-300 rounded-lg px-2.5 py-2 text-xs text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500">
+                                {% if not item.product %}
+                                <option value="" data-price="{{ item.unit_price }}" data-gross-weight="{{ item.gross_weight_grams|default:850 }}" selected>{{ item.product_name }} (Custom/Deleted)</option>
+                                {% endif %}
+                                {% for p in all_products %}
+                                <option value="{{ p.id }}" data-price="{{ p.price_bdt }}" data-gross-weight="{{ p.gross_weight_grams|default:850 }}" {% if item.product_id == p.id %}selected{% endif %}>{{ p.name }} — ৳{{ p.price_bdt|floatformat:0 }} (Stock: {{ p.stock_count }}){% if not p.is_in_stock %} [Out of Stock]{% endif %}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="flex items-center justify-between sm:justify-end gap-2 sm:gap-2.5">
+                            <div class="flex items-center gap-1">
+                                <span class="text-gray-500 text-[11px] font-semibold">৳</span>
+                                <input type="number" step="0.01" min="0" name="unit_price" value="{{ item.unit_price }}" required oninput="recalculateEditOrderTotals()" class="edit-item-price w-20 bg-gray-50 border border-gray-300 rounded-lg px-2 py-1.5 text-xs text-right font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500" title="Unit Price">
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <span class="text-gray-500 text-[11px] font-semibold">Qty:</span>
+                                <input type="number" min="1" name="quantity" value="{{ item.quantity }}" required oninput="recalculateEditOrderTotals()" class="edit-item-qty w-16 bg-gray-50 border border-gray-300 rounded-lg px-2 py-1.5 text-xs text-center font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500">
+                            </div>
+                            <div class="w-20 text-right">
+                                <span class="edit-item-subtotal text-xs font-black text-brand-700">৳{{ item.total_price|floatformat:0 }}</span>
+                            </div>
+                            <button type="button" onclick="removeEditOrderItem(this)" class="text-gray-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition cursor-pointer" title="Remove Item">
+                                <i class="fa-solid fa-trash-can text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="edit-order-item-row bg-white p-3 rounded-xl border border-gray-200 shadow-2xs flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                        <input type="hidden" name="existing_item_id" value="">
+                        <div class="flex-1 min-w-0">
+                            <select name="product_id" onchange="onEditOrderProductChange(this)" class="edit-product-select w-full bg-gray-50 border border-gray-300 rounded-lg px-2.5 py-2 text-xs text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500">
+                                {% for p in all_products %}
+                                <option value="{{ p.id }}" data-price="{{ p.price_bdt }}" data-gross-weight="{{ p.gross_weight_grams|default:850 }}">{{ p.name }} — ৳{{ p.price_bdt|floatformat:0 }} (Stock: {{ p.stock_count }}){% if not p.is_in_stock %} [Out of Stock]{% endif %}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="flex items-center justify-between sm:justify-end gap-2 sm:gap-2.5">
+                            <div class="flex items-center gap-1">
+                                <span class="text-gray-500 text-[11px] font-semibold">৳</span>
+                                <input type="number" step="0.01" min="0" name="unit_price" value="{{ all_products.0.price_bdt|default:'0' }}" required oninput="recalculateEditOrderTotals()" class="edit-item-price w-20 bg-gray-50 border border-gray-300 rounded-lg px-2 py-1.5 text-xs text-right font-bold text-gray-900">
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <span class="text-gray-500 text-[11px] font-semibold">Qty:</span>
+                                <input type="number" min="1" name="quantity" value="1" required oninput="recalculateEditOrderTotals()" class="edit-item-qty w-16 bg-gray-50 border border-gray-300 rounded-lg px-2 py-1.5 text-xs text-center font-bold text-gray-900">
+                            </div>
+                            <div class="w-20 text-right">
+                                <span class="edit-item-subtotal text-xs font-black text-brand-700">৳0</span>
+                            </div>
+                            <button type="button" onclick="removeEditOrderItem(this)" class="text-gray-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition cursor-pointer" title="Remove Item">
+                                <i class="fa-solid fa-trash-can text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Financial Adjustments & Summary -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                    <div>
+                        <label class="font-bold text-gray-700 block mb-1">Discount Amount (৳)</label>
+                        <input type="number" step="0.01" min="0" name="discount_amount" id="editOrderDiscountInput" value="{{ order.discount_amount }}" oninput="recalculateEditOrderTotals()" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-emerald-700 font-bold focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                    <div>
+                        <label class="font-bold text-gray-700 block mb-1">Coupon Code (Optional)</label>
+                        <input type="text" name="coupon_code" value="{{ order.coupon_code|default:'' }}" placeholder="e.g. PICKLE50" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 font-mono font-bold uppercase text-gray-900 focus:ring-2 focus:ring-brand-500">
+                    </div>
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="font-bold text-gray-700">Delivery Fee (৳)</label>
+                            <button type="button" onclick="recalculateEditOrderTotals(true)" class="text-[10px] font-extrabold text-brand-700 hover:text-brand-900 underline cursor-pointer">Auto Fee</button>
+                        </div>
+                        <input type="number" step="0.01" min="0" name="delivery_fee" id="editOrderDeliveryFeeInput" value="{{ order.delivery_fee }}" oninput="recalculateEditOrderTotals()" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:ring-2 focus:ring-brand-500">
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl p-3.5 border border-gray-200 space-y-1.5 shadow-2xs">
+                    <div class="flex justify-between text-gray-600">
+                        <span>Items Subtotal (<span id="editSummaryJarCount">{{ order.total_items_count }}</span> Jars • <span id="editSummaryWeightKg">{{ order.total_weight_kg }}</span> kg):</span>
+                        <strong class="text-gray-900" id="editSummarySubtotal">৳{{ order.subtotal|floatformat:2 }}</strong>
+                    </div>
+                    <div class="flex justify-between text-emerald-700 font-bold">
+                        <span>Discount:</span>
+                        <span id="editSummaryDiscount">-৳{{ order.discount_amount|floatformat:2 }}</span>
+                    </div>
+                    <div class="flex justify-between text-gray-600">
+                        <span>Delivery Charge:</span>
+                        <strong class="text-gray-900" id="editSummaryDelivery">৳{{ order.delivery_fee|floatformat:2 }}</strong>
+                    </div>
+                    <div class="border-t border-gray-200 pt-2 flex justify-between font-black text-sm text-gray-900">
+                        <span>Total Payable:</span>
+                        <span class="text-brand-700 text-base" id="editSummaryGrandTotal">৳{{ order.total_amount|floatformat:2 }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status, Payment & Notes -->
+            <div class="bg-gray-50/70 border border-gray-200 rounded-2xl p-4 space-y-3">
+                <h4 class="font-display font-black text-xs text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <i class="fa-solid fa-receipt text-pink-600"></i>
+                    <span>Order Status, Payment &amp; Notes</span>
+                </h4>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="font-bold text-gray-700 block mb-1">Order Status</label>
+                        <select name="order_status" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:ring-2 focus:ring-brand-500">
+                            {% for val, label in order.ORDER_STATUS_CHOICES %}
+                            <option value="{{ val }}" {% if order.order_status == val %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="font-bold text-gray-700 block mb-1">Payment Method</label>
+                        <select name="payment_method" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:ring-2 focus:ring-brand-500">
+                            <option value="COD" {% if order.payment_method == 'COD' %}selected{% endif %}>Cash on Delivery (COD)</option>
+                            <option value="BKASH" {% if order.payment_method == 'BKASH' or order.payment_method == 'BKASH_MANUAL' %}selected{% endif %}>bKash (Send Money / Manual)</option>
+                            <option value="BKASH_ONLINE" {% if order.payment_method == 'BKASH_ONLINE' %}selected{% endif %}>bKash Direct Online Payment</option>
+                            <option value="NAGAD" {% if order.payment_method == 'NAGAD' or order.payment_method == 'NAGAD_MANUAL' %}selected{% endif %}>Nagad (Send Money / Manual)</option>
+                            <option value="CARD" {% if order.payment_method == 'CARD' %}selected{% endif %}>Credit / Debit Card</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="font-bold text-gray-700 block mb-1">Payment Status</label>
+                        <select name="payment_status" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:ring-2 focus:ring-brand-500">
+                            {% for val, label in order.PAYMENT_STATUS_CHOICES %}
+                            <option value="{{ val }}" {% if order.payment_status == val %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="font-bold text-gray-700 block mb-1">bKash / MFS TrxID</label>
+                        <input type="text" name="payment_trx_id" value="{{ order.payment_trx_id|default:'' }}" placeholder="e.g. 9BKT78291X" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-pink-700 font-mono font-bold focus:ring-2 focus:ring-pink-500">
+                    </div>
+                    <div>
+                        <label class="font-bold text-gray-700 block mb-1">Sender bKash / Phone</label>
+                        <input type="tel" name="payment_sender_number" value="{{ order.payment_sender_number|default:'' }}" placeholder="017XXXXXXXX" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-mono font-bold focus:ring-2 focus:ring-pink-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="font-bold text-gray-700 block mb-1">Customer &amp; Delivery Instruction</label>
+                    <textarea name="customer_notes" rows="2" placeholder="Delivery notes, special requests..." class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:ring-2 focus:ring-brand-500">{{ order.delivery_instruction }}</textarea>
+                </div>
+            </div>
+
+            <div class="pt-2 flex items-center justify-end gap-2.5 border-t border-gray-100">
+                <button type="button" onclick="closeEditOrderModal()" class="px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold transition cursor-pointer">Cancel</button>
+                <button type="submit" class="px-5 py-2.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold transition shadow-md cursor-pointer flex items-center gap-1.5">
+                    <i class="fa-solid fa-check"></i>
+                    <span>Save Order Changes</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
 <!-- Mark Return Modal -->
 <div id="markReturnModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
@@ -1373,6 +1641,161 @@
 </div>
 
 <script>
+const EDIT_ORDER_PROMO = {
+    is_active: {% if promo_setting.is_active %}true{% else %}false{% endif %},
+    free_delivery_enabled: {% if promo_setting.free_delivery_enabled %}true{% else %}false{% endif %},
+    free_delivery_min_jars: {{ promo_setting.free_delivery_min_jars|default:4 }},
+    standard_delivery_fee: {{ promo_setting.standard_delivery_fee|default:150|floatformat:2 }}
+};
+
+function openEditOrderModal() {
+    const modal = document.getElementById('editOrderModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        recalculateEditOrderTotals(false);
+    }
+}
+function closeEditOrderModal() {
+    const modal = document.getElementById('editOrderModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+}
+
+function onEditOrderProductChange(selectEl) {
+    const row = selectEl.closest('.edit-order-item-row');
+    if (!row) return;
+    const opt = selectEl.options[selectEl.selectedIndex];
+    const priceInput = row.querySelector('.edit-item-price');
+    const existingIdInput = row.querySelector('input[name="existing_item_id"]');
+    if (opt && priceInput && opt.value) {
+        const pPrice = parseFloat(opt.getAttribute('data-price') || 0);
+        priceInput.value = pPrice.toFixed(2);
+    }
+    if (existingIdInput && opt && opt.value) {
+        existingIdInput.value = '';
+    }
+    recalculateEditOrderTotals(false);
+}
+
+function addEditOrderItem() {
+    const container = document.getElementById('editOrderItemsContainer');
+    if (!container) return;
+    const newRow = document.createElement('div');
+    newRow.className = 'edit-order-item-row bg-white p-3 rounded-xl border border-gray-200 shadow-2xs flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5';
+    newRow.innerHTML = `
+        <input type="hidden" name="existing_item_id" value="">
+        <div class="flex-1 min-w-0">
+            <label class="block text-[10px] font-bold text-gray-400 mb-0.5 sm:hidden">Product</label>
+            <select name="product_id" onchange="onEditOrderProductChange(this)" class="edit-product-select w-full bg-gray-50 border border-gray-300 rounded-lg px-2.5 py-2 text-xs text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500">
+                {% for p in all_products %}
+                <option value="{{ p.id }}" data-price="{{ p.price_bdt }}" data-gross-weight="{{ p.gross_weight_grams|default:850 }}">{{ p.name|escapejs }} — ৳{{ p.price_bdt|floatformat:0 }} (Stock: {{ p.stock_count }}){% if not p.is_in_stock %} [Out of Stock]{% endif %}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex items-center justify-between sm:justify-end gap-2 sm:gap-2.5">
+            <div class="flex items-center gap-1">
+                <span class="text-gray-500 text-[11px] font-semibold">৳</span>
+                <input type="number" step="0.01" min="0" name="unit_price" value="{{ all_products.0.price_bdt|default:'0' }}" required oninput="recalculateEditOrderTotals()" class="edit-item-price w-20 bg-gray-50 border border-gray-300 rounded-lg px-2 py-1.5 text-xs text-right font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500" title="Unit Price">
+            </div>
+            <div class="flex items-center gap-1">
+                <span class="text-gray-500 text-[11px] font-semibold">Qty:</span>
+                <input type="number" min="1" name="quantity" value="1" required oninput="recalculateEditOrderTotals()" class="edit-item-qty w-16 bg-gray-50 border border-gray-300 rounded-lg px-2 py-1.5 text-xs text-center font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500">
+            </div>
+            <div class="w-20 text-right">
+                <span class="edit-item-subtotal text-xs font-black text-brand-700">৳0</span>
+            </div>
+            <button type="button" onclick="removeEditOrderItem(this)" class="text-gray-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition cursor-pointer" title="Remove Item">
+                <i class="fa-solid fa-trash-can text-sm"></i>
+            </button>
+        </div>
+    `;
+    container.appendChild(newRow);
+    const sel = newRow.querySelector('.edit-product-select');
+    if (sel) onEditOrderProductChange(sel);
+}
+
+function removeEditOrderItem(btn) {
+    const container = document.getElementById('editOrderItemsContainer');
+    if (!container) return;
+    const rows = container.getElementsByClassName('edit-order-item-row');
+    if (rows.length <= 1) {
+        alert('At least one product item is required in the order.');
+        return;
+    }
+    const row = btn.closest('.edit-order-item-row');
+    if (row) {
+        row.remove();
+        recalculateEditOrderTotals(false);
+    }
+}
+
+function recalculateEditOrderTotals(autoCalcFee = false) {
+    const container = document.getElementById('editOrderItemsContainer');
+    if (!container) return;
+    const rows = container.getElementsByClassName('edit-order-item-row');
+    let subtotal = 0;
+    let totalJars = 0;
+    let totalGrossGrams = 0;
+
+    for (const row of rows) {
+        const select = row.querySelector('.edit-product-select');
+        const priceInput = row.querySelector('.edit-item-price');
+        const qtyInput = row.querySelector('.edit-item-qty');
+        const lineEl = row.querySelector('.edit-item-subtotal');
+
+        let unitPrice = parseFloat(priceInput ? priceInput.value : 0);
+        if (isNaN(unitPrice) || unitPrice < 0) unitPrice = 0;
+
+        let qty = parseInt(qtyInput ? qtyInput.value : 1, 10);
+        if (isNaN(qty) || qty < 1) qty = 1;
+
+        const opt = select && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
+        const grossWeight = opt ? (parseInt(opt.getAttribute('data-gross-weight') || 850, 10) || 850) : 850;
+
+        const lineTotal = unitPrice * qty;
+        subtotal += lineTotal;
+        totalJars += qty;
+        totalGrossGrams += grossWeight * qty;
+
+        if (lineEl) {
+            lineEl.textContent = '৳' + lineTotal.toFixed(0);
+        }
+    }
+
+    const feeInput = document.getElementById('editOrderDeliveryFeeInput');
+    if (autoCalcFee && feeInput) {
+        const freeQualifies = EDIT_ORDER_PROMO.is_active && EDIT_ORDER_PROMO.free_delivery_enabled && totalJars >= EDIT_ORDER_PROMO.free_delivery_min_jars;
+        feeInput.value = freeQualifies ? '0.00' : EDIT_ORDER_PROMO.standard_delivery_fee.toFixed(2);
+    }
+
+    const discountInput = document.getElementById('editOrderDiscountInput');
+    let discount = parseFloat(discountInput ? discountInput.value : 0);
+    if (isNaN(discount) || discount < 0) discount = 0;
+    if (discount > subtotal) discount = subtotal;
+
+    let deliveryFee = parseFloat(feeInput ? feeInput.value : 0);
+    if (isNaN(deliveryFee) || deliveryFee < 0) deliveryFee = 0;
+
+    const grandTotal = Math.max(0, subtotal - discount + deliveryFee);
+
+    const jarEl = document.getElementById('editSummaryJarCount');
+    const weightEl = document.getElementById('editSummaryWeightKg');
+    const subEl = document.getElementById('editSummarySubtotal');
+    const discEl = document.getElementById('editSummaryDiscount');
+    const delEl = document.getElementById('editSummaryDelivery');
+    const totalEl = document.getElementById('editSummaryGrandTotal');
+
+    if (jarEl) jarEl.textContent = totalJars;
+    if (weightEl) weightEl.textContent = (totalGrossGrams / 1000).toFixed(2);
+    if (subEl) subEl.textContent = '৳' + subtotal.toFixed(2);
+    if (discEl) discEl.textContent = '-৳' + discount.toFixed(2);
+    if (delEl) delEl.textContent = '৳' + deliveryFee.toFixed(2);
+    if (totalEl) totalEl.textContent = '৳' + grandTotal.toFixed(2);
+}
+
 function openEditCustomerModal() {
     document.getElementById('editCustomerModal').classList.remove('hidden');
 }
@@ -1781,6 +2204,12 @@ function copyMetaJsonPayload() {
 document.addEventListener('DOMContentLoaded', function() {
     {% if order.customer_phone %}
     checkSteadfastFraud('{{ order.customer_phone }}', '{{ order.customer_name|escapejs }}', false);
+    {% endif %}
+    {% if can_edit %}
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('edit') === '1') {
+        openEditOrderModal();
+    }
     {% endif %}
 });
 </script>

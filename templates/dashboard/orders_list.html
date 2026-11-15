@@ -871,6 +871,24 @@
 
                                 </a>
 
+                                {% if can_edit %}
+
+                                <a 
+
+                                    href="{% url 'dashboard:order_detail' order.order_number %}?edit=1" 
+
+                                    class="p-1 text-amber-600 hover:text-amber-800 rounded transition" 
+
+                                    title="Edit Order Manually"
+
+                                >
+
+                                    <i class="fa-solid fa-pen-to-square"></i>
+
+                                </a>
+
+                                {% endif %}
+
                                 <a 
 
                                     href="{% url 'dashboard:order_invoice' order.order_number %}" 
@@ -1250,6 +1268,16 @@
                         {% endif %}
 
 
+
+                        {% if can_edit %}
+
+                        <a href="{% url 'dashboard:order_detail' order.order_number %}?edit=1" class="p-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs inline-flex items-center justify-center transition active:scale-95" title="Edit Order Manually">
+
+                            <i class="fa-solid fa-pen-to-square text-[11px]"></i>
+
+                        </a>
+
+                        {% endif %}
 
                         <a href="{% url 'dashboard:order_invoice' order.order_number %}" target="_blank" class="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs inline-flex items-center justify-center transition active:scale-95" title="Print Invoice">
 

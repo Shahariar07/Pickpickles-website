@@ -472,3 +472,139 @@ class ManualOrderOfferAndCouponTests(TestCase):
         home_off = self.client.get(reverse('store:index'))
         self.assertNotContains(home_off, 'Only 4 Jars Left')
 
+    def test_admin_can_manually_edit_order_items_prices_and_stock(self):
+        """Admin can edit customer, items (add/remove/qty/price), discount, delivery fee, and packed stock reconciles cleanly."""
+        from store.models import Order, OrderItem, Product
+        from dashboard.models import StockLog
+
+        extra_product = Product.objects.create(
+            category=self.category,
+            name='Garlic Chili Jar',
+            slug='garlic-chili-jar',
+            price_bdt=Decimal('500.00'),
+            stock_count=20,
+            is_in_stock=True,
+        )
+        self.product.stock_count = 30
+        self.product.save(update_fields=['stock_count'])
+
+        # Create a PACKING order (already deducted stock: product=3 jars, extra_product=2 jars)
+        order = Order.objects.create(
+            customer_name='Old Customer',
+            customer_phone='01712345678',
+            delivery_address='Old Road 1',
+            delivery_city='Dhaka',
+            delivery_zone='INSIDE_DHAKA',
+            order_status='PACKING',
+            payment_method='COD',
+            payment_status='UNPAID',
+            subtotal=Decimal('2350.00'),
+            discount_amount=Decimal('50.00'),
+            delivery_fee=Decimal('150.00'),
+            total_amount=Decimal('2450.00'),
+        )
+        item1 = OrderItem.objects.create(
+            order=order, product=self.product, product_name=self.product.name,
+            unit_price=Decimal('450.00'), quantity=3, total_price=Decimal('1350.00'),
+        )
+        item2 = OrderItem.objects.create(
+            order=order, product=extra_product, product_name=extra_product.name,
+            unit_price=Decimal('500.00'), quantity=2, total_price=Decimal('1000.00'),
+        )
+
+        # GET order detail shows Edit Order button & modal
+        detail_res = self.client.get(reverse('dashboard:order_detail', args=[order.order_number]))
+        self.assertEqual(detail_res.status_code, 200)
+        self.assertContains(detail_res, 'Edit Order')
+        self.assertContains(detail_res, 'editOrderModal')
+
+        # Admin edits: item1 qty 3->5 @ custom 400, item2 qty 2->1 @ 500, discount 100, delivery 0
+        post_res = self.client.post(reverse('dashboard:edit_order_manual', args=[order.order_number]), {
+            'customer_name': 'Updated Customer',
+            'customer_phone': '01812345678',
+            'delivery_address': 'New Banani Road 11',
+            'delivery_city': 'Dhaka',
+            'delivery_zone': 'INSIDE_DHAKA',
+            'existing_item_id': [str(item1.id), str(item2.id)],
+            'product_id': [str(self.product.id), str(extra_product.id)],
+            'quantity': ['5', '1'],
+            'unit_price': ['400.00', '500.00'],
+            'discount_amount': '100.00',
+            'coupon_code': 'VIP100',
+            'delivery_fee': '0.00',
+            'order_status': 'PACKING',
+            'payment_method': 'BKASH',
+            'payment_status': 'PAID',
+            'payment_trx_id': 'TRX999',
+            'customer_notes': 'Updated note',
+        })
+        self.assertEqual(post_res.status_code, 302)
+
+        order.refresh_from_db()
+        self.product.refresh_from_db()
+        extra_product.refresh_from_db()
+
+        self.assertEqual(order.customer_name, 'Updated Customer')
+        self.assertEqual(order.delivery_address, 'New Banani Road 11')
+        self.assertEqual(order.subtotal, Decimal('2500.00'))  # (5*400) + (1*500)
+        self.assertEqual(order.discount_amount, Decimal('100.00'))
+        self.assertEqual(order.delivery_fee, Decimal('0.00'))
+        self.assertEqual(order.total_amount, Decimal('2400.00'))
+        self.assertEqual(order.coupon_code, 'VIP100')
+        self.assertEqual(order.payment_method, 'BKASH')
+        self.assertEqual(order.payment_status, 'PAID')
+        self.assertEqual(order.items.count(), 2)
+
+        # Packed stock deltas: self.product +2 jars packed => 30-2 = 28; extra_product -1 jar removed => 20+1 = 21
+        self.assertEqual(self.product.stock_count, 28)
+        self.assertEqual(extra_product.stock_count, 21)
+        self.assertTrue(StockLog.objects.filter(order=order, product=self.product, quantity_delta=-2).exists())
+        self.assertTrue(StockLog.objects.filter(order=order, product=extra_product, quantity_delta=1).exists())
+
+    def test_view_only_user_cannot_manually_edit_order(self):
+        """View-only staff user (mitu) cannot edit orders manually via edit_order_manual."""
+        from store.models import Order, OrderItem
+
+        User.objects.create_user(
+            username='mitu',
+            email='mitu@pickpickles.com',
+            password='mitupassword123',
+            is_staff=True,
+        )
+        order = Order.objects.create(
+            customer_name='Protected Buyer',
+            customer_phone='01799998888',
+            delivery_address='Dhanmondi',
+            delivery_city='Dhaka',
+            order_status='CONFIRMED',
+            subtotal=Decimal('450.00'),
+            delivery_fee=Decimal('150.00'),
+            total_amount=Decimal('600.00'),
+        )
+        item = OrderItem.objects.create(
+            order=order, product=self.product, product_name=self.product.name,
+            unit_price=Decimal('450.00'), quantity=1, total_price=Decimal('450.00'),
+        )
+
+        self.client.logout()
+        self.client.login(username='mitu', password='mitupassword123')
+
+        res = self.client.post(reverse('dashboard:edit_order_manual', args=[order.order_number]), {
+            'customer_name': 'Hacked Name',
+            'customer_phone': '01700000000',
+            'delivery_address': 'Elsewhere',
+            'delivery_city': 'Dhaka',
+            'existing_item_id': [str(item.id)],
+            'product_id': [str(self.product.id)],
+            'quantity': ['3'],
+            'unit_price': ['100.00'],
+            'discount_amount': '0.00',
+            'delivery_fee': '0.00',
+        })
+        self.assertEqual(res.status_code, 302)
+        order.refresh_from_db()
+        self.assertEqual(order.customer_name, 'Protected Buyer')
+        self.assertEqual(order.total_amount, Decimal('600.00'))
+        self.assertEqual(order.items.first().quantity, 1)
+
+

@@ -11,6 +11,7 @@ from django.urls import reverse
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
+from django.db import transaction
 from django.db.models import Sum, Count, Q, Avg
 from django.utils import timezone
 from django.http import HttpResponse, JsonResponse
@@ -1451,6 +1452,8 @@ def order_detail(request, order_number):
         'order': order,
         'meta_sent_info': meta_sent_info,
         'meta_details': meta_details,
+        'all_products': Product.objects.all().order_by('-is_in_stock', 'name'),
+        'promo_setting': PromotionSetting.get_settings(),
     })
 
 
@@ -1579,10 +1582,287 @@ def edit_order_customer(request, order_number):
             from store.models import calculate_pathao_delivery_fee
             order.delivery_fee = calculate_pathao_delivery_fee(order.total_weight_grams, order.delivery_zone, total_items=order.total_items_count)
 
-        order.total_amount = order.subtotal + order.delivery_fee
+        order.total_amount = max(
+            Decimal('0.00'),
+            order.subtotal - (order.discount_amount or Decimal('0.00')) + order.delivery_fee
+        )
         order.save()
         messages.success(request, f"Customer & Payment details updated for Order #{order.order_number}!")
 
+    return redirect('dashboard:order_detail', order_number=order.order_number)
+
+
+def _replace_order_items(order, parsed_items):
+    """Replace an order's line items cleanly from validated parsed item dicts."""
+    order.items.all().delete()
+    for itm in parsed_items:
+        OrderItem.objects.create(
+            order=order,
+            product=itm['product'],
+            product_name=itm['product_name'],
+            jar_weight_grams=itm['jar_weight_grams'],
+            gross_weight_grams=itm['gross_weight_grams'],
+            unit_price=itm['unit_price'],
+            quantity=itm['quantity'],
+            total_price=itm['unit_price'] * itm['quantity'],
+        )
+
+
+def _reconcile_packed_item_deltas(order, old_qty_by_pid, new_qty_by_pid, user=None):
+    """Apply stock adjustments and StockLog records when items change on an already-packed order."""
+    has_returns = hasattr(order, 'returns') and order.returns.exists()
+    actor = user if getattr(user, 'is_authenticated', False) else None
+    for pid in sorted(set(old_qty_by_pid) | set(new_qty_by_pid)):
+        diff = new_qty_by_pid.get(pid, 0) - old_qty_by_pid.get(pid, 0)
+        if diff == 0:
+            continue
+        prod = Product.objects.select_for_update().filter(id=pid).first()
+        if not prod:
+            continue
+        prev_stock = prod.stock_count
+        if diff > 0:
+            new_stock = max(0, prev_stock - diff)
+            prod.stock_count = new_stock
+            prod.save(update_fields=['stock_count'])
+            StockLog.objects.create(
+                product=prod,
+                log_type='ORDER_CONFIRMED',
+                quantity_delta=-diff,
+                previous_stock=prev_stock,
+                resulting_stock=new_stock,
+                order=order,
+                reference=f"Edited #{order.order_number}",
+                notes=f"Manual order edit on #{order.order_number}: added {diff} packed jar(s).",
+                created_by=actor,
+            )
+        elif not has_returns:
+            restore_qty = abs(diff)
+            new_stock = prev_stock + restore_qty
+            prod.stock_count = new_stock
+            prod.save(update_fields=['stock_count'])
+            StockLog.objects.create(
+                product=prod,
+                log_type='MANUAL_ADJUSTMENT',
+                quantity_delta=restore_qty,
+                previous_stock=prev_stock,
+                resulting_stock=new_stock,
+                order=order,
+                reference=f"Edited #{order.order_number}",
+                notes=f"Manual order edit on #{order.order_number}: removed {restore_qty} jar(s) & restored stock.",
+                created_by=actor,
+            )
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def edit_order_manual(request, order_number):
+    """
+    Allows authorized admin/editor to manually edit full order details:
+    items (add/remove/swap product/qty/unit_price), discount, delivery fee,
+    customer info, address, payment info, order status, and notes.
+    Safely reconciles inventory deltas when items or packed status change.
+    """
+    if request.method != 'POST':
+        return redirect('dashboard:order_detail', order_number=order_number)
+
+    if not can_user_edit(request.user):
+        messages.error(request, 'Permission Denied: অর্ডার ম্যানুয়ালি এডিট করার অনুমতি আপনার নেই। (Only authorized Admin can edit orders.)')
+        return redirect('dashboard:order_detail', order_number=order_number)
+
+    with transaction.atomic():
+        order = get_object_or_404(
+            Order.objects.select_for_update().prefetch_related('items__product'),
+            order_number=order_number,
+        )
+
+        # 1. Parse line items
+        product_ids = request.POST.getlist('product_id') or request.POST.getlist('product_id[]')
+        existing_item_ids = request.POST.getlist('existing_item_id') or request.POST.getlist('existing_item_id[]')
+        quantities = request.POST.getlist('quantity') or request.POST.getlist('quantity[]')
+        unit_prices = request.POST.getlist('unit_price') or request.POST.getlist('unit_price[]')
+
+        existing_items_map = {str(itm.id): itm for itm in order.items.all()}
+        parsed_items = []
+        row_count = max(len(product_ids), len(existing_item_ids))
+
+        for idx in range(row_count):
+            raw_pid = (product_ids[idx] if idx < len(product_ids) else '').strip()
+            raw_eid = (existing_item_ids[idx] if idx < len(existing_item_ids) else '').strip()
+
+            try:
+                qty = max(1, int(quantities[idx])) if idx < len(quantities) and str(quantities[idx]).strip() else 1
+            except (ValueError, TypeError):
+                qty = 1
+
+            product = None
+            if raw_pid.isdigit():
+                product = Product.objects.filter(id=int(raw_pid)).first()
+
+            if product:
+                product_name = product.name
+                jar_weight_grams = product.jar_weight_grams or 600
+                gross_weight_grams = getattr(product, 'gross_weight_grams', 850) or 850
+                default_price = product.price_bdt
+            elif raw_eid in existing_items_map:
+                old_itm = existing_items_map[raw_eid]
+                product_name = old_itm.product_name
+                jar_weight_grams = old_itm.jar_weight_grams or 600
+                gross_weight_grams = old_itm.gross_weight_grams or 850
+                default_price = old_itm.unit_price
+            else:
+                continue
+
+            raw_up = (unit_prices[idx] if idx < len(unit_prices) else '').strip()
+            try:
+                unit_price = Decimal(raw_up) if raw_up != '' else default_price
+                if unit_price < Decimal('0.00'):
+                    unit_price = Decimal('0.00')
+            except Exception:
+                unit_price = default_price
+
+            parsed_items.append({
+                'product': product,
+                'product_name': product_name,
+                'jar_weight_grams': jar_weight_grams,
+                'gross_weight_grams': gross_weight_grams,
+                'unit_price': unit_price.quantize(Decimal('0.01')),
+                'quantity': qty,
+            })
+
+        if not parsed_items:
+            messages.error(request, 'Order update failed: Please keep at least one product item in the order.')
+            return redirect('dashboard:order_detail', order_number=order.order_number)
+
+        # 2. Customer & Address
+        name = request.POST.get('customer_name', '').strip()
+        phone = request.POST.get('customer_phone', '').strip()
+        address = request.POST.get('delivery_address', '').strip()
+        city = request.POST.get('delivery_city', '').strip()
+        zone = request.POST.get('delivery_zone', '').strip()
+
+        if name:
+            order.customer_name = name
+        if phone:
+            order.customer_phone = phone
+        if address:
+            order.delivery_address = address
+        if city:
+            order.delivery_city = city
+        if zone and zone in dict(Order.ZONE_CHOICES):
+            order.delivery_zone = zone
+        if 'customer_email' in request.POST:
+            order.customer_email = request.POST.get('customer_email', '').strip() or None
+
+        # 3. Financials
+        subtotal = sum((itm['unit_price'] * itm['quantity'] for itm in parsed_items), Decimal('0.00'))
+        total_items_count = sum(itm['quantity'] for itm in parsed_items)
+        total_gross_weight_grams = sum(itm['gross_weight_grams'] * itm['quantity'] for itm in parsed_items)
+
+        raw_discount = request.POST.get('discount_amount', '').strip()
+        if raw_discount != '':
+            try:
+                discount_amount = max(Decimal('0.00'), Decimal(raw_discount))
+            except Exception:
+                discount_amount = order.discount_amount or Decimal('0.00')
+        else:
+            discount_amount = order.discount_amount or Decimal('0.00')
+        discount_amount = min(subtotal, discount_amount).quantize(Decimal('0.01'))
+
+        if request.POST.get('recalculate_delivery_fee') == '1':
+            delivery_fee = calculate_pathao_delivery_fee(
+                total_gross_weight_grams,
+                order.delivery_zone,
+                total_items=total_items_count,
+            )
+        else:
+            raw_fee = request.POST.get('delivery_fee', '').strip()
+            if raw_fee != '':
+                try:
+                    delivery_fee = max(Decimal('0.00'), Decimal(raw_fee)).quantize(Decimal('0.01'))
+                except Exception:
+                    delivery_fee = order.delivery_fee
+            else:
+                delivery_fee = order.delivery_fee
+
+        if 'coupon_code' in request.POST:
+            order.coupon_code = request.POST.get('coupon_code', '').strip().upper() or None
+
+        order.subtotal = subtotal.quantize(Decimal('0.01'))
+        order.discount_amount = discount_amount
+        order.delivery_fee = delivery_fee
+        order.total_amount = max(Decimal('0.00'), order.subtotal - order.discount_amount + order.delivery_fee).quantize(Decimal('0.01'))
+
+        # 4. Status, Payment & Notes
+        old_status = order.order_status
+        req_status = request.POST.get('order_status', old_status).strip()
+        new_status = req_status if req_status in dict(Order.ORDER_STATUS_CHOICES) else old_status
+
+        allowed_payment_methods = set(dict(Order.PAYMENT_METHOD_CHOICES).keys()) | {'CARD', 'BKASH_MANUAL', 'NAGAD_MANUAL'}
+        req_pay_method = request.POST.get('payment_method', '').strip()
+        if req_pay_method in allowed_payment_methods:
+            order.payment_method = req_pay_method
+
+        req_pay_status = request.POST.get('payment_status', '').strip()
+        if req_pay_status in dict(Order.PAYMENT_STATUS_CHOICES):
+            order.payment_status = req_pay_status
+
+        if 'payment_trx_id' in request.POST:
+            order.payment_trx_id = request.POST.get('payment_trx_id', '').strip()
+        if 'payment_sender_number' in request.POST:
+            order.payment_sender_number = request.POST.get('payment_sender_number', '').strip()
+        if 'customer_notes' in request.POST or 'admin_notes' in request.POST:
+            raw_inst = request.POST.get('customer_notes') if 'customer_notes' in request.POST else request.POST.get('admin_notes', '')
+            clean_inst = (raw_inst or '').strip()
+            order.customer_notes = clean_inst
+            order.admin_notes = clean_inst
+
+        # 5. Reconcile Inventory across item & packed-status transitions
+        old_qty_by_pid = {}
+        for old_itm in order.items.all():
+            if old_itm.product_id:
+                old_qty_by_pid[old_itm.product_id] = old_qty_by_pid.get(old_itm.product_id, 0) + old_itm.quantity
+
+        new_qty_by_pid = {}
+        for new_itm in parsed_items:
+            if new_itm['product']:
+                pid = new_itm['product'].id
+                new_qty_by_pid[pid] = new_qty_by_pid.get(pid, 0) + new_itm['quantity']
+
+        was_packed = old_status in PACKED_ORDER_STATUSES
+        now_packed = new_status in PACKED_ORDER_STATUSES
+
+        if not was_packed and not now_packed:
+            _replace_order_items(order, parsed_items)
+        elif not was_packed and now_packed:
+            _replace_order_items(order, parsed_items)
+            adjust_inventory_for_order_status_change(order, old_status, new_status, user=request.user)
+        elif was_packed and not now_packed:
+            adjust_inventory_for_order_status_change(order, old_status, new_status, user=request.user)
+            _replace_order_items(order, parsed_items)
+        else:
+            _replace_order_items(order, parsed_items)
+            _reconcile_packed_item_deltas(order, old_qty_by_pid, new_qty_by_pid, user=request.user)
+
+        order.order_status = new_status
+
+        if new_status != old_status:
+            if new_status == 'OUT_FOR_DELIVERY' and order.customer_phone:
+                request.session['auto_whatsapp_url'] = order.whatsapp_shipping_instruction_url
+                request.session['auto_whatsapp_order_number'] = order.order_number
+
+            CONFIRMED_STATUSES = {'CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'}
+            if new_status in CONFIRMED_STATUSES and old_status not in CONFIRMED_STATUSES:
+                try:
+                    from store.meta_capi import send_meta_purchase_event_on_accept
+                    send_meta_purchase_event_on_accept(order, request=request)
+                except Exception as _e:
+                    print(f"Failed to dispatch Meta CAPI Purchase: {_e}")
+
+        order.save()
+
+    messages.success(
+        request,
+        f"Order #{order.order_number} manually updated ({total_items_count} jar(s), Total: ৳{order.total_amount})."
+    )
     return redirect('dashboard:order_detail', order_number=order.order_number)
 
 
