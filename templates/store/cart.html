@@ -24,58 +24,78 @@
             <div class="lg:col-span-7 space-y-4 sm:space-y-6">
 
                 <!-- 1. Jars in Cart Card -->
-                <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/90 shadow-xs">
-                    <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-                        <div class="flex items-center gap-2.5">
+                <div class="bg-white p-3.5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-xs">
+                    <div class="flex items-center justify-between gap-2 flex-wrap border-b border-slate-100 pb-3 mb-3.5">
+                        <div class="flex items-center gap-2.5 min-w-0">
                             <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-emerald-700 text-white flex items-center justify-center text-xs sm:text-sm font-black shrink-0">
                                 <i class="fa-solid fa-basket-shopping"></i>
                             </div>
                             <h2 class="font-display font-black text-base text-slate-950">Cart Items</h2>
                         </div>
-                        <a href="{% url 'store:index' %}#pickle-menu" class="text-xs font-black text-emerald-800 hover:text-emerald-950 bg-emerald-50 border border-emerald-200/90 px-3 py-1.5 rounded-xl transition flex items-center gap-1.5">
+                        <a href="{% if add_more_products %}#cart-add-more-products{% else %}{% url 'store:index' %}#pickle-menu{% endif %}" class="text-xs font-black text-emerald-800 hover:text-emerald-950 bg-emerald-50 border border-emerald-200/90 px-3 py-1.5 rounded-xl transition inline-flex items-center gap-1.5 shrink-0">
                             <i class="fa-solid fa-plus text-[10px]"></i>
                             <span>Add More Jars</span>
                         </a>
                     </div>
 
-                    <!-- Items List -->
-                    <div class="space-y-3.5 divide-y divide-slate-100">
-                        {% for item in cart %}
-                        <div class="pt-3.5 first:pt-0 flex flex-col sm:flex-row items-center gap-3.5 sm:gap-4" id="cart-page-item-{{ item.key }}">
-                            <div class="relative shrink-0">
-                                <img src="{{ item.product.primary_image_url }}" alt="{{ item.name }}" class="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-xl border border-slate-200 bg-slate-50" loading="lazy" decoding="async" width="80" height="80">
-                            </div>
+                    {% if cart|length >= 3 %}
+                    <!-- Scroll Down Prompt for Mobile/Tablet when Cart has many items -->
+                    <a href="#cart-order-summary" onclick="const el = document.getElementById('cart-order-summary'); if (el) { el.scrollIntoView({ behavior: 'smooth' }); return false; }" class="lg:hidden mb-3.5 flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-emerald-50/90 border border-emerald-200 text-emerald-900 text-xs font-bold hover:bg-emerald-100/80 transition">
+                        <span class="flex items-center gap-2 min-w-0">
+                            <i class="fa-solid fa-circle-arrow-down text-emerald-700 animate-bounce shrink-0"></i>
+                            <span class="truncate">Scroll down for Order Summary &amp; Checkout</span>
+                        </span>
+                        <span class="text-[11px] font-black text-emerald-800 bg-white px-2 py-0.5 rounded-lg border border-emerald-200 shrink-0">Checkout &darr;</span>
+                    </a>
+                    {% endif %}
 
-                            <div class="flex-1 min-w-0 text-center sm:text-left">
-                                <h3 class="font-display font-black text-sm sm:text-base text-slate-950 truncate">
-                                    <a href="{% url 'store:product_detail' item.product.slug %}" class="hover:text-emerald-800 transition">{{ item.name }}</a>
-                                </h3>
-                                <p class="text-xs text-slate-500 font-medium mt-0.5">
-                                    {{ item.product.jar_weight_grams }}g Jar • ৳{{ item.price }} each
-                                </p>
-                                <div class="flex items-center gap-1.5 mt-1.5 justify-center sm:justify-start flex-wrap">
-                                    {% if item.product.cut_style %}
-                                    <span class="text-[10px] bg-slate-100 text-slate-700 font-bold px-2 py-0.5 rounded-md">{{ item.product.get_cut_style_display }}</span>
-                                    {% endif %}
-                                    {% if item.variant %}
-                                    <span class="text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold px-2 py-0.5 rounded-md">Style: {{ item.variant }}</span>
+                    <!-- Items List (Compact Mobile & Desktop Rows) -->
+                    <div class="space-y-2 sm:space-y-0 sm:divide-y sm:divide-slate-100">
+                        {% for item in cart %}
+                        <div class="p-2.5 sm:p-0 sm:py-2.5 sm:first:pt-0 sm:last:pb-0 rounded-xl sm:rounded-none bg-slate-50/70 sm:bg-transparent border border-slate-200/70 sm:border-0 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3" id="cart-page-item-{{ item.key }}">
+                            <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                                <div class="relative shrink-0">
+                                    <img src="{{ item.product.primary_image_url }}" alt="{{ item.name }}" class="w-12 h-12 sm:w-14 sm:h-14 object-cover rounded-lg border border-slate-200 bg-white" loading="lazy" decoding="async" width="56" height="56">
+                                </div>
+
+                                <div class="flex-1 min-w-0 text-left">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <h3 class="font-display font-black text-xs sm:text-sm text-slate-950 leading-snug break-words">
+                                            <a href="{% url 'store:product_detail' item.product.slug %}" class="hover:text-emerald-800 transition">{{ item.name }}</a>
+                                        </h3>
+                                        <button type="button" onclick="ajaxUpdateCart('{{ item.key }}', 'remove')" class="sm:hidden text-slate-400 hover:text-rose-600 w-7 h-7 -mt-1 -mr-1 rounded-lg flex items-center justify-center text-xs transition cursor-pointer shrink-0" title="Remove jar" aria-label="Remove jar">
+                                            <i class="fa-solid fa-trash-can"></i>
+                                        </button>
+                                    </div>
+                                    <p class="text-[11px] text-slate-500 font-medium mt-0.5">
+                                        {{ item.product.jar_weight_grams }}g • ৳{{ item.price }}
+                                    </p>
+                                    {% if item.product.cut_style or item.variant %}
+                                    <div class="flex items-center gap-1 mt-1 justify-start flex-wrap">
+                                        {% if item.product.cut_style %}
+                                        <span class="text-[9.5px] bg-white sm:bg-slate-100 text-slate-700 border border-slate-200/70 sm:border-0 font-bold px-1.5 py-0.5 rounded">{{ item.product.get_cut_style_display }}</span>
+                                        {% endif %}
+                                        {% if item.variant %}
+                                        <span class="text-[9.5px] bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold px-1.5 py-0.5 rounded">{{ item.variant }}</span>
+                                        {% endif %}
+                                    </div>
                                     {% endif %}
                                 </div>
                             </div>
 
                             <!-- Quantity Controls & Price -->
-                            <div class="flex items-center gap-3 shrink-0">
-                                <div class="flex items-center border border-slate-200 rounded-xl bg-slate-50 overflow-hidden shadow-2xs">
-                                    <button onclick="ajaxUpdateCart('{{ item.key }}', 'decrease')" class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-xs sm:text-sm font-black text-slate-600 hover:bg-slate-200 active:bg-slate-300 transition cursor-pointer" aria-label="Decrease quantity">-</button>
-                                    <span class="w-8 sm:w-10 text-center font-black text-xs sm:text-sm text-slate-950 bg-white py-1" id="cart-page-qty-{{ item.key }}">{{ item.quantity }}</span>
-                                    <button onclick="ajaxUpdateCart('{{ item.key }}', 'increase')" class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-xs sm:text-sm font-black text-slate-600 hover:bg-slate-200 active:bg-slate-300 transition cursor-pointer" aria-label="Increase quantity">+</button>
+                            <div class="flex items-center justify-between sm:justify-end gap-2.5 pt-1.5 sm:pt-0 border-t border-slate-200/70 sm:border-0 shrink-0">
+                                <div class="flex items-center border border-slate-200 rounded-lg bg-white overflow-hidden shadow-2xs">
+                                    <button type="button" onclick="ajaxUpdateCart('{{ item.key }}', 'decrease')" class="w-7 h-7 flex items-center justify-center text-xs font-black text-slate-700 hover:bg-slate-100 active:bg-slate-200 transition cursor-pointer" aria-label="Decrease quantity">-</button>
+                                    <span class="w-7 sm:w-8 text-center font-black text-xs text-slate-950 bg-white" id="cart-page-qty-{{ item.key }}">{{ item.quantity }}</span>
+                                    <button type="button" onclick="ajaxUpdateCart('{{ item.key }}', 'increase')" class="w-7 h-7 flex items-center justify-center text-xs font-black text-slate-700 hover:bg-slate-100 active:bg-slate-200 transition cursor-pointer" aria-label="Increase quantity">+</button>
                                 </div>
 
-                                <div class="text-right min-w-[70px]">
-                                    <span class="font-display font-black text-sm sm:text-base text-slate-950 block" id="cart-page-total-{{ item.key }}">৳{{ item.total_price }}</span>
+                                <div class="text-right min-w-[64px]">
+                                    <span class="font-display font-black text-sm text-slate-950 block" id="cart-page-total-{{ item.key }}">৳{{ item.total_price }}</span>
                                 </div>
 
-                                <button onclick="ajaxUpdateCart('{{ item.key }}', 'remove')" class="text-slate-400 hover:text-rose-600 p-1.5 text-xs sm:text-sm transition cursor-pointer" title="Remove jar">
+                                <button type="button" onclick="ajaxUpdateCart('{{ item.key }}', 'remove')" class="hidden sm:inline-flex items-center justify-center text-slate-400 hover:text-rose-600 p-1 text-xs transition cursor-pointer" title="Remove jar" aria-label="Remove jar">
                                     <i class="fa-solid fa-trash-can"></i>
                                 </button>
                             </div>
@@ -83,6 +103,54 @@
                         {% endfor %}
                     </div>
                 </div>
+
+                {% if add_more_products %}
+                <!-- Quick Add More Pickles (Horizontal Swipe Carousel) -->
+                <div id="cart-add-more-products" class="bg-white p-3.5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-xs scroll-mt-24">
+                    <div class="flex items-center justify-between gap-2 flex-wrap border-b border-slate-100 pb-3 mb-3.5">
+                        <div>
+                            <h3 class="font-display font-black text-sm sm:text-base text-slate-950 flex items-center gap-2">
+                                <span class="w-7 h-7 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center text-xs shrink-0">🫙</span>
+                                <span>Add More Jars to Your Bag</span>
+                            </h3>
+                            <p class="text-[11px] text-slate-500 font-medium mt-0.5">Swipe to explore &amp; tap to add jars instantly</p>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            {% if add_more_products|length > 2 %}
+                            <div class="flex items-center gap-1">
+                                <button type="button" onclick="scrollCartAddMore(-1)" class="w-7 h-7 rounded-full bg-slate-50 border border-slate-200 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-800 text-slate-600 flex items-center justify-center transition active:scale-90 cursor-pointer" aria-label="Previous pickles">
+                                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                                </button>
+                                <button type="button" onclick="scrollCartAddMore(1)" class="w-7 h-7 rounded-full bg-slate-50 border border-slate-200 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-800 text-slate-600 flex items-center justify-center transition active:scale-90 cursor-pointer" aria-label="Next pickles">
+                                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                                </button>
+                            </div>
+                            {% endif %}
+                            <a href="{% url 'store:index' %}#pickle-menu" class="text-[11px] font-bold text-emerald-800 hover:underline shrink-0">View All &rarr;</a>
+                        </div>
+                    </div>
+
+                    <div id="cartAddMoreCarousel" class="flex gap-2 sm:gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1 scroll-smooth">
+                        {% for p in add_more_products %}
+                        <div class="cart-add-more-card snap-start shrink-0 w-[124px] sm:w-[144px] bg-slate-50/70 rounded-xl border border-slate-200/80 hover:border-emerald-300 p-2 flex flex-col justify-between gap-1.5 shadow-2xs transition">
+                            <a href="{% url 'store:product_detail' p.slug %}" class="block space-y-1.5 min-w-0">
+                                <div class="h-24 sm:h-28 w-full rounded-lg overflow-hidden bg-white border border-slate-100">
+                                    <img src="{{ p.primary_image_url }}" alt="{{ p.name }}" class="w-full h-full object-cover" loading="lazy" decoding="async">
+                                </div>
+                                <div class="min-w-0">
+                                    <h4 class="font-display font-black text-[11px] sm:text-xs text-slate-950 leading-snug line-clamp-2">{{ p.name }}</h4>
+                                    <p class="text-[10px] text-slate-500 font-semibold mt-0.5">{{ p.jar_weight_grams }}g • <strong class="text-slate-900">৳{{ p.price_bdt|floatformat:0 }}</strong></p>
+                                </div>
+                            </a>
+                            <button type="button" onclick="cartPageQuickAdd({{ p.id }}, this)" class="w-full min-h-[32px] bg-emerald-700 hover:bg-emerald-800 active:scale-[0.98] text-white font-black text-[11px] px-2 py-1.5 rounded-lg transition flex items-center justify-center gap-1 cursor-pointer shadow-2xs">
+                                <i class="fa-solid fa-plus text-[9px]"></i>
+                                <span>Add Jar</span>
+                            </button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
 
                 <!-- 2. Nationwide Delivery & Craft Promise -->
                 <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
@@ -101,7 +169,7 @@
             </div>
 
             <!-- Right Column: Sticky Order Summary (5 Cols) (Matches Checkout 1:1) -->
-            <div class="lg:col-span-5 space-y-4 sm:space-y-5 sticky top-24">
+            <div id="cart-order-summary" class="lg:col-span-5 space-y-4 sm:space-y-5 lg:sticky lg:top-24 scroll-mt-24">
                 <div class="bg-white p-4 sm:p-7 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-md space-y-4 sm:space-y-5">
                     
                     <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -157,7 +225,7 @@
                         {% if promo_settings.advance_payment_discount_enabled and promo_settings.advance_payment_discount_percent > 0 %}
                         <p class="flex items-center gap-1.5">
                             <span class="shrink-0">💳</span>
-                            <span><strong>{{ promo_settings.get_advance_payment_label }}</strong> — extra {{ promo_settings.advance_payment_discount_percent|floatformat:0 }}% OFF when paying via bKash/Nagad at checkout!</span>
+                            <span><strong>{{ promo_settings.get_advance_payment_label }}</strong> — extra {{ promo_settings.advance_payment_discount_percent|floatformat:0 }}% OFF when paying via bKash at checkout!</span>
                         </p>
                         {% endif %}
                     </div>
@@ -257,9 +325,33 @@
 
 {% block extra_js %}
 <script>
+    function scrollCartAddMore(direction) {
+        const container = document.getElementById('cartAddMoreCarousel');
+        if (!container) return;
+        const card = container.querySelector('.cart-add-more-card');
+        const gap = window.innerWidth >= 640 ? 14 : 10;
+        const step = card ? (card.offsetWidth + gap) * 2 : 320;
+        const maxScroll = container.scrollWidth - container.clientWidth;
+
+        if (direction > 0 && container.scrollLeft >= maxScroll - 8) {
+            container.scrollTo({ left: 0, behavior: 'smooth' });
+        } else if (direction < 0 && container.scrollLeft <= 8) {
+            container.scrollTo({ left: maxScroll, behavior: 'smooth' });
+        } else {
+            container.scrollBy({ left: direction * step, behavior: 'smooth' });
+        }
+    }
+
+    async function cartPageQuickAdd(productId, btnEl) {
+        if (typeof ajaxAddToCart === 'function') {
+            await ajaxAddToCart(productId, 1, btnEl, '');
+            window.location.reload();
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         if (typeof updateFreeDeliveryProgress === 'function') {
-            updateFreeDeliveryProgress({{ cart_total_items }});
+            updateFreeDeliveryProgress({{ cart_total_items|default:0 }});
         }
     });
 </script>

@@ -3410,7 +3410,7 @@ function calculateManualOrderTotal(isManualFeeChange = false) {
     if (shouldApplyOffers && promoActive && MANUAL_OFFER_CONFIG.advance_payment_discount_enabled && selectedPayMethod !== 'COD') {
         const advPct = parseFloat(MANUAL_OFFER_CONFIG.advance_payment_discount_percent || 0);
         if (advPct > 0) {
-            advanceDiscount = Math.min(subtotal, Math.round(((subtotal * advPct) / 100) * 100) / 100);
+            advanceDiscount = Math.min(subtotal, Math.round((subtotal * advPct) / 100));
         }
     }
 

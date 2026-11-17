@@ -44,11 +44,33 @@ function toggleCartDrawer(open) {
         document.body.style.overflow = 'hidden';
         // Always sync with latest cart state when opening drawer
         syncCartDrawer();
+        setTimeout(updateCartDrawerScrollHint, 60);
     } else {
         drawer.classList.remove('open');
         backdrop.classList.remove('open');
         document.body.style.overflow = '';
     }
+}
+
+function updateCartDrawerScrollHint() {
+    const drawerItems = document.getElementById('cartDrawerItems');
+    const hint = document.getElementById('cartDrawerScrollHint');
+    if (!drawerItems || !hint) return;
+
+    if (!drawerItems.dataset.scrollHintBound) {
+        drawerItems.addEventListener('scroll', updateCartDrawerScrollHint, { passive: true });
+        drawerItems.dataset.scrollHintBound = '1';
+    }
+
+    const hasMoreBelow = (drawerItems.scrollHeight - drawerItems.clientHeight > 12) &&
+                         (drawerItems.scrollTop + drawerItems.clientHeight < drawerItems.scrollHeight - 16);
+    hint.classList.toggle('hidden', !hasMoreBelow);
+}
+
+function scrollCartDrawerDown() {
+    const drawerItems = document.getElementById('cartDrawerItems');
+    if (!drawerItems) return;
+    drawerItems.scrollBy({ top: 180, behavior: 'smooth' });
 }
 
 // Background Cart State Synchronizer (keeps Drawer & Badges 100% up-to-date without page refresh)
@@ -431,31 +453,32 @@ function renderCartDrawer(items, subtotal, discount, cartData = null) {
         drawerItems.innerHTML = items.map(item => {
             const itemKey = item.item_key || item.product_id;
             return `
-            <div class="flex gap-3.5 p-3 rounded-2xl bg-gray-50/80 border border-gray-100 relative group" id="drawer-item-${itemKey}">
-                <img src="${item.image_url}" alt="${item.name}" class="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-xl border border-gray-200 bg-white flex-shrink-0">
+            <div class="flex gap-2.5 p-2.5 rounded-xl bg-gray-50/80 border border-gray-100 relative group" id="drawer-item-${itemKey}">
+                <img src="${item.image_url}" alt="${item.name}" class="w-12 h-12 sm:w-14 sm:h-14 object-cover rounded-lg border border-gray-200 bg-white flex-shrink-0">
                 <div class="flex-1 min-w-0">
                     <div class="flex items-start justify-between gap-1">
-                        <h4 class="font-bold text-sm text-gray-900 truncate">${item.name}</h4>
-                        <button onclick="ajaxUpdateCart('${itemKey}', 'remove')" class="text-gray-400 hover:text-rose-500 text-xs p-1" title="Remove">
+                        <h4 class="font-bold text-xs sm:text-sm text-gray-900 truncate">${item.name}</h4>
+                        <button onclick="ajaxUpdateCart('${itemKey}', 'remove')" class="text-gray-400 hover:text-rose-500 text-xs p-0.5" title="Remove">
                             <i class="fa-solid fa-trash-can"></i>
                         </button>
                     </div>
-                    <p class="text-xs text-gray-500">
+                    <p class="text-[11px] text-gray-500">
                         ${item.weight}g Jar • ৳${parseFloat(item.price).toFixed(2)}
                     </p>
-                    <div class="flex items-center justify-between mt-2.5">
+                    <div class="flex items-center justify-between mt-1.5">
                         <div class="flex items-center border border-gray-200 rounded-lg bg-white overflow-hidden shadow-xs">
-                            <button onclick="ajaxUpdateCart('${itemKey}', 'decrease')" class="px-2.5 py-1 text-xs text-gray-600 hover:bg-gray-100 active:bg-gray-200 font-bold">-</button>
-                            <span class="px-3 py-1 text-xs font-bold text-gray-900 border-x border-gray-100" id="drawer-qty-${itemKey}">${item.quantity}</span>
-                            <button onclick="ajaxUpdateCart('${itemKey}', 'increase')" class="px-2.5 py-1 text-xs text-gray-600 hover:bg-gray-100 active:bg-gray-200 font-bold">+</button>
+                            <button onclick="ajaxUpdateCart('${itemKey}', 'decrease')" class="px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-100 active:bg-gray-200 font-bold">-</button>
+                            <span class="px-2.5 py-0.5 text-xs font-bold text-gray-900 border-x border-gray-100" id="drawer-qty-${itemKey}">${item.quantity}</span>
+                            <button onclick="ajaxUpdateCart('${itemKey}', 'increase')" class="px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-100 active:bg-gray-200 font-bold">+</button>
                         </div>
-                        <span class="font-display font-bold text-sm text-emerald-700" id="drawer-total-${itemKey}">৳${parseFloat(item.total_price).toFixed(2)}</span>
+                        <span class="font-display font-bold text-xs sm:text-sm text-emerald-700" id="drawer-total-${itemKey}">৳${parseFloat(item.total_price).toFixed(2)}</span>
                     </div>
                 </div>
             </div>
             `;
         }).join('');
     }
+    requestAnimationFrame(updateCartDrawerScrollHint);
 }
 
 // AJAX Add To Cart (Adds item smoothly, updates badges & progress bar, opens cart drawer with Proceed to Checkout)

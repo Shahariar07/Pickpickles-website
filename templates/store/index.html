@@ -279,18 +279,20 @@
 
             <!-- Left Text Content -->
             <div class="lg:col-span-7 space-y-5 sm:space-y-6 text-center lg:text-left min-w-0">
-                <div class="flex flex-wrap items-center justify-center lg:justify-start gap-2">
+                <div class="flex flex-wrap lg:flex-nowrap items-center justify-center lg:justify-start gap-2 max-w-full min-w-0">
                     <div
-                        class="inline-flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 bg-[#082816] border-2 border-emerald-400/80 px-3 sm:px-4 py-1.5 rounded-full text-[11px] sm:text-xs font-bold text-amber-300 shadow-md max-w-full text-center">
-                        <span class="inline-flex items-center gap-1">🥒 100% Fresh Pickles</span>
-                        <span class="text-emerald-500 opacity-60">•</span>
-                        <span class="inline-flex items-center gap-1">🇧🇩 Handcrafted in Bangladesh</span>
+                        class="inline-flex items-center gap-1.5 bg-[#082816] border border-emerald-400/80 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold text-amber-300 shadow-md whitespace-nowrap shrink-0">
+                        <span>🥒 100% Fresh<span class="lg:hidden"> Pickles</span></span>
+                        <span class="lg:hidden text-emerald-500 opacity-60">•</span>
+                        <span class="lg:hidden">🇧🇩 Handcrafted in BD</span>
+                        <span class="hidden 2xl:inline text-emerald-500 opacity-60">•</span>
+                        <span class="hidden 2xl:inline">🇧🇩 Bangladesh</span>
                     </div>
                     {% if promo_settings.is_active and promo_settings.hero_badge_enabled and promo_settings.hero_badge_text %}
                     <div
-                        class="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 text-slate-950 border-2 border-amber-200 px-3.5 sm:px-4 py-1.5 rounded-full text-[11px] sm:text-xs font-black shadow-lg shadow-amber-500/30 animate-pulse">
-                        <i class="fa-solid fa-gift text-slate-950"></i>
-                        <span>{{ promo_settings.hero_badge_text }}</span>
+                        class="inline-flex items-center justify-center gap-1.5 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 text-slate-950 border border-amber-200 px-3 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-black shadow-lg shadow-amber-500/30 animate-pulse max-w-full text-center leading-snug lg:min-w-0">
+                        <i class="fa-solid fa-gift text-slate-950 shrink-0"></i>
+                        <span class="lg:truncate">{{ promo_settings.hero_badge_text }}</span>
                     </div>
                     {% endif %}
                 </div>
@@ -456,24 +458,17 @@
                                 <span class="text-xs sm:text-sm font-black bg-rose-500 text-white px-2.5 py-0.5 rounded-full border border-rose-400/50 shadow-2xs">Save ৳{{ hero_pickle.discount_amount|floatformat:0 }}</span>
                                 {% endif %}
                             </div>
-                            {% if hero_pickle.show_stock_count and hero_pickle.is_in_stock and hero_pickle.stock_count > 0 %}
-                            <div class="pt-0.5">
-                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-black {% if hero_pickle.stock_count <= 5 %}bg-rose-500/20 text-rose-200 border border-rose-400/40{% else %}bg-amber-400/20 text-amber-200 border border-amber-300/40{% endif %}">
-                                    <span class="w-1.5 h-1.5 rounded-full {% if hero_pickle.stock_count <= 5 %}bg-rose-400 animate-pulse{% else %}bg-amber-300{% endif %}"></span>
-                                    <span>{% if hero_pickle.stock_count <= 10 %}🔥 Only {{ hero_pickle.stock_count }} Jar{% if hero_pickle.stock_count != 1 %}s{% endif %} Left{% else %}🫙 {{ hero_pickle.stock_count }} Jars Left{% endif %}</span>
-                                </span>
-                            </div>
-                            {% endif %}
                             <div class="pt-2 flex items-center justify-center gap-2">
                                 <button type="button" onclick="prevHeroPickle()" aria-label="Previous Best Seller"
                                     class="w-10 h-10 rounded-xl bg-black/40 hover:bg-black/70 border border-emerald-500/40 text-emerald-200 hover:text-amber-300 flex items-center justify-center transition cursor-pointer shrink-0">
                                     <i class="fa-solid fa-chevron-left text-xs"></i>
                                 </button>
-                                <a href="{% url 'store:product_detail' hero_pickle.slug %}"
-                                    class="flex-1 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 hover:from-amber-300 hover:to-amber-200 text-slate-950 text-xs font-black py-3 px-4 rounded-xl shadow-lg shadow-amber-400/25 transition-all hover:shadow-amber-400/40 active:scale-95 text-center flex items-center justify-center gap-1.5 border border-amber-200">
-                                    <span>Order Best Seller Jar</span>
-                                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
-                                </a>
+                                <button type="button" onclick="quickAddToCart({{ hero_pickle.id }}, 1, this)"
+                                    class="flex-1 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 hover:from-amber-300 hover:to-amber-200 text-slate-950 text-xs font-black py-3 px-4 rounded-xl shadow-lg shadow-amber-400/25 transition-all hover:shadow-amber-400/40 active:scale-95 text-center flex items-center justify-center gap-1.5 border border-amber-200 cursor-pointer"
+                                    aria-label="Add {{ hero_pickle.name }} to cart">
+                                    <i class="fa-solid fa-cart-plus text-xs"></i>
+                                    <span>Add to Cart</span>
+                                </button>
                                 <button type="button" onclick="nextHeroPickle(true)" aria-label="Next Best Seller"
                                     class="w-10 h-10 rounded-xl bg-black/40 hover:bg-black/70 border border-emerald-500/40 text-emerald-200 hover:text-amber-300 flex items-center justify-center transition cursor-pointer shrink-0">
                                     <i class="fa-solid fa-chevron-right text-xs"></i>
@@ -603,12 +598,16 @@
                             <i class="fa-solid fa-clock text-[7.5px]"></i> Pre-Order
                         </span>
                         {% elif product.custom_badge %}
-                            {% if 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower or 'launch' in product.custom_badge|lower or 'নতুন' in product.custom_badge %}
+                            {% if 'flash' in product.custom_badge|lower or '⚡' in product.custom_badge %}
+                            <span class="shimmer-ribbon inline-flex items-center gap-1 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white font-black text-[8.5px] sm:text-[9.5px] px-2 py-0.5 rounded-md shadow-sm ring-1 ring-amber-300/80">
+                                ⚡ Flash Sale
+                            </span>
+                            {% elif 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower or 'launch' in product.custom_badge|lower or 'নতুন' in product.custom_badge %}
                             <span class="shimmer-ribbon inline-flex items-center gap-1 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-[8.5px] sm:text-[9.5px] px-2 py-0.5 rounded-md shadow-xs">
                                 ✨ New
                             </span>
                             {% elif 'season' in product.custom_badge|lower or 'ended' in product.custom_badge|lower or 'শেষ' in product.custom_badge %}
-                            <span class="inline-flex items-center gap-1 bg-gradient-to-r from-rose-600 to-red-600 text-white font-black text-[8.5px] sm:text-[9.5px] px-2 py-0.5 rounded-md shadow-xs">
+                            <span class="shimmer-ribbon inline-flex items-center gap-1 bg-gradient-to-r from-rose-600 via-red-600 to-rose-500 text-white font-black text-[8.5px] sm:text-[9.5px] px-2 py-0.5 rounded-md shadow-sm ring-1 ring-rose-300/80">
                                 🍂 Season End
                             </span>
                             {% else %}

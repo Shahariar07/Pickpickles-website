@@ -848,5 +848,57 @@ class CartTests(TestCase):
         self.assertIn('-৳<span id="pageCartDiscount">120.00</span>', html)
         self.assertIn('-৳<span id="drawerDiscount">120.00</span>', html)
         self.assertIn('<span id="drawerEstimatedTotal">1080.00</span>', html)
+        self.assertIn('on bKash advance payment at checkout!', html)
+        self.assertIn('when paying via bKash at checkout!', html)
+        self.assertNotIn('Nagad', html)
+        self.assertIn('id="cart-add-more-products"', html)
+        self.assertIn('cartPageQuickAdd', html)
+
+    def test_checkout_shows_free_delivery_offer_and_hides_redundant_banner(self):
+        """Checkout shows free delivery progress banner when active, and hides duplicate top delivery pill when no offer applies."""
+        from store.models import PromotionSetting
+        cat = Category.objects.create(name='Checkout Cat', slug='checkout-cat')
+        prod = Product.objects.create(
+            category=cat,
+            name='Checkout Olive Pickle',
+            slug='checkout-olive-pickle',
+            price_bdt=Decimal('450.00'),
+            stock_count=20,
+            is_in_stock=True,
+        )
+        promo = PromotionSetting.get_settings()
+        promo.is_active = True
+        promo.bundle_discount_enabled = False
+        promo.free_delivery_enabled = True
+        promo.free_delivery_min_jars = 4
+        promo.standard_delivery_fee = Decimal('150.00')
+        promo.save()
+
+        self.client.post(
+            f"{reverse('store:cart_add', args=[prod.id])}?format=json",
+            {'quantity': 2},
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+
+        res_offer = self.client.get(reverse('store:checkout'))
+        self.assertEqual(res_offer.status_code, 200)
+        html_offer = res_offer.content.decode('utf-8')
+        self.assertIn('id="freeDeliveryBanner"', html_offer)
+        self.assertIn('2 more jars', html_offer)
+        self.assertIn('FREE Delivery', html_offer)
+        self.assertIn('window.cartTotalItemsCount', html_offer)
+        self.assertNotIn('updateFreeDeliveryProgress(totalItemsCount)', html_offer)
+        # Cash on Delivery appears first (and checked) before bKash Payment
+        self.assertLess(html_offer.index('value="COD"'), html_offer.index('value="BKASH"'))
+
+        # When both bundle & free delivery are disabled, redundant top delivery pill is hidden
+        promo.free_delivery_enabled = False
+        promo.save()
+        res_plain = self.client.get(reverse('store:checkout'))
+        self.assertEqual(res_plain.status_code, 200)
+        html_plain = res_plain.content.decode('utf-8')
+        self.assertNotIn('id="freeDeliveryBanner"', html_plain)
+        self.assertIn('Nationwide Delivery', html_plain)
+
 
 

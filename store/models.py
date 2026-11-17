@@ -587,9 +587,10 @@ class PromotionSetting(models.Model):
             or method == 'COD'
         ):
             return Decimal('0.00')
+        from decimal import ROUND_HALF_UP
         subtotal_dec = Decimal(str(subtotal or '0.00'))
         discount = (subtotal_dec * Decimal(str(self.advance_payment_discount_percent))) / Decimal('100.00')
-        return min(subtotal_dec, discount).quantize(Decimal('0.01'))
+        return min(subtotal_dec, discount).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
 
     def calculate_discount(self, total_items: int, subtotal: Decimal = Decimal('0.00')) -> Decimal:
         if not self.is_active or not self.bundle_discount_enabled or self.bundle_discount_amount <= Decimal('0.00'):

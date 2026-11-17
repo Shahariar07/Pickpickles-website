@@ -146,24 +146,26 @@
 
                             <!-- Option 2: bKash -->
                             <div>
-                                <label class="border-2 border-slate-200 bg-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl cursor-pointer flex items-start sm:items-center gap-3 transition-all hover:border-pink-400 shadow-2xs" id="payBkashLabel">
+                                <label class="border-2 {% if promo_settings.is_active and promo_settings.advance_payment_discount_enabled and promo_settings.advance_payment_discount_percent > 0 %}border-pink-300 bg-gradient-to-r from-pink-50/70 via-white to-white{% else %}border-slate-200 bg-white{% endif %} p-3.5 sm:p-4 rounded-xl sm:rounded-2xl cursor-pointer flex items-start sm:items-center gap-3 transition-all hover:border-pink-500 shadow-xs" id="payBkashLabel">
                                     <input type="radio" name="payment_method" value="BKASH" class="text-pink-600 focus:ring-pink-500 w-4 h-4 mt-0.5 sm:mt-0 shrink-0" onchange="togglePaymentInputs('BKASH')">
                                     <div class="flex-1 min-w-0">
                                         <div class="flex items-center justify-between gap-2">
-                                            <div class="flex items-center gap-2 flex-wrap">
+                                            <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                                                 <span class="font-black text-sm text-slate-950">bKash Payment</span>
-                                                <span class="text-[10px] bg-[#e2136e] text-white font-black px-2 py-0.5 rounded-full tracking-wider uppercase">Advance</span>
+                                                <span class="text-[10px] bg-slate-900 text-white font-black px-2 py-0.5 rounded-full tracking-wider uppercase">Advance</span>
                                                 {% if promo_settings.is_active and promo_settings.advance_payment_discount_enabled and promo_settings.advance_payment_discount_percent > 0 %}
-                                                <span class="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-300 font-black px-2 py-0.5 rounded-full tracking-wide">
-                                                    🎁 {{ promo_settings.advance_payment_discount_percent|floatformat:0 }}% OFF
+                                                <span class="shimmer-ribbon text-[10px] sm:text-[11px] bg-gradient-to-r from-[#e2136e] to-rose-600 text-white font-black px-2.5 py-0.5 rounded-full tracking-wide shadow-xs inline-flex items-center gap-1">
+                                                    <span>🎁 {{ promo_settings.advance_payment_discount_percent|floatformat:0 }}% OFF</span>
+                                                    <span class="opacity-80">•</span>
+                                                    <span>Save ৳<span id="bkashLiveSavingsAmt">0</span></span>
                                                 </span>
                                                 {% endif %}
                                             </div>
                                             <span class="text-base font-mono font-black text-[#e2136e] shrink-0">bKash</span>
                                         </div>
-                                        <p class="text-xs text-slate-500 font-medium mt-1">
+                                        <p class="text-xs text-slate-600 font-medium mt-1">
                                             {% if promo_settings.is_active and promo_settings.advance_payment_discount_enabled and promo_settings.advance_payment_discount_percent > 0 %}
-                                            Pay via bKash advance and get <strong class="text-pink-700">{{ promo_settings.advance_payment_discount_percent|floatformat:0 }}% extra discount</strong> instantly!
+                                            Pay via bKash advance and get <strong class="text-[#e2136e] font-black">{{ promo_settings.advance_payment_discount_percent|floatformat:0 }}% extra discount</strong> applied instantly!
                                             {% else %}
                                             100% advance payment via bKash personal Send Money.
                                             {% endif %}
@@ -266,28 +268,53 @@
                             {% endfor %}
                         </div>
 
-                        <!-- Delivery Pill -->
-                        <div id="freeDeliveryBanner" class="p-3 rounded-2xl border text-xs font-bold bg-slate-50 border-slate-200 text-slate-900">
+                        <!-- Offer / Free Delivery Progress Pill (Shown only when an offer is active) -->
+                        {% if promo_settings.is_active %}
+                            {% if promo_settings.free_delivery_enabled or promo_settings.bundle_discount_enabled %}
+                        <div id="freeDeliveryBanner" class="p-3 rounded-2xl border text-xs font-bold {% if free_delivery_unlocked %}bg-emerald-50 border-emerald-200 text-emerald-950{% elif promo_settings.free_delivery_enabled or cart_bundle_discount > 0 %}bg-amber-50/90 border-amber-200 text-amber-950{% else %}bg-slate-50 border-slate-200 text-slate-900{% endif %}">
                             <div class="flex items-start justify-between gap-2">
                                 <div class="flex items-start gap-2 min-w-0 flex-1">
-                                    <span id="freeDeliveryIcon" class="shrink-0 text-base leading-none mt-0.5">🚚</span>
+                                    <span id="freeDeliveryIcon" class="shrink-0 text-base leading-none mt-0.5">{% if free_delivery_unlocked %}🎉{% elif promo_settings.free_delivery_enabled %}🚚{% else %}🎁{% endif %}</span>
                                     <div class="min-w-0 flex-1">
                                         <div id="freeDeliveryText" class="text-xs font-black leading-snug break-words">
-                                            <strong>Nationwide Delivery Flat ৳{{ promo_settings.standard_delivery_fee|default:150|floatformat:0 }}</strong>
+                                            {% if promo_settings.free_delivery_enabled %}
+                                                {% if free_delivery_unlocked %}
+                                                <strong>FREE Delivery Unlocked!</strong>
+                                                {% else %}
+                                                Add <strong>{{ items_needed_for_free_delivery }} more jar{{ items_needed_for_free_delivery|pluralize }}</strong> for <strong>FREE Delivery</strong>!
+                                                {% endif %}
+                                            {% elif promo_settings.bundle_discount_enabled %}
+                                                {% if cart_bundle_discount > 0 %}
+                                                <strong>{{ promo_settings.get_discount_label }} Unlocked!</strong>
+                                                {% else %}
+                                                <strong>{{ promo_settings.get_discount_label }}</strong> on {{ promo_settings.bundle_min_jars }}{% if promo_settings.bundle_apply_mode == 'AT_LEAST' %}+{% endif %} jars!
+                                                {% endif %}
+                                            {% endif %}
                                         </div>
                                         <p class="text-[11px] mt-1 opacity-90 leading-normal break-words font-medium" id="freeDeliverySubtext">
-                                            {{ promo_settings.delivery_notice_text|default:"Reliable doorstep courier delivery in 7–10 days across Bangladesh." }}
+                                            {% if promo_settings.free_delivery_enabled and not free_delivery_unlocked %}
+                                                Free delivery on {{ promo_settings.free_delivery_min_jars }}+ jars (Save ৳{{ promo_settings.standard_delivery_fee|default:150|floatformat:0 }}).
+                                                <a href="{% url 'store:cart_view' %}#cart-add-more-products" class="underline font-black text-amber-900 hover:text-emerald-800 ml-1">Add Jars &rarr;</a>
+                                            {% else %}
+                                                {{ promo_settings.delivery_notice_text|default:"Flat ৳150 nationwide delivery across Bangladesh." }}
+                                            {% endif %}
                                         </p>
                                     </div>
                                 </div>
-                                <span id="freeDeliveryBadge" class="text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap mt-0.5 bg-slate-800 text-white">
-                                    Flat ৳{{ promo_settings.standard_delivery_fee|default:150|floatformat:0 }}
+                                <span id="freeDeliveryBadge" class="text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap mt-0.5 {% if free_delivery_unlocked %}bg-emerald-600 text-white{% elif promo_settings.free_delivery_enabled %}bg-amber-400 text-slate-950{% else %}bg-slate-800 text-white{% endif %}">
+                                    {% if promo_settings.free_delivery_enabled %}
+                                        {% if free_delivery_unlocked %}FREE{% else %}{{ cart_total_items }}/{{ promo_settings.free_delivery_min_jars }} Jars{% endif %}
+                                    {% else %}
+                                        {% if cart_bundle_discount > 0 %}-৳{{ cart_bundle_discount|floatformat:0 }}{% else %}{{ promo_settings.bundle_min_jars }} Jars{% endif %}
+                                    {% endif %}
                                 </span>
                             </div>
                             <div class="w-full bg-black/10 rounded-full h-1.5 mt-2.5 overflow-hidden">
-                                <div id="freeDeliveryProgressBar" class="h-1.5 rounded-full transition-all duration-500 bg-emerald-600" style="width: {% if cart_total_items > 0 %}100%{% else %}0%{% endif %};"></div>
+                                <div id="freeDeliveryProgressBar" class="h-1.5 rounded-full transition-all duration-500 {% if free_delivery_unlocked %}bg-emerald-600{% else %}bg-amber-500{% endif %}" style="width: {% if free_delivery_unlocked %}100%{% else %}50%{% endif %};"></div>
                             </div>
                         </div>
+                            {% endif %}
+                        {% endif %}
 
                         <!-- Promo / Coupon Code Card (Placed cleanly above price calculations) -->
                         <div class="bg-slate-50/90 rounded-2xl p-3 sm:p-3.5 border border-slate-200/90 space-y-2">
@@ -358,6 +385,19 @@
                                 <span class="font-black text-sm text-pink-700">-৳<span id="checkoutAdvanceDiscount">0.00</span></span>
                             </div>
 
+                            <!-- bKash 5% OFF Nudge (when COD is selected) -->
+                            {% if promo_settings.is_active and promo_settings.advance_payment_discount_enabled and promo_settings.advance_payment_discount_percent > 0 %}
+                            <button type="button" id="checkoutBkashSavingsNudge"
+                                onclick="const bkashRadio = document.querySelector('input[name=payment_method][value=BKASH]'); if (bkashRadio) { bkashRadio.click(); bkashRadio.closest('#payBkashLabel')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }"
+                                class="w-full flex items-center justify-between gap-2 text-left text-[11px] font-bold text-pink-950 bg-gradient-to-r from-pink-50 via-rose-50 to-amber-50/70 hover:from-pink-100 hover:to-rose-100 px-3 py-2 rounded-xl border border-pink-300 shadow-2xs transition cursor-pointer">
+                                <span class="flex items-center gap-1.5 min-w-0">
+                                    <span class="shrink-0">🎁</span>
+                                    <span>Pay via <strong>bKash</strong> &amp; save <strong class="text-[#e2136e]">৳<span id="checkoutBkashNudgeAmt">0</span></strong> ({{ promo_settings.advance_payment_discount_percent|floatformat:0 }}% OFF)</span>
+                                </span>
+                                <span class="text-[10px] font-black bg-[#e2136e] text-white px-2 py-0.5 rounded-lg shrink-0">Switch &rarr;</span>
+                            </button>
+                            {% endif %}
+
                             <div class="flex justify-between items-center text-slate-600 font-medium">
                                 <div>
                                     <span>Nationwide Delivery</span>
@@ -375,6 +415,9 @@
                             <p class="text-[11px] text-slate-400 font-medium" id="checkoutDeliveryNote">
                                 {% if free_delivery_unlocked or delivery_fee == 0 %}
                                 <strong class="text-emerald-700">🎉 Congratulations! You unlocked FREE delivery.</strong>
+                                {% elif promo_settings.is_active and promo_settings.free_delivery_enabled and items_needed_for_free_delivery > 0 %}
+                                <span class="text-amber-700 font-bold">🚚 Add {{ items_needed_for_free_delivery }} more jar{{ items_needed_for_free_delivery|pluralize }} to unlock FREE delivery!</span>
+                                <a href="{% url 'store:cart_view' %}#cart-add-more-products" class="underline font-black text-amber-800 hover:text-emerald-700 ml-1">Add Jars</a>
                                 {% else %}
                                 {{ promo_settings.delivery_notice_text|default:"Flat ৳150 nationwide delivery across Bangladesh." }}
                                 {% endif %}
@@ -446,6 +489,7 @@
         notesEl.focus();
     }
 
+    window.cartTotalItemsCount = parseInt("{{ cart_total_items|default:0 }}", 10) || 0;
     window.totalWeightGrams = parseInt("{{ total_weight_grams|default:0 }}", 10) || 0;
     window.subtotalValue = parseFloat("{{ cart_subtotal|default:0 }}") || 0;
     window.isFreeDelivery = {{ free_delivery_unlocked|yesno:"true,false" }};
@@ -489,11 +533,12 @@
 
         let advanceDiscount = 0;
         if (window.advanceDiscountEnabled && window.advanceDiscountPercent > 0 && currentMethod !== 'COD') {
-            advanceDiscount = Math.min(subtotal, Math.round(((subtotal * window.advanceDiscountPercent) / 100) * 100) / 100);
+            advanceDiscount = Math.min(subtotal, Math.round((subtotal * window.advanceDiscountPercent) / 100));
         }
 
         const totalDiscount = Math.min(subtotal, bundleDiscount + couponDiscount + advanceDiscount);
-        const total = Math.max(0, subtotal - totalDiscount + fee);
+        const rawTotal = Math.max(0, subtotal - totalDiscount + fee);
+        const total = currentMethod !== 'COD' ? Math.round(rawTotal) : rawTotal;
 
         // 1. Bundle Discount Row
         const bundleRow = document.getElementById('checkoutBundleDiscountRow');
@@ -519,16 +564,29 @@
             }
         }
 
-        // 3. Advance Payment Discount Row
+        // 3. Advance Payment Discount Row & Live bKash Savings Nudge
         const advanceRow = document.getElementById('checkoutAdvanceDiscountRow');
         const advanceAmountEl = document.getElementById('checkoutAdvanceDiscount');
         if (advanceRow) {
             if (advanceDiscount > 0) {
                 advanceRow.classList.remove('hidden');
-                if (advanceAmountEl) advanceAmountEl.innerText = advanceDiscount.toFixed(2);
+                if (advanceAmountEl) advanceAmountEl.innerText = advanceDiscount.toFixed(0);
             } else {
                 advanceRow.classList.add('hidden');
             }
+        }
+
+        const potentialAdvanceDiscount = (window.advanceDiscountEnabled && window.advanceDiscountPercent > 0)
+            ? Math.min(subtotal, Math.round((subtotal * window.advanceDiscountPercent) / 100))
+            : 0;
+        const formattedPotentialSavings = potentialAdvanceDiscount.toFixed(0);
+        const bkashLiveSavingsEl = document.getElementById('bkashLiveSavingsAmt');
+        if (bkashLiveSavingsEl) bkashLiveSavingsEl.innerText = formattedPotentialSavings;
+        const bkashNudgeAmtEl = document.getElementById('checkoutBkashNudgeAmt');
+        if (bkashNudgeAmtEl) bkashNudgeAmtEl.innerText = formattedPotentialSavings;
+        const bkashNudgeEl = document.getElementById('checkoutBkashSavingsNudge');
+        if (bkashNudgeEl) {
+            bkashNudgeEl.classList.toggle('hidden', !(potentialAdvanceDiscount > 0 && currentMethod === 'COD'));
         }
 
         const feeEl = document.getElementById('checkoutDeliveryFee');
@@ -548,14 +606,15 @@
             }
         }
 
+        const formattedTotal = currentMethod !== 'COD' ? total.toFixed(0) : total.toFixed(2);
         const totalEl = document.getElementById('checkoutTotal');
-        if (totalEl) totalEl.innerText = total.toFixed(2);
+        if (totalEl) totalEl.innerText = formattedTotal;
 
         const bkashDue = document.getElementById('bkashDueAmount');
-        if (bkashDue) bkashDue.innerText = total.toFixed(2);
+        if (bkashDue) bkashDue.innerText = total.toFixed(0);
 
         const mobileTotalEl = document.getElementById('mobileSummaryTotal');
-        if (mobileTotalEl) mobileTotalEl.innerText = total.toFixed(2);
+        if (mobileTotalEl) mobileTotalEl.innerText = formattedTotal;
 
         // Refresh button text amount
         if (!skipToggleRefresh) {
@@ -563,7 +622,7 @@
         } else {
             const submitText = document.getElementById('submitBtnText');
             if (submitText && currentMethod === 'BKASH') {
-                submitText.innerHTML = `Confirm Order with bKash (৳${total.toFixed(2)})`;
+                submitText.innerHTML = `Confirm Order with bKash (৳${total.toFixed(0)})`;
             }
         }
     }
@@ -894,7 +953,7 @@
         loadSavedCheckoutProfile();
         updateDeliveryFee();
         if (typeof updateFreeDeliveryProgress === 'function') {
-            updateFreeDeliveryProgress(totalItemsCount);
+            updateFreeDeliveryProgress(window.cartTotalItemsCount || 0);
         }
         ['customer_name', 'customer_phone', 'customer_email', 'delivery_city', 'delivery_address'].forEach(function(id) {
             const el = document.getElementById(id);

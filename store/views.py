@@ -74,8 +74,16 @@ def index(request):
 
     best_seller = top_best_sellers[0] if top_best_sellers else None
 
-    # Products with active promotional/featured badges (New Arrivals, Season Ending Mango, etc.) appear first at beginning
+    # Products with active promotional/featured badges (Flash Sale, New Arrivals, Season Ending Mango, etc.) appear first at beginning
     badge_featured_priority = Case(
+        When(
+            Q(custom_badge__icontains='flash') |
+            Q(custom_badge__icontains='⚡') |
+            Q(custom_badge__icontains='season') |
+            Q(custom_badge__icontains='ended') |
+            Q(custom_badge__icontains='শেষ'),
+            then=Value(3)
+        ),
         When(
             Q(custom_badge__icontains='new') |
             Q(custom_badge__icontains='arrival') |
@@ -305,6 +313,7 @@ def cart_view(request):
         'grand_total': grand_total,
         'free_delivery_unlocked': cart.is_free_delivery(),
         'items_needed_for_free_delivery': cart.items_needed_for_free_delivery(),
+        'add_more_products': Product.objects.filter(is_in_stock=True).order_by('-is_featured', 'name'),
     })
 
 

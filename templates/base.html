@@ -269,10 +269,10 @@
     <header
         class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm transition-all duration-300">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16 sm:h-20">
+            <div class="flex items-center justify-between md:grid md:grid-cols-[1fr_auto_1fr] md:gap-4 h-16 sm:h-20">
 
                 <!-- Logo & Brand -->
-                <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+                <div class="flex items-center gap-2 sm:gap-3 shrink-0 md:justify-self-start">
                     <a href="{% url 'store:index' %}" class="flex items-center gap-2 sm:gap-3 group shrink-0">
                         <img src="{% static 'images/logo.png' %}" alt="Pickpickles Logo"
                             class="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover shadow-sm group-hover:scale-105 transition-transform duration-300 border border-brand-500/20 shrink-0" width="48" height="48" loading="eager" decoding="async">
@@ -290,7 +290,7 @@
                 </div>
 
                 <!-- Desktop Navigation Links -->
-                <nav class="hidden md:flex items-center gap-7 font-semibold text-sm text-gray-700 whitespace-nowrap">
+                <nav class="hidden md:flex items-center justify-center gap-5 lg:gap-7 font-semibold text-sm text-gray-700 whitespace-nowrap md:justify-self-center">
                     <a href="{% url 'store:index' %}" class="hover:text-brand-600 transition-colors">Our Pickles</a>
                     <a href="{% url 'store:index' %}#pickle-menu" class="hover:text-brand-600 transition-colors">Shop Flavors</a>
                     <a href="{% url 'store:about_story' %}" class="hover:text-brand-600 transition-colors">Story & FAQ</a>
@@ -306,7 +306,7 @@
                 </nav>
 
                 <!-- Action Controls: Cart & Dashboard link -->
-                <div class="flex items-center gap-2 sm:gap-4">
+                <div class="flex items-center gap-2 sm:gap-4 md:justify-self-end">
                     {% if request.resolver_match.url_name != 'cart_view' and request.resolver_match.url_name != 'checkout' %}
                     <!-- Cart Trigger Button -->
                     <button id="cartDrawerBtn" onclick="toggleCartDrawer(true)"
@@ -610,35 +610,35 @@
         </div>
 
         <!-- Drawer Items List -->
-        <div id="cartDrawerItems" class="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+        <div id="cartDrawerItems" class="flex-1 min-h-0 overflow-y-auto cart-drawer-scroll p-3 sm:p-4 space-y-2.5">
             {% if cart|length > 0 %}
             {% for item in cart %}
-            <div class="flex gap-3.5 p-3 rounded-2xl bg-gray-50/80 border border-gray-100 relative group"
+            <div class="flex gap-2.5 p-2.5 rounded-xl bg-gray-50/80 border border-gray-100 relative group"
                 id="drawer-item-{{ item.key }}">
                 <img src="{{ item.product.primary_image_url }}" alt="{{ item.name }}"
-                    class="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-xl border border-gray-200 bg-white flex-shrink-0">
+                    class="w-12 h-12 sm:w-14 sm:h-14 object-cover rounded-lg border border-gray-200 bg-white flex-shrink-0">
                 <div class="flex-1 min-w-0">
                     <div class="flex items-start justify-between gap-1">
-                        <h4 class="font-bold text-sm text-gray-900 truncate">{{ item.name }}</h4>
+                        <h4 class="font-bold text-xs sm:text-sm text-gray-900 truncate">{{ item.name }}</h4>
                         <button onclick="ajaxUpdateCart('{{ item.key }}', 'remove')"
-                            class="text-gray-400 hover:text-rose-500 text-xs p-1" title="Remove">
+                            class="text-gray-400 hover:text-rose-500 text-xs p-0.5" title="Remove">
                             <i class="fa-solid fa-trash-can"></i>
                         </button>
                     </div>
-                    <p class="text-xs text-gray-500">
+                    <p class="text-[11px] text-gray-500">
                         {{ item.product.jar_weight_grams }} g Jar • ৳{{ item.price }}
                     </p>
-                    <div class="flex items-center justify-between mt-2.5">
+                    <div class="flex items-center justify-between mt-1.5">
                         <div
                             class="flex items-center border border-gray-200 rounded-lg bg-white overflow-hidden shadow-xs">
                             <button onclick="ajaxUpdateCart('{{ item.key }}', 'decrease')"
-                                class="px-2.5 py-1 text-xs text-gray-600 hover:bg-gray-100 active:bg-gray-200 font-bold">-</button>
-                            <span class="px-3 py-1 text-xs font-bold text-gray-900 border-x border-gray-100"
+                                class="px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-100 active:bg-gray-200 font-bold">-</button>
+                            <span class="px-2.5 py-0.5 text-xs font-bold text-gray-900 border-x border-gray-100"
                                 id="drawer-qty-{{ item.key }}">{{ item.quantity }}</span>
                             <button onclick="ajaxUpdateCart('{{ item.key }}', 'increase')"
-                                class="px-2.5 py-1 text-xs text-gray-600 hover:bg-gray-100 active:bg-gray-200 font-bold">+</button>
+                                class="px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-100 active:bg-gray-200 font-bold">+</button>
                         </div>
-                        <span class="font-display font-bold text-sm text-brand-700"
+                        <span class="font-display font-bold text-xs sm:text-sm text-brand-700"
                             id="drawer-total-{{ item.key }}">৳{{ item.total_price }}</span>
                     </div>
                 </div>
@@ -658,6 +658,13 @@
             </div>
             {% endif %}
         </div>
+
+        <!-- Scroll Hint when Cart Drawer has many items -->
+        <button type="button" id="cartDrawerScrollHint" onclick="scrollCartDrawerDown()"
+            class="hidden mx-4 my-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer hover:bg-emerald-100 transition shrink-0">
+            <i class="fa-solid fa-circle-arrow-down text-emerald-700 animate-bounce"></i>
+            <span>Scroll down to see more jars</span>
+        </button>
 
         <!-- Drawer Footer with Subtotal & Checkout Button -->
         <div id="cartDrawerFooter" class="p-4 sm:p-5 border-t border-gray-100 bg-white space-y-2.5 {% if cart|length == 0 %}hidden{% endif %}">
@@ -681,7 +688,7 @@
             </div>
             <div id="drawerOfferReminder" class="{% if not promo_settings.is_active %}hidden{% endif %} {% if not promo_settings.bundle_discount_enabled and not promo_settings.free_delivery_enabled and not promo_settings.advance_payment_discount_enabled %}hidden{% endif %} text-[11px] bg-amber-50/90 border border-amber-200 text-amber-950 rounded-xl px-3 py-2 font-semibold space-y-0.5">
                 {% if promo_settings.is_active and promo_settings.advance_payment_discount_enabled and promo_settings.advance_payment_discount_percent > 0 %}
-                <p class="flex items-center gap-1.5"><span class="shrink-0">💳</span><span>Extra <strong>{{ promo_settings.advance_payment_discount_percent|floatformat:0 }}% OFF</strong> on bKash/Nagad advance payment at checkout!</span></p>
+                <p class="flex items-center gap-1.5"><span class="shrink-0">💳</span><span>Extra <strong>{{ promo_settings.advance_payment_discount_percent|floatformat:0 }}% OFF</strong> on bKash advance payment at checkout!</span></p>
                 {% endif %}
                 {% if promo_settings.is_active and promo_settings.bundle_discount_enabled and promo_settings.bundle_discount_amount > 0 %}
                 <p id="drawerBundleOfferHint" class="flex items-center gap-1.5"><span class="shrink-0">🎁</span><span>{{ promo_settings.get_discount_label }}</span></p>

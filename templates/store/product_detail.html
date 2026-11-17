@@ -90,7 +90,15 @@
                     <span>Pre-Order / নতুন ব্যাচ</span>
                 </div>
                 {% elif product.custom_badge %}
-                    {% if 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower or 'launch' in product.custom_badge|lower or 'নতুন' in product.custom_badge %}
+                    {% if 'flash' in product.custom_badge|lower or '⚡' in product.custom_badge %}
+                    <div class="shimmer-ribbon absolute top-4 left-4 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white border-amber-300 px-3.5 py-1.5 rounded-full text-xs font-black shadow-md border flex items-center gap-1.5 z-10">
+                        <span class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                        </span>
+                        <span class="relative z-10">⚡ FLASH SALE</span>
+                    </div>
+                    {% elif 'new' in product.custom_badge|lower or 'arrival' in product.custom_badge|lower or 'launch' in product.custom_badge|lower or 'নতুন' in product.custom_badge %}
                     <div class="shimmer-ribbon absolute top-4 left-4 bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-600 text-white border-emerald-400 px-3.5 py-1.5 rounded-full text-xs font-black shadow-md border flex items-center gap-1.5">
                         <span class="relative flex h-2 w-2">
                             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
@@ -99,9 +107,12 @@
                         <span class="relative z-10">✨ NEW ARRIVAL</span>
                     </div>
                     {% elif 'season' in product.custom_badge|lower or 'ended' in product.custom_badge|lower or 'শেষ' in product.custom_badge %}
-                    <div class="absolute top-4 left-4 bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white border-rose-400 px-3.5 py-1.5 rounded-full text-xs font-black shadow-md border flex items-center gap-1.5">
-                        <i class="fa-solid fa-hourglass-half"></i>
-                        <span>🍂 SEASON ENDING</span>
+                    <div class="shimmer-ribbon absolute top-4 left-4 bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white border-rose-400 px-3.5 py-1.5 rounded-full text-xs font-black shadow-md border flex items-center gap-1.5 z-10">
+                        <span class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                        </span>
+                        <span class="relative z-10">🍂 SEASON ENDING</span>
                     </div>
                     {% else %}
                     <div class="absolute top-4 left-4 bg-amber-400 text-slate-950 border-amber-300 px-3.5 py-1.5 rounded-full text-xs font-black shadow-md border flex items-center gap-1.5">
