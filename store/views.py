@@ -1,4 +1,5 @@
 import json
+import re
 from decimal import Decimal
 from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
@@ -586,7 +587,8 @@ def apply_coupon_ajax(request):
             data = request.POST
         code = (data.get('coupon_code') or '').strip()
         zone = data.get('zone', 'INSIDE_DHAKA')
-        success, message, coupon_discount = cart.apply_coupon(code)
+        customer_phone = (data.get('customer_phone') or '').strip()
+        success, message, coupon_discount = cart.apply_coupon(code, customer_phone=customer_phone)
         
         delivery_fee = float(cart.get_delivery_fee(zone))
         subtotal = float(cart.get_subtotal())
@@ -676,7 +678,16 @@ def checkout(request):
         form = CheckoutForm(request.POST)
         if form.is_valid():
             order = form.save(commit=False)
-            
+
+            # Enforce per-customer & previous-customers-only coupon rules at checkout
+            active_coupon = cart.get_coupon()
+            if active_coupon:
+                cust_ok, cust_err = active_coupon.validate_for_customer(order.customer_phone)
+                if not cust_ok:
+                    cart.remove_coupon()
+                    messages.error(request, cust_err)
+                    return redirect('store:checkout')
+
             promo = PromotionSetting.get_settings()
             subtotal = cart.get_subtotal()
             bundle_coupon_discount = cart.get_discount()

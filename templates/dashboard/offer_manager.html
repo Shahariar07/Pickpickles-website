@@ -434,6 +434,12 @@
                             {% if c.min_subtotal > 0 %}
                             <div>• Min Subtotal: <strong>৳{{ c.min_subtotal|floatformat:0 }}</strong></div>
                             {% endif %}
+                            {% if c.one_use_per_customer %}
+                            <div class="text-indigo-700 font-bold">• 1x per Phone Number</div>
+                            {% endif %}
+                            {% if c.previous_customers_only %}
+                            <div class="text-amber-700 font-bold">• Previous Customers Only (VIP)</div>
+                            {% endif %}
                         </td>
                         <td class="p-3 text-gray-700">
                             <div><strong class="text-gray-900">{{ c.used_count }}</strong> / {% if c.usage_limit %}{{ c.usage_limit }}{% else %}∞ Unlimited{% endif %}</div>
@@ -452,7 +458,7 @@
                         </td>
                         <td class="p-3 text-right">
                             <div class="flex items-center justify-end gap-1">
-                                <button type="button" onclick="openEditCouponModal('{{ c.id }}', '{{ c.code }}', '{{ c.discount_type }}', '{{ c.discount_value|floatformat:2 }}', '{{ c.min_jars }}', '{{ c.min_subtotal|floatformat:2 }}', '{{ c.usage_limit|default:'' }}', {{ c.is_active|yesno:'true,false' }})" {% if is_view_only %}disabled{% endif %} class="p-1.5 text-gray-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition cursor-pointer" title="Edit Coupon">
+                                <button type="button" onclick="openEditCouponModal('{{ c.id }}', '{{ c.code }}', '{{ c.discount_type }}', '{{ c.discount_value|floatformat:2 }}', '{{ c.min_jars }}', '{{ c.min_subtotal|floatformat:2 }}', '{{ c.usage_limit|default:'' }}', {{ c.is_active|yesno:'true,false' }}, {{ c.one_use_per_customer|yesno:'true,false' }}, {{ c.previous_customers_only|yesno:'true,false' }})" {% if is_view_only %}disabled{% endif %} class="p-1.5 text-gray-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition cursor-pointer" title="Edit Coupon">
                                     <i class="fa-solid fa-pen-to-square text-sm"></i>
                                 </button>
                                 <button type="button" onclick="openDeleteCouponModal('{{ c.id }}', '{{ c.code|escapejs }}')" {% if is_view_only %}disabled{% endif %} class="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer" title="Delete Coupon">
@@ -539,7 +545,15 @@
                             class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3.5 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition">
                     </div>
 
-                    <div class="sm:col-span-2 pt-1">
+                    <div class="sm:col-span-2 space-y-2 pt-1">
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" name="one_use_per_customer" value="1" checked class="w-4 h-4 text-indigo-600 rounded-md border-gray-300 focus:ring-indigo-500">
+                            <span class="text-xs font-bold text-gray-800">1 use per customer (limit once per phone number)</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" name="previous_customers_only" value="1" class="w-4 h-4 text-amber-600 rounded-md border-gray-300 focus:ring-amber-500">
+                            <span class="text-xs font-bold text-amber-900">Previous customers only (VIP — requires 1+ delivered order)</span>
+                        </label>
                         <label class="flex items-center gap-2 cursor-pointer select-none">
                             <input type="checkbox" name="is_active" value="1" checked class="w-4 h-4 text-brand-600 rounded-md border-gray-300 focus:ring-brand-500">
                             <span class="text-xs font-bold text-gray-800">Activate coupon immediately upon creation</span>
@@ -622,7 +636,15 @@
                             class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3.5 py-2 text-xs font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition">
                     </div>
 
-                    <div class="sm:col-span-2 pt-1">
+                    <div class="sm:col-span-2 space-y-2 pt-1">
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" name="one_use_per_customer" id="edit_one_use_per_customer" value="1" class="w-4 h-4 text-indigo-600 rounded-md border-gray-300 focus:ring-indigo-500">
+                            <span class="text-xs font-bold text-gray-800">1 use per customer (limit once per phone number)</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" name="previous_customers_only" id="edit_previous_customers_only" value="1" class="w-4 h-4 text-amber-600 rounded-md border-gray-300 focus:ring-amber-500">
+                            <span class="text-xs font-bold text-amber-900">Previous customers only (VIP — requires 1+ delivered order)</span>
+                        </label>
                         <label class="flex items-center gap-2 cursor-pointer select-none">
                             <input type="checkbox" name="is_active" id="edit_is_active" value="1" class="w-4 h-4 text-brand-600 rounded-md border-gray-300 focus:ring-brand-500">
                             <span class="text-xs font-bold text-gray-800">Coupon is currently active</span>
@@ -873,7 +895,7 @@
         }
     }
 
-    function openEditCouponModal(id, code, type, value, minJars, minSubtotal, usageLimit, isActive) {
+    function openEditCouponModal(id, code, type, value, minJars, minSubtotal, usageLimit, isActive, oneUsePerCustomer, previousCustomersOnly) {
         const idEl = document.getElementById('edit_coupon_id');
         const codeEl = document.getElementById('edit_coupon_code');
         const typeEl = document.getElementById('edit_discount_type');
@@ -882,6 +904,8 @@
         const subEl = document.getElementById('edit_min_subtotal');
         const limitEl = document.getElementById('edit_usage_limit');
         const activeEl = document.getElementById('edit_is_active');
+        const oneUseEl = document.getElementById('edit_one_use_per_customer');
+        const prevOnlyEl = document.getElementById('edit_previous_customers_only');
 
         if (idEl) idEl.value = id;
         if (codeEl) codeEl.value = code;
@@ -891,6 +915,8 @@
         if (subEl) subEl.value = parseFloat(minSubtotal) || 0;
         if (limitEl) limitEl.value = usageLimit || '';
         if (activeEl) activeEl.checked = Boolean(isActive);
+        if (oneUseEl) oneUseEl.checked = Boolean(oneUsePerCustomer);
+        if (prevOnlyEl) prevOnlyEl.checked = Boolean(previousCustomersOnly);
 
         toggleEditCouponModal(true);
     }

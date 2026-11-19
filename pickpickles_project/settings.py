@@ -267,6 +267,10 @@ STEADFAST_WEBHOOK_SECRET = os.environ.get('STEADFAST_WEBHOOK_SECRET', '').strip(
 CLOUDFLARE_TURNSTILE_SITE_KEY = os.environ.get('CLOUDFLARE_TURNSTILE_SITE_KEY', '')
 CLOUDFLARE_TURNSTILE_SECRET_KEY = os.environ.get('CLOUDFLARE_TURNSTILE_SECRET_KEY', '')
 
+# BulkSMSBD SMS Gateway API
+BULKSMSBD_API_KEY = os.environ.get('BULKSMSBD_API_KEY', 'fxclPi6WijQG8djIszN1').strip()
+BULKSMSBD_SENDER_ID = os.environ.get('BULKSMSBD_SENDER_ID', '8809617644578').strip()
+
 
 # ==============================================================================
 # 8. Production Security Hardening

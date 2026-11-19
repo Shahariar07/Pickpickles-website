@@ -1,0 +1,288 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Top Header & Live Balance -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white rounded-3xl border border-gray-200 p-5 sm:p-6 shadow-xs">
+        <div class="flex items-center gap-3.5">
+            <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xl border border-emerald-200 shrink-0">
+                <i class="fa-solid fa-paper-plane"></i>
+            </div>
+            <div>
+                <h1 class="font-display font-black text-xl sm:text-2xl text-gray-900 leading-tight">
+                    1-Click Bulk SMS Campaign
+                </h1>
+                <p class="text-xs text-gray-500 mt-0.5">
+                    Connected with <strong>BulkSMSBD</strong> • Blacklisted &amp; duplicate numbers are filtered automatically.
+                </p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2.5 flex-wrap">
+            {% if balance_ok %}
+            <div class="px-4 py-2.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-right">
+                <span class="text-[10px] font-black uppercase tracking-wider text-emerald-700 block">BulkSMSBD Balance</span>
+                <span class="font-display font-black text-lg text-emerald-950">৳{{ balance_val }}</span>
+            </div>
+            {% else %}
+            <div class="px-4 py-2.5 rounded-2xl bg-amber-50 border border-amber-200">
+                <span class="text-[10px] font-black uppercase tracking-wider text-amber-800 block">Balance Status</span>
+                <span class="text-xs font-bold text-amber-900">{{ balance_msg|default:"Unavailable" }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if not sender_id %}
+    <div class="bg-amber-50 border border-amber-300 rounded-2xl p-4 text-xs text-amber-950 flex items-start gap-3">
+        <i class="fa-solid fa-triangle-exclamation text-amber-600 text-base mt-0.5 shrink-0"></i>
+        <div>
+            <strong class="font-black block">Approved Sender ID প্রয়োজন (Required by BulkSMSBD)</strong>
+            <p class="mt-0.5 text-amber-900">আপনার BulkSMSBD ড্যাশবোর্ড থেকে পাওয়া Approved Sender ID (যেমন <code>880961761XXXX</code>) নিচের <strong>Sender ID</strong> বক্সে দিন অথবা <code>.env</code> ফাইলে <code>BULKSMSBD_SENDER_ID=...</code> সেট করুন।</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{% url 'dashboard:sms_campaign' %}" id="smsCampaignForm" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {% csrf_token %}
+
+        <!-- Left: Audience & Sender Config -->
+        <div class="lg:col-span-5 space-y-5">
+            <div class="bg-white rounded-3xl border border-gray-200 p-5 shadow-xs space-y-4">
+                <h2 class="font-display font-black text-sm text-gray-900 uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-users text-emerald-600"></i>
+                    <span>1. Select Audience</span>
+                </h2>
+
+                <div class="space-y-2.5">
+                    <label class="flex items-center justify-between p-3 rounded-2xl border border-gray-200 hover:border-emerald-400 cursor-pointer transition bg-gray-50/50 has-[:checked]:bg-emerald-50 has-[:checked]:border-emerald-500">
+                        <div class="flex items-center gap-2.5">
+                            <input type="radio" name="audience" value="test_single" checked onchange="onAudienceChange()" class="text-emerald-600 focus:ring-emerald-500">
+                            <div>
+                                <span class="font-bold text-xs text-gray-900 block">🧪 Test / Custom Numbers</span>
+                                <span class="text-[10px] text-gray-500">Send a test SMS to your own number first</span>
+                            </div>
+                        </div>
+                        <span class="text-[11px] font-black px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">Custom</span>
+                    </label>
+
+                    <label class="flex items-center justify-between p-3 rounded-2xl border border-gray-200 hover:border-emerald-400 cursor-pointer transition bg-gray-50/50 has-[:checked]:bg-emerald-50 has-[:checked]:border-emerald-500">
+                        <div class="flex items-center gap-2.5">
+                            <input type="radio" name="audience" value="delivered_all" onchange="onAudienceChange()" class="text-emerald-600 focus:ring-emerald-500">
+                            <div>
+                                <span class="font-bold text-xs text-gray-900 block">📦 All Delivered Customers</span>
+                                <span class="text-[10px] text-gray-500">Every unique customer with 1+ delivered order</span>
+                            </div>
+                        </div>
+                        <span class="text-xs font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">{{ count_delivered_all }}</span>
+                    </label>
+
+                    <label class="flex items-center justify-between p-3 rounded-2xl border border-gray-200 hover:border-emerald-400 cursor-pointer transition bg-gray-50/50 has-[:checked]:bg-emerald-50 has-[:checked]:border-emerald-500">
+                        <div class="flex items-center gap-2.5">
+                            <input type="radio" name="audience" value="repeat_vip" onchange="onAudienceChange()" class="text-emerald-600 focus:ring-emerald-500">
+                            <div>
+                                <span class="font-bold text-xs text-gray-900 block">👑 VIP Repeat Customers</span>
+                                <span class="text-[10px] text-gray-500">Customers with 2+ delivered orders</span>
+                            </div>
+                        </div>
+                        <span class="text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900">{{ count_repeat_vip }}</span>
+                    </label>
+
+                    <label class="flex items-center justify-between p-3 rounded-2xl border border-gray-200 hover:border-emerald-400 cursor-pointer transition bg-gray-50/50 has-[:checked]:bg-emerald-50 has-[:checked]:border-emerald-500">
+                        <div class="flex items-center gap-2.5">
+                            <input type="radio" name="audience" value="inside_dhaka" onchange="onAudienceChange()" class="text-emerald-600 focus:ring-emerald-500">
+                            <div>
+                                <span class="font-bold text-xs text-gray-900 block">🏙️ Delivered — Inside Dhaka</span>
+                                <span class="text-[10px] text-gray-500">Dhaka city delivered customers</span>
+                            </div>
+                        </div>
+                        <span class="text-xs font-black px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800">{{ count_inside_dhaka }}</span>
+                    </label>
+
+                    <label class="flex items-center justify-between p-3 rounded-2xl border border-gray-200 hover:border-emerald-400 cursor-pointer transition bg-gray-50/50 has-[:checked]:bg-emerald-50 has-[:checked]:border-emerald-500">
+                        <div class="flex items-center gap-2.5">
+                            <input type="radio" name="audience" value="outside_dhaka" onchange="onAudienceChange()" class="text-emerald-600 focus:ring-emerald-500">
+                            <div>
+                                <span class="font-bold text-xs text-gray-900 block">🚚 Delivered — Outside Dhaka</span>
+                                <span class="text-[10px] text-gray-500">Nationwide outside Dhaka delivered customers</span>
+                            </div>
+                        </div>
+                        <span class="text-xs font-black px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-800">{{ count_outside_dhaka }}</span>
+                    </label>
+                </div>
+
+                <!-- Custom Numbers Input (shown when test_single selected) -->
+                <div id="customNumbersBox" class="pt-2">
+                    <label for="custom_numbers" class="block text-xs font-bold text-gray-700 mb-1">Test / Custom Phone Number(s)</label>
+                    <input type="text" name="custom_numbers" id="custom_numbers" placeholder="e.g. 017XXXXXXXX or comma separated"
+                        class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-gray-900 focus:bg-white focus:border-emerald-600 focus:outline-hidden">
+                    <p class="text-[10px] text-gray-400 mt-1">Auto-formats <code>017...</code> to <code>88017...</code></p>
+                </div>
+
+                <!-- Sender ID Input -->
+                <div class="pt-2 border-t border-gray-100">
+                    <label for="sender_id" class="block text-xs font-bold text-gray-700 mb-1">Approved Sender ID *</label>
+                    <input type="text" name="sender_id" id="sender_id" value="{{ sender_id }}" required placeholder="e.g. 880961761XXXX"
+                        class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-gray-900 focus:bg-white focus:border-emerald-600 focus:outline-hidden">
+                    <p class="text-[10px] text-gray-400 mt-1">BulkSMSBD Approved Non-Masking or Masking Sender ID.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Message Composer & 1-Click Send -->
+        <div class="lg:col-span-7 space-y-5">
+            <div class="bg-white rounded-3xl border border-gray-200 p-5 sm:p-6 shadow-xs space-y-4">
+                <div class="flex items-center justify-between flex-wrap gap-2">
+                    <h2 class="font-display font-black text-sm text-gray-900 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fa-solid fa-comment-sms text-emerald-600"></i>
+                        <span>2. Compose SMS Message</span>
+                    </h2>
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <button type="button" onclick="applySmsTemplate('price_drop')" class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 cursor-pointer transition">
+                            ✨ Price Drop (1 SMS)
+                        </button>
+                        <button type="button" onclick="applySmsTemplate('vip_coupon')" class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100 cursor-pointer transition">
+                            🎟️ Repeat 5% OFF (1 SMS)
+                        </button>
+                    </div>
+                </div>
+
+                {% if active_coupons %}
+                <div class="flex items-center gap-1.5 flex-wrap text-[11px]">
+                    <span class="font-bold text-gray-500">Active Coupons:</span>
+                    {% for c in active_coupons %}
+                    <button type="button" onclick="insertCouponText('{{ c.code }}')" class="px-2 py-0.5 rounded-md bg-slate-900 text-amber-300 font-mono font-black hover:bg-slate-800 cursor-pointer transition" title="Click to insert coupon code">
+                        + {{ c.code }}
+                    </button>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <div>
+                    <textarea name="message" id="smsMessageInput" rows="5" required oninput="updateSmsCounter()"
+                        placeholder="Write your SMS here (Keep under 160 English/Banglish characters for 1 SMS cost)..."
+                        class="w-full bg-gray-50 border border-gray-300 rounded-2xl p-4 text-sm text-gray-900 font-medium focus:bg-white focus:border-emerald-600 focus:outline-hidden transition">Pickpickles Repeat Offer! Use code REPEAT5 for 5% OFF on your next order. Fresh, crispy & homemade! Order: https://www.pickpickles.xyz</textarea>
+
+                    <div class="mt-2 flex items-center justify-between flex-wrap gap-2 text-xs">
+                        <div class="flex items-center gap-2">
+                            <span id="smsEncodingBadge" class="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold text-[11px]">English / GSM (160/SMS)</span>
+                            <span class="text-gray-500 font-bold"><span id="smsCharCount">0</span> chars • <strong id="smsPartCount" class="text-gray-900">1</strong> SMS part(s)</span>
+                        </div>
+                        <span class="text-gray-500 font-bold">Est. SMS Units: <strong id="smsTotalUnits" class="text-emerald-700">1</strong></span>
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-gray-100 flex items-center justify-between gap-3 flex-wrap">
+                    <p class="text-[11px] text-gray-500">
+                        Tip: প্রথমে <strong>Test / Custom Numbers</strong> দিয়ে নিজের নম্বরে ১টা SMS পাঠিয়ে চেক করুন।
+                    </p>
+                    <button type="submit" {% if is_view_only %}disabled{% endif %}
+                        onclick="return confirmSmsSend();"
+                        class="bg-gradient-to-r from-[#15803d] to-[#0f4826] hover:from-[#166534] hover:to-[#092d18] active:scale-95 text-white font-display font-black text-sm px-6 py-3 rounded-2xl shadow-lg shadow-emerald-800/20 flex items-center gap-2 cursor-pointer transition">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span id="sendSmsBtnText">Send SMS Now</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+const AUDIENCE_COUNTS = {
+    test_single: 1,
+    delivered_all: {{ count_delivered_all|default:0 }},
+    repeat_vip: {{ count_repeat_vip|default:0 }},
+    inside_dhaka: {{ count_inside_dhaka|default:0 }},
+    outside_dhaka: {{ count_outside_dhaka|default:0 }},
+};
+
+function getSelectedAudience() {
+    const checked = document.querySelector('input[name="audience"]:checked');
+    return checked ? checked.value : 'test_single';
+}
+
+function onAudienceChange() {
+    const aud = getSelectedAudience();
+    const box = document.getElementById('customNumbersBox');
+    if (box) {
+        box.style.display = (aud === 'test_single') ? 'block' : 'none';
+    }
+    updateSmsCounter();
+}
+
+function updateSmsCounter() {
+    const el = document.getElementById('smsMessageInput');
+    const txt = el ? el.value : '';
+    const isUnicode = /[^\x00-\x7F]/.test(txt);
+    const limitSingle = isUnicode ? 70 : 160;
+    const limitMulti = isUnicode ? 67 : 153;
+    const len = txt.length;
+    const parts = len === 0 ? 0 : (len <= limitSingle ? 1 : Math.ceil(len / limitMulti));
+
+    const encBadge = document.getElementById('smsEncodingBadge');
+    if (encBadge) {
+        if (isUnicode) {
+            encBadge.textContent = 'Bangla / Unicode (70/SMS)';
+            encBadge.className = 'px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-bold text-[11px]';
+        } else {
+            encBadge.textContent = 'English / GSM (160/SMS)';
+            encBadge.className = 'px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold text-[11px]';
+        }
+    }
+
+    const aud = getSelectedAudience();
+    let recCount = AUDIENCE_COUNTS[aud] || 0;
+    if (aud === 'test_single') {
+        const customRaw = (document.getElementById('custom_numbers')?.value || '').trim();
+        recCount = customRaw ? customRaw.split(/[,\n;\s]+/).filter(Boolean).length : 1;
+    }
+
+    document.getElementById('smsCharCount').textContent = len;
+    document.getElementById('smsPartCount').textContent = parts;
+    document.getElementById('smsTotalUnits').textContent = parts * recCount;
+    document.getElementById('sendSmsBtnText').textContent = aud === 'test_single'
+        ? 'Send Test SMS'
+        : `Send to ${recCount} Customers`;
+}
+
+function applySmsTemplate(kind) {
+    const el = document.getElementById('smsMessageInput');
+    if (!el) return;
+    if (kind === 'price_drop') {
+        el.value = 'Pickpickles Winter Offer! Order 4+ Jars for FREE Delivery + 5% OFF on bKash. Repeat code: REPEAT5. Shop: https://www.pickpickles.xyz';
+    } else if (kind === 'vip_coupon') {
+        el.value = 'Pickpickles Repeat Offer! Use code REPEAT5 for 5% OFF on your next order. Fresh, crispy & homemade! Order: https://www.pickpickles.xyz';
+    }
+    updateSmsCounter();
+}
+
+function insertCouponText(code) {
+    const el = document.getElementById('smsMessageInput');
+    if (!el) return;
+    el.value = (el.value.trim() + ' Use code: ' + code).trim();
+    updateSmsCounter();
+}
+
+function confirmSmsSend() {
+    const aud = getSelectedAudience();
+    const sender = (document.getElementById('sender_id')?.value || '').trim();
+    if (!sender) {
+        alert('Please enter your Approved BulkSMSBD Sender ID first.');
+        return false;
+    }
+    if (aud !== 'test_single') {
+        const cnt = AUDIENCE_COUNTS[aud] || 0;
+        const units = document.getElementById('smsTotalUnits')?.textContent || cnt;
+        return confirm(`Are you sure you want to send this SMS to ${cnt} customers (~${units} SMS units)?`);
+    }
+    return true;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    onAudienceChange();
+    const customInput = document.getElementById('custom_numbers');
+    if (customInput) customInput.addEventListener('input', updateSmsCounter);
+});
+</script>
+{% endblock %}

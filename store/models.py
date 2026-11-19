@@ -631,6 +631,8 @@ class Coupon(models.Model):
     is_active = models.BooleanField(default=True, help_text="Whether this coupon is active.")
     usage_limit = models.PositiveIntegerField(null=True, blank=True, help_text="Max uses. Leave empty for unlimited.")
     used_count = models.PositiveIntegerField(default=0, help_text="Times this coupon has been redeemed.")
+    one_use_per_customer = models.BooleanField(default=False, help_text="Each customer phone number can only use this coupon once.")
+    previous_customers_only = models.BooleanField(default=False, help_text="Only phone numbers with at least one previous DELIVERED order can use this coupon.")
     valid_from = models.DateTimeField(null=True, blank=True, help_text="Start date.")
     valid_to = models.DateTimeField(null=True, blank=True, help_text="Expiry date.")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -653,13 +655,53 @@ class Coupon(models.Model):
         if not self.is_active:
             return False, "This coupon is currently inactive."
         if self.usage_limit is not None and self.used_count >= self.usage_limit:
-            return False, "This coupon has reached its maximum redemption limit."
+            return False, "This coupon limit has been reached."
         from django.utils import timezone
         now = timezone.now()
         if self.valid_from and now < self.valid_from:
             return False, "This coupon is not yet active."
         if self.valid_to and now > self.valid_to:
             return False, "This coupon has expired."
+        return True, ""
+
+    @staticmethod
+    def _normalize_phone_last10(phone_number: str) -> str:
+        digits = ''.join(c for c in str(phone_number or '') if c.isdigit())
+        return digits[-10:] if len(digits) >= 10 else digits
+
+    def validate_for_customer(self, phone_number: str):
+        """
+        Validate per-customer coupon eligibility based on phone number:
+        1. If `previous_customers_only` is True, requires >= 1 prior DELIVERED order with this phone.
+        2. If `one_use_per_customer` is True, blocks if this phone already used this coupon on any non-cancelled order.
+        """
+        if not self.previous_customers_only and not self.one_use_per_customer:
+            return True, ""
+
+        last10 = self._normalize_phone_last10(phone_number)
+        if not last10 or len(last10) < 8:
+            if self.previous_customers_only:
+                return False, "Please enter your phone number first."
+            return False, "Please enter a valid phone number."
+
+        if self.previous_customers_only:
+            has_delivered = Order.objects.filter(
+                is_deleted=False,
+                order_status='DELIVERED',
+                customer_phone__icontains=last10,
+            ).exists()
+            if not has_delivered:
+                return False, "This coupon is for previous customers only."
+
+        if self.one_use_per_customer or self.previous_customers_only:
+            already_used = Order.objects.filter(
+                is_deleted=False,
+                coupon_code__iexact=self.code,
+                customer_phone__icontains=last10,
+            ).exclude(order_status='CANCELLED').exists()
+            if already_used:
+                return False, "You have already used this coupon."
+
         return True, ""
 
     def calculate_discount(self, subtotal, total_items: int):

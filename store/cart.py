@@ -64,10 +64,13 @@ class Cart:
             if keys_to_remove:
                 for k in keys_to_remove:
                     del self.cart[k]
+                if not self.cart:
+                    self.session.pop('coupon_code', None)
                 self.save()
 
     def clear(self):
-        del self.session['pickpickles_cart']
+        self.session.pop('pickpickles_cart', None)
+        self.session.pop('coupon_code', None)
         self.save()
 
     def save(self):
@@ -226,7 +229,7 @@ class Cart:
         coupon_disc = self.get_coupon_discount()
         return min(self.get_subtotal(), bundle_disc + coupon_disc)
 
-    def apply_coupon(self, code: str):
+    def apply_coupon(self, code: str, customer_phone: str = ''):
         code = (code or '').strip().upper()
         if not code:
             return False, "Please enter a coupon code.", Decimal('0.00')
@@ -237,6 +240,11 @@ class Cart:
             valid, msg = coupon.is_valid_now()
             if not valid:
                 return False, msg, Decimal('0.00')
+            if coupon.previous_customers_only or coupon.one_use_per_customer:
+                cust_ok, cust_err = coupon.validate_for_customer(customer_phone)
+                if not cust_ok:
+                    self.remove_coupon()
+                    return False, cust_err, Decimal('0.00')
             discount, err = coupon.calculate_discount(self.get_subtotal(), len(self))
             if err:
                 return False, err, Decimal('0.00')

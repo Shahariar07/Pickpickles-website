@@ -900,5 +900,92 @@ class CartTests(TestCase):
         self.assertNotIn('id="freeDeliveryBanner"', html_plain)
         self.assertIn('Nationwide Delivery', html_plain)
 
+    def test_coupon_previous_customers_only_and_one_use_per_customer(self):
+        import json
+        from store.models import Category, Product, Coupon, Order
+
+        cat, _ = Category.objects.get_or_create(name='VIP Cat', defaults={'slug': 'vip-cat'})
+        prod = Product.objects.create(
+            category=cat,
+            name='VIP Garlic Pickle',
+            slug='vip-garlic-pickle',
+            tagline='VIP crunch',
+            description='VIP desc',
+            price_bdt=Decimal('500.00'),
+            jar_weight_grams=500,
+            is_in_stock=True,
+        )
+        coupon = Coupon.objects.create(
+            code='VIPBACK50',
+            discount_type='FIXED',
+            discount_value=Decimal('50.00'),
+            min_jars=1,
+            is_active=True,
+            one_use_per_customer=True,
+            previous_customers_only=True,
+        )
+
+        # Previous delivered customer
+        Order.objects.create(
+            customer_name='Old Customer',
+            customer_phone='01711000111',
+            delivery_address='Dhanmondi',
+            delivery_city='Dhaka',
+            delivery_zone='INSIDE_DHAKA',
+            subtotal=Decimal('500.00'),
+            delivery_fee=Decimal('150.00'),
+            total_amount=Decimal('650.00'),
+            order_status='DELIVERED',
+        )
+
+        # Add item to cart
+        self.client.post(
+            reverse('store:cart_add', args=[prod.id]) + '?format=json',
+            {'quantity': 1},
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+
+        # 1. Brand-new phone number should be rejected
+        res_new = self.client.post(
+            reverse('store:apply_coupon_ajax'),
+            data=json.dumps({'coupon_code': 'VIPBACK50', 'customer_phone': '01999888777'}),
+            content_type='application/json',
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+        self.assertFalse(res_new.json()['success'])
+
+        # 2. Previous delivered customer should succeed the first time
+        res_old = self.client.post(
+            reverse('store:apply_coupon_ajax'),
+            data=json.dumps({'coupon_code': 'VIPBACK50', 'customer_phone': '+8801711000111'}),
+            content_type='application/json',
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+        self.assertTrue(res_old.json()['success'])
+        self.assertEqual(res_old.json()['coupon_discount'], 50.0)
+
+        # 3. After using VIPBACK50 on an active order, the same phone cannot reuse it
+        Order.objects.create(
+            customer_name='Old Customer',
+            customer_phone='01711000111',
+            delivery_address='Dhanmondi',
+            delivery_city='Dhaka',
+            delivery_zone='INSIDE_DHAKA',
+            subtotal=Decimal('500.00'),
+            discount_amount=Decimal('50.00'),
+            delivery_fee=Decimal('150.00'),
+            total_amount=Decimal('600.00'),
+            coupon_code='VIPBACK50',
+            order_status='CONFIRMED',
+        )
+        res_repeat = self.client.post(
+            reverse('store:apply_coupon_ajax'),
+            data=json.dumps({'coupon_code': 'VIPBACK50', 'customer_phone': '01711000111'}),
+            content_type='application/json',
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+        self.assertFalse(res_repeat.json()['success'])
+
+
 
 

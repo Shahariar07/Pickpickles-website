@@ -348,16 +348,16 @@ function updateFreeDeliveryProgress(totalItems, offerInfo = null) {
     const pageFreeBadge = document.getElementById('freeDeliveryBadge');
 
     if (pageFreeBanner) {
-        pageFreeBanner.className = `p-3 rounded-2xl border transition-all ${state.bannerBg}`;
+        pageFreeBanner.className = `px-2.5 py-2 rounded-xl border text-[11px] font-bold transition-all ${state.bannerBg}`;
         if (pageFreeIcon) pageFreeIcon.innerText = state.icon;
         if (pageFreeText) pageFreeText.innerHTML = state.msgHtml;
         if (pageFreeProgress) {
-            pageFreeProgress.className = `h-1.5 rounded-full transition-all duration-500 ${state.barClass}`;
+            pageFreeProgress.className = `h-1 rounded-full transition-all duration-500 ${state.barClass}`;
             pageFreeProgress.style.width = state.barWidth;
         }
         if (pageFreeSubtext) pageFreeSubtext.innerText = state.subtext;
         if (pageFreeBadge) {
-            pageFreeBadge.className = `text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap mt-0.5 ${state.badgeClass}`;
+            pageFreeBadge.className = `text-[9.5px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap ${state.badgeClass}`;
             pageFreeBadge.innerText = state.badgeText;
         }
     }
@@ -822,6 +822,8 @@ async function applyCouponCode(inputId) {
     if (zoneChecked && zoneChecked.value) {
         currentZone = zoneChecked.value;
     }
+    const phoneInput = document.querySelector('input[name="customer_phone"]');
+    const customerPhone = phoneInput ? phoneInput.value.trim() : '';
 
     try {
         const response = await fetch('/cart/apply-coupon/', {
@@ -833,7 +835,8 @@ async function applyCouponCode(inputId) {
             },
             body: JSON.stringify({
                 coupon_code: code,
-                zone: currentZone
+                zone: currentZone,
+                customer_phone: customerPhone
             })
         });
 
@@ -851,10 +854,14 @@ async function applyCouponCode(inputId) {
             // Sync Coupon Badge & Input
             const group = document.getElementById('checkoutCouponInputGroup');
             const badge = document.getElementById('checkoutCouponAppliedBadge');
+            const toggleBtn = document.getElementById('checkoutCouponToggleBtn');
+            const couponBox = document.getElementById('checkoutCouponBox');
             const codeText = document.getElementById('checkoutCouponCodeText');
             const discCode = document.getElementById('checkoutCouponDiscountCode');
             const input = document.getElementById('checkoutCouponInput');
 
+            if (toggleBtn) toggleBtn.classList.add('hidden');
+            if (couponBox) couponBox.classList.remove('hidden');
             if (group) group.classList.add('hidden');
             if (badge) badge.classList.remove('hidden');
             if (codeText) codeText.innerText = data.coupon_code || code;
@@ -971,10 +978,14 @@ async function removeCouponCode() {
 
             const group = document.getElementById('checkoutCouponInputGroup');
             const badge = document.getElementById('checkoutCouponAppliedBadge');
+            const toggleBtn = document.getElementById('checkoutCouponToggleBtn');
+            const couponBox = document.getElementById('checkoutCouponBox');
             const codeText = document.getElementById('checkoutCouponCodeText');
             const discCode = document.getElementById('checkoutCouponDiscountCode');
             const input = document.getElementById('checkoutCouponInput');
 
+            if (toggleBtn) toggleBtn.classList.remove('hidden');
+            if (couponBox) couponBox.classList.add('hidden');
             if (group) group.classList.remove('hidden');
             if (badge) badge.classList.add('hidden');
             if (codeText) codeText.innerText = '';

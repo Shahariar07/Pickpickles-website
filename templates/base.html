@@ -326,6 +326,7 @@
     </header>
 
     <!-- Global Messages / Alerts -->
+    {% block global_messages %}
     {% if messages %}
     <div class="max-w-4xl mx-auto px-4 mt-3 w-full">
         {% for message in messages %}
@@ -348,6 +349,7 @@
         {% endfor %}
     </div>
     {% endif %}
+    {% endblock %}
 
     <!-- Main Content Area -->
     <main class="flex-grow">

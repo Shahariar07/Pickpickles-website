@@ -321,6 +321,14 @@
                                 {% endif %}
                             </a>
 
+                            <!-- 1-Click Bulk SMS Campaign -->
+                            <a href="{% url 'dashboard:sms_campaign' %}"
+                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'sms_campaign' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-emerald-300 hover:text-white hover:bg-brand-800{% endif %}">
+                                <i class="fa-solid fa-paper-plane text-emerald-400 text-sm w-4 text-center"></i>
+                                <span>SMS Campaign</span>
+                                <span class="ml-auto px-1.5 py-0.5 text-[9px] font-black bg-emerald-500/20 text-emerald-300 rounded border border-emerald-400/30">BulkSMSBD</span>
+                            </a>
+
                             <!-- Pickle Categories -->
                             <a href="{% url 'dashboard:pickle_categories' %}"
                                 class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'pickle_categories' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">

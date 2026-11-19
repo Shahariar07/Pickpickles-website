@@ -1,5 +1,6 @@
 import csv
 import json
+import re
 import datetime
 from datetime import timedelta
 import math
@@ -2147,6 +2148,10 @@ def create_manual_order(request):
                 c_disc, c_err = coupon_obj.calculate_discount(subtotal, total_items_count)
                 if c_err:
                     messages.error(request, f"Coupon '{coupon_obj.code}': {c_err}")
+                    return redirect('dashboard:orders')
+                cust_ok, cust_err = coupon_obj.validate_for_customer(customer_phone)
+                if not cust_ok:
+                    messages.error(request, cust_err)
                     return redirect('dashboard:orders')
                 applied_coupon = coupon_obj
                 coupon_discount = c_disc
@@ -6746,6 +6751,8 @@ def offer_manager(request):
                 usage_limit_raw = request.POST.get('usage_limit', '').strip()
                 usage_limit = int(usage_limit_raw) if usage_limit_raw else None
                 is_active = request.POST.get('is_active') == '1'
+                one_use_per_customer = request.POST.get('one_use_per_customer') == '1'
+                previous_customers_only = request.POST.get('previous_customers_only') == '1'
 
                 Coupon.objects.create(
                     code=code,
@@ -6755,6 +6762,8 @@ def offer_manager(request):
                     min_subtotal=min_subtotal,
                     usage_limit=usage_limit,
                     is_active=is_active,
+                    one_use_per_customer=one_use_per_customer,
+                    previous_customers_only=previous_customers_only,
                 )
                 messages.success(request, f'🎉 Coupon "{code}" created successfully!')
             except Exception as e:
@@ -6803,6 +6812,8 @@ def offer_manager(request):
                 usage_limit_raw = request.POST.get('usage_limit', '').strip()
                 c.usage_limit = int(usage_limit_raw) if usage_limit_raw else None
                 c.is_active = request.POST.get('is_active') == '1'
+                c.one_use_per_customer = request.POST.get('one_use_per_customer') == '1'
+                c.previous_customers_only = request.POST.get('previous_customers_only') == '1'
                 c.save()
 
                 messages.success(request, f'🎉 Coupon "{c.code}" updated successfully!')
@@ -6890,6 +6901,109 @@ def offer_manager(request):
         'can_delete': not is_view_only,
     }
     return render(request, 'dashboard/offer_manager.html', context)
+
+
+def _get_sms_audience_segments():
+    """Return deduplicated, blacklist-filtered BD mobile numbers per customer segment."""
+    from dashboard.sms_service import normalize_bd_phone
+
+    blacklisted = set()
+    for raw_bp in BlacklistedCustomer.objects.filter(is_active=True).values_list('phone', flat=True):
+        norm_bp = normalize_bd_phone(raw_bp)
+        if norm_bp:
+            blacklisted.add(norm_bp)
+
+    delivered_orders = Order.objects.filter(
+        is_deleted=False,
+        order_status='DELIVERED',
+    ).values('customer_phone', 'delivery_zone')
+
+    phone_counts = {}
+    phone_zones = {}
+    for row in delivered_orders:
+        norm = normalize_bd_phone(row['customer_phone'])
+        if not norm or norm in blacklisted:
+            continue
+        phone_counts[norm] = phone_counts.get(norm, 0) + 1
+        if norm not in phone_zones:
+            phone_zones[norm] = row['delivery_zone'] or 'INSIDE_DHAKA'
+
+    delivered_all = list(phone_counts.keys())
+    repeat_vip = [ph for ph, cnt in phone_counts.items() if cnt >= 2]
+    inside_dhaka = [ph for ph in delivered_all if phone_zones.get(ph) == 'INSIDE_DHAKA']
+    outside_dhaka = [ph for ph in delivered_all if phone_zones.get(ph) != 'INSIDE_DHAKA']
+
+    return {
+        'delivered_all': delivered_all,
+        'repeat_vip': repeat_vip,
+        'inside_dhaka': inside_dhaka,
+        'outside_dhaka': outside_dhaka,
+    }
+
+
+@login_required(login_url='dashboard:login')
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def sms_campaign_manager(request):
+    from django.conf import settings
+    from dashboard.sms_service import get_bulksmsbd_balance, send_bulksmsbd_bulk
+
+    is_view_only = is_view_only_user(request.user)
+    segments = _get_sms_audience_segments()
+
+    default_sender_id = (
+        request.session.get('bulksmsbd_sender_id')
+        or getattr(settings, 'BULKSMSBD_SENDER_ID', '')
+        or ''
+    ).strip()
+
+    if request.method == 'POST':
+        if not can_user_edit(request.user):
+            messages.error(request, 'Permission Denied: SMS পাঠানোর অনুমতি নেই। (View-Only Mode)')
+            return redirect('dashboard:sms_campaign')
+
+        audience = (request.POST.get('audience') or 'test_single').strip()
+        sender_id = (request.POST.get('sender_id') or default_sender_id).strip()
+        sms_message = (request.POST.get('message') or '').strip()
+        custom_numbers_raw = (request.POST.get('custom_numbers') or '').strip()
+
+        if sender_id:
+            request.session['bulksmsbd_sender_id'] = sender_id
+
+        if audience == 'test_single':
+            target_numbers = [n.strip() for n in re.split(r'[,\n;\s]+', custom_numbers_raw) if n.strip()]
+        else:
+            target_numbers = segments.get(audience, [])
+
+        result = send_bulksmsbd_bulk(
+            numbers=target_numbers,
+            message=sms_message,
+            sender_id=sender_id,
+        )
+        if result['success']:
+            messages.success(request, f"✅ {result['message']}")
+        else:
+            messages.error(request, f"❌ SMS Failed: {result['message']}")
+
+        return redirect('dashboard:sms_campaign')
+
+    bal_ok, balance_val, bal_msg = get_bulksmsbd_balance()
+    active_coupons = Coupon.objects.filter(is_active=True).order_by('-created_at')[:5]
+
+    context = {
+        'title': '1-Click Bulk SMS Campaign',
+        'is_view_only': is_view_only,
+        'balance_ok': bal_ok,
+        'balance_val': balance_val,
+        'balance_msg': bal_msg,
+        'sender_id': default_sender_id,
+        'has_api_key': bool(getattr(settings, 'BULKSMSBD_API_KEY', '')),
+        'count_delivered_all': len(segments['delivered_all']),
+        'count_repeat_vip': len(segments['repeat_vip']),
+        'count_inside_dhaka': len(segments['inside_dhaka']),
+        'count_outside_dhaka': len(segments['outside_dhaka']),
+        'active_coupons': active_coupons,
+    }
+    return render(request, 'dashboard/sms_campaign.html', context)
 
 
 

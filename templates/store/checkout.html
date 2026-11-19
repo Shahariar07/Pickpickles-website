@@ -3,6 +3,8 @@
 
 {% block title %}Checkout — Order Artisanal Pickles | Pickpickles Bangladesh{% endblock %}
 
+{% block global_messages %}{% endblock %}
+
 {% block content %}
 <div class="bg-gradient-to-b from-slate-50 via-white to-slate-50 min-h-screen py-5 sm:py-10">
     <div class="max-w-6xl mx-auto px-3.5 sm:px-6 lg:px-8">
@@ -29,19 +31,19 @@
                 <!-- Left Column: Form Steps (7 Cols) -->
                 <div class="lg:col-span-7 space-y-4 sm:space-y-6">
 
-                    <!-- 1. Delivery Details (Unified & Minimal) -->
-                    <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/90 shadow-xs">
-                        <div class="flex items-center gap-2.5 border-b border-slate-100 pb-3 mb-4">
-                            <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-emerald-700 text-white flex items-center justify-center text-xs sm:text-sm font-black shrink-0">
+                    <!-- 1. Delivery Details (Compact & Minimal on Mobile) -->
+                    <div class="bg-white p-3.5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-xs">
+                        <div class="flex items-center gap-2 border-b border-slate-100 pb-2.5 mb-3">
+                            <div class="w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-emerald-700 text-white flex items-center justify-center text-xs sm:text-sm font-black shrink-0">
                                 1
                             </div>
-                            <h2 class="font-display font-black text-base text-slate-950">Delivery Information</h2>
+                            <h2 class="font-display font-black text-sm sm:text-base text-slate-950">Delivery Information</h2>
                         </div>
 
                         <!-- Returning Customer Auto-Fill Badge -->
-                        <div id="returningCustomerBadge" class="hidden mb-3.5 px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between gap-2 text-xs text-emerald-900 font-bold">
+                        <div id="returningCustomerBadge" class="hidden mb-3 px-2.5 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between gap-2 text-[11px] text-emerald-900 font-bold">
                             <span class="flex items-center gap-1.5">
-                                <i class="fa-solid fa-wand-magic-sparkles text-emerald-600 text-xs"></i>
+                                <i class="fa-solid fa-wand-magic-sparkles text-emerald-600 text-[11px]"></i>
                                 <span>Saved details auto-filled!</span>
                             </span>
                             <button type="button" onclick="clearSavedCheckoutProfile()" class="text-[11px] text-slate-500 hover:text-rose-600 underline font-semibold shrink-0 cursor-pointer">
@@ -49,20 +51,20 @@
                             </button>
                         </div>
 
-                        <div class="space-y-3.5">
+                        <div class="space-y-2.5 sm:space-y-3.5">
                             <!-- Full Name -->
                             <div>
-                                <label class="block text-xs font-bold text-slate-800 mb-1" for="customer_name">
+                                <label class="block text-[11px] sm:text-xs font-bold text-slate-700 mb-1" for="customer_name">
                                     Full Name <span class="text-rose-500">*</span>
                                 </label>
                                 <div class="relative">
-                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
-                                        <i class="fa-regular fa-user text-sm"></i>
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                                        <i class="fa-regular fa-user text-xs sm:text-sm"></i>
                                     </span>
-                                    <input type="text" name="customer_name" id="customer_name" value="{{ form.customer_name.value|default:'' }}" required autocomplete="name" placeholder="e.g. Tanvir Ahmed" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3.5 py-2.5 sm:py-3 text-base sm:text-sm text-slate-900 font-bold focus:bg-white focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 focus:outline-hidden transition">
+                                    <input type="text" name="customer_name" id="customer_name" value="{{ form.customer_name.value|default:'' }}" required autocomplete="name" placeholder="e.g. Tanvir Ahmed" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 sm:py-2.5 text-xs sm:text-sm text-slate-900 font-semibold focus:bg-white focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 focus:outline-hidden transition">
                                 </div>
                                 {% if form.customer_name.errors %}
-                                    <p class="text-rose-600 font-bold text-xs mt-1 flex items-center gap-1">
+                                    <p class="text-rose-600 font-bold text-[11px] mt-1 flex items-center gap-1">
                                         <i class="fa-solid fa-circle-exclamation"></i> {{ form.customer_name.errors.0 }}
                                     </p>
                                 {% endif %}
@@ -70,22 +72,22 @@
 
                             <!-- Phone Number -->
                             <div>
-                                <label class="block text-xs font-bold text-slate-800 mb-1" for="customer_phone">
+                                <label class="block text-[11px] sm:text-xs font-bold text-slate-700 mb-1" for="customer_phone">
                                     Mobile Number <span class="text-rose-500">*</span>
                                 </label>
                                 <div class="relative">
-                                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-500 text-xs font-black border-r border-slate-200 pr-2 my-1.5">
+                                    <div class="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none text-slate-500 text-[11px] sm:text-xs font-black border-r border-slate-200 pr-2 my-1.5">
                                         <span>🇧🇩 +88</span>
                                     </div>
-                                    <input type="tel" name="customer_phone" id="customer_phone" value="{{ form.customer_phone.value|default:'' }}" required inputmode="numeric" placeholder="01XXXXXXXXX" maxlength="15" autocomplete="tel" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-20 pr-3.5 py-2.5 sm:py-3 text-base sm:text-sm text-slate-900 font-bold tracking-wide focus:bg-white focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 focus:outline-hidden transition">
+                                    <input type="tel" name="customer_phone" id="customer_phone" value="{{ form.customer_phone.value|default:'' }}" required inputmode="numeric" placeholder="01XXXXXXXXX" maxlength="15" autocomplete="tel" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-18 sm:pl-20 pr-3 py-2 sm:py-2.5 text-xs sm:text-sm text-slate-900 font-semibold tracking-wide focus:bg-white focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 focus:outline-hidden transition">
                                 </div>
                                 
-                                <p id="customer_phone_err" class="hidden text-rose-700 bg-rose-50 border border-rose-200 font-semibold text-xs p-2.5 rounded-xl mt-1.5 flex items-center gap-1.5">
+                                <p id="customer_phone_err" class="hidden text-rose-700 bg-rose-50 border border-rose-200 font-semibold text-[11px] p-2 rounded-xl mt-1 flex items-center gap-1.5">
                                     <i class="fa-solid fa-circle-exclamation text-rose-600 text-xs shrink-0"></i>
                                     <span>Please enter a valid 11-digit mobile number (01XXXXXXXXX).</span>
                                 </p>
                                 {% if form.customer_phone.errors %}
-                                    <p class="text-rose-600 font-bold text-xs mt-1 flex items-center gap-1">
+                                    <p class="text-rose-600 font-bold text-[11px] mt-1 flex items-center gap-1">
                                         <i class="fa-solid fa-circle-exclamation"></i> {{ form.customer_phone.errors.0 }}
                                     </p>
                                 {% endif %}
@@ -93,12 +95,12 @@
 
                             <!-- Full Street Address -->
                             <div>
-                                <label class="block text-xs font-bold text-slate-800 mb-1" for="delivery_address">
+                                <label class="block text-[11px] sm:text-xs font-bold text-slate-700 mb-1" for="delivery_address">
                                     Full Delivery Address <span class="text-rose-500">*</span>
                                 </label>
-                                <textarea name="delivery_address" id="delivery_address" rows="3" required autocomplete="street-address" placeholder="House #, Road #, Area, Thana & District (e.g. House 14, Road 5, Dhanmondi, Dhaka or Agrabad, Chattogram)" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-base sm:text-sm text-slate-900 font-bold focus:bg-white focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 focus:outline-hidden transition">{{ form.delivery_address.value|default:'' }}</textarea>
+                                <textarea name="delivery_address" id="delivery_address" rows="2" required autocomplete="street-address" placeholder="House #, Road #, Area, Thana & District" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 sm:p-3 text-xs sm:text-sm text-slate-900 font-semibold focus:bg-white focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 focus:outline-hidden transition">{{ form.delivery_address.value|default:'' }}</textarea>
                                 {% if form.delivery_address.errors %}
-                                    <p class="text-rose-600 font-bold text-xs mt-1">{{ form.delivery_address.errors.0 }}</p>
+                                    <p class="text-rose-600 font-bold text-[11px] mt-1">{{ form.delivery_address.errors.0 }}</p>
                                 {% endif %}
                             </div>
 
@@ -119,26 +121,26 @@
                             <h2 class="font-display font-black text-base text-slate-950">Payment Method</h2>
                         </div>
 
-                        <div class="space-y-3">
+                        <div class="space-y-2.5 sm:space-y-3">
                             <!-- Option 1: Cash on Delivery -->
-                            <label class="border-2 border-emerald-600 bg-emerald-50/80 p-3.5 sm:p-4 rounded-xl sm:rounded-2xl cursor-pointer flex items-start gap-3 transition-all shadow-2xs hover:border-emerald-700" id="payCodLabel">
+                            <label class="border-2 border-emerald-600 bg-emerald-50/80 p-3 sm:p-4 rounded-xl sm:rounded-2xl cursor-pointer flex items-start gap-2.5 sm:gap-3 transition-all shadow-2xs hover:border-emerald-700" id="payCodLabel">
                                 <input type="radio" name="payment_method" value="COD" checked class="text-emerald-700 focus:ring-emerald-500 w-4 h-4 mt-0.5 shrink-0" onchange="togglePaymentInputs('COD')">
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-center justify-between gap-2">
-                                        <div class="flex items-center gap-2">
-                                            <span class="font-black text-sm text-slate-950">Cash on Delivery</span>
-                                            <span class="text-[10px] bg-emerald-700 text-white font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Pay on Delivery</span>
+                                        <div class="flex items-center gap-1.5 flex-wrap">
+                                            <span class="font-black text-xs sm:text-sm text-slate-950">Cash on Delivery</span>
+                                            <span class="hidden sm:inline-block text-[10px] bg-emerald-700 text-white font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Pay on Delivery</span>
                                         </div>
-                                        <span class="text-xl shrink-0">💵</span>
+                                        <span class="text-base sm:text-xl shrink-0">💵</span>
                                     </div>
-                                    <p class="text-xs text-slate-600 font-medium mt-1 leading-relaxed">
-                                        Pay in cash when you receive your fresh jars at your doorstep.
+                                    <p class="text-[11px] sm:text-xs text-slate-600 font-medium mt-0.5 leading-snug">
+                                        Pay in cash at your doorstep.
                                     </p>
-                                    <!-- Clean & Compact Notice for Mobile & Desktop -->
-                                    <div class="mt-2 flex items-start gap-1.5 text-[11px] text-amber-900 bg-amber-50/90 border border-amber-200/80 px-2.5 py-1.5 rounded-lg">
-                                        <i class="fa-solid fa-circle-exclamation text-amber-600 mt-0.5 shrink-0 text-xs"></i>
-                                        <span class="leading-snug">
-                                            <strong class="font-bold text-amber-950">Notice:</strong> Advance payment required for customers with past courier return records (<a href="{% url 'store:policies' %}#clause-2-0" target="_blank" onclick="event.stopPropagation()" class="underline font-bold text-amber-950 hover:text-emerald-800">Clause 2.0</a>).
+                                    <!-- Clear, Compact COD Important Notice -->
+                                    <div class="mt-2 flex items-start gap-1.5 text-[11px] sm:text-xs text-slate-900 bg-amber-100/95 border border-amber-300 border-l-4 border-l-amber-500 px-2.5 py-1.5 rounded-lg shadow-2xs">
+                                        <i class="fa-solid fa-triangle-exclamation text-amber-600 mt-0.5 shrink-0 text-xs"></i>
+                                        <span class="leading-snug font-medium">
+                                            <strong class="font-black text-amber-950">Important:</strong> Advance required for past courier returns (<a href="{% url 'store:policies' %}#clause-2-0" target="_blank" onclick="event.stopPropagation()" class="underline font-extrabold text-amber-950 hover:text-emerald-800">Clause 2.0</a>).
                                         </span>
                                     </div>
                                 </div>
@@ -146,28 +148,28 @@
 
                             <!-- Option 2: bKash -->
                             <div>
-                                <label class="border-2 {% if promo_settings.is_active and promo_settings.advance_payment_discount_enabled and promo_settings.advance_payment_discount_percent > 0 %}border-pink-300 bg-gradient-to-r from-pink-50/70 via-white to-white{% else %}border-slate-200 bg-white{% endif %} p-3.5 sm:p-4 rounded-xl sm:rounded-2xl cursor-pointer flex items-start sm:items-center gap-3 transition-all hover:border-pink-500 shadow-xs" id="payBkashLabel">
+                                <label class="border-2 {% if promo_settings.is_active and promo_settings.advance_payment_discount_enabled and promo_settings.advance_payment_discount_percent > 0 %}border-pink-300 bg-gradient-to-r from-pink-50/70 via-white to-white{% else %}border-slate-200 bg-white{% endif %} p-3 sm:p-4 rounded-xl sm:rounded-2xl cursor-pointer flex items-start sm:items-center gap-2.5 sm:gap-3 transition-all hover:border-pink-500 shadow-xs" id="payBkashLabel">
                                     <input type="radio" name="payment_method" value="BKASH" class="text-pink-600 focus:ring-pink-500 w-4 h-4 mt-0.5 sm:mt-0 shrink-0" onchange="togglePaymentInputs('BKASH')">
                                     <div class="flex-1 min-w-0">
                                         <div class="flex items-center justify-between gap-2">
-                                            <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                                                <span class="font-black text-sm text-slate-950">bKash Payment</span>
-                                                <span class="text-[10px] bg-slate-900 text-white font-black px-2 py-0.5 rounded-full tracking-wider uppercase">Advance</span>
+                                            <div class="flex items-center gap-1.5 flex-wrap">
+                                                <span class="font-black text-xs sm:text-sm text-slate-950">bKash</span>
+                                                <span class="hidden sm:inline-block text-[10px] bg-slate-900 text-white font-black px-2 py-0.5 rounded-full tracking-wider uppercase">Advance</span>
                                                 {% if promo_settings.is_active and promo_settings.advance_payment_discount_enabled and promo_settings.advance_payment_discount_percent > 0 %}
-                                                <span class="shimmer-ribbon text-[10px] sm:text-[11px] bg-gradient-to-r from-[#e2136e] to-rose-600 text-white font-black px-2.5 py-0.5 rounded-full tracking-wide shadow-xs inline-flex items-center gap-1">
-                                                    <span>🎁 {{ promo_settings.advance_payment_discount_percent|floatformat:0 }}% OFF</span>
+                                                <span class="shimmer-ribbon text-[10px] sm:text-[11px] bg-gradient-to-r from-[#e2136e] to-rose-600 text-white font-black px-2 py-0.5 rounded-full tracking-wide shadow-xs inline-flex items-center gap-1">
+                                                    <span>{{ promo_settings.advance_payment_discount_percent|floatformat:0 }}% OFF</span>
                                                     <span class="opacity-80">•</span>
                                                     <span>Save ৳<span id="bkashLiveSavingsAmt">0</span></span>
                                                 </span>
                                                 {% endif %}
                                             </div>
-                                            <span class="text-base font-mono font-black text-[#e2136e] shrink-0">bKash</span>
+                                            <span class="text-sm sm:text-base font-mono font-black text-[#e2136e] shrink-0">bKash</span>
                                         </div>
-                                        <p class="text-xs text-slate-600 font-medium mt-1">
+                                        <p class="text-[11px] sm:text-xs text-slate-600 font-medium mt-0.5 leading-snug">
                                             {% if promo_settings.is_active and promo_settings.advance_payment_discount_enabled and promo_settings.advance_payment_discount_percent > 0 %}
-                                            Pay via bKash advance and get <strong class="text-[#e2136e] font-black">{{ promo_settings.advance_payment_discount_percent|floatformat:0 }}% extra discount</strong> applied instantly!
+                                            Instant <strong class="text-[#e2136e] font-black">{{ promo_settings.advance_payment_discount_percent|floatformat:0 }}% discount</strong> on advance payment.
                                             {% else %}
-                                            100% advance payment via bKash personal Send Money.
+                                            Advance payment via bKash Send Money.
                                             {% endif %}
                                         </p>
                                     </div>
@@ -268,180 +270,103 @@
                             {% endfor %}
                         </div>
 
-                        <!-- Offer / Free Delivery Progress Pill (Shown only when an offer is active) -->
+                        <!-- Compact Offer Progress Strip (Shown only when an offer is active) -->
                         {% if promo_settings.is_active %}
                             {% if promo_settings.free_delivery_enabled or promo_settings.bundle_discount_enabled %}
-                        <div id="freeDeliveryBanner" class="p-3 rounded-2xl border text-xs font-bold {% if free_delivery_unlocked %}bg-emerald-50 border-emerald-200 text-emerald-950{% elif promo_settings.free_delivery_enabled or cart_bundle_discount > 0 %}bg-amber-50/90 border-amber-200 text-amber-950{% else %}bg-slate-50 border-slate-200 text-slate-900{% endif %}">
-                            <div class="flex items-start justify-between gap-2">
-                                <div class="flex items-start gap-2 min-w-0 flex-1">
-                                    <span id="freeDeliveryIcon" class="shrink-0 text-base leading-none mt-0.5">{% if free_delivery_unlocked %}🎉{% elif promo_settings.free_delivery_enabled %}🚚{% else %}🎁{% endif %}</span>
-                                    <div class="min-w-0 flex-1">
-                                        <div id="freeDeliveryText" class="text-xs font-black leading-snug break-words">
-                                            {% if promo_settings.free_delivery_enabled %}
-                                                {% if free_delivery_unlocked %}
-                                                <strong>FREE Delivery Unlocked!</strong>
-                                                {% else %}
-                                                Add <strong>{{ items_needed_for_free_delivery }} more jar{{ items_needed_for_free_delivery|pluralize }}</strong> for <strong>FREE Delivery</strong>!
-                                                {% endif %}
-                                            {% elif promo_settings.bundle_discount_enabled %}
-                                                {% if cart_bundle_discount > 0 %}
-                                                <strong>{{ promo_settings.get_discount_label }} Unlocked!</strong>
-                                                {% else %}
-                                                <strong>{{ promo_settings.get_discount_label }}</strong> on {{ promo_settings.bundle_min_jars }}{% if promo_settings.bundle_apply_mode == 'AT_LEAST' %}+{% endif %} jars!
-                                                {% endif %}
-                                            {% endif %}
-                                        </div>
-                                        <p class="text-[11px] mt-1 opacity-90 leading-normal break-words font-medium" id="freeDeliverySubtext">
-                                            {% if promo_settings.free_delivery_enabled and not free_delivery_unlocked %}
-                                                Free delivery on {{ promo_settings.free_delivery_min_jars }}+ jars (Save ৳{{ promo_settings.standard_delivery_fee|default:150|floatformat:0 }}).
-                                                <a href="{% url 'store:cart_view' %}#cart-add-more-products" class="underline font-black text-amber-900 hover:text-emerald-800 ml-1">Add Jars &rarr;</a>
-                                            {% else %}
-                                                {{ promo_settings.delivery_notice_text|default:"Flat ৳150 nationwide delivery across Bangladesh." }}
-                                            {% endif %}
-                                        </p>
-                                    </div>
+                        <div id="freeDeliveryBanner" class="px-2.5 py-2 rounded-xl border text-[11px] font-bold {% if free_delivery_unlocked %}bg-emerald-50/70 border-emerald-200 text-emerald-900{% else %}bg-slate-50 border-slate-200 text-slate-800{% endif %}">
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                                    <span id="freeDeliveryIcon" class="shrink-0 text-xs">{% if free_delivery_unlocked %}🎉{% elif promo_settings.free_delivery_enabled %}🚚{% else %}🎁{% endif %}</span>
+                                    <span id="freeDeliveryText" class="text-[11px] leading-snug">
+                                        {% if promo_settings.free_delivery_enabled %}
+                                            {% if free_delivery_unlocked %}FREE Delivery Unlocked!{% else %}Add {{ items_needed_for_free_delivery }} more for FREE Delivery{% endif %}
+                                        {% elif promo_settings.bundle_discount_enabled %}
+                                            {% if cart_bundle_discount > 0 %}{{ promo_settings.get_discount_label }} Unlocked!{% else %}{{ promo_settings.get_discount_label }} ({{ promo_settings.bundle_min_jars }}{% if promo_settings.bundle_apply_mode == 'AT_LEAST' %}+{% endif %} jars){% endif %}
+                                        {% endif %}
+                                    </span>
                                 </div>
-                                <span id="freeDeliveryBadge" class="text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap mt-0.5 {% if free_delivery_unlocked %}bg-emerald-600 text-white{% elif promo_settings.free_delivery_enabled %}bg-amber-400 text-slate-950{% else %}bg-slate-800 text-white{% endif %}">
+                                <span id="freeDeliveryBadge" class="text-[10px] font-black shrink-0 whitespace-nowrap {% if free_delivery_unlocked %}text-emerald-700{% else %}text-slate-600{% endif %}">
                                     {% if promo_settings.free_delivery_enabled %}
-                                        {% if free_delivery_unlocked %}FREE{% else %}{{ cart_total_items }}/{{ promo_settings.free_delivery_min_jars }} Jars{% endif %}
+                                        {% if free_delivery_unlocked %}FREE{% else %}{{ cart_total_items }}/{{ promo_settings.free_delivery_min_jars }}{% endif %}
                                     {% else %}
                                         {% if cart_bundle_discount > 0 %}-৳{{ cart_bundle_discount|floatformat:0 }}{% else %}{{ promo_settings.bundle_min_jars }} Jars{% endif %}
                                     {% endif %}
                                 </span>
                             </div>
-                            <div class="w-full bg-black/10 rounded-full h-1.5 mt-2.5 overflow-hidden">
-                                <div id="freeDeliveryProgressBar" class="h-1.5 rounded-full transition-all duration-500 {% if free_delivery_unlocked %}bg-emerald-600{% else %}bg-amber-500{% endif %}" style="width: {% if free_delivery_unlocked %}100%{% else %}50%{% endif %};"></div>
+                            <div class="w-full bg-slate-200/80 rounded-full h-1 mt-1.5 overflow-hidden">
+                                <div id="freeDeliveryProgressBar" class="h-1 rounded-full transition-all duration-500 {% if free_delivery_unlocked %}bg-emerald-600{% else %}bg-amber-500{% endif %}" style="width: {% if free_delivery_unlocked %}100%{% else %}50%{% endif %};"></div>
                             </div>
                         </div>
                             {% endif %}
                         {% endif %}
 
-                        <!-- Promo / Coupon Code Card (Placed cleanly above price calculations) -->
-                        <div class="bg-slate-50/90 rounded-2xl p-3 sm:p-3.5 border border-slate-200/90 space-y-2">
-                            <div class="flex items-center justify-between text-xs">
-                                <label for="checkoutCouponInput" class="font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer">
-                                    <span class="w-5 h-5 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center text-[10px]">
-                                        <i class="fa-solid fa-ticket"></i>
-                                    </span>
-                                    <span>Have a Promo Coupon?</span>
-                                </label>
-                                <span class="text-[10px] text-slate-400 font-semibold">Optional</span>
-                            </div>
-
-                            <!-- Input Form (when no coupon applied) -->
-                            <div class="{% if applied_coupon_code %}hidden{% endif %} flex gap-2" id="checkoutCouponInputGroup">
-                                <div class="relative flex-1">
-                                    <input type="text" id="checkoutCouponInput" placeholder="Enter coupon code (e.g. SAVE50)"
-                                        onkeydown="if(event.key==='Enter'){event.preventDefault();applyCouponCode('checkoutCouponInput');}"
-                                        class="w-full uppercase font-bold text-xs bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 focus:outline-hidden transition placeholder:normal-case placeholder:font-normal placeholder:text-slate-400 shadow-2xs">
-                                </div>
-                                <button type="button" onclick="applyCouponCode('checkoutCouponInput')" class="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2 rounded-xl transition active:scale-95 shrink-0 cursor-pointer shadow-xs">
-                                    Apply
-                                </button>
-                            </div>
-
-                            <!-- Applied Badge (when coupon applied) -->
-                            <div class="{% if not applied_coupon_code %}hidden{% endif %} flex items-center justify-between text-xs bg-purple-50 text-purple-900 border border-purple-200 px-3 py-2 rounded-xl font-bold" id="checkoutCouponAppliedBadge">
-                                <span class="flex items-center gap-1.5">
-                                    <i class="fa-solid fa-tag text-purple-600"></i>
-                                    <span>Coupon Applied: <strong id="checkoutCouponCodeText">{{ applied_coupon_code }}</strong></span>
-                                </span>
-                                <button type="button" onclick="removeCouponCode()" class="text-rose-600 hover:text-rose-800 text-xs ml-2 cursor-pointer font-black px-2 py-0.5 rounded hover:bg-rose-100/70 transition" title="Remove coupon">✕ Remove</button>
-                            </div>
-
-                            <div id="checkoutCouponMsg" class="text-[11px] font-bold hidden"></div>
-                        </div>
-
-                        <!-- Price Calculations Breakdown -->
-                        <div class="border-t border-slate-200/80 pt-4 space-y-2 text-xs">
-                            <div class="flex justify-between text-slate-600 font-medium">
-                                <span>Pickle Jars Subtotal</span>
-                                <span class="font-black text-slate-900 text-sm">৳<span id="checkoutSubtotal">{{ cart_subtotal }}</span></span>
+                        <!-- Clean Price Breakdown -->
+                        <div class="border-t border-slate-100 pt-3.5 space-y-2 text-xs">
+                            <div class="flex justify-between text-slate-600">
+                                <span>Subtotal</span>
+                                <span class="font-bold text-slate-900">৳<span id="checkoutSubtotal">{{ cart_subtotal }}</span></span>
                             </div>
 
                             <!-- 1. Multi-Jar / Bundle Offer Discount Row -->
                             <div id="checkoutBundleDiscountRow" class="{% if not cart_bundle_discount or cart_bundle_discount <= 0 %}hidden{% endif %} flex justify-between items-center text-emerald-700 font-bold">
-                                <span class="flex items-center gap-1.5">
-                                    <span id="checkoutBundleDiscountLabel">🎁 {{ promo_settings.get_discount_label|default:"Special Offer Discount" }}</span>
-                                </span>
-                                <span class="font-black text-sm text-emerald-700">-৳<span id="checkoutBundleDiscount">{{ cart_bundle_discount|floatformat:2 }}</span></span>
+                                <span id="checkoutBundleDiscountLabel">{{ promo_settings.get_discount_label|default:"Offer Discount" }}</span>
+                                <span>-৳<span id="checkoutBundleDiscount">{{ cart_bundle_discount|floatformat:2 }}</span></span>
                             </div>
 
-                            <!-- 2. Separate Coupon Discount Row -->
-                            <div id="checkoutCouponDiscountRow" class="{% if not cart_coupon_discount or cart_coupon_discount <= 0 %}hidden{% endif %} flex justify-between items-center text-purple-700 font-bold bg-purple-50/70 px-2.5 py-1.5 rounded-xl border border-purple-200">
-                                <span class="flex items-center gap-1.5">
-                                    <i class="fa-solid fa-ticket text-purple-600"></i>
-                                    <span>Coupon (<strong id="checkoutCouponDiscountCode">{{ applied_coupon_code }}</strong>)</span>
-                                </span>
-                                <span class="font-black text-sm text-purple-700">-৳<span id="checkoutCouponDiscount">{{ cart_coupon_discount|floatformat:2 }}</span></span>
+                            <!-- 2. Coupon Discount Row -->
+                            <div id="checkoutCouponDiscountRow" class="{% if not cart_coupon_discount or cart_coupon_discount <= 0 %}hidden{% endif %} flex justify-between items-center text-emerald-700 font-bold">
+                                <span>Coupon (<strong id="checkoutCouponDiscountCode">{{ applied_coupon_code }}</strong>)</span>
+                                <span>-৳<span id="checkoutCouponDiscount">{{ cart_coupon_discount|floatformat:2 }}</span></span>
                             </div>
 
                             <!-- 3. Advance Payment Discount Row -->
-                            <div id="checkoutAdvanceDiscountRow" class="hidden flex justify-between items-center text-pink-700 font-bold bg-pink-50/70 px-2.5 py-1.5 rounded-xl border border-pink-200">
-                                <span class="flex items-center gap-1.5">
-                                    <i class="fa-solid fa-wallet text-pink-600"></i>
-                                    <span id="checkoutAdvanceDiscountLabel">{{ promo_settings.get_advance_payment_label|default:"5% Advance Payment OFF" }}</span>
-                                </span>
-                                <span class="font-black text-sm text-pink-700">-৳<span id="checkoutAdvanceDiscount">0.00</span></span>
+                            <div id="checkoutAdvanceDiscountRow" class="hidden flex justify-between items-center text-pink-700 font-bold">
+                                <span id="checkoutAdvanceDiscountLabel">{{ promo_settings.get_advance_payment_label|default:"Advance Payment OFF" }}</span>
+                                <span>-৳<span id="checkoutAdvanceDiscount">0.00</span></span>
                             </div>
 
-                            <!-- bKash 5% OFF Nudge (when COD is selected) -->
+                            <div class="flex justify-between items-center text-slate-600">
+                                <span>Nationwide Delivery <span class="text-[10px] text-slate-400">(7–10 days)</span></span>
+                                {% if free_delivery_unlocked or delivery_fee == 0 %}
+                                <span class="font-bold text-emerald-700" id="checkoutDeliveryFee">FREE</span>
+                                {% else %}
+                                <span class="font-bold text-slate-900" id="checkoutDeliveryFee">৳{{ delivery_fee }}</span>
+                                {% endif %}
+                            </div>
+
+                            <!-- Direct Clean 1-Line Promo / Coupon Row -->
+                            <div class="pt-2">
+                                <div class="{% if applied_coupon_code %}hidden{% endif %} flex gap-2" id="checkoutCouponInputGroup">
+                                    <input type="text" id="checkoutCouponInput" placeholder="Coupon code (optional)"
+                                        onkeydown="if(event.key==='Enter'){event.preventDefault();applyCouponCode('checkoutCouponInput');}"
+                                        class="flex-1 uppercase font-bold text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:bg-white focus:border-emerald-600 focus:outline-hidden transition placeholder:normal-case placeholder:font-normal placeholder:text-slate-400">
+                                    <button type="button" onclick="applyCouponCode('checkoutCouponInput')" class="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2 rounded-xl transition active:scale-95 shrink-0 cursor-pointer">
+                                        Apply
+                                    </button>
+                                </div>
+
+                                <div class="{% if not applied_coupon_code %}hidden{% endif %} flex items-center justify-between text-xs bg-emerald-50 text-emerald-900 border border-emerald-200 px-3 py-2 rounded-xl font-bold" id="checkoutCouponAppliedBadge">
+                                    <span>🎟️ Coupon: <strong id="checkoutCouponCodeText">{{ applied_coupon_code }}</strong></span>
+                                    <button type="button" onclick="removeCouponCode()" class="text-rose-600 hover:text-rose-800 text-xs cursor-pointer font-black">✕ Remove</button>
+                                </div>
+
+                                <div id="checkoutCouponMsg" class="text-[11px] font-bold mt-1.5 hidden"></div>
+                            </div>
+
+                            <!-- Clean 1-Line bKash Advance Discount Offer Nudge (when COD is selected) -->
                             {% if promo_settings.is_active and promo_settings.advance_payment_discount_enabled and promo_settings.advance_payment_discount_percent > 0 %}
                             <button type="button" id="checkoutBkashSavingsNudge"
                                 onclick="const bkashRadio = document.querySelector('input[name=payment_method][value=BKASH]'); if (bkashRadio) { bkashRadio.click(); bkashRadio.closest('#payBkashLabel')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }"
-                                class="w-full flex items-center justify-between gap-2 text-left text-[11px] font-bold text-pink-950 bg-gradient-to-r from-pink-50 via-rose-50 to-amber-50/70 hover:from-pink-100 hover:to-rose-100 px-3 py-2 rounded-xl border border-pink-300 shadow-2xs transition cursor-pointer">
-                                <span class="flex items-center gap-1.5 min-w-0">
-                                    <span class="shrink-0">🎁</span>
-                                    <span>Pay via <strong>bKash</strong> &amp; save <strong class="text-[#e2136e]">৳<span id="checkoutBkashNudgeAmt">0</span></strong> ({{ promo_settings.advance_payment_discount_percent|floatformat:0 }}% OFF)</span>
-                                </span>
-                                <span class="text-[10px] font-black bg-[#e2136e] text-white px-2 py-0.5 rounded-lg shrink-0">Switch &rarr;</span>
+                                class="w-full flex items-center justify-between gap-2 text-left text-[11px] font-bold text-pink-950 bg-pink-50/90 hover:bg-pink-100/80 px-3 py-2 rounded-xl border border-pink-200 transition cursor-pointer">
+                                <span class="truncate">🎁 <strong>{{ promo_settings.advance_payment_discount_percent|floatformat:0 }}% OFF on bKash</strong> (Save <strong class="text-[#e2136e]">৳<span id="checkoutBkashNudgeAmt">0</span></strong>)</span>
+                                <span class="text-[10px] font-black text-[#e2136e] shrink-0">Switch &rarr;</span>
                             </button>
                             {% endif %}
 
-                            <div class="flex justify-between items-center text-slate-600 font-medium">
-                                <div>
-                                    <span>Nationwide Delivery</span>
-                                    <span class="block text-[11px] text-slate-500 font-medium">Estimated: <strong>7–10 days</strong></span>
-                                </div>
-                                <div class="text-right">
-                                    {% if free_delivery_unlocked or delivery_fee == 0 %}
-                                    <span class="font-black text-emerald-700 text-sm" id="checkoutDeliveryFee">FREE</span>
-                                    {% else %}
-                                    <span class="font-black text-slate-900 text-sm" id="checkoutDeliveryFee">৳{{ delivery_fee }}</span>
-                                    {% endif %}
-                                </div>
+                            <div class="border-t border-slate-200 pt-3 flex justify-between items-baseline">
+                                <span class="font-black text-slate-950 text-sm">Total Payable</span>
+                                <span class="font-display font-black text-2xl text-emerald-800">৳<span id="checkoutTotal">{{ grand_total }}</span></span>
                             </div>
-
-                            <p class="text-[11px] text-slate-400 font-medium" id="checkoutDeliveryNote">
-                                {% if free_delivery_unlocked or delivery_fee == 0 %}
-                                <strong class="text-emerald-700">🎉 Congratulations! You unlocked FREE delivery.</strong>
-                                {% elif promo_settings.is_active and promo_settings.free_delivery_enabled and items_needed_for_free_delivery > 0 %}
-                                <span class="text-amber-700 font-bold">🚚 Add {{ items_needed_for_free_delivery }} more jar{{ items_needed_for_free_delivery|pluralize }} to unlock FREE delivery!</span>
-                                <a href="{% url 'store:cart_view' %}#cart-add-more-products" class="underline font-black text-amber-800 hover:text-emerald-700 ml-1">Add Jars</a>
-                                {% else %}
-                                {{ promo_settings.delivery_notice_text|default:"Flat ৳150 nationwide delivery across Bangladesh." }}
-                                {% endif %}
-                            </p>
-
-                            <div class="border-t-2 border-slate-200/80 pt-3 flex justify-between items-baseline text-base">
-                                <div>
-                                    <span class="font-black text-slate-950 block">Total Payable</span>
-                                    <span class="text-[11px] text-slate-500 font-medium">Food-grade airtight packaging included</span>
-                                </div>
-                                <span class="font-display font-black text-2xl sm:text-3xl text-emerald-800">৳<span id="checkoutTotal">{{ grand_total }}</span></span>
-                            </div>
-                        </div>
-
-                        <!-- Customer Assurance & Policy Link -->
-                        <div class="flex items-center justify-between p-3 rounded-2xl bg-emerald-50/70 border border-emerald-100/90 text-xs text-emerald-950">
-                            <span class="flex items-center gap-2 font-bold">
-                                <i class="fa-solid fa-shield-halved text-emerald-700"></i>
-                                <span>100% Satisfaction Guarantee</span>
-                            </span>
-                            <a href="{% url 'store:policies' %}" target="_blank" class="text-[11px] font-black text-emerald-800 hover:text-emerald-950 underline underline-offset-2 flex items-center gap-1">
-                                <span>View Policy & Support</span>
-                                <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
-                            </a>
                         </div>
 
                         <!-- Invisible Honeypot Anti-Spam Bot Trap -->
@@ -456,6 +381,39 @@
                             <div class="cf-turnstile" data-sitekey="{{ CLOUDFLARE_TURNSTILE_SITE_KEY }}" data-action="checkout" data-theme="light" data-size="flexible"></div>
                         </div>
                         <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+                        {% endif %}
+
+                        <!-- Inline Checkout Messages / Errors (Right above Submit Button) -->
+                        {% if messages %}
+                        <div id="checkoutInlineMessages" class="space-y-2">
+                            {% for message in messages %}
+                            <div class="flex items-start justify-between gap-2.5 p-3 rounded-xl text-xs font-bold border shadow-2xs {% if message.tags == 'error' %}bg-rose-50 text-rose-900 border-rose-300 border-l-4 border-l-rose-600{% elif message.tags == 'warning' %}bg-amber-50 text-amber-950 border-amber-300 border-l-4 border-l-amber-500{% elif message.tags == 'success' %}bg-emerald-50 text-emerald-900 border-emerald-300 border-l-4 border-l-emerald-600{% else %}bg-blue-50 text-blue-900 border-blue-200{% endif %}">
+                                <div class="flex items-start gap-2">
+                                    {% if message.tags == 'error' %}
+                                    <i class="fa-solid fa-circle-exclamation text-rose-600 text-sm mt-0.5 shrink-0"></i>
+                                    {% elif message.tags == 'warning' %}
+                                    <i class="fa-solid fa-triangle-exclamation text-amber-600 text-sm mt-0.5 shrink-0"></i>
+                                    {% elif message.tags == 'success' %}
+                                    <i class="fa-solid fa-circle-check text-emerald-600 text-sm mt-0.5 shrink-0"></i>
+                                    {% else %}
+                                    <i class="fa-solid fa-circle-info text-blue-600 text-sm mt-0.5 shrink-0"></i>
+                                    {% endif %}
+                                    <span class="leading-snug">{{ message }}</span>
+                                </div>
+                                <button type="button" onclick="this.parentElement.remove()" class="text-slate-400 hover:text-slate-700 p-0.5 shrink-0 cursor-pointer" aria-label="Close">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <script>
+                            document.addEventListener('DOMContentLoaded', function() {
+                                const msgBox = document.getElementById('checkoutInlineMessages');
+                                if (msgBox) {
+                                    setTimeout(() => msgBox.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+                                }
+                            });
+                        </script>
                         {% endif %}
 
                         <!-- Submit Button -->
