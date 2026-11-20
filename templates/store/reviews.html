@@ -241,14 +241,6 @@
                     {{ review_form.comment }}
                 </div>
 
-                <!-- Cloudflare Turnstile Smart Bot Protection (Responsive) -->
-                {% if CLOUDFLARE_TURNSTILE_SITE_KEY %}
-                <div class="flex justify-center my-3 max-w-full overflow-hidden">
-                    <div class="cf-turnstile" data-sitekey="{{ CLOUDFLARE_TURNSTILE_SITE_KEY }}" data-action="review" data-theme="light" data-size="flexible"></div>
-                </div>
-                <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-                {% endif %}
-
                 <div class="pt-2">
                     <button type="submit" class="w-full bg-[#092d18] hover:bg-[#15803d] text-white font-black text-sm py-3.5 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
                         <i class="fa-solid fa-paper-plane text-amber-400"></i>

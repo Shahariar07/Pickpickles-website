@@ -6941,6 +6941,78 @@ def _get_sms_audience_segments():
     }
 
 
+SMS_AUDIENCE_LABELS = {
+    'test_single': 'Test / Custom Numbers',
+    'delivered_all': 'All Delivered Customers',
+    'repeat_vip': 'VIP Repeat Customers (2+ Orders)',
+    'inside_dhaka': 'Inside Dhaka Delivered',
+    'outside_dhaka': 'Outside Dhaka Delivered',
+}
+
+
+def _get_sms_history_path():
+    import os
+    from django.conf import settings
+    os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
+    return os.path.join(settings.MEDIA_ROOT, 'sms_campaign_history.json')
+
+
+def _load_sms_history():
+    import os
+    path = _get_sms_history_path()
+    if not os.path.exists(path):
+        return []
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            return data if isinstance(data, list) else []
+    except Exception:
+        return []
+
+
+def _append_sms_history(entry):
+    history = _load_sms_history()
+    history.insert(0, entry)
+    history = history[:50]
+    path = _get_sms_history_path()
+    try:
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(history, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+
+def _resolve_sms_recipients(numbers):
+    from dashboard.sms_service import normalize_bd_phone
+    norm_list = []
+    seen = set()
+    for raw in numbers:
+        norm = normalize_bd_phone(raw)
+        if norm and norm not in seen:
+            seen.add(norm)
+            norm_list.append(norm)
+
+    if not norm_list:
+        return []
+
+    last10_map = {}
+    for phone, name in Order.objects.filter(is_deleted=False).exclude(customer_phone='').order_by('-created_at').values_list('customer_phone', 'customer_name'):
+        digits = ''.join(c for c in str(phone or '') if c.isdigit())
+        if len(digits) >= 10:
+            key = digits[-10:]
+            if key not in last10_map and (name or '').strip():
+                last10_map[key] = name.strip()
+
+    recipients = []
+    for norm in norm_list:
+        last10 = norm[-10:] if len(norm) >= 10 else norm
+        recipients.append({
+            'phone': norm,
+            'name': last10_map.get(last10, ''),
+        })
+    return recipients
+
+
 @login_required(login_url='dashboard:login')
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def sms_campaign_manager(request):
@@ -6979,6 +7051,19 @@ def sms_campaign_manager(request):
             message=sms_message,
             sender_id=sender_id,
         )
+        recipients = _resolve_sms_recipients(target_numbers)
+        _append_sms_history({
+            'sent_at': timezone.localtime(timezone.now()).strftime('%d %b %Y, %I:%M %p'),
+            'audience': audience,
+            'audience_label': SMS_AUDIENCE_LABELS.get(audience, audience),
+            'message': sms_message,
+            'sender_id': sender_id,
+            'recipient_count': len(recipients),
+            'recipients': recipients,
+            'success': bool(result.get('success')),
+            'status_message': result.get('message', ''),
+            'sent_by': request.user.username,
+        })
         if result['success']:
             messages.success(request, f"✅ {result['message']}")
         else:
@@ -6988,6 +7073,7 @@ def sms_campaign_manager(request):
 
     bal_ok, balance_val, bal_msg = get_bulksmsbd_balance()
     active_coupons = Coupon.objects.filter(is_active=True).order_by('-created_at')[:5]
+    sms_history = _load_sms_history()
 
     context = {
         'title': '1-Click Bulk SMS Campaign',
@@ -7002,6 +7088,8 @@ def sms_campaign_manager(request):
         'count_inside_dhaka': len(segments['inside_dhaka']),
         'count_outside_dhaka': len(segments['outside_dhaka']),
         'active_coupons': active_coupons,
+        'sms_history': sms_history,
+        'last_sms': sms_history[0] if sms_history else None,
     }
     return render(request, 'dashboard/sms_campaign.html', context)
 

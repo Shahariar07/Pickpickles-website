@@ -6,12 +6,12 @@
 {% block global_messages %}{% endblock %}
 
 {% block content %}
-<div class="bg-gradient-to-b from-slate-50 via-white to-slate-50 min-h-screen py-5 sm:py-10">
+<div class="bg-gradient-to-b from-slate-50 via-white to-slate-50 min-h-screen py-3 pb-24 sm:py-10 lg:pb-10">
     <div class="max-w-6xl mx-auto px-3.5 sm:px-6 lg:px-8">
 
         <!-- Clean & Welcoming Checkout Header -->
-        <div class="mb-5 sm:mb-8 text-center px-2">
-            <h1 class="font-display font-black text-2xl sm:text-3xl lg:text-4xl text-slate-950 tracking-tight">
+        <div class="mb-3.5 sm:mb-8 text-center px-2">
+            <h1 class="font-display font-black text-xl sm:text-3xl lg:text-4xl text-slate-950 tracking-tight">
                 Complete Your Order
             </h1>
             <p class="text-xs sm:text-sm text-slate-600 font-medium mt-1.5 max-w-md mx-auto">
@@ -75,11 +75,11 @@
                                 <label class="block text-[11px] sm:text-xs font-bold text-slate-700 mb-1" for="customer_phone">
                                     Mobile Number <span class="text-rose-500">*</span>
                                 </label>
-                                <div class="relative">
-                                    <div class="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none text-slate-500 text-[11px] sm:text-xs font-black border-r border-slate-200 pr-2 my-1.5">
-                                        <span>🇧🇩 +88</span>
-                                    </div>
-                                    <input type="tel" name="customer_phone" id="customer_phone" value="{{ form.customer_phone.value|default:'' }}" required inputmode="numeric" placeholder="01XXXXXXXXX" maxlength="15" autocomplete="tel" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-18 sm:pl-20 pr-3 py-2 sm:py-2.5 text-xs sm:text-sm text-slate-900 font-semibold tracking-wide focus:bg-white focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 focus:outline-hidden transition">
+                                <div class="flex items-center w-full bg-slate-50 border border-slate-200 rounded-xl overflow-hidden focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-600/20 focus-within:border-emerald-600 transition">
+                                    <span class="flex items-center gap-1 px-2.5 sm:px-3 py-2 sm:py-2.5 text-slate-600 text-[11px] sm:text-xs font-black border-r border-slate-200 bg-slate-100/70 shrink-0 select-none">
+                                        🇧🇩 +88
+                                    </span>
+                                    <input type="tel" name="customer_phone" id="customer_phone" value="{{ form.customer_phone.value|default:'' }}" required inputmode="numeric" placeholder="01XXXXXXXXX" maxlength="15" autocomplete="tel" class="w-full min-w-0 bg-transparent px-3 py-2 sm:py-2.5 text-xs sm:text-sm text-slate-900 font-semibold tracking-wide focus:outline-hidden">
                                 </div>
                                 
                                 <p id="customer_phone_err" class="hidden text-rose-700 bg-rose-50 border border-rose-200 font-semibold text-[11px] p-2 rounded-xl mt-1 flex items-center gap-1.5">
@@ -91,6 +91,84 @@
                                         <i class="fa-solid fa-circle-exclamation"></i> {{ form.customer_phone.errors.0 }}
                                     </p>
                                 {% endif %}
+                            </div>
+
+                            <!-- City / District Select -->
+                            <div>
+                                <label class="block text-[11px] sm:text-xs font-bold text-slate-700 mb-1" for="delivery_city">
+                                    City / District <span class="text-rose-500">*</span>
+                                </label>
+                                <div class="relative">
+                                    <i class="fa-solid fa-location-dot absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                                    <select name="delivery_city" id="delivery_city" onchange="const z = document.getElementById('delivery_zone'); if (z) z.value = (this.value === 'Dhaka' ? 'INSIDE_DHAKA' : 'OUTSIDE_DHAKA');" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-2 sm:py-2.5 text-xs sm:text-sm text-slate-900 font-semibold focus:bg-white focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 focus:outline-hidden transition cursor-pointer">
+                                        {% with selected_city=form.delivery_city.value|default:'Dhaka' %}
+                                        <option value="Dhaka" {% if selected_city == 'Dhaka' %}selected{% endif %}>Dhaka</option>
+                                        <option value="Bagerhat" {% if selected_city == 'Bagerhat' %}selected{% endif %}>Bagerhat</option>
+                                        <option value="Bandarban" {% if selected_city == 'Bandarban' %}selected{% endif %}>Bandarban</option>
+                                        <option value="Barguna" {% if selected_city == 'Barguna' %}selected{% endif %}>Barguna</option>
+                                        <option value="Barishal" {% if selected_city == 'Barishal' %}selected{% endif %}>Barishal</option>
+                                        <option value="Bhola" {% if selected_city == 'Bhola' %}selected{% endif %}>Bhola</option>
+                                        <option value="Bogura" {% if selected_city == 'Bogura' %}selected{% endif %}>Bogura</option>
+                                        <option value="Brahmanbaria" {% if selected_city == 'Brahmanbaria' %}selected{% endif %}>Brahmanbaria</option>
+                                        <option value="Chandpur" {% if selected_city == 'Chandpur' %}selected{% endif %}>Chandpur</option>
+                                        <option value="Chapainawabganj" {% if selected_city == 'Chapainawabganj' %}selected{% endif %}>Chapainawabganj</option>
+                                        <option value="Chattogram" {% if selected_city == 'Chattogram' or selected_city == 'Chittagong' %}selected{% endif %}>Chattogram (Chittagong)</option>
+                                        <option value="Chuadanga" {% if selected_city == 'Chuadanga' %}selected{% endif %}>Chuadanga</option>
+                                        <option value="Cox's Bazar" {% if selected_city == "Cox's Bazar" %}selected{% endif %}>Cox's Bazar</option>
+                                        <option value="Cumilla" {% if selected_city == 'Cumilla' %}selected{% endif %}>Cumilla</option>
+                                        <option value="Dinajpur" {% if selected_city == 'Dinajpur' %}selected{% endif %}>Dinajpur</option>
+                                        <option value="Faridpur" {% if selected_city == 'Faridpur' %}selected{% endif %}>Faridpur</option>
+                                        <option value="Feni" {% if selected_city == 'Feni' %}selected{% endif %}>Feni</option>
+                                        <option value="Gaibandha" {% if selected_city == 'Gaibandha' %}selected{% endif %}>Gaibandha</option>
+                                        <option value="Gazipur" {% if selected_city == 'Gazipur' %}selected{% endif %}>Gazipur</option>
+                                        <option value="Gopalganj" {% if selected_city == 'Gopalganj' %}selected{% endif %}>Gopalganj</option>
+                                        <option value="Habiganj" {% if selected_city == 'Habiganj' %}selected{% endif %}>Habiganj</option>
+                                        <option value="Jamalpur" {% if selected_city == 'Jamalpur' %}selected{% endif %}>Jamalpur</option>
+                                        <option value="Jashore" {% if selected_city == 'Jashore' %}selected{% endif %}>Jashore</option>
+                                        <option value="Jhalokati" {% if selected_city == 'Jhalokati' %}selected{% endif %}>Jhalokati</option>
+                                        <option value="Jhenaidah" {% if selected_city == 'Jhenaidah' %}selected{% endif %}>Jhenaidah</option>
+                                        <option value="Joypurhat" {% if selected_city == 'Joypurhat' %}selected{% endif %}>Joypurhat</option>
+                                        <option value="Khagrachhari" {% if selected_city == 'Khagrachhari' %}selected{% endif %}>Khagrachhari</option>
+                                        <option value="Khulna" {% if selected_city == 'Khulna' %}selected{% endif %}>Khulna</option>
+                                        <option value="Kishoreganj" {% if selected_city == 'Kishoreganj' %}selected{% endif %}>Kishoreganj</option>
+                                        <option value="Kurigram" {% if selected_city == 'Kurigram' %}selected{% endif %}>Kurigram</option>
+                                        <option value="Kushtia" {% if selected_city == 'Kushtia' %}selected{% endif %}>Kushtia</option>
+                                        <option value="Lakshmipur" {% if selected_city == 'Lakshmipur' %}selected{% endif %}>Lakshmipur</option>
+                                        <option value="Lalmonirhat" {% if selected_city == 'Lalmonirhat' %}selected{% endif %}>Lalmonirhat</option>
+                                        <option value="Madaripur" {% if selected_city == 'Madaripur' %}selected{% endif %}>Madaripur</option>
+                                        <option value="Magura" {% if selected_city == 'Magura' %}selected{% endif %}>Magura</option>
+                                        <option value="Manikganj" {% if selected_city == 'Manikganj' %}selected{% endif %}>Manikganj</option>
+                                        <option value="Meherpur" {% if selected_city == 'Meherpur' %}selected{% endif %}>Meherpur</option>
+                                        <option value="Moulvibazar" {% if selected_city == 'Moulvibazar' %}selected{% endif %}>Moulvibazar</option>
+                                        <option value="Munshiganj" {% if selected_city == 'Munshiganj' %}selected{% endif %}>Munshiganj</option>
+                                        <option value="Mymensingh" {% if selected_city == 'Mymensingh' %}selected{% endif %}>Mymensingh</option>
+                                        <option value="Naogaon" {% if selected_city == 'Naogaon' %}selected{% endif %}>Naogaon</option>
+                                        <option value="Narail" {% if selected_city == 'Narail' %}selected{% endif %}>Narail</option>
+                                        <option value="Narayanganj" {% if selected_city == 'Narayanganj' %}selected{% endif %}>Narayanganj</option>
+                                        <option value="Narsingdi" {% if selected_city == 'Narsingdi' %}selected{% endif %}>Narsingdi</option>
+                                        <option value="Natore" {% if selected_city == 'Natore' %}selected{% endif %}>Natore</option>
+                                        <option value="Netrokona" {% if selected_city == 'Netrokona' %}selected{% endif %}>Netrokona</option>
+                                        <option value="Nilphamari" {% if selected_city == 'Nilphamari' %}selected{% endif %}>Nilphamari</option>
+                                        <option value="Noakhali" {% if selected_city == 'Noakhali' %}selected{% endif %}>Noakhali</option>
+                                        <option value="Pabna" {% if selected_city == 'Pabna' %}selected{% endif %}>Pabna</option>
+                                        <option value="Panchagarh" {% if selected_city == 'Panchagarh' %}selected{% endif %}>Panchagarh</option>
+                                        <option value="Patuakhali" {% if selected_city == 'Patuakhali' %}selected{% endif %}>Patuakhali</option>
+                                        <option value="Pirojpur" {% if selected_city == 'Pirojpur' %}selected{% endif %}>Pirojpur</option>
+                                        <option value="Rajbari" {% if selected_city == 'Rajbari' %}selected{% endif %}>Rajbari</option>
+                                        <option value="Rajshahi" {% if selected_city == 'Rajshahi' %}selected{% endif %}>Rajshahi</option>
+                                        <option value="Rangamati" {% if selected_city == 'Rangamati' %}selected{% endif %}>Rangamati</option>
+                                        <option value="Rangpur" {% if selected_city == 'Rangpur' %}selected{% endif %}>Rangpur</option>
+                                        <option value="Satkhira" {% if selected_city == 'Satkhira' %}selected{% endif %}>Satkhira</option>
+                                        <option value="Shariatpur" {% if selected_city == 'Shariatpur' %}selected{% endif %}>Shariatpur</option>
+                                        <option value="Sherpur" {% if selected_city == 'Sherpur' %}selected{% endif %}>Sherpur</option>
+                                        <option value="Sirajganj" {% if selected_city == 'Sirajganj' %}selected{% endif %}>Sirajganj</option>
+                                        <option value="Sunamganj" {% if selected_city == 'Sunamganj' %}selected{% endif %}>Sunamganj</option>
+                                        <option value="Sylhet" {% if selected_city == 'Sylhet' %}selected{% endif %}>Sylhet</option>
+                                        <option value="Tangail" {% if selected_city == 'Tangail' %}selected{% endif %}>Tangail</option>
+                                        <option value="Thakurgaon" {% if selected_city == 'Thakurgaon' %}selected{% endif %}>Thakurgaon</option>
+                                        {% endwith %}
+                                    </select>
+                                </div>
                             </div>
 
                             <!-- Full Street Address -->
@@ -107,7 +185,6 @@
                             <!-- Hidden fields for backend compatibility -->
                             <input type="hidden" name="customer_email" id="customer_email" value="{{ form.customer_email.value|default:'' }}">
                             <input type="hidden" name="delivery_zone" id="delivery_zone" value="INSIDE_DHAKA">
-                            <input type="hidden" name="delivery_city" id="delivery_city" value="Dhaka">
                             <input type="hidden" name="customer_notes" id="customer_notes" value="{{ form.customer_notes.value|default:'' }}">
                         </div>
                     </div>
@@ -136,13 +213,6 @@
                                     <p class="text-[11px] sm:text-xs text-slate-600 font-medium mt-0.5 leading-snug">
                                         Pay in cash at your doorstep.
                                     </p>
-                                    <!-- Clear, Compact COD Important Notice -->
-                                    <div class="mt-2 flex items-start gap-1.5 text-[11px] sm:text-xs text-slate-900 bg-amber-100/95 border border-amber-300 border-l-4 border-l-amber-500 px-2.5 py-1.5 rounded-lg shadow-2xs">
-                                        <i class="fa-solid fa-triangle-exclamation text-amber-600 mt-0.5 shrink-0 text-xs"></i>
-                                        <span class="leading-snug font-medium">
-                                            <strong class="font-black text-amber-950">Important:</strong> Advance required for past courier returns (<a href="{% url 'store:policies' %}#clause-2-0" target="_blank" onclick="event.stopPropagation()" class="underline font-extrabold text-amber-950 hover:text-emerald-800">Clause 2.0</a>).
-                                        </span>
-                                    </div>
                                 </div>
                             </label>
 
@@ -226,13 +296,16 @@
                             <input type="hidden" name="payment_trx_id" id="payment_trx_id" value="{{ form.payment_trx_id.value|default:'' }}">
                             {% if form.payment_sender_number.errors %}<p class="text-rose-600 font-bold text-xs mt-1">{{ form.payment_sender_number.errors.0 }}</p>{% endif %}
                             {% if form.payment_trx_id.errors %}<p class="text-rose-600 font-bold text-xs mt-1">{{ form.payment_trx_id.errors.0 }}</p>{% endif %}
+                            <p class="text-[10.5px] text-slate-400 text-right pt-0.5">
+                                <a href="{% url 'store:policies' %}#clause-2-0" target="_blank" class="hover:text-emerald-800 underline underline-offset-2">COD Policy (Clause 2.0)</a>
+                            </p>
                         </div>
                     </div>
 
                 </div>
 
                 <!-- Right Column: Sticky Order Summary (5 Cols) -->
-                <div class="lg:col-span-5 space-y-4 sm:space-y-5 sticky top-24">
+                <div id="checkoutOrderSummary" class="lg:col-span-5 space-y-4 sm:space-y-5 lg:sticky lg:top-24 scroll-mt-24">
                     <div class="bg-white p-4 sm:p-7 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-md space-y-4 sm:space-y-5">
                         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                             <div class="flex items-center gap-2">
@@ -265,7 +338,7 @@
                                         </span>
                                     </div>
                                 </div>
-                                <span class="font-display font-black text-slate-950 text-sm shrink-0 whitespace-nowrap">৳{{ item.total_price }}</span>
+                                <span class="font-display font-bold text-slate-900 text-xs sm:text-sm shrink-0 whitespace-nowrap">৳{{ item.total_price|floatformat:0 }}</span>
                             </div>
                             {% endfor %}
                         </div>
@@ -301,36 +374,36 @@
                         {% endif %}
 
                         <!-- Clean Price Breakdown -->
-                        <div class="border-t border-slate-100 pt-3.5 space-y-2 text-xs">
-                            <div class="flex justify-between text-slate-600">
+                        <div class="border-t border-slate-100 pt-3.5 space-y-2 text-xs sm:text-sm">
+                            <div class="flex justify-between items-center text-slate-600">
                                 <span>Subtotal</span>
-                                <span class="font-bold text-slate-900">৳<span id="checkoutSubtotal">{{ cart_subtotal }}</span></span>
+                                <span class="font-bold text-slate-900">৳<span id="checkoutSubtotal">{{ cart_subtotal|floatformat:0 }}</span></span>
                             </div>
 
                             <!-- 1. Multi-Jar / Bundle Offer Discount Row -->
                             <div id="checkoutBundleDiscountRow" class="{% if not cart_bundle_discount or cart_bundle_discount <= 0 %}hidden{% endif %} flex justify-between items-center text-emerald-700 font-bold">
                                 <span id="checkoutBundleDiscountLabel">{{ promo_settings.get_discount_label|default:"Offer Discount" }}</span>
-                                <span>-৳<span id="checkoutBundleDiscount">{{ cart_bundle_discount|floatformat:2 }}</span></span>
+                                <span>-৳<span id="checkoutBundleDiscount">{{ cart_bundle_discount|floatformat:0 }}</span></span>
                             </div>
 
                             <!-- 2. Coupon Discount Row -->
                             <div id="checkoutCouponDiscountRow" class="{% if not cart_coupon_discount or cart_coupon_discount <= 0 %}hidden{% endif %} flex justify-between items-center text-emerald-700 font-bold">
                                 <span>Coupon (<strong id="checkoutCouponDiscountCode">{{ applied_coupon_code }}</strong>)</span>
-                                <span>-৳<span id="checkoutCouponDiscount">{{ cart_coupon_discount|floatformat:2 }}</span></span>
+                                <span>-৳<span id="checkoutCouponDiscount">{{ cart_coupon_discount|floatformat:0 }}</span></span>
                             </div>
 
                             <!-- 3. Advance Payment Discount Row -->
                             <div id="checkoutAdvanceDiscountRow" class="hidden flex justify-between items-center text-pink-700 font-bold">
                                 <span id="checkoutAdvanceDiscountLabel">{{ promo_settings.get_advance_payment_label|default:"Advance Payment OFF" }}</span>
-                                <span>-৳<span id="checkoutAdvanceDiscount">0.00</span></span>
+                                <span>-৳<span id="checkoutAdvanceDiscount">0</span></span>
                             </div>
 
                             <div class="flex justify-between items-center text-slate-600">
-                                <span>Nationwide Delivery <span class="text-[10px] text-slate-400">(7–10 days)</span></span>
+                                <span>Nationwide Delivery <span class="text-[10.5px] sm:text-xs text-slate-400">(7–10 days)</span></span>
                                 {% if free_delivery_unlocked or delivery_fee == 0 %}
                                 <span class="font-bold text-emerald-700" id="checkoutDeliveryFee">FREE</span>
                                 {% else %}
-                                <span class="font-bold text-slate-900" id="checkoutDeliveryFee">৳{{ delivery_fee }}</span>
+                                <span class="font-bold text-slate-900" id="checkoutDeliveryFee">৳{{ delivery_fee|floatformat:0 }}</span>
                                 {% endif %}
                             </div>
 
@@ -364,8 +437,8 @@
                             {% endif %}
 
                             <div class="border-t border-slate-200 pt-3 flex justify-between items-baseline">
-                                <span class="font-black text-slate-950 text-sm">Total Payable</span>
-                                <span class="font-display font-black text-2xl text-emerald-800">৳<span id="checkoutTotal">{{ grand_total }}</span></span>
+                                <span class="font-black text-slate-950 text-sm sm:text-base">Total Payable</span>
+                                <span class="font-display font-black text-xl sm:text-2xl text-emerald-800">৳<span id="checkoutTotal">{{ grand_total|floatformat:0 }}</span></span>
                             </div>
                         </div>
 
@@ -374,14 +447,6 @@
                             <label for="website_security_token">Security Verification (Do not fill)</label>
                             <input type="text" name="website_security_token" id="website_security_token" tabindex="-1" autocomplete="off">
                         </div>
-
-                        <!-- Cloudflare Turnstile Smart Bot Protection (Responsive) -->
-                        {% if CLOUDFLARE_TURNSTILE_SITE_KEY %}
-                        <div class="flex justify-center my-2 max-w-full overflow-hidden">
-                            <div class="cf-turnstile" data-sitekey="{{ CLOUDFLARE_TURNSTILE_SITE_KEY }}" data-action="checkout" data-theme="light" data-size="flexible"></div>
-                        </div>
-                        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-                        {% endif %}
 
                         <!-- Inline Checkout Messages / Errors (Right above Submit Button) -->
                         {% if messages %}
@@ -430,6 +495,23 @@
 
             </div>
         </form>
+
+        <!-- Sticky Mobile Bottom Checkout Bar (Easy 1-Tap Order on Mobile) -->
+        <div class="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 px-3.5 py-2.5 shadow-[0_-6px_20px_rgba(0,0,0,0.08)] flex items-center justify-between gap-3">
+            <div class="min-w-0">
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block leading-none">Total Payable</span>
+                <div class="flex items-center gap-2 mt-0.5">
+                    <span class="font-display font-black text-lg text-emerald-800 leading-none">৳<span id="mobileStickyTotal">{{ grand_total }}</span></span>
+                    <button type="button" onclick="document.getElementById('checkoutOrderSummary')?.scrollIntoView({ behavior: 'smooth', block: 'start' });" class="text-[10.5px] font-bold text-emerald-700 underline underline-offset-2 cursor-pointer">
+                        Summary
+                    </button>
+                </div>
+            </div>
+            <button type="button" onclick="document.getElementById('submitOrderBtn')?.click();" class="bg-emerald-700 hover:bg-emerald-800 active:scale-[0.98] text-white font-display font-black text-sm px-5 py-3 rounded-xl shadow-md shadow-emerald-800/20 flex items-center gap-1.5 shrink-0 cursor-pointer">
+                <span>Confirm Order</span>
+                <i class="fa-solid fa-arrow-right text-xs"></i>
+            </button>
+        </div>
 
     </div>
 </div>
@@ -559,8 +641,8 @@
                     noteEl.innerHTML = '<strong class="text-emerald-700">🎉 Congratulations! You unlocked FREE delivery.</strong>';
                 }
             } else {
-                feeEl.className = "font-black text-slate-900 text-sm";
-                feeEl.innerText = `৳${fee.toFixed(2)}`;
+                feeEl.className = "font-bold text-slate-900";
+                feeEl.innerText = `৳${fee.toFixed(0)}`;
             }
         }
 
@@ -573,6 +655,9 @@
 
         const mobileTotalEl = document.getElementById('mobileSummaryTotal');
         if (mobileTotalEl) mobileTotalEl.innerText = formattedTotal;
+
+        const mobileStickyEl = document.getElementById('mobileStickyTotal');
+        if (mobileStickyEl) mobileStickyEl.innerText = formattedTotal;
 
         // Refresh button text amount
         if (!skipToggleRefresh) {
