@@ -1,0 +1,12 @@
+{
+  "PKP-00199": [
+    "OUT_FOR_DELIVERY",
+    "PACKING",
+    "PENDING",
+    "CONFIRMED"
+  ],
+  "PKP-00200": [
+    "PENDING",
+    "OUT_FOR_DELIVERY"
+  ]
+}

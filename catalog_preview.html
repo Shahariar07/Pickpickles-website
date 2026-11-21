@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pickpickles - Facebook Catalog Images Showcase</title>
+    <style>
+        :root {
+            --primary: #15803d;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text-dark);
+            padding: 32px 16px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        header {
+            margin-bottom: 32px;
+            text-align: center;
+        }
+        h1 {
+            font-size: 28px;
+            font-weight: 800;
+            color: #14532d;
+            margin-bottom: 8px;
+        }
+        p.subtitle {
+            color: var(--text-muted);
+            font-size: 15px;
+        }
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin: 32px 0 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+        }
+        .image-wrapper {
+            position: relative;
+            width: 100%;
+            padding-top: 100%;
+            background: #f1f5f9;
+        }
+        .image-wrapper img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .badge-labeled {
+            background: #166534;
+            color: #ffffff;
+        }
+        .badge-standard {
+            background: #0284c7;
+            color: #ffffff;
+        }
+        .badge-id {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(15, 23, 42, 0.75);
+            color: #ffffff;
+            padding: 3px 7px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .card-body {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+        .title {
+            font-size: 15px;
+            font-weight: 700;
+            line-height: 1.3;
+            margin-bottom: 6px;
+            color: var(--text-dark);
+        }
+        .prices {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .sale-price {
+            font-size: 16px;
+            font-weight: 800;
+            color: #b91c1c;
+        }
+        .regular-price {
+            font-size: 13px;
+            text-decoration: line-through;
+            color: var(--text-muted);
+        }
+        .filename-box {
+            margin-top: auto;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 6px 8px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 11px;
+            color: #475569;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Pickpickles - Facebook Catalog Images</h1>
+            <p class="subtitle">facebook_products_catalog.csv ফাইলে যুক্ত করা মোট ১৮টি প্রডাক্টের সম্পূর্ণ ইমেজ গ্যালারি</p>
+        </header>
+
+        <!-- 10 Labeled Products -->
+        <h2 class="section-title">🏷️ ১. ব্র্যন্ডেড লেবেলড ইমেজ (১০টি প্রডাক্ট)</h2>
+        <div class="grid">
+            
+            <div class="card">
+                <div class="image-wrapper">
+                    <span class="badge-id">JAR-1</span>
+                    <span class="badge badge-labeled">Labeled</span>
+                    <img src="media/products/pickled_mixed_veggies_labeled.jpg" alt="Pickled Mixed Veggies" loading="lazy">
+                </div>
+                <div class="card-body">
+                    <div class="title">Pickled Mixed Veggies (500g)</div>
+                    <div class="prices">
+                        <span class="sale-price">৳500</span>
+                        <span class="regular-price">৳550</span>
+                    </div>
+                    <div class="filename-box">pickled_mixed_veggies_labeled.jpg</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="image-wrapper">
+                    <span class="badge-id">JAR-2</span>
+                    <span class="badge badge-labeled">Labeled</span>
+                    <img src="media/products/pickled_deshi_onions_labeled.jpg" alt="Pickled Deshi Onions" loading="lazy">
+                </div>
+                <div class="card-body">
+                    <div class="title">Pickled Deshi Onions (500g)</div>
+                    <div class="prices">
+                        <span class="sale-price">৳400</span>
+                        <span class="regular-price">৳450</span>
+                    </div>
+                    <div class="filename-box">pickled_deshi_onions_labeled.jpg</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="image-wrapper">
+                    <span class="badge-id">JAR-3</span>
+                    <span class="badge badge-labeled">Labeled</span>
+                    <img src="media/products/pickled_green_peppers_labeled.jpg" alt="Pickled Green Peppers" loading="lazy">
+                </div>
+                <div class="card-body">
+                    <div class="title">Pickled Green Peppers (500g)</div>
+                    <div class="prices">
+                        <span class="sale-price">৳400</span>
+                        <span class="regular-price">৳450</span>
+                    </div>
+                    <div class="filename-box">pickled_green_peppers_labeled.jpg</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="image-wrapper">
+                    <span class="badge-id">JAR-4</span>
+                    <span class="badge badge-labeled">Labeled</span>
+                    <img src="media/products/pickled_beetroot_labeled.jpg" alt="Pickled Beetroot" loading="lazy">
+                </div>
+                <div class="card-body">
+                    <div class="title">Pickled Beetroot (500g)</div>
+                    <div class="prices">
+                        <span class="sale-price">৳400</span>
+                        <span class="regular-price">৳450</span>
+                    </div>
+                    <div class="filename-box">pickled_beetroot_labeled.jpg</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="image-wrapper">
+                    <span class="badge-id">JAR-5</span>
+                    <span class="badge badge-labeled">Labeled</span>
+                    <img src="media/products/classic_dill_pickles_labeled.jpg" alt="Classic Dill Pickles" loading="lazy">
+                </div>
+                <div class="card-body">
+                    <div class="title">Classic Dill Pickles (500g)</div>
+                    <div class="prices">
+                        <span class="sale-price">৳450</span>
+                        <span class="regular-price">৳550</span>
+                    </div>
+                    <div class="filename-box">classic_dill_pickles_labeled.jpg</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="image-wrapper">
+                    <span class="badge-id">JAR-6</span>
+                    <span class="badge badge-labeled">Labeled</span>
+                    <img src="media/products/pickled_pineapple_labeled.jpg" alt="Pickled Pineapple" loading="lazy">
+                </div>
+                <div class="card-body">
+                    <div class="title">Pickled Pineapple (500g)</div>
+                    <div class="prices">
+                        <span class="sale-price">৳450</span>
+                        <span class="regular-price">৳550</span>
+                    </div>
+                    <div class="filename-box">pickled_pineapple_labeled.jpg</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="image-wrapper">
+                    <span class="badge-id">JAR-7</span>
+                    <span class="badge badge-labeled">Labeled</span>
+                    <img src="media/products/pickled_quail_eggs_labeled.jpg" alt="Pickled Quail Eggs" loading="lazy">
+                </div>
+                <div class="card-body">
+                    <div class="title">Pickled Quail Eggs (500g)</div>
+                    <div class="prices">
+                        <span class="sale-price">৳550</span>
+                        <span class="regular-price">৳700</span>
+                    </div>
+                    <div class="filename-box">pickled_quail_eggs_labeled.jpg</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="image-wrapper">
+                    <span class="badge-id">JAR-8</span>
+                    <span class="badge badge-labeled">Labeled</span>
+                    <img src="media/products/pickled_mango_labeled.jpg" alt="Pickled Mango" loading="lazy">
+                </div>
+                <div class="card-body">
+                    <div class="title">Pickled Mango (500g)</div>
+                    <div class="prices">
+                        <span class="sale-price">৳450</span>
+                        <span class="regular-price">৳550</span>
+                    </div>
+                    <div class="filename-box">pickled_mango_labeled.jpg</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="image-wrapper">
+                    <span class="badge-id">JAR-9</span>
+                    <span class="badge badge-labeled">Labeled</span>
+                    <img src="media/products/pickled_bell_peppers_labeled.jpg" alt="Pickled Bell Peppers" loading="lazy">
+                </div>
+                <div class="card-body">
+                    <div class="title">Pickled Bell Peppers (500g)</div>
+                    <div class="prices">
+                        <span class="sale-price">৳400</span>
+                        <span class="regular-price">৳450</span>
+                    </div>
+                    <div class="filename-box">pickled_bell_peppers_labeled.jpg</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="image-wrapper">
+                    <span class="badge-id">JAR-10</span>
+                    <span class="badge badge-labeled">Labeled</span>
+                    <img src="media/products/pickled_grapes_labeled.jpg" alt="Pickled Grapes" loading="lazy">
+                </div>
+                <div class="card-body">
+                    <div class="title">Pickled Grapes (500g)</div>
+                    <div class="prices">
+                        <span class="sale-price">৳500</span>
+                        <span class="regular-price">৳600</span>
+                    </div>
+                    <div class="filename-box">pickled_grapes_labeled.jpg</div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 8 Standard Products -->
+        <h2 class="section-title">🫙 ২. রেগুলার রিয়েল জার ফটোগ্রাফ (৮টি প্রডাক্ট)</h2>
+        <div class="grid">
+
+            <div class="card">
+                <div class="image-wrapper">
+                    <span class="badge-id">JAR-11</span>
+                    <span class="badge badge-standard">Real Jar</span>
+                    <img src="media/products/pickled_green_tomatoes.jpg" alt="Pickled Green Tomatoes" loading="lazy">
+                </div>
+                <div class="card-body">
+                    <div class="title">Pickled Green Tomatoes (500g)</div>
+                    <div class="prices">
+                        <span class="sale-price">৳400</span>
+                        <span class="regular-price">৳450</span>
+                    </div>
+                    <div class="filename-box">pickled_green_tomatoes.jpg</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="image-wrapper">
+                    <span class="badge-id">JAR-12</span>
+                    <span class="badge badge-standard">Real Jar</span>
+                    <img src="media/products/pickled_garlic.jpg" alt="Pickled Garlic" loading="lazy">
+                </div>
+                <div class="card-body">
+                    <div class="title">Pickled Garlic (500g)</div>
+                    <div class="prices">
+                        <span class="sale-price">৳500</span>
+                        <span class="regular-price">৳650</span>
+                    </div>
+                    <div class="filename-box">pickled_garlic.jpg</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="image-wrapper">
+                    <span class="badge-id">JAR-13</span>
+                    <span class="badge badge-standard">Real Jar</span>
+                    <img src="media/products/classic_dill_chips.jpg" alt="Classic Dill Chips" loading="lazy">
+                </div>
+                <div class="card-body">
+                    <div class="title">Classic Dill Chips (500g)</div>
+                    <div class="prices">
+                        <span class="sale-price">৳450</span>
+                        <span class="regular-price">৳550</span>
+                    </div>
+                    <div class="filename-box">classic_dill_chips.jpg</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="image-wrapper">
+                    <span class="badge-id">JAR-14</span>
+                    <span class="badge badge-standard">Real Jar</span>
+                    <img src="media/products/classic_dill_extra_sour.jpg" alt="Classic Dill Extra Sour" loading="lazy">
+                </div>
+                <div class="card-body">
+                    <div class="title">Classic Dill Extra Sour (500g)</div>
+                    <div class="prices">
+                        <span class="sale-price">৳450</span>
+                        <span class="regular-price">৳550</span>
+                    </div>
+                    <div class="filename-box">classic_dill_extra_sour.jpg</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="image-wrapper">
+                    <span class="badge-id">JAR-15</span>
+                    <span class="badge badge-standard">Real Jar</span>
+                    <img src="media/products/classic_dill_hot.jpg" alt="Classic Dill Naga Hot" loading="lazy">
+                </div>
+                <div class="card-body">
+                    <div class="title">Classic Dill Naga Hot (500g)</div>
+                    <div class="prices">
+                        <span class="sale-price">৳450</span>
+                        <span class="regular-price">৳550</span>
+                    </div>
+                    <div class="filename-box">classic_dill_hot.jpg</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="image-wrapper">
+                    <span class="badge-id">JAR-16</span>
+                    <span class="badge badge-standard">Real Jar</span>
+                    <img src="media/products/classic_dill_sandwich_cut.jpg" alt="Classic Dill Sandwich Cut" loading="lazy">
+                </div>
+                <div class="card-body">
+                    <div class="title">Classic Dill Sandwich Cut (500g)</div>
+                    <div class="prices">
+                        <span class="sale-price">৳450</span>
+                        <span class="regular-price">৳550</span>
+                    </div>
+                    <div class="filename-box">classic_dill_sandwich_cut.jpg</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="image-wrapper">
+                    <span class="badge-id">JAR-17</span>
+                    <span class="badge badge-standard">Real Jar</span>
+                    <img src="media/products/pickled_citrus.jpg" alt="Pickled Citrus" loading="lazy">
+                </div>
+                <div class="card-body">
+                    <div class="title">Pickled Citrus (500g)</div>
+                    <div class="prices">
+                        <span class="sale-price">৳450</span>
+                        <span class="regular-price">৳550</span>
+                    </div>
+                    <div class="filename-box">pickled_citrus.jpg</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="image-wrapper">
+                    <span class="badge-id">JAR-18</span>
+                    <span class="badge badge-standard">Real Jar</span>
+                    <img src="media/products/pickled_deshi_eggs.jpg" alt="Pickled Deshi Eggs" loading="lazy">
+                </div>
+                <div class="card-body">
+                    <div class="title">Pickled Deshi Eggs (500g)</div>
+                    <div class="prices">
+                        <span class="sale-price">৳650</span>
+                        <span class="regular-price">৳750</span>
+                    </div>
+                    <div class="filename-box">pickled_deshi_eggs.jpg</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</body>
+</html>

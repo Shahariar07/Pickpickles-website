@@ -206,10 +206,19 @@
                 </button>
             </form>
             {% endif %}
-            <a href="https://wa.me/{{ order.whatsapp_phone_international }}?text=Hello%20{{ order.customer_name|urlencode }},%20from%20Pickpickles%20regarding%20order%20%23{{ order.order_number|urlencode }}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-2xs flex items-center gap-1.5 transition">
-                <i class="fa-brands fa-whatsapp text-sm"></i>
-                <span>WhatsApp</span>
-            </a>
+            {% if order.customer_phone %}
+            {% if order.order_status in sms_sent_statuses %}
+            <button type="button" disabled class="bg-gray-100 text-gray-400 border border-gray-200 font-bold text-xs px-3 py-1.5 rounded-xl flex items-center gap-1.5 cursor-not-allowed opacity-75">
+                <i class="fa-solid fa-comment-sms text-sm"></i>
+                <span>SMS Sent</span>
+            </button>
+            {% else %}
+            <button type="button" onclick="sendOrderSmsQuick('{{ order.order_number }}', '{{ order.order_status }}', this)" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-2xs flex items-center gap-1.5 transition cursor-pointer">
+                <i class="fa-solid fa-comment-sms text-sm"></i>
+                <span>Send SMS</span>
+            </button>
+            {% endif %}
+            {% endif %}
 
             {% elif order.order_status == 'CONFIRMED' %}
             {% if can_edit %}
@@ -237,10 +246,17 @@
 
             {% elif order.order_status == 'OUT_FOR_DELIVERY' %}
             {% if order.customer_phone %}
-            <a href="{{ order.whatsapp_shipping_instruction_url }}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl shadow-2xs flex items-center gap-1.5 transition" title="Send WhatsApp Storage Guidelines to Customer">
-                <i class="fa-brands fa-whatsapp text-sm"></i>
-                <span>সংরক্ষণ নির্দেশিকা পাঠান</span>
-            </a>
+            {% if 'OUT_FOR_DELIVERY' in sms_sent_statuses %}
+            <button type="button" disabled class="bg-gray-100 text-gray-400 border border-gray-200 font-bold text-xs px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 cursor-not-allowed opacity-75" title="Dispatch SMS already sent">
+                <i class="fa-solid fa-comment-sms text-sm"></i>
+                <span>Dispatch SMS Sent</span>
+            </button>
+            {% else %}
+            <button type="button" onclick="sendOrderSmsQuick('{{ order.order_number }}', 'OUT_FOR_DELIVERY', this)" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl shadow-2xs flex items-center gap-1.5 transition cursor-pointer" title="Send Dispatch SMS to Customer">
+                <i class="fa-solid fa-comment-sms text-sm"></i>
+                <span>Send Dispatch SMS</span>
+            </button>
+            {% endif %}
             {% endif %}
             {% if can_edit %}
             <form action="{% url 'dashboard:update_order_status_quick' order.order_number %}" method="POST" class="inline-block">
@@ -446,34 +462,26 @@
                         {% endif %}
                     </div>
                     
-                    <!-- WhatsApp Messaging Grid (Clean 4-Item Row) -->
+                    <!-- SMS Messaging Grid -->
                     {% if order.customer_phone %}
                     <div class="space-y-1.5 pt-0.5">
                         <div class="flex items-center justify-between text-[11px] font-bold text-gray-500">
-                            <span><i class="fa-brands fa-whatsapp text-emerald-600 mr-1"></i>WhatsApp Messaging</span>
-                            <span class="text-[10px] text-gray-400 font-normal">One-click templates</span>
+                            <span><i class="fa-solid fa-comment-sms text-emerald-600 mr-1"></i>Mobile SMS</span>
+                            <span class="text-[10px] text-gray-400 font-normal">BulkSMSBD</span>
                         </div>
-                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                            <a href="https://wa.me/{{ order.whatsapp_phone_international }}?text=Hello%20{{ order.customer_name|urlencode }},%20from%20Pickpickles%20regarding%20order%20%23{{ order.order_number|urlencode }}" target="_blank"
-                                class="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 rounded-xl px-2 py-2 text-center text-[11px] font-bold flex items-center justify-center gap-1.5 transition shadow-2xs" title="Open Direct WhatsApp Chat">
-                                <i class="fa-solid fa-comment-dots text-[11px] text-emerald-600"></i>
-                                <span>Chat</span>
-                            </a>
-                            <a href="{{ order.whatsapp_order_confirmation_url }}" target="_blank"
-                                class="bg-white hover:bg-blue-50 text-blue-800 border border-blue-200/80 rounded-xl px-2 py-2 text-center text-[11px] font-bold flex items-center justify-center gap-1.5 transition shadow-2xs" title="Send WhatsApp Order Confirmation">
-                                <i class="fa-solid fa-circle-check text-[11px] text-blue-600"></i>
-                                <span>Confirm</span>
-                            </a>
-                            <a href="{{ order.whatsapp_shipping_instruction_url }}" target="_blank"
-                                class="bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-200/80 rounded-xl px-2 py-2 text-center text-[11px] font-bold flex items-center justify-center gap-1.5 transition shadow-2xs" title="Send Pickle Storage Instructions">
-                                <i class="fa-solid fa-box-open text-[11px] text-emerald-600"></i>
-                                <span>Storage</span>
-                            </a>
-                            <a href="{{ order.whatsapp_feedback_url }}" target="_blank"
-                                class="bg-white hover:bg-amber-50 text-amber-800 border border-amber-200/80 rounded-xl px-2 py-2 text-center text-[11px] font-bold flex items-center justify-center gap-1.5 transition shadow-2xs" title="Ask Customer for Review & Feedback">
-                                <i class="fa-solid fa-star text-[11px] text-amber-500"></i>
-                                <span>Review</span>
-                            </a>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <button type="button"
+                                {% if 'CONFIRMED' in sms_sent_statuses %}disabled title="Confirm SMS already sent"{% else %}onclick="sendOrderSmsQuick('{{ order.order_number }}', 'CONFIRMED', this)"{% endif %}
+                                class="rounded-xl px-2 py-2 text-center text-[11px] font-bold flex items-center justify-center gap-1.5 transition border {% if 'CONFIRMED' in sms_sent_statuses %}bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-75{% else %}bg-white hover:bg-blue-50 text-blue-800 border-blue-200/80 shadow-2xs cursor-pointer{% endif %}">
+                                <i class="fa-solid fa-circle-check text-[11px]"></i>
+                                <span>{% if 'CONFIRMED' in sms_sent_statuses %}Confirm Sent{% else %}Confirm SMS{% endif %}</span>
+                            </button>
+                            <button type="button"
+                                {% if 'OUT_FOR_DELIVERY' in sms_sent_statuses %}disabled title="Dispatch SMS already sent"{% else %}onclick="sendOrderSmsQuick('{{ order.order_number }}', 'OUT_FOR_DELIVERY', this)"{% endif %}
+                                class="rounded-xl px-2 py-2 text-center text-[11px] font-bold flex items-center justify-center gap-1.5 transition border {% if 'OUT_FOR_DELIVERY' in sms_sent_statuses %}bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-75{% else %}bg-white hover:bg-emerald-50 text-emerald-800 border-emerald-200/80 shadow-2xs cursor-pointer{% endif %}">
+                                <i class="fa-solid fa-truck-fast text-[11px]"></i>
+                                <span>{% if 'OUT_FOR_DELIVERY' in sms_sent_statuses %}Dispatch Sent{% else %}Dispatch SMS{% endif %}</span>
+                            </button>
                         </div>
                     </div>
                     {% endif %}
@@ -2212,6 +2220,38 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     {% endif %}
 });
+function sendOrderSmsQuick(orderNumber, smsType, btnEl) {
+    if (!orderNumber || (btnEl && btnEl.disabled)) return;
+    const origHtml = btnEl ? btnEl.innerHTML : '';
+    if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i> <span>Sending...</span>';
+    }
+    fetch(`/dashboard/order/${orderNumber}/send-sms/?sms_type=${encodeURIComponent(smsType)}&format=json`, {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            if (btnEl) {
+                btnEl.disabled = false;
+                btnEl.innerHTML = origHtml;
+            }
+            alert(data.error || 'Failed to send SMS');
+        }
+    })
+    .catch(() => {
+        if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.innerHTML = origHtml;
+        }
+        alert('Network error sending SMS');
+    });
+}
 </script>
 
 {% endblock %}

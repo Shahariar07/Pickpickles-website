@@ -761,6 +761,13 @@ def checkout(request):
 
             # Clear cart session
             cart.clear()
+
+            # Send immediate Order Placed SMS to customer mobile
+            try:
+                from dashboard.sms_service import send_order_status_sms
+                send_order_status_sms(order, 'PENDING', old_status=None)
+            except Exception as _sms_err:
+                print(f"Order placed SMS failed: {_sms_err}")
             
             messages.success(request, f"Order #{order.order_number} confirmed successfully!")
             return redirect('store:order_success', order_number=order.order_number)

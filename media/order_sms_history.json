@@ -1,0 +1,24 @@
+[
+  {
+    "sent_at": "20 Nov 2026, 04:44 PM",
+    "order_number": "PKP-00200",
+    "customer_name": "Shahariar Imtiaz",
+    "phone": "01739804566",
+    "sms_type": "OUT_FOR_DELIVERY",
+    "sms_type_label": "Dispatched",
+    "message": "Pick Pickles: Order #PKP-00200 dispatched! COD: Tk 700. Please refrigerate upon arrival! Track: www.pickpickles.xyz/track/",
+    "success": true,
+    "status_message": "SMS submitted successfully to 1 recipient(s)!"
+  },
+  {
+    "sent_at": "20 Nov 2026, 04:43 PM",
+    "order_number": "PKP-00200",
+    "customer_name": "Shahariar Imtiaz",
+    "phone": "01739804566",
+    "sms_type": "PENDING",
+    "sms_type_label": "Order Placed",
+    "message": "Pick Pickles: Order #PKP-00200 placed! Total: Tk 700. We will confirm & pack soon. Track: www.pickpickles.xyz/track/",
+    "success": true,
+    "status_message": "SMS submitted successfully to 1 recipient(s)!"
+  }
+]

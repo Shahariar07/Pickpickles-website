@@ -237,83 +237,18 @@
                         </nav>
                     </div>
 
-                    <!-- SECTION 2: RECORDS & HISTORY (Secondary Logs, History & Intelligence) -->
+                    <!-- SECTION 2: MARKETING & CUSTOMERS -->
                     <div class="pt-3 border-t border-brand-800/80 space-y-1">
                         <div class="text-[10px] font-extrabold text-brand-accent uppercase tracking-widest px-3 mb-2 flex items-center justify-between">
-                            <span>Records & History</span>
-                            <i class="fa-solid fa-clock-rotate-left text-[10px] text-brand-accent/60"></i>
-                        </div>
-                        <nav class="space-y-1 text-xs font-bold">
-                            <!-- Stock Ledger Link -->
-                            <a href="{% url 'dashboard:stock_ledger' %}"
-                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'stock_ledger' or request.resolver_match.url_name == 'product_stock_ledger' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
-                                <i class="fa-solid fa-clock-rotate-left text-brand-accent text-sm w-4 text-center"></i>
-                                <span>Stock Ledger / History</span>
-                            </a>
-
-                            <!-- Price History Link -->
-                            <a href="{% url 'dashboard:price_history' %}"
-                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'price_history' or request.resolver_match.url_name == 'product_price_history' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
-                                <i class="fa-solid fa-tags text-brand-accent text-sm w-4 text-center"></i>
-                                <span>Price History</span>
-                            </a>
-
-                            <!-- Production Batches Link -->
-                            <a href="{% url 'dashboard:production_batches' %}"
-                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'production_batches' or request.resolver_match.url_name == 'production_batch_detail' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
-                                <i class="fa-solid fa-layer-group text-brand-accent text-sm w-4 text-center"></i>
-                                <span>Production Batches</span>
-                            </a>
-
-                            <!-- Damage & Returns Link -->
-                            <a href="{% url 'dashboard:damage_returns' %}"
-                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'damage_returns' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
-                                <i class="fa-solid fa-triangle-exclamation text-amber-400 text-sm w-4 text-center"></i>
-                                <span>Damage & Returns</span>
-                            </a>
-
-                            <!-- Pricing & Profitability Intelligence Link -->
-                            <a href="{% url 'dashboard:business_profitability' %}"
-                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'business_profitability' %}bg-emerald-600 text-white shadow-md shadow-emerald-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
-                                <i class="fa-solid fa-calculator text-amber-300 text-sm w-4 text-center"></i>
-                                <span>Pricing & Profitability</span>
-                                <span class="ml-auto px-1.5 py-0.5 text-[9px] font-black bg-amber-400/20 text-amber-300 rounded border border-amber-400/30">Smart</span>
-                            </a>
-
-                            <!-- Customer Reviews -->
-                            <a href="{% url 'dashboard:reviews' %}"
-                                id="sidebarReviewsLink"
-                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'reviews' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
-                                <i class="fa-solid fa-star text-brand-accent text-sm w-4 text-center"></i>
-                                <span>Customer Reviews</span>
-                            </a>
-
-                            <!-- Feedback Reminders (1+ Month Old) -->
-                            <a href="{% url 'dashboard:feedback_reminders' %}"
-                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'feedback_reminders' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-amber-200/90 hover:text-white hover:bg-brand-800{% endif %}">
-                                <i class="fa-solid fa-comments text-amber-400 text-sm w-4 text-center"></i>
-                                <span>Feedback Reminders</span>
-                                <span id="sidebarFeedbackRemindersBadge"
-                                    class="ml-auto min-w-[20px] h-5 px-1.5 text-[10px] font-black {% if pending_feedback_reminders_count > 0 %}bg-amber-500 text-slate-950 shadow-xs{% else %}bg-brand-800 text-gray-300{% endif %} rounded-full flex items-center justify-center"
-                                    title="{{ pending_feedback_reminders_count|default:'0' }} জন কাস্টমারকে ফিডব্যাক রিমাইন্ডার পাঠানো বাকি">
-                                    {{ pending_feedback_reminders_count|default:"0" }}
-                                </span>
-                            </a>
-                        </nav>
-                    </div>
-
-                    <!-- SECTION 3: ADMIN MANAGEMENT (Configuration, Security & System) -->
-                    <div class="pt-3 border-t border-brand-800/80 space-y-1">
-                        <div class="text-[10px] font-extrabold text-brand-accent uppercase tracking-widest px-3 mb-2 flex items-center justify-between">
-                            <span>Admin Management</span>
-                            <i class="fa-solid fa-sliders text-[10px] text-brand-accent/60"></i>
+                            <span>Marketing &amp; Customers</span>
+                            <i class="fa-solid fa-bullhorn text-[10px] text-brand-accent/60"></i>
                         </div>
                         <nav class="space-y-1 text-xs font-bold">
                             <!-- Offers & Campaigns -->
                             <a href="{% url 'dashboard:offer_manager' %}"
                                 class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'offer_manager' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-amber-300 hover:text-white hover:bg-brand-800{% endif %}">
                                 <i class="fa-solid fa-gift text-amber-400 text-sm w-4 text-center"></i>
-                                <span>Offers & Campaigns</span>
+                                <span>Offers &amp; Campaigns</span>
                                 {% if promo_settings.is_active %}
                                 <span class="ml-auto px-1.5 py-0.5 text-[9px] font-black bg-emerald-500/30 text-emerald-300 rounded border border-emerald-400/40">Active</span>
                                 {% else %}
@@ -328,6 +263,93 @@
                                 <span>SMS Campaign</span>
                                 <span class="ml-auto px-1.5 py-0.5 text-[9px] font-black bg-emerald-500/20 text-emerald-300 rounded border border-emerald-400/30">BulkSMSBD</span>
                             </a>
+
+                            <!-- All Sent SMS History -->
+                            <a href="{% url 'dashboard:sms_history' %}"
+                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'sms_history' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
+                                <i class="fa-solid fa-comment-sms text-emerald-400 text-sm w-4 text-center"></i>
+                                <span>SMS History</span>
+                            </a>
+
+                            <!-- Order Refill Reminders (Mobile SMS) -->
+                            <a href="{% url 'dashboard:feedback_reminders' %}"
+                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'feedback_reminders' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-amber-200/90 hover:text-white hover:bg-brand-800{% endif %}">
+                                <i class="fa-solid fa-rotate-right text-amber-400 text-sm w-4 text-center"></i>
+                                <span>Order Refill Reminders</span>
+                                <span id="sidebarFeedbackRemindersBadge"
+                                    class="ml-auto min-w-[20px] h-5 px-1.5 text-[10px] font-black {% if pending_feedback_reminders_count > 0 %}bg-amber-500 text-slate-950 shadow-xs{% else %}bg-brand-800 text-gray-300{% endif %} rounded-full flex items-center justify-center"
+                                    title="{{ pending_feedback_reminders_count|default:'0' }} জন কাস্টমারকে রিফিল রিমাইন্ডার পাঠানো বাকি">
+                                    {{ pending_feedback_reminders_count|default:"0" }}
+                                </span>
+                            </a>
+
+                            <!-- Customer Reviews -->
+                            <a href="{% url 'dashboard:reviews' %}"
+                                id="sidebarReviewsLink"
+                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'reviews' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
+                                <i class="fa-solid fa-star text-brand-accent text-sm w-4 text-center"></i>
+                                <span>Customer Reviews</span>
+                                <span id="sidebarReviewsBadge"
+                                    class="ml-auto min-w-[20px] h-5 px-1.5 text-[10px] font-black bg-amber-400 text-slate-950 rounded-full flex items-center justify-center shadow-xs {% if not pending_reviews_count %}hidden{% endif %}"
+                                    title="Pending customer reviews">
+                                    {{ pending_reviews_count|default:"0" }}
+                                </span>
+                            </a>
+                        </nav>
+                    </div>
+
+                    <!-- SECTION 3: PRODUCTION & LOGS -->
+                    <div class="pt-3 border-t border-brand-800/80 space-y-1">
+                        <div class="text-[10px] font-extrabold text-brand-accent uppercase tracking-widest px-3 mb-2 flex items-center justify-between">
+                            <span>Production &amp; Logs</span>
+                            <i class="fa-solid fa-clock-rotate-left text-[10px] text-brand-accent/60"></i>
+                        </div>
+                        <nav class="space-y-1 text-xs font-bold">
+                            <!-- Production Batches Link -->
+                            <a href="{% url 'dashboard:production_batches' %}"
+                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'production_batches' or request.resolver_match.url_name == 'production_batch_detail' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
+                                <i class="fa-solid fa-layer-group text-brand-accent text-sm w-4 text-center"></i>
+                                <span>Production Batches</span>
+                            </a>
+
+                            <!-- Stock Ledger Link -->
+                            <a href="{% url 'dashboard:stock_ledger' %}"
+                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'stock_ledger' or request.resolver_match.url_name == 'product_stock_ledger' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
+                                <i class="fa-solid fa-clock-rotate-left text-brand-accent text-sm w-4 text-center"></i>
+                                <span>Stock Ledger / History</span>
+                            </a>
+
+                            <!-- Price History Link -->
+                            <a href="{% url 'dashboard:price_history' %}"
+                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'price_history' or request.resolver_match.url_name == 'product_price_history' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
+                                <i class="fa-solid fa-tags text-brand-accent text-sm w-4 text-center"></i>
+                                <span>Price History</span>
+                            </a>
+
+                            <!-- Damage & Returns Link -->
+                            <a href="{% url 'dashboard:damage_returns' %}"
+                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'damage_returns' %}bg-brand-600 text-white shadow-md shadow-brand-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
+                                <i class="fa-solid fa-triangle-exclamation text-amber-400 text-sm w-4 text-center"></i>
+                                <span>Damage &amp; Returns</span>
+                            </a>
+
+                            <!-- Pricing & Profitability Intelligence Link -->
+                            <a href="{% url 'dashboard:business_profitability' %}"
+                                class="px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition {% if request.resolver_match.url_name == 'business_profitability' %}bg-emerald-600 text-white shadow-md shadow-emerald-600/30 font-extrabold{% else %}text-gray-300 hover:text-white hover:bg-brand-800{% endif %}">
+                                <i class="fa-solid fa-calculator text-amber-300 text-sm w-4 text-center"></i>
+                                <span>Pricing &amp; Profitability</span>
+                                <span class="ml-auto px-1.5 py-0.5 text-[9px] font-black bg-amber-400/20 text-amber-300 rounded border border-amber-400/30">Smart</span>
+                            </a>
+                        </nav>
+                    </div>
+
+                    <!-- SECTION 4: SETTINGS & SECURITY -->
+                    <div class="pt-3 border-t border-brand-800/80 space-y-1">
+                        <div class="text-[10px] font-extrabold text-brand-accent uppercase tracking-widest px-3 mb-2 flex items-center justify-between">
+                            <span>Settings &amp; Security</span>
+                            <i class="fa-solid fa-sliders text-[10px] text-brand-accent/60"></i>
+                        </div>
+                        <nav class="space-y-1 text-xs font-bold">
 
                             <!-- Pickle Categories -->
                             <a href="{% url 'dashboard:pickle_categories' %}"

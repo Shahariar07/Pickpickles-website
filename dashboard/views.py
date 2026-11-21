@@ -1015,6 +1015,8 @@ def orders_list(request):
         if new_status in dict(Order.ORDER_STATUS_CHOICES) and order_numbers:
             target_orders = Order.objects.prefetch_related('items__product').filter(order_number__in=order_numbers)
             updated_count = 0
+            sms_sent_count = 0
+            sms_failed_count = 0
             CONFIRMED_STATUSES = {'CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'}
             for order in target_orders:
                 old_status = order.order_status
@@ -1030,11 +1032,22 @@ def orders_list(request):
                         except Exception as _e:
                             print(f"Failed to dispatch Meta CAPI Purchase: {_e}")
                     order.save()
+                    if new_status in ('CONFIRMED', 'OUT_FOR_DELIVERY'):
+                        from dashboard.sms_service import send_order_status_sms
+                        sms_res = send_order_status_sms(order, new_status, old_status)
+                        if sms_res.get('success'):
+                            sms_sent_count += 1
+                        elif not sms_res.get('skipped'):
+                            sms_failed_count += 1
                     updated_count += 1
             status_label = dict(Order.ORDER_STATUS_CHOICES).get(new_status, new_status)
             if updated_count > 0:
                 wa_hint = " (Tip: Select Shipped orders and use the WhatsApp Queue to send messages one by one.)" if new_status == 'OUT_FOR_DELIVERY' else ""
                 messages.success(request, f"Updated {updated_count} order(s) to '{status_label}'{wa_hint}")
+                if sms_sent_count > 0:
+                    messages.info(request, f"📱 Auto SMS sent to {sms_sent_count} customer(s) via BulkSMSBD.")
+                if sms_failed_count > 0:
+                    messages.warning(request, f"⚠️ Auto SMS failed for {sms_failed_count} order(s). Check BulkSMSBD balance/Sender ID.")
             else:
                 messages.info(request, f"Selected orders are already in '{status_label}' status.")
         return redirect(request.META.get('HTTP_REFERER') or 'dashboard:orders')
@@ -1251,6 +1264,11 @@ def orders_list(request):
         ],
     }
 
+    from dashboard.sms_service import get_all_order_sms_sent_map
+    _sms_sent_map = get_all_order_sms_sent_map()
+    for _ord in page_obj:
+        _ord.sms_already_sent = _ord.order_status in _sms_sent_map.get(str(_ord.order_number), [])
+
     context = {
         'orders': page_obj,
         'page_obj': page_obj,
@@ -1401,11 +1419,6 @@ def order_detail(request, order_number):
             if new_status == 'DELIVERED' and not new_payment_status and order.payment_status == 'UNPAID':
                 order.payment_status = 'PAID'
 
-            # Trigger automatic WhatsApp delivery & storage instruction popup when shipping out
-            if new_status == 'OUT_FOR_DELIVERY' and order.customer_phone:
-                request.session['auto_whatsapp_url'] = order.whatsapp_shipping_instruction_url
-                request.session['auto_whatsapp_order_number'] = order.order_number
-
             # Trigger Meta Conversions API (CAPI) Purchase STRICTLY ONCE when moving to confirmed status
             CONFIRMED_STATUSES = {'CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'}
             if new_status in CONFIRMED_STATUSES and old_status not in CONFIRMED_STATUSES:
@@ -1433,6 +1446,13 @@ def order_detail(request, order_number):
             order.admin_notes = clean_inst
             
         order.save()
+        if new_status and new_status != old_status and new_status in ('CONFIRMED', 'OUT_FOR_DELIVERY'):
+            from dashboard.sms_service import send_order_status_sms
+            sms_res = send_order_status_sms(order, new_status, old_status)
+            if sms_res.get('success'):
+                messages.info(request, f"📱 Auto SMS sent to {order.customer_phone} for '{order.get_order_status_display()}'.")
+            elif not sms_res.get('skipped'):
+                messages.warning(request, f"⚠️ Auto SMS failed for #{order.order_number}: {sms_res.get('message')}")
         messages.success(request, f'Order #{order.order_number} details successfully updated.')
         return redirect('dashboard:order_detail', order_number=order.order_number)
 
@@ -1449,12 +1469,14 @@ def order_detail(request, order_number):
             item.fifo_active_batch = p_fifo.get('active_batch')
             item.fifo_all_sold_out = p_fifo.get('all_sold_out', False)
 
+    from dashboard.sms_service import get_order_sms_sent_statuses
     return render(request, 'dashboard/order_detail.html', {
         'order': order,
         'meta_sent_info': meta_sent_info,
         'meta_details': meta_details,
         'all_products': Product.objects.all().order_by('-is_in_stock', 'name'),
         'promo_setting': PromotionSetting.get_settings(),
+        'sms_sent_statuses': get_order_sms_sent_statuses(order.order_number),
     })
 
 
@@ -1478,11 +1500,6 @@ def update_order_status_quick(request, order_number):
             if new_status == 'DELIVERED' and order.payment_status == 'UNPAID':
                 order.payment_status = 'PAID'
 
-            # Trigger automatic WhatsApp delivery & storage instruction when shipping out
-            if new_status == 'OUT_FOR_DELIVERY' and order.customer_phone:
-                request.session['auto_whatsapp_url'] = order.whatsapp_shipping_instruction_url
-                request.session['auto_whatsapp_order_number'] = order.order_number
-
             # Trigger Meta Conversions API (CAPI) Purchase STRICTLY ONCE when moving to confirmed status
             CONFIRMED_STATUSES = {'CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'}
             if new_status in CONFIRMED_STATUSES and old_status not in CONFIRMED_STATUSES:
@@ -1493,18 +1510,51 @@ def update_order_status_quick(request, order_number):
                     print(f"Failed to dispatch Meta CAPI Purchase: {_e}")
 
             order.save()
+            sms_res = {}
+            if new_status in ('CONFIRMED', 'OUT_FOR_DELIVERY'):
+                from dashboard.sms_service import send_order_status_sms
+                sms_res = send_order_status_sms(order, new_status, old_status)
             messages.success(request, f'Order #{order.order_number} status changed to {order.get_order_status_display()}')
+            if sms_res.get('success'):
+                messages.info(request, f"📱 Auto SMS sent to {order.customer_phone} via BulkSMSBD.")
+            elif new_status in ('CONFIRMED', 'OUT_FOR_DELIVERY') and not sms_res.get('skipped'):
+                messages.warning(request, f"⚠️ Auto SMS failed for #{order.order_number}: {sms_res.get('message')}")
             
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({
                 'success': True,
                 'new_status': new_status,
                 'status_display': order.get_order_status_display(),
-                'whatsapp_url': order.whatsapp_shipping_instruction_url if (new_status == 'OUT_FOR_DELIVERY' and order.customer_phone) else '',
-                'should_open_whatsapp': (new_status == 'OUT_FOR_DELIVERY' and bool(order.customer_phone))
+                'whatsapp_url': '',
+                'should_open_whatsapp': False
             })
             
     return redirect(request.META.get('HTTP_REFERER') or 'dashboard:index')
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def send_order_sms_quick(request, order_number):
+    if not can_user_edit(request.user):
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('format') == 'json':
+            return JsonResponse({'success': False, 'error': 'Permission Denied: SMS পাঠানোর অনুমতি নেই।'}, status=403)
+        messages.error(request, 'Permission Denied: SMS পাঠানোর অনুমতি নেই।')
+        return redirect(request.META.get('HTTP_REFERER') or 'dashboard:orders')
+
+    order = get_object_or_404(Order, order_number=order_number)
+    sms_type = (request.POST.get('sms_type') or request.GET.get('sms_type') or order.order_status or 'CONFIRMED').strip().upper()
+    from dashboard.sms_service import send_order_status_sms
+    res = send_order_status_sms(order, sms_type, force=True)
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('format') == 'json':
+        if res.get('success'):
+            return JsonResponse({'success': True, 'message': f"SMS sent to {order.customer_phone}", 'sms_type': sms_type})
+        return JsonResponse({'success': False, 'error': res.get('message') or 'Failed to send SMS.'}, status=400)
+
+    if res.get('success'):
+        messages.success(request, f"📱 SMS sent to {order.customer_phone} for Order #{order.order_number}.")
+    else:
+        messages.error(request, f"❌ SMS failed for #{order.order_number}: {res.get('message')}")
+    return redirect(request.META.get('HTTP_REFERER') or 'dashboard:orders')
 
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
@@ -1846,10 +1896,6 @@ def edit_order_manual(request, order_number):
         order.order_status = new_status
 
         if new_status != old_status:
-            if new_status == 'OUT_FOR_DELIVERY' and order.customer_phone:
-                request.session['auto_whatsapp_url'] = order.whatsapp_shipping_instruction_url
-                request.session['auto_whatsapp_order_number'] = order.order_number
-
             CONFIRMED_STATUSES = {'CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'}
             if new_status in CONFIRMED_STATUSES and old_status not in CONFIRMED_STATUSES:
                 try:
@@ -1859,6 +1905,9 @@ def edit_order_manual(request, order_number):
                     print(f"Failed to dispatch Meta CAPI Purchase: {_e}")
 
         order.save()
+        if new_status != old_status and new_status in ('CONFIRMED', 'OUT_FOR_DELIVERY'):
+            from dashboard.sms_service import send_order_status_sms
+            send_order_status_sms(order, new_status, old_status)
 
     messages.success(
         request,
@@ -4510,26 +4559,24 @@ def feedback_reminders_manager(request):
             Q(delivery_city__icontains=q)
         )
 
-    # Filter out customers who already reviewed:
-    # - Pending: Feedback reminder NOT sent yet and created_at <= cutoff_date
-    # - Done: Feedback reminder has already been sent
+    # Filter customers for Order Refill Reminder:
+    # - Pending: Refill reminder NOT sent yet and created_at <= cutoff_date
+    # - Done: Refill reminder has already been sent
     pending_list = []
     done_list = []
 
     for order in orders_qs:
-        cust_name_clean = (order.customer_name or '').strip().lower()
-        if cust_name_clean not in reviewed_names:
-            days_ago = (now.date() - order.created_at.date()).days
-            order.days_ago = days_ago
+        days_ago = (now.date() - order.created_at.date()).days
+        order.days_ago = days_ago
 
-            if order.feedback_request_sent_at:
-                order.is_feedback_done = True
-                order.days_since_sent = (now.date() - order.feedback_request_sent_at.date()).days
-                done_list.append(order)
-            elif order.created_at <= cutoff_date:
-                order.is_feedback_done = False
-                order.days_since_sent = None
-                pending_list.append(order)
+        if order.feedback_request_sent_at:
+            order.is_feedback_done = True
+            order.days_since_sent = (now.date() - order.feedback_request_sent_at.date()).days
+            done_list.append(order)
+        elif order.created_at <= cutoff_date:
+            order.is_feedback_done = False
+            order.days_since_sent = None
+            pending_list.append(order)
 
     pending_count = len(pending_list)
     done_count = len(done_list)
@@ -4566,6 +4613,11 @@ def feedback_reminders_manager(request):
     except Exception:
         elided_page_range = paginator.page_range
 
+    from dashboard.sms_service import get_all_order_sms_sent_map
+    _sms_sent_map = get_all_order_sms_sent_map()
+    for _ord in page_obj:
+        _ord.sms_already_sent = _ord.order_status in _sms_sent_map.get(str(_ord.order_number), [])
+
     context = {
         'orders': page_obj,
         'page_obj': page_obj,
@@ -4599,13 +4651,27 @@ def mark_feedback_reminder_sent(request, order_number):
         if action == 'undo':
             order.feedback_request_sent_at = None
             order.save(update_fields=['feedback_request_sent_at'])
-            msg = f'Review reminder undone for #{order.order_number}. Moved back to Pending.'
+            msg = f'Refill reminder undone for #{order.order_number}. Moved back to Pending.'
             is_done = False
+        elif action == 'send_sms':
+            from dashboard.sms_service import send_order_refill_reminder_sms
+            sms_res = send_order_refill_reminder_sms(order)
+            if not sms_res.get('success'):
+                err_msg = sms_res.get('message') or 'Failed to send Refill SMS.'
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('format') == 'json':
+                    return JsonResponse({'success': False, 'error': err_msg}, status=400)
+                messages.error(request, f'❌ Refill SMS Failed for #{order.order_number}: {err_msg}')
+                return redirect('dashboard:feedback_reminders')
+            order.feedback_request_sent_at = timezone.now()
+            order.feedback_request_count = (order.feedback_request_count or 0) + 1
+            order.save(update_fields=['feedback_request_sent_at', 'feedback_request_count'])
+            msg = f'Refill reminder SMS sent to {order.customer_phone} for #{order.order_number}.'
+            is_done = True
         else:
             order.feedback_request_sent_at = timezone.now()
             order.feedback_request_count = (order.feedback_request_count or 0) + 1
             order.save(update_fields=['feedback_request_sent_at', 'feedback_request_count'])
-            msg = f'Review request marked as sent for #{order.order_number}. Moved to Done.'
+            msg = f'Refill reminder marked as sent for #{order.order_number}. Moved to Done.'
             is_done = True
 
         if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('format') == 'json':
@@ -7052,18 +7118,15 @@ def sms_campaign_manager(request):
             sender_id=sender_id,
         )
         recipients = _resolve_sms_recipients(target_numbers)
-        _append_sms_history({
-            'sent_at': timezone.localtime(timezone.now()).strftime('%d %b %Y, %I:%M %p'),
-            'audience': audience,
-            'audience_label': SMS_AUDIENCE_LABELS.get(audience, audience),
-            'message': sms_message,
-            'sender_id': sender_id,
-            'recipient_count': len(recipients),
-            'recipients': recipients,
-            'success': bool(result.get('success')),
-            'status_message': result.get('message', ''),
-            'sent_by': request.user.username,
-        })
+        from dashboard.sms_service import log_campaign_sms_event
+        log_campaign_sms_event(
+            audience_label=SMS_AUDIENCE_LABELS.get(audience, audience),
+            recipients=recipients,
+            message=sms_message,
+            success=bool(result.get('success')),
+            status_message=result.get('message', ''),
+            sent_by=request.user.username,
+        )
         if result['success']:
             messages.success(request, f"✅ {result['message']}")
         else:
@@ -7074,6 +7137,8 @@ def sms_campaign_manager(request):
     bal_ok, balance_val, bal_msg = get_bulksmsbd_balance()
     active_coupons = Coupon.objects.filter(is_active=True).order_by('-created_at')[:5]
     sms_history = _load_sms_history()
+    from dashboard.sms_service import get_order_sms_history
+    order_sms_history = get_order_sms_history()
 
     context = {
         'title': '1-Click Bulk SMS Campaign',
@@ -7090,8 +7155,46 @@ def sms_campaign_manager(request):
         'active_coupons': active_coupons,
         'sms_history': sms_history,
         'last_sms': sms_history[0] if sms_history else None,
+        'order_sms_history': order_sms_history,
     }
     return render(request, 'dashboard/sms_campaign.html', context)
+
+
+@login_required(login_url='dashboard:login')
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def sms_history_manager(request):
+    from dashboard.sms_service import get_order_sms_history
+
+    type_filter = (request.GET.get('type') or 'ALL').strip().upper()
+    q = (request.GET.get('q') or '').strip()
+
+    logs = get_order_sms_history()
+    if type_filter != 'ALL':
+        logs = [item for item in logs if (item.get('sms_type') or '').upper() == type_filter]
+
+    if q:
+        q_low = q.lower()
+        filtered = []
+        for item in logs:
+            haystack = ' '.join([
+                str(item.get('order_number') or ''),
+                str(item.get('phone') or ''),
+                str(item.get('customer_name') or ''),
+                str(item.get('message') or ''),
+                str(item.get('audience_label') or ''),
+                ' '.join(f"{r.get('name', '')} {r.get('phone', '')}" for r in (item.get('recipients') or [])),
+            ]).lower()
+            if q_low in haystack:
+                filtered.append(item)
+        logs = filtered
+
+    return render(request, 'dashboard/sms_history.html', {
+        'title': 'SMS History',
+        'sms_history': logs,
+        'total_count': len(logs),
+        'type_filter': type_filter,
+        'q': q,
+    })
 
 
 

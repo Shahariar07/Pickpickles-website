@@ -1,7 +1,7 @@
 {% extends 'dashboard/base_dashboard.html' %}
 {% load static %}
 
-{% block title %}Feedback Reminders | Pickpickles Admin{% endblock %}
+{% block title %}Order Refill Reminders | Pickpickles Admin{% endblock %}
 
 {% block content %}
 <div class="space-y-4">
@@ -11,12 +11,12 @@
         <div class="flex items-center gap-3">
             <div>
                 <div class="flex items-center gap-2">
-                    <h1 class="font-display font-black text-xl text-gray-900 tracking-tight">Feedback Reminders</h1>
+                    <h1 class="font-display font-black text-xl text-gray-900 tracking-tight">Order Refill Reminders</h1>
                     <span class="px-2 py-0.5 rounded-md text-[11px] font-bold {% if status_filter == 'done' %}bg-emerald-50 text-emerald-800 border border-emerald-200{% else %}bg-amber-50 text-amber-800 border border-amber-200{% endif %}">
                         {% if status_filter == 'done' %}{{ done_count }} Sent{% else %}{{ pending_count }} Pending{% endif %}
                     </span>
                 </div>
-                <p class="text-xs text-gray-500 mt-0.5">Customers who ordered {{ min_days }}+ days ago without review (মেসেজ একবার পাঠালে Done ট্যাবে থাকবে)</p>
+                <p class="text-xs text-gray-500 mt-0.5">Customers who ordered {{ min_days }}+ days ago — send 1-click Refill SMS to their mobile</p>
             </div>
         </div>
 
@@ -186,13 +186,14 @@
                                 {% endif %}
                                 {% endif %}
 
-                                <a href="{{ order.whatsapp_1month_review_request_url }}" target="_blank" 
-                                   {% if can_edit %}onclick="markReminderSent('{{ order.order_number }}')"{% endif %}
-                                   class="{% if order.is_feedback_done %}bg-gray-100 hover:bg-gray-200 text-gray-700{% else %}bg-emerald-600 hover:bg-emerald-700 text-white{% endif %} font-bold text-xs px-2.5 py-1.5 rounded-lg inline-flex items-center gap-1 transition shadow-2xs" 
-                                   title="{% if order.is_feedback_done %}Already sent. Click to resend WhatsApp message{% else %}Send WhatsApp Review Request{% endif %}">
-                                    <i class="fa-brands fa-whatsapp text-xs {% if order.is_feedback_done %}text-emerald-600{% endif %}"></i>
-                                    <span>{% if order.is_feedback_done %}Resend{% else %}WhatsApp{% endif %}</span>
-                                </a>
+                                {% if can_edit %}
+                                <button type="button" onclick="sendRefillSms('{{ order.order_number }}', this)"
+                                    class="{% if order.is_feedback_done %}bg-gray-100 hover:bg-gray-200 text-gray-700{% else %}bg-emerald-600 hover:bg-emerald-700 text-white{% endif %} font-bold text-xs px-2.5 py-1.5 rounded-lg inline-flex items-center gap-1 transition shadow-2xs cursor-pointer"
+                                    title="Send Refill Reminder SMS to {{ order.customer_phone }}">
+                                    <i class="fa-solid fa-comment-sms text-xs {% if order.is_feedback_done %}text-emerald-600{% endif %}"></i>
+                                    <span>{% if order.is_feedback_done %}Resend SMS{% else %}Send Refill SMS{% endif %}</span>
+                                </button>
+                                {% endif %}
 
                                 <button type="button" 
                                         onclick="openPreviewModal('{{ order.order_number }}', '{{ order.customer_name|escapejs }}', '{{ order.whatsapp_1month_review_request_url|escapejs }}', '{{ order.get_whatsapp_1month_review_request_message|escapejs }}')" 
@@ -255,12 +256,13 @@
                     {% endif %}
                     {% endif %}
 
-                    <a href="{{ order.whatsapp_1month_review_request_url }}" target="_blank" 
-                       {% if can_edit %}onclick="markReminderSent('{{ order.order_number }}')"{% endif %}
-                       class="flex-1 {% if order.is_feedback_done %}bg-gray-100 hover:bg-gray-200 text-gray-700{% else %}bg-emerald-600 hover:bg-emerald-700 text-white{% endif %} font-bold text-xs py-1.5 rounded-lg text-center flex items-center justify-center gap-1">
-                        <i class="fa-brands fa-whatsapp text-xs {% if order.is_feedback_done %}text-emerald-600{% endif %}"></i>
-                        <span>{% if order.is_feedback_done %}Resend WhatsApp{% else %}Send WhatsApp{% endif %}</span>
-                    </a>
+                    {% if can_edit %}
+                    <button type="button" onclick="sendRefillSms('{{ order.order_number }}', this)"
+                        class="flex-1 {% if order.is_feedback_done %}bg-gray-100 hover:bg-gray-200 text-gray-700{% else %}bg-emerald-600 hover:bg-emerald-700 text-white{% endif %} font-bold text-xs py-1.5 rounded-lg text-center flex items-center justify-center gap-1 cursor-pointer">
+                        <i class="fa-solid fa-comment-sms text-xs {% if order.is_feedback_done %}text-emerald-600{% endif %}"></i>
+                        <span>{% if order.is_feedback_done %}Resend SMS{% else %}Send Refill SMS{% endif %}</span>
+                    </button>
+                    {% endif %}
                     <button type="button" 
                             onclick="openPreviewModal('{{ order.order_number }}', '{{ order.customer_name|escapejs }}', '{{ order.whatsapp_1month_review_request_url|escapejs }}', '{{ order.get_whatsapp_1month_review_request_message|escapejs }}')" 
                             class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-2.5 py-1.5 rounded-lg">
@@ -434,6 +436,40 @@
 
         // Instant UI response without waiting for async fetch
         applySentUIState(orderNumber, true);
+    }
+
+    function sendRefillSms(orderNumber, btnEl) {
+        if (!orderNumber) return;
+        const origHtml = btnEl ? btnEl.innerHTML : '';
+        if (btnEl) {
+            btnEl.disabled = true;
+            btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i> <span>Sending...</span>';
+        }
+        const url = `/dashboard/feedback-reminders/mark-sent/${orderNumber}/?action=send_sms&format=json`;
+        fetch(url, {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                applySentUIState(orderNumber, true);
+            } else {
+                alert(data.error || 'Failed to send Refill SMS');
+                if (btnEl) {
+                    btnEl.disabled = false;
+                    btnEl.innerHTML = origHtml;
+                }
+            }
+        })
+        .catch(() => {
+            alert('Network error sending Refill SMS');
+            if (btnEl) {
+                btnEl.disabled = false;
+                btnEl.innerHTML = origHtml;
+            }
+        });
     }
 
     function undoReminderSent(orderNumber) {

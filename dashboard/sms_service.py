@@ -193,3 +193,220 @@ def send_bulksmsbd_bulk(numbers, message: str, api_key: str = None, sender_id: s
         'response_code': last_code,
         'message': '; '.join(errors) or 'Failed to send SMS.',
     }
+
+
+def _get_order_sms_log_path():
+    import os
+    os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
+    return os.path.join(settings.MEDIA_ROOT, 'order_sms_sent.json')
+
+
+def get_all_order_sms_sent_map() -> dict:
+    import os, json
+    path = _get_order_sms_log_path()
+    if not os.path.exists(path):
+        return {}
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def get_order_sms_sent_statuses(order_number: str) -> set:
+    sent_map = get_all_order_sms_sent_map()
+    return set(sent_map.get(str(order_number), []))
+
+
+def _mark_order_sms_sent(order_number: str, status: str):
+    import json
+    sent_map = get_all_order_sms_sent_map()
+    key = str(order_number)
+    statuses = list(sent_map.get(key, []))
+    if status not in statuses:
+        statuses.append(status)
+    sent_map[key] = statuses
+    try:
+        with open(_get_order_sms_log_path(), 'w', encoding='utf-8') as f:
+            json.dump(sent_map, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+
+def _get_order_sms_history_path():
+    import os
+    os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
+    return os.path.join(settings.MEDIA_ROOT, 'order_sms_history.json')
+
+
+def get_order_sms_history() -> list:
+    import os, json
+    history = []
+    path = _get_order_sms_history_path()
+    if os.path.exists(path):
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                if isinstance(data, list):
+                    history = data
+        except Exception:
+            pass
+
+    legacy_path = os.path.join(settings.MEDIA_ROOT, 'sms_campaign_history.json')
+    if os.path.exists(legacy_path):
+        try:
+            with open(legacy_path, 'r', encoding='utf-8') as f:
+                legacy = json.load(f)
+                if isinstance(legacy, list):
+                    existing_sigs = {(h.get('sent_at'), h.get('message'), h.get('sms_type')) for h in history}
+                    for item in legacy:
+                        sig = (item.get('sent_at'), item.get('message'), 'CAMPAIGN')
+                        if sig not in existing_sigs:
+                            recs = item.get('recipients') or []
+                            history.append({
+                                'sent_at': item.get('sent_at', ''),
+                                'order_number': '',
+                                'customer_name': '',
+                                'phone': recs[0].get('phone', '') if len(recs) == 1 else '',
+                                'sms_type': 'CAMPAIGN',
+                                'sms_type_label': 'Bulk Campaign',
+                                'audience_label': item.get('audience_label', ''),
+                                'recipient_count': item.get('recipient_count', len(recs)),
+                                'recipients': recs,
+                                'message': item.get('message', ''),
+                                'success': bool(item.get('success')),
+                                'status_message': item.get('status_message', ''),
+                                'sent_by': item.get('sent_by', ''),
+                            })
+        except Exception:
+            pass
+    return history
+
+
+ORDER_SMS_TYPE_LABELS = {
+    'PENDING': 'Order Placed',
+    'CONFIRMED': 'Order Confirmed',
+    'OUT_FOR_DELIVERY': 'Dispatched',
+    'REFILL': 'Refill Reminder',
+    'CAMPAIGN': 'Bulk Campaign',
+}
+
+
+def _save_sms_history_entry(entry: dict):
+    import json
+    history = get_order_sms_history()
+    history.insert(0, entry)
+    history = history[:2000]
+    try:
+        with open(_get_order_sms_history_path(), 'w', encoding='utf-8') as f:
+            json.dump(history, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+
+def _log_order_sms_event(order, sms_type: str, message: str, success: bool, status_message: str = ''):
+    from django.utils import timezone
+    _save_sms_history_entry({
+        'sent_at': timezone.localtime(timezone.now()).strftime('%d %b %Y, %I:%M %p'),
+        'order_number': getattr(order, 'order_number', ''),
+        'customer_name': (getattr(order, 'customer_name', '') or '').strip(),
+        'phone': (getattr(order, 'customer_phone', '') or '').strip(),
+        'sms_type': sms_type,
+        'sms_type_label': ORDER_SMS_TYPE_LABELS.get(sms_type, sms_type),
+        'message': message,
+        'success': bool(success),
+        'status_message': status_message,
+        'recipient_count': 1,
+        'recipients': [],
+        'audience_label': '',
+    })
+
+
+def log_campaign_sms_event(audience_label: str, recipients: list, message: str, success: bool, status_message: str = '', sent_by: str = ''):
+    from django.utils import timezone
+    _save_sms_history_entry({
+        'sent_at': timezone.localtime(timezone.now()).strftime('%d %b %Y, %I:%M %p'),
+        'order_number': '',
+        'customer_name': '',
+        'phone': recipients[0]['phone'] if len(recipients) == 1 else '',
+        'sms_type': 'CAMPAIGN',
+        'sms_type_label': 'Bulk Campaign',
+        'audience_label': audience_label,
+        'recipient_count': len(recipients),
+        'recipients': recipients,
+        'message': message,
+        'success': bool(success),
+        'status_message': status_message,
+        'sent_by': sent_by,
+    })
+
+
+def send_order_status_sms(order, new_status: str, old_status: str = None, force: bool = False):
+    """
+    Send a concise 1-SMS notification via BulkSMSBD when an order transitions to
+    CONFIRMED or OUT_FOR_DELIVERY (or manually via force=True).
+    Records sent status in media/order_sms_sent.json so UI can gray out already-sent buttons.
+    """
+    if not order or not getattr(order, 'customer_phone', None):
+        return {'success': False, 'skipped': True, 'message': 'Missing customer phone.'}
+    if not force and new_status == old_status:
+        return {'success': False, 'skipped': True, 'message': 'No status change.'}
+    if new_status in get_order_sms_sent_statuses(order.order_number):
+        return {'success': False, 'skipped': True, 'message': 'SMS already sent and locked for this status.'}
+
+    total_int = int(round(float(order.total_amount or 0)))
+    if new_status == 'PENDING':
+        msg = (
+            f"Pick Pickles: Order #{order.order_number} placed! "
+            f"Total: Tk {total_int}. We will confirm & pack soon. Track: www.pickpickles.xyz/track/"
+        )
+    elif new_status == 'CONFIRMED':
+        msg = (
+            f"Pick Pickles: Order #{order.order_number} confirmed! "
+            f"Total: Tk {total_int}. Freshly packed for you. Track: www.pickpickles.xyz/track/"
+        )
+    elif new_status == 'OUT_FOR_DELIVERY':
+        pay_text = "Payment: PAID" if getattr(order, 'payment_status', '') == 'PAID' else f"COD: Tk {total_int}"
+        msg = (
+            f"Pick Pickles: Order #{order.order_number} dispatched! "
+            f"{pay_text}. Please refrigerate upon arrival! Track: www.pickpickles.xyz/track/"
+        )
+    elif force:
+        status_label = order.get_order_status_display() if hasattr(order, 'get_order_status_display') else new_status
+        msg = (
+            f"Pick Pickles: Order #{order.order_number} ({status_label}). "
+            f"Total: Tk {total_int}. Track: www.pickpickles.xyz/track/"
+        )
+    else:
+        return {'success': False, 'skipped': True, 'message': 'Status does not trigger auto SMS.'}
+
+    try:
+        res = send_bulksmsbd_bulk([order.customer_phone], msg)
+        if res.get('success'):
+            _mark_order_sms_sent(order.order_number, new_status)
+        _log_order_sms_event(order, new_status, msg, bool(res.get('success')), res.get('message', ''))
+        return res
+    except Exception as exc:
+        _log_order_sms_event(order, new_status, msg, False, str(exc))
+        return {'success': False, 'skipped': False, 'message': str(exc)}
+
+
+def send_order_refill_reminder_sms(order):
+    """
+    Send a 1-SMS refill / repeat order reminder to a past customer's mobile number.
+    """
+    if not order or not getattr(order, 'customer_phone', None):
+        return {'success': False, 'message': 'Customer phone number is missing.'}
+
+    msg = (
+        "Pick Pickles: Time for a pickle refill? Enjoy 5% OFF on your next order "
+        "with code WINTER5 (Min. 2 jars). Order: www.pickpickles.xyz"
+    )
+    try:
+        res = send_bulksmsbd_bulk([order.customer_phone], msg)
+        _log_order_sms_event(order, 'REFILL', msg, bool(res.get('success')), res.get('message', ''))
+        return res
+    except Exception as exc:
+        _log_order_sms_event(order, 'REFILL', msg, False, str(exc))
+        return {'success': False, 'message': str(exc)}

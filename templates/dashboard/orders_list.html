@@ -837,28 +837,6 @@
 
 
 
-                                {% if order.order_status not in 'DELIVERED,CANCELLED' and order.customer_phone %}
-
-                                <a 
-
-                                    href="{{ order.whatsapp_shipping_instruction_url }}" 
-
-                                    target="_blank" 
-
-                                    class="p-1 text-emerald-600 hover:text-emerald-800 rounded transition" 
-
-                                    title="WhatsApp Delivery & Pickle Storage Instructions"
-
-                                >
-
-                                    <i class="fa-brands fa-whatsapp text-sm"></i>
-
-                                </a>
-
-                                {% endif %}
-
-
-
                                 <a 
 
                                     href="{% url 'dashboard:order_detail' order.order_number %}" 
@@ -1252,18 +1230,6 @@
                             <i class="fa-solid fa-paper-plane text-[9px]"></i> <span>Pathao</span>
 
                         </button>
-
-                        {% endif %}
-
-
-
-                        {% if order.order_status not in 'DELIVERED,CANCELLED' and order.customer_phone %}
-
-                        <a href="{{ order.whatsapp_shipping_instruction_url }}" target="_blank" class="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs inline-flex items-center justify-center transition active:scale-95" title="WhatsApp Instructions">
-
-                            <i class="fa-brands fa-whatsapp text-xs text-emerald-600"></i>
-
-                        </a>
 
                         {% endif %}
 
@@ -5611,6 +5577,46 @@ function copyAllSelectedPhones() {
 
     });
 
+}
+
+function sendOrderSmsQuick(orderNumber, smsType, btnEl) {
+    if (!orderNumber || (btnEl && btnEl.disabled)) return;
+    const origHtml = btnEl ? btnEl.innerHTML : '';
+    if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i>';
+    }
+    fetch(`/dashboard/order/${orderNumber}/send-sms/?sms_type=${encodeURIComponent(smsType)}&format=json`, {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            if (btnEl) {
+                btnEl.className = 'p-1.5 rounded-lg border text-xs inline-flex items-center justify-center bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-70';
+                btnEl.title = 'SMS already sent';
+                btnEl.innerHTML = '<i class="fa-solid fa-comment-sms text-sm"></i>';
+            }
+            if (typeof showDashboardNotification === 'function') {
+                showDashboardNotification(`📱 ${data.message}`, 'success');
+            }
+        } else {
+            if (btnEl) {
+                btnEl.disabled = false;
+                btnEl.innerHTML = origHtml;
+            }
+            alert(data.error || 'Failed to send SMS');
+        }
+    })
+    .catch(() => {
+        if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.innerHTML = origHtml;
+        }
+        alert('Network error sending SMS');
+    });
 }
 
 </script>
