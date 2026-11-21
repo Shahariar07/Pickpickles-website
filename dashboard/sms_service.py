@@ -354,6 +354,8 @@ def send_order_status_sms(order, new_status: str, old_status: str = None, force:
         return {'success': False, 'skipped': True, 'message': 'No status change.'}
     if new_status in get_order_sms_sent_statuses(order.order_number):
         return {'success': False, 'skipped': True, 'message': 'SMS already sent and locked for this status.'}
+    if not force and new_status == 'CONFIRMED':
+        return {'success': False, 'skipped': True, 'message': 'Auto SMS on confirmation is disabled.'}
 
     total_int = int(round(float(order.total_amount or 0)))
     if new_status == 'PENDING':

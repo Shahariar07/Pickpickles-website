@@ -1032,7 +1032,7 @@ def orders_list(request):
                         except Exception as _e:
                             print(f"Failed to dispatch Meta CAPI Purchase: {_e}")
                     order.save()
-                    if new_status in ('CONFIRMED', 'OUT_FOR_DELIVERY'):
+                    if new_status == 'OUT_FOR_DELIVERY':
                         from dashboard.sms_service import send_order_status_sms
                         sms_res = send_order_status_sms(order, new_status, old_status)
                         if sms_res.get('success'):
@@ -1446,7 +1446,7 @@ def order_detail(request, order_number):
             order.admin_notes = clean_inst
             
         order.save()
-        if new_status and new_status != old_status and new_status in ('CONFIRMED', 'OUT_FOR_DELIVERY'):
+        if new_status and new_status != old_status and new_status == 'OUT_FOR_DELIVERY':
             from dashboard.sms_service import send_order_status_sms
             sms_res = send_order_status_sms(order, new_status, old_status)
             if sms_res.get('success'):
@@ -1511,13 +1511,13 @@ def update_order_status_quick(request, order_number):
 
             order.save()
             sms_res = {}
-            if new_status in ('CONFIRMED', 'OUT_FOR_DELIVERY'):
+            if new_status == 'OUT_FOR_DELIVERY':
                 from dashboard.sms_service import send_order_status_sms
                 sms_res = send_order_status_sms(order, new_status, old_status)
             messages.success(request, f'Order #{order.order_number} status changed to {order.get_order_status_display()}')
             if sms_res.get('success'):
                 messages.info(request, f"📱 Auto SMS sent to {order.customer_phone} via BulkSMSBD.")
-            elif new_status in ('CONFIRMED', 'OUT_FOR_DELIVERY') and not sms_res.get('skipped'):
+            elif new_status == 'OUT_FOR_DELIVERY' and not sms_res.get('skipped'):
                 messages.warning(request, f"⚠️ Auto SMS failed for #{order.order_number}: {sms_res.get('message')}")
             
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -1905,7 +1905,7 @@ def edit_order_manual(request, order_number):
                     print(f"Failed to dispatch Meta CAPI Purchase: {_e}")
 
         order.save()
-        if new_status != old_status and new_status in ('CONFIRMED', 'OUT_FOR_DELIVERY'):
+        if new_status != old_status and new_status == 'OUT_FOR_DELIVERY':
             from dashboard.sms_service import send_order_status_sms
             send_order_status_sms(order, new_status, old_status)
 
