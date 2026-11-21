@@ -5,9 +5,11 @@ is sent to Meta ONLY after the admin verifies and accepts/confirms an order.
 """
 
 import hashlib
+import ipaddress
 import json
 import logging
 import os
+import re
 import threading
 import time
 import requests
@@ -46,7 +48,7 @@ def record_order_tracking_keys(order, request):
             (request.session.get('meta_fbc') if hasattr(request, 'session') else '') or ''
         ).strip()
 
-        # If no fbc but fbclid exists, build standard fbc format: fb.1.<timestamp>.<fbclid>
+        # If no fbc but fbclid exists, build standard fbc format: fb.1.<timestamp_ms>.<fbclid>
         if not fbc:
             fbclid = (
                 (request.GET.get('fbclid') if hasattr(request, 'GET') else '') or
@@ -54,7 +56,7 @@ def record_order_tracking_keys(order, request):
                 (request.session.get('meta_fbclid') if hasattr(request, 'session') else '') or ''
             ).strip()
             if fbclid:
-                fbc = f"fb.1.{int(time.time())}.{fbclid}"
+                fbc = f"fb.1.{int(time.time() * 1000)}.{fbclid}"
 
         # 3. Extract customer's real device User-Agent
         client_ua = ''
@@ -168,6 +170,92 @@ def _format_bd_phone(raw_phone):
     return digits
 
 
+def _is_public_ip(ip_str):
+    """Return True if ip_str is a valid non-private, non-loopback IP address."""
+    if not ip_str:
+        return False
+    try:
+        ip_obj = ipaddress.ip_address(str(ip_str).strip())
+        return not (ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_reserved or ip_obj.is_unspecified)
+    except ValueError:
+        return False
+
+
+_BD_CITY_ALIASES = {
+    'chittagong': 'chattogram',
+    'চট্টগ্রাম': 'chattogram',
+    'ctg': 'chattogram',
+    'slyhet': 'sylhet',
+    'সিলেট': 'sylhet',
+    'ঢাকা': 'dhaka',
+    'comilla': 'cumilla',
+    'কুমিল্লা': 'cumilla',
+    'barisal': 'barishal',
+    'বরিশাল': 'barishal',
+    'bogra': 'bogura',
+    'বগুড়া': 'bogura',
+    'jessore': 'jashore',
+    'রাজশাহী': 'rajshahi',
+    'খুলনা': 'khulna',
+    'রংপুর': 'rangpur',
+    'ময়মনসিংহ': 'mymensingh',
+    'নারায়ণগঞ্জ': 'narayanganj',
+    'গাজীপুর': 'gazipur',
+}
+
+_BD_CITY_POSTCODES = {
+    'dhaka': '1200',
+    'chattogram': '4000',
+    'sylhet': '3100',
+    'rajshahi': '6000',
+    'khulna': '9000',
+    'barishal': '8200',
+    'rangpur': '5400',
+    'mymensingh': '2200',
+    'cumilla': '3500',
+    'narayanganj': '1400',
+    'gazipur': '1700',
+    'savar': '1340',
+    'faridpur': '7800',
+    'bogura': '5800',
+    'jashore': '7400',
+    'noakhali': '3800',
+    'rangamati': '4500',
+    'satkhira': '9400',
+    'narsingdi': '1600',
+    "cox's bazar": '4700',
+    'coxs bazar': '4700',
+}
+
+
+def _normalize_bd_city(raw_city, address=''):
+    """Normalize Bangladesh city/district names for Meta CAPI ct/st matching."""
+    c = (raw_city or '').strip().lower()
+    if c in _BD_CITY_ALIASES:
+        return _BD_CITY_ALIASES[c]
+    if c in ('outside dhaka', 'inside dhaka', 'other', ''):
+        addr_lower = (address or '').lower()
+        for known in _BD_CITY_POSTCODES:
+            if known in addr_lower:
+                return known
+        for alias, canonical in _BD_CITY_ALIASES.items():
+            if alias in addr_lower:
+                return canonical
+        return 'dhaka' if c == 'inside dhaka' else ''
+    return c
+
+
+def _extract_bd_postcode(city_clean, address=''):
+    """Extract 4-digit Bangladesh postcode from address or map from city."""
+    if address:
+        match = re.search(r'\b(?!20[23]\d)(\d{4})\b', str(address))
+        if match:
+            return match.group(1)
+    if city_clean and city_clean in _BD_CITY_POSTCODES:
+        return _BD_CITY_POSTCODES[city_clean]
+    return ''
+
+
 def _read_env_fallback():
     env_vars = {}
     try:
@@ -241,9 +329,9 @@ def _execute_meta_purchase(order, force=False):
         else:
             user_data['client_user_agent'] = 'Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36'
 
-        # Match Key: Real Client IP Address - Unhashed
+        # Match Key: Real Client IP Address - Unhashed (only send valid public IP)
         client_ip = tracking.get('client_ip_address') or getattr(order, 'ip_address', None)
-        if client_ip:
+        if _is_public_ip(client_ip):
             user_data['client_ip_address'] = str(client_ip).strip()
 
         # Email
@@ -272,11 +360,20 @@ def _execute_meta_purchase(order, force=False):
                     if hashed_ln:
                         user_data['ln'] = [hashed_ln]
 
-        # City
-        if order.delivery_city:
-            hashed_city = _sha256(order.delivery_city)
+        # City, State/Region, and Postal Code
+        delivery_addr = getattr(order, 'delivery_address', '') or ''
+        city_clean = _normalize_bd_city(order.delivery_city, delivery_addr)
+        if city_clean:
+            hashed_city = _sha256(city_clean)
             if hashed_city:
                 user_data['ct'] = [hashed_city]
+                user_data['st'] = [hashed_city]
+
+        postcode = _extract_bd_postcode(city_clean, delivery_addr)
+        if postcode:
+            hashed_zp = _sha256(postcode)
+            if hashed_zp:
+                user_data['zp'] = [hashed_zp]
 
         # 2. Custom Data (Financials & Items with Catalog Content ID match)
         contents = []
@@ -442,13 +539,37 @@ def send_meta_purchase_event_on_accept(order, request=None, force=False):
     return _execute_meta_purchase(order, force=force)
 
 
-def send_meta_view_content_capi(request, product, event_id):
+def send_meta_view_content_capi(request, product, event_id, override_fbp=None, override_fbc=None, override_external_id=None, override_source_url=None):
     """
     Dispatches a high-fidelity 'ViewContent' event to Meta Conversions API (CAPI)
     asynchronously in a background daemon thread, paired with the browser-side eventID.
     Includes maximum customer match keys (IP, User-Agent, fbp, fbc, external_id,
     and phone/email/name when known from session, cookie, or profile).
     """
+    # Extract request data synchronously before spawning thread
+    client_ip = (
+        request.META.get('HTTP_CF_CONNECTING_IP') or
+        request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip() or
+        request.META.get('REMOTE_ADDR', '')
+    ).strip()
+    client_ua = request.META.get('HTTP_USER_AGENT', '').strip() or 'Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36'
+
+    session_meta = getattr(request, 'session', {})
+    fbp = (override_fbp or request.COOKIES.get('_fbp') or session_meta.get('meta_fbp') or '').strip()
+    fbc = (override_fbc or request.COOKIES.get('_fbc') or session_meta.get('meta_fbc') or '').strip()
+    if not fbc and hasattr(request, 'GET') and request.GET.get('fbclid'):
+        fbc = f"fb.1.{int(time.time() * 1000)}.{request.GET.get('fbclid').strip()}"
+
+    known_phone = session_meta.get('customer_phone') or session_meta.get('meta_ph') or ''
+    known_email = session_meta.get('customer_email') or session_meta.get('meta_em') or (request.user.email if getattr(request, 'user', None) and request.user.is_authenticated else '')
+    known_name = session_meta.get('customer_name') or session_meta.get('meta_fn') or ''
+    known_city = session_meta.get('customer_city') or session_meta.get('meta_ct') or 'dhaka'
+    external_id = (override_external_id or request.COOKIES.get('_pkp_vid') or session_meta.get('visitor_id') or session_meta.get('meta_external_id') or '').strip()
+    source_url = override_source_url or request.build_absolute_uri()
+    prod_price = float(product.price_bdt) if hasattr(product, 'price_bdt') else 0.0
+    prod_name = str(product.name)
+    prod_catalog_id = str(getattr(product, 'catalog_id', '') or f"JAR-{product.id}")
+
     def _worker():
         try:
             env_fallback = _read_env_fallback()
@@ -457,37 +578,16 @@ def send_meta_view_content_capi(request, product, event_id):
             if not pixel_id or not access_token:
                 return
 
-            # Extract user IP & Agent
-            client_ip = (
-                request.META.get('HTTP_CF_CONNECTING_IP') or
-                request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip() or
-                request.META.get('REMOTE_ADDR', '')
-            ).strip()
-            client_ua = request.META.get('HTTP_USER_AGENT', '').strip() or 'Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36'
-
-            # Extract cookies / session match keys
-            fbp = (request.COOKIES.get('_fbp') or (request.session.get('meta_fbp') if hasattr(request, 'session') else '') or '').strip()
-            fbc = (request.COOKIES.get('_fbc') or (request.session.get('meta_fbc') if hasattr(request, 'session') else '') or '').strip()
-            if not fbc and hasattr(request, 'GET') and request.GET.get('fbclid'):
-                fbc = f"fb.1.{int(time.time())}.{request.GET.get('fbclid').strip()}"
-
-            # Known customer info from session or authenticated user
             user_data = {
                 'country': [_sha256('bd')],
-                'client_ip_address': client_ip,
                 'client_user_agent': client_ua,
             }
+            if _is_public_ip(client_ip):
+                user_data['client_ip_address'] = client_ip
             if fbp:
                 user_data['fbp'] = fbp
             if fbc:
                 user_data['fbc'] = fbc
-
-            session_meta = getattr(request, 'session', {})
-            known_phone = session_meta.get('customer_phone') or session_meta.get('meta_ph') or ''
-            known_email = session_meta.get('customer_email') or session_meta.get('meta_em') or (request.user.email if getattr(request, 'user', None) and request.user.is_authenticated else '')
-            known_name = session_meta.get('customer_name') or session_meta.get('meta_fn') or ''
-            known_city = session_meta.get('customer_city') or session_meta.get('meta_ct') or 'dhaka'
-            external_id = session_meta.get('visitor_id') or session_meta.get('meta_external_id') or ''
 
             if known_phone:
                 formatted_ph = _format_bd_phone(known_phone)
@@ -502,24 +602,27 @@ def send_meta_view_content_capi(request, product, event_id):
                     if len(parts) > 1:
                         user_data['ln'] = [_sha256(' '.join(parts[1:]))]
             if known_city:
-                user_data['ct'] = [_sha256(known_city)]
-                user_data['st'] = [_sha256(known_city)]
+                city_clean = _normalize_bd_city(known_city)
+                if city_clean:
+                    user_data['ct'] = [_sha256(city_clean)]
+                    user_data['st'] = [_sha256(city_clean)]
+                    postcode = _extract_bd_postcode(city_clean)
+                    if postcode:
+                        user_data['zp'] = [_sha256(postcode)]
             if external_id:
                 user_data['external_id'] = [_sha256(external_id)]
-
-            prod_price = float(product.price_bdt) if hasattr(product, 'price_bdt') else 0.0
 
             payload = {
                 'data': [{
                     'event_name': 'ViewContent',
                     'event_time': int(time.time()),
                     'event_id': str(event_id),
-                    'event_source_url': request.build_absolute_uri(),
+                    'event_source_url': source_url,
                     'action_source': 'website',
                     'user_data': user_data,
                     'custom_data': {
-                        'content_name': str(product.name),
-                        'content_ids': [str(getattr(product, 'catalog_id', product.id))],
+                        'content_name': prod_name,
+                        'content_ids': [prod_catalog_id],
                         'content_type': 'product',
                         'value': prod_price,
                         'currency': 'BDT'

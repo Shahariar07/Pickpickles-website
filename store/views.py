@@ -187,12 +187,27 @@ def product_detail(request, slug):
     import time
     view_content_event_id = f"vc_{product.id}_{int(time.time())}_{uuid.uuid4().hex[:8]}"
 
-    # Dispatch Server-Side Meta CAPI ViewContent event in non-blocking background thread
-    try:
-        from .meta_capi import send_meta_view_content_capi
-        send_meta_view_content_capi(request, product, view_content_event_id)
-    except Exception:
-        pass
+    # Persist visitor_id & fbclid in session so server CAPI ViewContent matches browser external_id & fbc
+    if not request.session.get('visitor_id'):
+        vid = (request.COOKIES.get('_pkp_vid') or '').strip()
+        if not vid:
+            vid = f"pkp_{uuid.uuid4().hex[:14]}"
+        request.session['visitor_id'] = vid
+
+    url_fbclid = (request.GET.get('fbclid') or '').strip()
+    if url_fbclid and not request.session.get('meta_fbc'):
+        request.session['meta_fbc'] = f"fb.1.{int(time.time() * 1000)}.{url_fbclid}"
+
+    has_fbp = bool((request.COOKIES.get('_fbp') or request.session.get('meta_fbp') or '').strip())
+    needs_client_capi_vc = not has_fbp
+
+    if has_fbp:
+        # Dispatch Server-Side Meta CAPI ViewContent event immediately when _fbp is already known
+        try:
+            from .meta_capi import send_meta_view_content_capi
+            send_meta_view_content_capi(request, product, view_content_event_id)
+        except Exception:
+            pass
 
     context = {
         'product': product,
@@ -203,6 +218,7 @@ def product_detail(request, slug):
         'related_products': related_products,
         'reviews': reviews,
         'meta_view_content_event_id': view_content_event_id,
+        'needs_client_capi_vc': needs_client_capi_vc,
     }
     return render(request, 'store/product_detail.html', context)
 
@@ -1317,3 +1333,52 @@ def meta_catalog_csv(request):
         })
 
     return response
+
+
+@require_POST
+def meta_view_content_capi_ajax(request):
+    """
+    Receives client-side _fbp / _fbc / visitor_id once fbevents.js initializes on first visit,
+    persists them in session, and dispatches Server CAPI ViewContent with matching event_id.
+    """
+    try:
+        data = json.loads(request.body.decode('utf-8') or '{}')
+    except Exception:
+        return JsonResponse({'ok': False}, status=400)
+
+    product_id = data.get('product_id')
+    event_id = (data.get('event_id') or '').strip()
+    fbp = (data.get('fbp') or '').strip()
+    fbc = (data.get('fbc') or '').strip()
+    external_id = (data.get('external_id') or '').strip()
+    source_url = (data.get('source_url') or '').strip()
+
+    if not product_id or not event_id:
+        return JsonResponse({'ok': False}, status=400)
+
+    product = Product.objects.filter(id=product_id).first()
+    if not product:
+        return JsonResponse({'ok': False}, status=404)
+
+    if fbp:
+        request.session['meta_fbp'] = fbp
+    if fbc:
+        request.session['meta_fbc'] = fbc
+    if external_id:
+        request.session['visitor_id'] = external_id
+
+    try:
+        from .meta_capi import send_meta_view_content_capi
+        send_meta_view_content_capi(
+            request,
+            product,
+            event_id,
+            override_fbp=fbp or None,
+            override_fbc=fbc or None,
+            override_external_id=external_id or None,
+            override_source_url=source_url or None,
+        )
+    except Exception:
+        pass
+
+    return JsonResponse({'ok': True})

@@ -517,6 +517,50 @@ if (typeof fbq === 'function') {
         value: prodPrice,
         currency: 'BDT'
     }, { eventID: '{{ meta_view_content_event_id }}' });
+
+    {% if needs_client_capi_vc %}
+    // Wait briefly for fbevents.js to mint _fbp cookie on first visit, then fire Server CAPI ViewContent with fbp/fbc/external_id
+    (function() {
+        var vcAttempts = 0;
+        var vcSent = false;
+        function getCookie(n) {
+            var m = document.cookie.match(new RegExp('(?:^|;\\s*)' + n + '=([^;]*)'));
+            return m ? decodeURIComponent(m[1]) : '';
+        }
+        function dispatchVcCapi() {
+            if (vcSent) return;
+            vcSent = true;
+            var fbp = getCookie('_fbp') || localStorage.getItem('_fbp') || '';
+            var fbc = getCookie('_fbc') || localStorage.getItem('_fbc') || '';
+            var extId = getCookie('_pkp_vid') || localStorage.getItem('pickpickles_visitor_id') || '';
+            var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : getCookie('csrftoken');
+            fetch('{% url "store:meta_view_content_capi_ajax" %}', {
+                method: 'POST',
+                keepalive: true,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken || ''
+                },
+                body: JSON.stringify({
+                    product_id: {{ product.id }},
+                    event_id: '{{ meta_view_content_event_id|escapejs }}',
+                    fbp: fbp,
+                    fbc: fbc,
+                    external_id: extId,
+                    source_url: window.location.href
+                })
+            }).catch(function() {});
+        }
+        var vcTimer = setInterval(function() {
+            vcAttempts++;
+            if (getCookie('_fbp') || vcAttempts >= 8) {
+                clearInterval(vcTimer);
+                dispatchVcCapi();
+            }
+        }, 100);
+    })();
+    {% endif %}
 }
 {% endif %}
 

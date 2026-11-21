@@ -116,7 +116,7 @@
             var storedPhone = localStorage.getItem('pickpickles_customer_phone') || (prof && prof.phone) || '';
             var storedName = localStorage.getItem('pickpickles_customer_name') || (prof && prof.name) || '';
             var storedCity = localStorage.getItem('pickpickles_customer_city') || (prof && prof.city) || '';
-            var storedVisitorId = localStorage.getItem('pickpickles_visitor_id') || '';
+            var storedVisitorId = localStorage.getItem('pickpickles_visitor_id') || (document.cookie.match(/(?:^|;\s*)_pkp_vid=([^;]*)/) || [])[1] || '';
 
             if (!em && storedEmail) em = String(storedEmail).trim().toLowerCase();
             if (!ph && storedPhone) ph = normalizeBdPhone(storedPhone);
@@ -129,8 +129,9 @@
             if (!extId) {
                 if (!storedVisitorId) {
                     storedVisitorId = 'pkp_' + Math.random().toString(36).substring(2, 12) + Date.now().toString(36);
-                    localStorage.setItem('pickpickles_visitor_id', storedVisitorId);
                 }
+                localStorage.setItem('pickpickles_visitor_id', storedVisitorId);
+                document.cookie = '_pkp_vid=' + encodeURIComponent(storedVisitorId) + '; path=/; max-age=31536000; SameSite=Lax';
                 extId = storedVisitorId;
             }
         } catch (e) {}
@@ -139,9 +140,9 @@
             ct: ct || 'dhaka',
             st: ct || 'dhaka',
             zp: '1200',
-            country: 'bd',
-            external_id: extId || 'pkp_guest'
+            country: 'bd'
         };
+        if (extId) advancedMatching.external_id = extId;
         if (em) advancedMatching.em = em;
         if (ph) advancedMatching.ph = ph;
         if (fn) advancedMatching.fn = fn;
@@ -160,6 +161,12 @@
             if (urlFbclid) {
                 localStorage.setItem('meta_fbclid', urlFbclid);
                 sessionStorage.setItem('meta_fbclid', urlFbclid);
+                var existingFbc = (document.cookie.match(/(?:^|;\s*)_fbc=([^;]*)/) || [])[1];
+                if (!existingFbc) {
+                    var builtFbc = 'fb.1.' + Date.now() + '.' + urlFbclid;
+                    localStorage.setItem('_fbc', builtFbc);
+                    document.cookie = '_fbc=' + encodeURIComponent(builtFbc) + '; path=/; max-age=7776000; SameSite=Lax';
+                }
             }
             var mFbp = (document.cookie.match(/(?:^|;\s*)_fbp=([^;]*)/) || [])[1];
             if (mFbp) localStorage.setItem('_fbp', decodeURIComponent(mFbp));

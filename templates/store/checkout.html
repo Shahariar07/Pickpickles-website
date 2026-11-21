@@ -1026,7 +1026,10 @@
                     var fbclid = urlParams.get('fbclid') || sessionStorage.getItem('meta_fbclid') || localStorage.getItem('meta_fbclid');
                     if (fbclid) {
                         fbc = 'fb.1.' + Date.now() + '.' + fbclid;
-                        try { localStorage.setItem('_fbc', fbc); } catch(e) {}
+                        try {
+                            localStorage.setItem('_fbc', fbc);
+                            document.cookie = '_fbc=' + encodeURIComponent(fbc) + '; path=/; max-age=7776000; SameSite=Lax';
+                        } catch(e) {}
                     }
                 }
 
