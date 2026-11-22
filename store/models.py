@@ -206,13 +206,13 @@ class Product(models.Model):
 
     @property
     def ordered_demand_count(self):
-        """Total quantity demanded across all active unfulfilled orders."""
+        """Total quantity demanded across unconfirmed PENDING orders (stock is deducted upon CONFIRMED)."""
         if hasattr(self, '_computed_demand'):
             return self._computed_demand
         if not hasattr(self, '_cached_demand'):
             self._cached_demand = self.order_items.filter(
                 order__is_deleted=False,
-                order__order_status__in=['PENDING', 'CONFIRMED']
+                order__order_status='PENDING'
             ).aggregate(models.Sum('quantity'))['quantity__sum'] or 0
         return self._cached_demand
 
@@ -757,6 +757,18 @@ class Order(models.Model):
         ('CANCELLED', 'Cancelled / Returned'),
     ]
 
+    CANCEL_REASON_CHOICES = [
+        ('NO_RESPONSE', 'ফোন রিসিভ করেনি (No Response on Call)'),
+        ('CUSTOMER_CANCELLED', 'কাস্টমার নিজেই বাতিল করেছেন (Customer Changed Mind)'),
+        ('WRONG_NUMBER', 'ভুল বা বন্ধ নম্বর (Wrong / Switched-Off Number)'),
+        ('DUPLICATE_ORDER', 'ডুপ্লিকেট অর্ডার (Duplicate Order)'),
+        ('HIGH_DELIVERY_FEE', 'ডেলিভারি চার্জ সমস্যা (Delivery Charge Issue)'),
+        ('OUT_OF_STOCK', 'স্টক শেষ (Out of Stock)'),
+        ('FAKE_SPAM', 'ফেক / স্প্যাম অর্ডার (Fake / Spam Order)'),
+        ('COURIER_RETURN', 'কুরিয়ার রিটার্ন / ডেলিভারি ব্যর্থ (Courier Return / Failed)'),
+        ('OTHER', 'অন্যান্য কারণ (Other Reason)'),
+    ]
+
     order_number = models.CharField(max_length=32, unique=True, editable=False)
     
     # Customer Details
@@ -802,6 +814,9 @@ class Order(models.Model):
     
     # Order Status & Management
     order_status = models.CharField(max_length=30, choices=ORDER_STATUS_CHOICES, default='PENDING', db_index=True)
+    is_notification_seen = models.BooleanField(default=False, db_index=True, help_text="True once staff has seen this new order notification")
+    cancel_reason = models.CharField(max_length=50, choices=CANCEL_REASON_CHOICES, blank=True, default='', help_text="Reason why the order/parcel was cancelled")
+    cancel_reason_note = models.TextField(blank=True, default='', help_text="Additional details about cancellation")
     customer_notes = models.TextField(blank=True, help_text="Customer special request")
     admin_notes = models.TextField(blank=True, help_text="Internal notes / rider info")
     
@@ -839,6 +854,15 @@ class Order(models.Model):
             models.Index(fields=['confirmed_at']),
         ]
 
+
+    @property
+    def get_full_cancel_reason(self):
+        """Human-readable cancellation reason combining choice label and optional note."""
+        label = self.get_cancel_reason_display() if self.cancel_reason else ''
+        note = (self.cancel_reason_note or '').strip()
+        if label and note:
+            return f"{label} — {note}"
+        return label or note
 
     def soft_delete(self):
         from django.utils import timezone
@@ -1029,6 +1053,13 @@ class Order(models.Model):
         """
         Calculates customer delivery trust & fraud risk score based on recipient phone order history.
         """
+        if hasattr(self, '_cached_customer_score'):
+            return self._cached_customer_score
+        res = self._compute_customer_score()
+        self._cached_customer_score = res
+        return res
+
+    def _compute_customer_score(self):
         from django.db.models import Sum
         clean_digits = ''.join(c for c in (self.customer_phone or '') if c.isdigit())
         last_10 = clean_digits[-10:] if len(clean_digits) >= 10 else clean_digits
@@ -1101,7 +1132,7 @@ class Order(models.Model):
         courier_keywords = ['courier delay', 'damaged in transit', 'courier fault', 'courier rto', 'lost by courier', 'courier return']
         for o in all_orders.filter(order_status='CANCELLED'):
             note = (o.admin_notes or '').lower()
-            if any(kw in note for kw in courier_keywords):
+            if getattr(o, 'cancel_reason', '') == 'COURIER_RETURN' or any(kw in note for kw in courier_keywords):
                 courier_fault_order_ids.add(o.id)
 
         courier_fault_count = len(courier_fault_order_ids)

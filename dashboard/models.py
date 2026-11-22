@@ -342,6 +342,30 @@ class DashboardSecurityConfig(models.Model):
         default=False,
         help_text="Strict Mode: ONLY Superuser/Admin can dispatch orders to couriers."
     )
+    order_duplicate_cooldown_minutes = models.PositiveIntegerField(
+        default=5,
+        help_text="Block repeat orders from same phone within X minutes (0 to disable)."
+    )
+    order_max_active_pending_per_phone = models.PositiveIntegerField(
+        default=2,
+        help_text="Max simultaneous PENDING orders allowed per phone number (0 for unlimited)."
+    )
+    order_cod_cancel_block_threshold = models.PositiveIntegerField(
+        default=2,
+        help_text="Require bKash advance payment if a phone has >= X cancelled orders and 0 delivered (0 to disable)."
+    )
+    order_rate_limit_per_phone_hourly = models.PositiveIntegerField(
+        default=3,
+        help_text="Max orders allowed per phone number per hour (0 for unlimited)."
+    )
+    order_rate_limit_per_ip_hourly = models.PositiveIntegerField(
+        default=5,
+        help_text="Max orders allowed per IP address per hour (0 for unlimited)."
+    )
+    review_rate_limit_per_ip_hourly = models.PositiveIntegerField(
+        default=3,
+        help_text="Max public reviews allowed per IP address per hour (0 for unlimited)."
+    )
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
 

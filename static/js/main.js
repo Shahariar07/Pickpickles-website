@@ -549,13 +549,18 @@ async function ajaxAddToCart(productId, quantity = 1, btnEl = null, variant = ''
                 };
                 const pId = parseInt(data.added_product.id, 10);
                 const catalogContentId = String(data.added_product.content_id || CATALOG_MAP[pId] || ('JAR-' + pId));
-                fbq('track', 'AddToCart', {
+                const atcPayload = {
                     content_name: String(data.added_product.name || ''),
                     content_ids: [catalogContentId],
                     content_type: 'product',
                     value: totalVal,
                     currency: 'BDT'
-                });
+                };
+                if (data.meta_event_id) {
+                    fbq('track', 'AddToCart', atcPayload, { eventID: String(data.meta_event_id) });
+                } else {
+                    fbq('track', 'AddToCart', atcPayload);
+                }
             }
 
             updateCartBadges(data.cart_total_items, data.cart_subtotal, data.offer_info);

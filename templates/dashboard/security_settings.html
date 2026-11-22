@@ -1,0 +1,248 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block title %}Site & Security Settings | Pickpickles Admin{% endblock %}
+{% block header_title %}Site & Security Settings{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+    <!-- Header Banner -->
+    <div class="bg-gradient-to-r from-brand-900 via-brand-800 to-emerald-900 rounded-3xl p-5 sm:p-6 text-white shadow-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div class="flex items-center gap-3.5">
+            <div class="w-12 h-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-2xl shrink-0">
+                <i class="fa-solid fa-shield-halved text-brand-accent"></i>
+            </div>
+            <div>
+                <h1 class="font-display font-black text-lg sm:text-xl">Site & Security Settings</h1>
+                <p class="text-xs text-emerald-100/90">অর্ডার অ্যান্টি-ফ্রড, রেট-লিমিট, স্টাফ পারমিশন এবং লাইভ সিকিউরিটি কনফিগারেশন এখান থেকেই কন্ট্রোল করুন।</p>
+            </div>
+        </div>
+        <div class="text-[11px] bg-white/10 border border-white/15 rounded-2xl px-3.5 py-2 text-emerald-100 shrink-0">
+            <span class="block text-[10px] uppercase tracking-wider text-brand-accent font-bold">Session Cookie Age</span>
+            <strong class="text-white">{{ session_days }} Days (HttpOnly)</strong>
+        </div>
+    </div>
+
+    <form method="POST" class="space-y-6">
+        {% csrf_token %}
+
+        <!-- 1. Anti-Fraud & Order Rate-Limit Controls -->
+        <div class="bg-white rounded-3xl border border-gray-200 shadow-xs p-5 sm:p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                <div>
+                    <h2 class="font-display font-black text-base text-gray-900 flex items-center gap-2">
+                        <i class="fa-solid fa-robot text-rose-600"></i>
+                        <span>Order Anti-Fraud &amp; Rate Limiting</span>
+                    </h2>
+                    <p class="text-xs text-gray-500 mt-0.5">ফেক অর্ডার ও বট স্প্যাম আটকাতে সংখ্যাগুলো সেট করুন (0 দিলে ওই লিমিটটি বন্ধ থাকবে)।</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+                <div class="bg-gray-50 p-3.5 rounded-2xl border border-gray-200/80 space-y-1.5">
+                    <label class="block font-black text-gray-800">Duplicate Order Cooldown (Min)</label>
+                    <input type="number" min="0" max="1440" name="order_duplicate_cooldown_minutes" value="{{ config.order_duplicate_cooldown_minutes }}" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 font-black text-gray-900 focus:ring-2 focus:ring-brand-500">
+                    <p class="text-[11px] text-gray-500">একই নম্বর থেকে কত মিনিটের মধ্যে ডুপ্লিকেট অর্ডার ব্লক হবে।</p>
+                </div>
+
+                <div class="bg-gray-50 p-3.5 rounded-2xl border border-gray-200/80 space-y-1.5">
+                    <label class="block font-black text-gray-800">Max Active Pending Orders / Phone</label>
+                    <input type="number" min="0" max="50" name="order_max_active_pending_per_phone" value="{{ config.order_max_active_pending_per_phone }}" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 font-black text-gray-900 focus:ring-2 focus:ring-brand-500">
+                    <p class="text-[11px] text-gray-500">একটি নম্বরে সর্বোচ্চ কয়টি Pending অর্ডার একসাথে থাকতে পারবে।</p>
+                </div>
+
+                <div class="bg-gray-50 p-3.5 rounded-2xl border border-gray-200/80 space-y-1.5">
+                    <label class="block font-black text-gray-800">COD Auto-Block After Cancels</label>
+                    <input type="number" min="0" max="50" name="order_cod_cancel_block_threshold" value="{{ config.order_cod_cancel_block_threshold }}" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 font-black text-gray-900 focus:ring-2 focus:ring-brand-500">
+                    <p class="text-[11px] text-gray-500">কোনো ডেলিভারড অর্ডার না থেকে এতবার ক্যানসেল হলে COD বন্ধ হবে।</p>
+                </div>
+
+                <div class="bg-gray-50 p-3.5 rounded-2xl border border-gray-200/80 space-y-1.5">
+                    <label class="block font-black text-gray-800">Max Orders / Phone / Hour</label>
+                    <input type="number" min="0" max="100" name="order_rate_limit_per_phone_hourly" value="{{ config.order_rate_limit_per_phone_hourly }}" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 font-black text-gray-900 focus:ring-2 focus:ring-brand-500">
+                    <p class="text-[11px] text-gray-500">১ ঘণ্টায় একই ফোন নম্বর থেকে সর্বোচ্চ কয়টি অর্ডার করা যাবে।</p>
+                </div>
+
+                <div class="bg-gray-50 p-3.5 rounded-2xl border border-gray-200/80 space-y-1.5">
+                    <label class="block font-black text-gray-800">Max Orders / IP / Hour</label>
+                    <input type="number" min="0" max="200" name="order_rate_limit_per_ip_hourly" value="{{ config.order_rate_limit_per_ip_hourly }}" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 font-black text-gray-900 focus:ring-2 focus:ring-brand-500">
+                    <p class="text-[11px] text-gray-500">১ ঘণ্টায় একই ইন্টারনেট IP থেকে সর্বোচ্চ অর্ডার লিমিট।</p>
+                </div>
+
+                <div class="bg-gray-50 p-3.5 rounded-2xl border border-gray-200/80 space-y-1.5">
+                    <label class="block font-black text-gray-800">Max Reviews / IP / Hour</label>
+                    <input type="number" min="0" max="100" name="review_rate_limit_per_ip_hourly" value="{{ config.review_rate_limit_per_ip_hourly }}" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 font-black text-gray-900 focus:ring-2 focus:ring-brand-500">
+                    <p class="text-[11px] text-gray-500">রিভিউ স্প্যাম আটকাতে ঘণ্টাপ্রতি রিভিউ সাবমিশন লিমিট।</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Staff Access & Permission Locks -->
+        <div class="bg-white rounded-3xl border border-gray-200 shadow-xs p-5 sm:p-6 space-y-4">
+            <div class="border-b border-gray-100 pb-3">
+                <h2 class="font-display font-black text-base text-gray-900 flex items-center gap-2">
+                    <i class="fa-solid fa-user-lock text-amber-600"></i>
+                    <span>Staff &amp; Admin Access Locks</span>
+                </h2>
+                <p class="text-xs text-gray-500 mt-0.5">স্টাফ অ্যাকাউন্টগুলো কী কী অ্যাকশন নিতে পারবে তা এখান থেকে লক/আনলক করুন।</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <label class="flex items-start gap-3 p-3.5 rounded-2xl border border-gray-200 bg-gray-50 hover:bg-gray-100/70 cursor-pointer transition">
+                    <input type="checkbox" name="strict_admin_only_delete" {% if config.strict_admin_only_delete %}checked{% endif %} class="mt-0.5 w-4 h-4 accent-brand-700 rounded">
+                    <div>
+                        <span class="font-black text-gray-900 block">Strict Admin-Only Delete</span>
+                        <span class="text-[11px] text-gray-500">চালু থাকলে কেবল Superuser-ই কোনো অর্ডার বা রেকর্ড ডিলিট করতে পারবেন।</span>
+                    </div>
+                </label>
+
+                <label class="flex items-start gap-3 p-3.5 rounded-2xl border border-gray-200 bg-gray-50 hover:bg-gray-100/70 cursor-pointer transition">
+                    <input type="checkbox" name="allow_staff_delete_override" {% if config.allow_staff_delete_override %}checked{% endif %} class="mt-0.5 w-4 h-4 accent-brand-700 rounded">
+                    <div>
+                        <span class="font-black text-gray-900 block">Allow Staff Delete Override</span>
+                        <span class="text-[11px] text-gray-500">নির্দিষ্ট স্টাফের প্রোফাইলে Delete পারমিশন থাকলে ডিলিট করতে দেবে।</span>
+                    </div>
+                </label>
+
+                <label class="flex items-start gap-3 p-3.5 rounded-2xl border border-gray-200 bg-gray-50 hover:bg-gray-100/70 cursor-pointer transition">
+                    <input type="checkbox" name="strict_admin_only_edit" {% if config.strict_admin_only_edit %}checked{% endif %} class="mt-0.5 w-4 h-4 accent-brand-700 rounded">
+                    <div>
+                        <span class="font-black text-gray-900 block">Strict Admin-Only Edit</span>
+                        <span class="text-[11px] text-gray-500">চালু থাকলে স্টাফরা অর্ডার, ঠিকানা বা প্রোডাক্ট এডিট করতে পারবেন না।</span>
+                    </div>
+                </label>
+
+                <label class="flex items-start gap-3 p-3.5 rounded-2xl border border-gray-200 bg-gray-50 hover:bg-gray-100/70 cursor-pointer transition">
+                    <input type="checkbox" name="strict_admin_only_dispatch" {% if config.strict_admin_only_dispatch %}checked{% endif %} class="mt-0.5 w-4 h-4 accent-brand-700 rounded">
+                    <div>
+                        <span class="font-black text-gray-900 block">Strict Admin-Only Courier Dispatch</span>
+                        <span class="text-[11px] text-gray-500">চালু থাকলে কেবল Superuser-ই Pathao/Steadfast কুরিয়ারে পার্সেল পাঠাতে পারবেন।</span>
+                    </div>
+                </label>
+            </div>
+
+            <div class="pt-2 flex justify-end">
+                <button type="submit" class="px-6 py-2.5 rounded-2xl bg-brand-700 hover:bg-brand-800 text-white font-black text-xs shadow-md transition cursor-pointer flex items-center gap-2">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    <span>Save Security Settings</span>
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <!-- 3. Live Environment & Server Security Tuning (.env) -->
+    <div class="bg-white rounded-3xl border border-gray-200 shadow-xs p-5 sm:p-6 space-y-5">
+        <div class="border-b border-gray-100 pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+                <h2 class="font-display font-black text-base text-gray-900 flex items-center gap-2">
+                    <i class="fa-solid fa-server text-brand-700"></i>
+                    <span>Live Server &amp; Environment Tuning (.env)</span>
+                </h2>
+                <p class="text-xs text-gray-500 mt-0.5">সার্ভারের SSL, কুকি, DEBUG ও ডোমেইন সিকিউরিটি এখান থেকেই টিউন করে `.env` ফাইলে সেভ করুন।</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+            {% for item in env_checks %}
+            <div class="p-3 rounded-2xl border {% if item.ok %}border-emerald-200 bg-emerald-50/50{% else %}border-amber-200 bg-amber-50/50{% endif %} flex items-center justify-between gap-2">
+                <div class="min-w-0">
+                    <span class="block text-[10px] font-bold uppercase tracking-wider text-gray-500">{{ item.label }}</span>
+                    <span class="block font-black text-gray-900 truncate">{{ item.value }}</span>
+                </div>
+                {% if item.ok %}
+                <span class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0"><i class="fa-solid fa-check text-[11px]"></i></span>
+                {% else %}
+                <span class="w-6 h-6 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shrink-0"><i class="fa-solid fa-triangle-exclamation text-[11px]"></i></span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if request.user.is_superuser %}
+        <form method="POST" class="bg-gray-50 rounded-2xl border border-gray-200 p-4 sm:p-5 space-y-4 text-xs">
+            {% csrf_token %}
+            <input type="hidden" name="form_action" value="save_env_settings">
+            <input type="hidden" name="generate_new_secret_key" id="generateNewSecretKeyInput" value="0">
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <label class="flex items-start gap-2.5 p-3 rounded-xl bg-white border border-gray-200 cursor-pointer">
+                    <input type="checkbox" name="env_debug_off" {% if env_form.debug_off %}checked{% endif %} class="mt-0.5 w-4 h-4 accent-brand-700">
+                    <div>
+                        <span class="font-black text-gray-900 block">Production Mode (DEBUG = OFF)</span>
+                        <span class="text-[11px] text-gray-500">লাইভ সাইটে এরর ডিটেইলস লুকাতে ON রাখুন।</span>
+                    </div>
+                </label>
+
+                <label class="flex items-start gap-2.5 p-3 rounded-xl bg-white border border-gray-200 cursor-pointer">
+                    <input type="checkbox" name="env_session_cookie_secure" {% if env_form.session_cookie_secure %}checked{% endif %} class="mt-0.5 w-4 h-4 accent-brand-700">
+                    <div>
+                        <span class="font-black text-gray-900 block">Secure Session Cookie</span>
+                        <span class="text-[11px] text-gray-500">সেশন কুকি কেবল HTTPS-এ পাঠাবে।</span>
+                    </div>
+                </label>
+
+                <label class="flex items-start gap-2.5 p-3 rounded-xl bg-white border border-gray-200 cursor-pointer">
+                    <input type="checkbox" name="env_csrf_cookie_secure" {% if env_form.csrf_cookie_secure %}checked{% endif %} class="mt-0.5 w-4 h-4 accent-brand-700">
+                    <div>
+                        <span class="font-black text-gray-900 block">Secure CSRF Cookie</span>
+                        <span class="text-[11px] text-gray-500">CSRF কুকি কেবল HTTPS-এ সুরক্ষিত রাখবে।</span>
+                    </div>
+                </label>
+
+                <label class="flex items-start gap-2.5 p-3 rounded-xl bg-white border border-gray-200 cursor-pointer">
+                    <input type="checkbox" name="env_enable_hsts" {% if env_form.enable_hsts %}checked{% endif %} class="mt-0.5 w-4 h-4 accent-brand-700">
+                    <div>
+                        <span class="font-black text-gray-900 block">HSTS Header (1 Year)</span>
+                        <span class="text-[11px] text-gray-500">ব্রাউজারকে সবসময় HTTPS ব্যবহারে বাধ্য করবে।</span>
+                    </div>
+                </label>
+
+                <label class="flex items-start gap-2.5 p-3 rounded-xl bg-white border border-gray-200 cursor-pointer">
+                    <input type="checkbox" name="env_ssl_redirect" {% if env_form.ssl_redirect %}checked{% endif %} class="mt-0.5 w-4 h-4 accent-brand-700">
+                    <div>
+                        <span class="font-black text-gray-900 block">Django SSL Redirect</span>
+                        <span class="text-[11px] text-gray-500">Cloudflare Always HTTPS থাকলে OFF রাখা নিরাপদ।</span>
+                    </div>
+                </label>
+
+                <div class="p-3 rounded-xl bg-white border border-gray-200 flex items-center justify-between gap-2">
+                    <div>
+                        <span class="font-black text-gray-900 block">Secret Key</span>
+                        <span class="text-[11px] {% if env_form.secret_hardened %}text-emerald-700 font-bold{% else %}text-amber-700 font-bold{% endif %}">
+                            {% if env_form.secret_hardened %}Hardened Key Active{% else %}Insecure Default Key{% endif %}
+                        </span>
+                    </div>
+                    <button type="submit" onclick="document.getElementById('generateNewSecretKeyInput').value='1'" class="px-2.5 py-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-[11px] cursor-pointer shrink-0">
+                        Rotate Key
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                    <label class="block font-black text-gray-800 mb-1">Allowed Hosts</label>
+                    <input type="text" name="env_allowed_hosts" value="{{ env_form.allowed_hosts }}" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 font-mono text-[11px] text-gray-900">
+                </div>
+                <div>
+                    <label class="block font-black text-gray-800 mb-1">Cloudflare Turnstile Site Key</label>
+                    <input type="text" name="env_turnstile_site_key" value="{{ env_form.turnstile_site }}" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 font-mono text-[11px] text-gray-900">
+                </div>
+                <div>
+                    <label class="block font-black text-gray-800 mb-1">Cloudflare Turnstile Secret Key</label>
+                    <input type="text" name="env_turnstile_secret_key" value="{{ env_form.turnstile_secret }}" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 font-mono text-[11px] text-gray-900">
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between gap-2 pt-1">
+                <span class="text-[11px] text-gray-500">নোট: `.env` সেভ করার পর লাইভ সার্ভারে Gunicorn/Python রিস্টার্ট করলে পরিবর্তন কার্যকর হবে।</span>
+                <button type="submit" class="px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs shadow-sm transition cursor-pointer flex items-center gap-1.5 shrink-0">
+                    <i class="fa-solid fa-sliders"></i>
+                    <span>Save .env Settings</span>
+                </button>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

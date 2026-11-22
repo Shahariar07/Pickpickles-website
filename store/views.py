@@ -382,6 +382,25 @@ def cart_add(request, product_id):
             for item in cart
         ]
         msg = f'Added {item_display_name} to your pickle jar bag!'
+        import uuid as _uuid, time as _time
+        meta_atc_event_id = f"atc_{product.id}_{int(_time.time())}_{_uuid.uuid4().hex[:8]}"
+        try:
+            from .meta_capi import send_meta_funnel_event_capi
+            send_meta_funnel_event_capi(
+                request,
+                'AddToCart',
+                meta_atc_event_id,
+                {
+                    'content_name': str(item_display_name),
+                    'content_ids': [str(product.catalog_id or f"JAR-{product.id}")],
+                    'content_type': 'product',
+                    'value': round(float(product.price_bdt) * int(quantity or 1), 2),
+                    'currency': 'BDT',
+                },
+                override_source_url=request.META.get('HTTP_REFERER') or None,
+            )
+        except Exception:
+            pass
         return JsonResponse({
             'success': True,
             'message': msg,
@@ -408,7 +427,8 @@ def cart_add(request, product_id):
                 'quantity': quantity,
                 'variant': variant_label,
                 'is_preorder': False,
-            }
+            },
+            'meta_event_id': meta_atc_event_id,
         })
         
     flash_msg = f'Added "{item_display_name}" to your jar cart!'
@@ -801,7 +821,31 @@ def checkout(request):
     discount = cart.get_discount()
     total = cart.get_total_price(selected_zone)
 
+    import uuid as _uuid, time as _time
+    meta_ic_event_id = f"ic_{int(_time.time())}_{_uuid.uuid4().hex[:8]}"
+    if request.method == 'GET' and float(subtotal or 0) > 0:
+        try:
+            from .meta_capi import send_meta_funnel_event_capi
+            ic_ids = [str(item['product'].catalog_id or f"JAR-{item['product'].id}") for item in cart if item.get('product')]
+            if ic_ids:
+                send_meta_funnel_event_capi(
+                    request,
+                    'InitiateCheckout',
+                    meta_ic_event_id,
+                    {
+                        'content_name': 'Pickle Order Checkout',
+                        'content_ids': ic_ids,
+                        'content_type': 'product',
+                        'value': float(subtotal),
+                        'currency': 'BDT',
+                        'num_items': len(cart) or 1,
+                    },
+                )
+        except Exception:
+            pass
+
     context = {
+        'meta_ic_event_id': meta_ic_event_id,
         'cart': cart,
         'form': form,
         'cart_subtotal': subtotal,

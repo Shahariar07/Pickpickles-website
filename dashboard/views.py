@@ -1,5 +1,6 @@
 import csv
 import json
+import os
 import re
 import datetime
 from datetime import timedelta
@@ -246,6 +247,8 @@ def dashboard_login(request):
         if user is not None and (user.is_staff or user.is_superuser):
             cache.delete(login_fail_key)
             login(request, user)
+            # Clear any stale queued messages (e.g. 'You have been logged out.') before showing Welcome back
+            list(messages.get_messages(request))
             messages.success(request, f'Welcome back, {user.username}!')
             raw_next = request.GET.get('next') or request.POST.get('next') or ''
             if raw_next and url_has_allowed_host_and_scheme(raw_next, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
@@ -274,6 +277,7 @@ def dashboard_login(request):
 
 def dashboard_logout(request):
     logout(request)
+    list(messages.get_messages(request))
     messages.info(request, 'You have been logged out.')
     return redirect('dashboard:login')
 
@@ -495,12 +499,12 @@ def dashboard_index(request):
     delivery_rate = round((delivered_count / total_orders_count) * 100, 1) if total_orders_count > 0 else 0
     
     # Inventory & Low Stock Tracking (Ultra-fast 1-Query Batch Demand)
-    # Orders in PACKING, OUT_FOR_DELIVERY, or DELIVERED have already had physical stock deducted.
-    # Therefore, active unfulfilled demand is strictly orders in PENDING or CONFIRMED status.
+    # Orders in CONFIRMED, PACKING, OUT_FOR_DELIVERY, or DELIVERED have already had physical stock deducted.
+    # Therefore, active unfulfilled demand is strictly orders in PENDING status.
     active_demands = dict(
         OrderItem.objects.filter(
             order__is_deleted=False,
-            order__order_status__in=['PENDING', 'CONFIRMED']
+            order__order_status='PENDING'
         ).values('product_id').annotate(total_demand=Sum('quantity')).values_list('product_id', 'total_demand')
     )
 
@@ -1023,6 +1027,7 @@ def orders_list(request):
                 if old_status != new_status:
                     adjust_inventory_for_order_status_change(order, old_status, new_status, user=request.user)
                     order.order_status = new_status
+                    _apply_cancel_reason_fields(order, new_status, request.POST)
                     if new_status == 'DELIVERED' and order.payment_status == 'UNPAID':
                         order.payment_status = 'PAID'
                     if new_status in CONFIRMED_STATUSES and old_status not in CONFIRMED_STATUSES:
@@ -1266,8 +1271,15 @@ def orders_list(request):
 
     from dashboard.sms_service import get_all_order_sms_sent_map
     _sms_sent_map = get_all_order_sms_sent_map()
+    _phone_score_cache = {}
     for _ord in page_obj:
         _ord.sms_already_sent = _ord.order_status in _sms_sent_map.get(str(_ord.order_number), [])
+        _digits = ''.join(c for c in (_ord.customer_phone or '') if c.isdigit())
+        _last10 = _digits[-10:] if len(_digits) >= 10 else _digits
+        if _last10 in _phone_score_cache:
+            _ord._cached_customer_score = _phone_score_cache[_last10]
+        else:
+            _phone_score_cache[_last10] = _ord.customer_score
 
     context = {
         'orders': page_obj,
@@ -1293,6 +1305,7 @@ def orders_list(request):
         'customer_type': customer_type,
         'search_query': search_query,
         'status_choices': Order.ORDER_STATUS_CHOICES,
+        'cancel_reason_choices': Order.CANCEL_REASON_CHOICES,
         'payment_status_choices': Order.PAYMENT_STATUS_CHOICES,
         'products': Product.objects.all(),
         'promo_setting': promo_setting,
@@ -1302,13 +1315,29 @@ def orders_list(request):
     return render(request, 'dashboard/orders_list.html', context)
 
 
-PACKED_ORDER_STATUSES = {'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'}
+PACKED_ORDER_STATUSES = {'CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'}
+
+
+def _apply_cancel_reason_fields(order, new_status, post_data):
+    """Stores cancel_reason and cancel_reason_note when cancelling, or clears them when un-cancelling."""
+    if new_status == 'CANCELLED':
+        reason = (post_data.get('cancel_reason') or '').strip()
+        note = (post_data.get('cancel_reason_note') or '').strip()
+        if reason in dict(Order.CANCEL_REASON_CHOICES):
+            order.cancel_reason = reason
+        if 'cancel_reason_note' in post_data:
+            order.cancel_reason_note = note
+    elif new_status and new_status != 'CANCELLED':
+        order.cancel_reason = ''
+        order.cancel_reason_note = ''
+
 
 def adjust_inventory_for_order_status_change(order, old_status, new_status, user=None):
     """
-    Packing Inventory Model:
-    Stock is deducted when the order is being packed (transitions to PACKING, OUT_FOR_DELIVERY, or DELIVERED).
-    Stock is restored if a packed order is cancelled or reverted back to PENDING/CONFIRMED before packing.
+    Confirm-Time Inventory Model:
+    Stock is deducted immediately when the order is confirmed (transitions to CONFIRMED, PACKING,
+    OUT_FOR_DELIVERY, or DELIVERED).
+    Stock is restored if a confirmed/packed order is cancelled or reverted back to PENDING.
     """
     was_packed = old_status in PACKED_ORDER_STATUSES
     now_packed = new_status in PACKED_ORDER_STATUSES
@@ -1396,6 +1425,11 @@ def sync_parcel_status_with_cache(order, force=False, user=None):
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def order_detail(request, order_number):
     order = get_object_or_404(Order.objects.prefetch_related('items__product'), order_number=order_number)
+
+    # Mark notification as seen once staff opens the order, while keeping status PENDING until call + accept
+    if request.method == 'GET' and order.order_status == 'PENDING' and not order.is_notification_seen:
+        order.is_notification_seen = True
+        order.save(update_fields=['is_notification_seen'])
     
     # Auto-update live parcel tracking status with caching
     if order.steadfast_consignment_id or order.pathao_consignment_id or order.steadfast_tracking_code:
@@ -1412,7 +1446,7 @@ def order_detail(request, order_number):
         old_status = order.order_status
         if new_status and new_status != old_status:
             # Adjust inventory based on acceptance / cancellation transition
-            adjust_inventory_for_order_status_change(order, old_status, new_status)
+            adjust_inventory_for_order_status_change(order, old_status, new_status, user=request.user)
 
             order.order_status = new_status
             # Auto-mark payment as collected/PAID when delivered
@@ -1430,6 +1464,9 @@ def order_detail(request, order_number):
 
         if new_payment_status:
             order.payment_status = new_payment_status
+
+        if order.order_status == 'CANCELLED' or new_status == 'CANCELLED' or (new_status and new_status != 'CANCELLED'):
+            _apply_cancel_reason_fields(order, order.order_status, request.POST)
             
         if request.POST.get('payment_trx_id') is not None:
             order.payment_trx_id = request.POST.get('payment_trx_id', '').strip()
@@ -1477,6 +1514,7 @@ def order_detail(request, order_number):
         'all_products': Product.objects.all().order_by('-is_in_stock', 'name'),
         'promo_setting': PromotionSetting.get_settings(),
         'sms_sent_statuses': get_order_sms_sent_statuses(order.order_number),
+        'cancel_reason_choices': Order.CANCEL_REASON_CHOICES,
     })
 
 
@@ -1493,9 +1531,10 @@ def update_order_status_quick(request, order_number):
         old_status = order.order_status
         if new_status in dict(Order.ORDER_STATUS_CHOICES) and new_status != old_status:
             # Adjust inventory based on acceptance / cancellation transition
-            adjust_inventory_for_order_status_change(order, old_status, new_status)
+            adjust_inventory_for_order_status_change(order, old_status, new_status, user=request.user)
 
             order.order_status = new_status
+            _apply_cancel_reason_fields(order, new_status, request.POST)
             # When marked as DELIVERED, automatically mark money as collected (PAID)
             if new_status == 'DELIVERED' and order.payment_status == 'UNPAID':
                 order.payment_status = 'PAID'
@@ -1607,9 +1646,9 @@ def edit_order_customer(request, order_number):
             order.delivery_address = address
         if city:
             order.delivery_city = city
-        if email:
+        if 'customer_email' in request.POST:
             order.customer_email = email
-        if notes is not None:
+        if 'customer_notes' in request.POST or 'admin_notes' in request.POST:
             order.customer_notes = notes
             order.admin_notes = notes
         if trx_id is not None:
@@ -4615,8 +4654,15 @@ def feedback_reminders_manager(request):
 
     from dashboard.sms_service import get_all_order_sms_sent_map
     _sms_sent_map = get_all_order_sms_sent_map()
+    _phone_score_cache = {}
     for _ord in page_obj:
         _ord.sms_already_sent = _ord.order_status in _sms_sent_map.get(str(_ord.order_number), [])
+        _digits = ''.join(c for c in (_ord.customer_phone or '') if c.isdigit())
+        _last10 = _digits[-10:] if len(_digits) >= 10 else _digits
+        if _last10 in _phone_score_cache:
+            _ord._cached_customer_score = _phone_score_cache[_last10]
+        else:
+            _phone_score_cache[_last10] = _ord.customer_score
 
     context = {
         'orders': page_obj,
@@ -6297,13 +6343,15 @@ def order_notifications_api(request):
 
     from .context_processors import get_pending_feedback_reminders_count
     pending_count = Order.objects.filter(order_status='PENDING').count()
+    unread_qs = Order.objects.filter(order_status='PENDING', is_notification_seen=False)
+    unread_count = unread_qs.count()
     pending_reviews_count = Review.objects.filter(is_approved=False).count()
     feedback_reminders_count = get_pending_feedback_reminders_count(min_days=30)
 
     # New orders that came strictly after last_id
     new_orders_data = []
     if last_id > 0 and latest_id > last_id:
-        new_orders = Order.objects.filter(id__gt=last_id).order_by('-id')[:5]
+        new_orders = Order.objects.filter(id__gt=last_id, order_status='PENDING', is_notification_seen=False).order_by('-id')[:5]
         for o in new_orders:
             new_orders_data.append({
                 'id': o.id,
@@ -6317,8 +6365,8 @@ def order_notifications_api(request):
                 'detail_url': reverse('dashboard:order_detail', kwargs={'order_number': o.order_number}),
             })
 
-    # Recent 5 pending orders for dropdown list
-    recent_pending = Order.objects.filter(order_status='PENDING').order_by('-id')[:5]
+    # Recent unseen pending orders for notification bell dropdown (disappears once seen, while staying PENDING)
+    recent_pending = unread_qs.order_by('-id')[:8]
     recent_pending_data = []
     for o in recent_pending:
         recent_pending_data.append({
@@ -6335,10 +6383,45 @@ def order_notifications_api(request):
         'latest_id': latest_id,
         'has_new': len(new_orders_data) > 0,
         'new_orders': new_orders_data,
+        'unread_count': unread_count,
         'pending_count': pending_count,
         'pending_reviews_count': pending_reviews_count,
         'feedback_reminders_count': feedback_reminders_count,
         'recent_pending': recent_pending_data,
+    })
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def mark_order_notifications_seen(request):
+    """Marks one or all PENDING order notifications as seen without changing their PENDING order_status."""
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'POST required'}, status=405)
+
+    order_number = (request.POST.get('order_number') or '').strip()
+    mark_all = request.POST.get('all') in ('1', 'true', 'True')
+
+    if not order_number and not mark_all and request.body:
+        try:
+            body_data = json.loads(request.body.decode('utf-8') or '{}')
+            order_number = (body_data.get('order_number') or '').strip()
+            mark_all = bool(body_data.get('all'))
+        except Exception:
+            pass
+
+    if mark_all:
+        updated = Order.objects.filter(order_status='PENDING', is_notification_seen=False).update(is_notification_seen=True)
+    elif order_number:
+        updated = Order.objects.filter(order_number=order_number, is_notification_seen=False).update(is_notification_seen=True)
+    else:
+        updated = 0
+
+    unread_count = Order.objects.filter(order_status='PENDING', is_notification_seen=False).count()
+    pending_count = Order.objects.filter(order_status='PENDING').count()
+    return JsonResponse({
+        'status': 'ok',
+        'updated': updated,
+        'unread_count': unread_count,
+        'pending_count': pending_count,
     })
 
 
@@ -7194,6 +7277,175 @@ def sms_history_manager(request):
         'total_count': len(logs),
         'type_filter': type_filter,
         'q': q,
+    })
+
+
+def _read_dotenv_values(env_path):
+    """Reads key=value pairs from .env without modifying comments or structure."""
+    import os
+    vals = {}
+    if not os.path.exists(env_path):
+        return vals
+    try:
+        with open(env_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                s = line.strip()
+                if s and not s.startswith('#') and '=' in s:
+                    k, v = s.split('=', 1)
+                    vals[k.strip()] = v.strip().strip('"').strip("'")
+    except Exception:
+        pass
+    return vals
+
+
+def _write_dotenv_values(env_path, updates):
+    """Updates or appends key=value pairs in .env while preserving existing lines and comments."""
+    import os
+    lines = []
+    if os.path.exists(env_path):
+        with open(env_path, 'r', encoding='utf-8') as f:
+            lines = f.read().splitlines()
+
+    remaining = dict(updates)
+    new_lines = []
+    for line in lines:
+        s = line.strip()
+        if s and not s.startswith('#') and '=' in s:
+            k = s.split('=', 1)[0].strip()
+            if k in remaining:
+                new_lines.append(f"{k}={remaining.pop(k)}")
+                continue
+        new_lines.append(line)
+
+    for k, v in remaining.items():
+        new_lines.append(f"{k}={v}")
+
+    with open(env_path, 'w', encoding='utf-8') as f:
+        f.write('\n'.join(new_lines) + '\n')
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def security_settings_view(request):
+    """
+    Centralized Site & Security Settings page for Staff/Admin:
+    - Live Anti-Fraud & Rate-Limiting Thresholds (DB-backed via DashboardSecurityConfig)
+    - Staff Access & Strict Permission Controls
+    - Tunable Environment & SSL/Cookie Hardening (.env)
+    """
+    if not request.user.is_superuser:
+        messages.error(request, 'Permission Denied: কেবল অ্যাডমিন (Superuser) সিকিউরিটি সেটিংস পরিবর্তন করতে পারবেন।')
+        return redirect('dashboard:index')
+
+    from django.conf import settings
+    import os, secrets
+    config = DashboardSecurityConfig.get_config()
+    env_path = os.path.join(settings.BASE_DIR, '.env')
+
+    if request.method == 'POST':
+        form_action = request.POST.get('form_action', 'save_app_security')
+
+        if form_action == 'save_env_settings':
+            if not request.user.is_superuser:
+                messages.error(request, 'Permission Denied: কেবল Superuser .env সার্ভার সেটিংস পরিবর্তন করতে পারবেন।')
+                return redirect('dashboard:security_settings')
+
+            updates = {
+                'DJANGO_DEBUG': 'False' if request.POST.get('env_debug_off') == 'on' else 'True',
+                'DJANGO_ALLOWED_HOSTS': (request.POST.get('env_allowed_hosts') or '*').strip() or '*',
+                'DJANGO_SESSION_COOKIE_SECURE': 'True' if request.POST.get('env_session_cookie_secure') == 'on' else 'False',
+                'DJANGO_CSRF_COOKIE_SECURE': 'True' if request.POST.get('env_csrf_cookie_secure') == 'on' else 'False',
+                'DJANGO_ENABLE_HSTS': 'True' if request.POST.get('env_enable_hsts') == 'on' else 'False',
+                'DJANGO_SECURE_SSL_REDIRECT': 'True' if request.POST.get('env_ssl_redirect') == 'on' else 'False',
+            }
+            if 'env_turnstile_site_key' in request.POST:
+                updates['CLOUDFLARE_TURNSTILE_SITE_KEY'] = request.POST.get('env_turnstile_site_key', '').strip()
+            if 'env_turnstile_secret_key' in request.POST:
+                updates['CLOUDFLARE_TURNSTILE_SECRET_KEY'] = request.POST.get('env_turnstile_secret_key', '').strip()
+
+            if request.POST.get('generate_new_secret_key') == '1':
+                new_key = 'pkp-' + secrets.token_urlsafe(48)
+                updates['DJANGO_SECRET_KEY'] = new_key
+
+            _write_dotenv_values(env_path, updates)
+            for k, v in updates.items():
+                os.environ[k] = v
+            if updates.get('DJANGO_ALLOWED_HOSTS'):
+                settings.ALLOWED_HOSTS = [h.strip() for h in updates['DJANGO_ALLOWED_HOSTS'].split(',') if h.strip()] or ['*']
+
+            messages.success(request, '⚙️ .env Server & Security settings saved! (Restart server/gunicorn on live VPS to apply all .env changes.)')
+            return redirect('dashboard:security_settings')
+
+        def _pos_int(field_name, default_val, max_val=500):
+            try:
+                val = int(request.POST.get(field_name, default_val))
+                return max(0, min(max_val, val))
+            except (TypeError, ValueError):
+                return default_val
+
+        config.order_duplicate_cooldown_minutes = _pos_int('order_duplicate_cooldown_minutes', 5, 1440)
+        config.order_max_active_pending_per_phone = _pos_int('order_max_active_pending_per_phone', 2, 50)
+        config.order_cod_cancel_block_threshold = _pos_int('order_cod_cancel_block_threshold', 2, 50)
+        config.order_rate_limit_per_phone_hourly = _pos_int('order_rate_limit_per_phone_hourly', 3, 100)
+        config.order_rate_limit_per_ip_hourly = _pos_int('order_rate_limit_per_ip_hourly', 5, 200)
+        config.review_rate_limit_per_ip_hourly = _pos_int('review_rate_limit_per_ip_hourly', 3, 100)
+
+        if request.user.is_superuser:
+            config.strict_admin_only_delete = request.POST.get('strict_admin_only_delete') == 'on'
+            config.allow_staff_delete_override = request.POST.get('allow_staff_delete_override') == 'on'
+            config.strict_admin_only_edit = request.POST.get('strict_admin_only_edit') == 'on'
+            config.strict_admin_only_dispatch = request.POST.get('strict_admin_only_dispatch') == 'on'
+        config.updated_by = request.user
+        config.save()
+
+        messages.success(request, '🛡️ Security & Anti-Fraud settings updated and applied immediately!')
+        return redirect('dashboard:security_settings')
+
+    env_vals = _read_dotenv_values(env_path)
+    def _env_bool(key, fallback=False):
+        raw = env_vals.get(key)
+        if raw is None:
+            return fallback
+        return raw.lower() in ('true', '1', 't', 'yes')
+
+    env_debug_off = not _env_bool('DJANGO_DEBUG', settings.DEBUG)
+    env_secret_key = env_vals.get('DJANGO_SECRET_KEY', settings.SECRET_KEY)
+    env_secret_hardened = bool(env_secret_key) and ('django-insecure-' not in env_secret_key)
+    env_allowed_hosts = env_vals.get('DJANGO_ALLOWED_HOSTS', ','.join(settings.ALLOWED_HOSTS))
+    env_session_cookie_secure = _env_bool('DJANGO_SESSION_COOKIE_SECURE', getattr(settings, 'SESSION_COOKIE_SECURE', False))
+    env_csrf_cookie_secure = _env_bool('DJANGO_CSRF_COOKIE_SECURE', getattr(settings, 'CSRF_COOKIE_SECURE', False))
+    env_enable_hsts = _env_bool('DJANGO_ENABLE_HSTS', getattr(settings, 'SECURE_HSTS_SECONDS', 0) > 0)
+    env_ssl_redirect = _env_bool('DJANGO_SECURE_SSL_REDIRECT', getattr(settings, 'SECURE_SSL_REDIRECT', False))
+    env_turnstile_site = env_vals.get('CLOUDFLARE_TURNSTILE_SITE_KEY', getattr(settings, 'CLOUDFLARE_TURNSTILE_SITE_KEY', ''))
+    env_turnstile_secret = env_vals.get('CLOUDFLARE_TURNSTILE_SECRET_KEY', getattr(settings, 'CLOUDFLARE_TURNSTILE_SECRET_KEY', ''))
+
+    env_checks = [
+        {'label': 'DEBUG Mode', 'value': 'OFF (Production)' if env_debug_off else 'ON (Dev Mode)', 'ok': env_debug_off},
+        {'label': 'Secret Key Hardened', 'value': 'Custom Hardened Key' if env_secret_hardened else 'Default Insecure Key', 'ok': env_secret_hardened},
+        {'label': 'HTTPS SSL Redirect', 'value': 'Active' if env_ssl_redirect else 'Cloudflare Handles HTTPS', 'ok': env_ssl_redirect or True},
+        {'label': 'Session / CSRF Secure Cookie', 'value': 'Enabled' if (env_session_cookie_secure and env_csrf_cookie_secure) else 'Disabled (.env)', 'ok': env_session_cookie_secure and env_csrf_cookie_secure},
+        {'label': 'HSTS Header (1 Year)', 'value': 'Enabled' if env_enable_hsts else 'Disabled (.env)', 'ok': env_enable_hsts},
+        {'label': 'Allowed Hosts', 'value': env_allowed_hosts[:36], 'ok': env_allowed_hosts.strip() != '*'},
+        {'label': 'Cloudflare Turnstile', 'value': 'Configured' if env_turnstile_secret else 'Honeypot Fallback Only', 'ok': bool(env_turnstile_secret)},
+        {'label': 'Meta Pixel & CAPI', 'value': f"Pixel {getattr(settings, 'META_PIXEL_ID', 'N/A')}", 'ok': bool(getattr(settings, 'META_PIXEL_ID', ''))},
+        {'label': 'BulkSMSBD API', 'value': 'Connected' if getattr(settings, 'BULKSMSBD_API_KEY', '') else 'Not Set', 'ok': bool(getattr(settings, 'BULKSMSBD_API_KEY', ''))},
+    ]
+
+    return render(request, 'dashboard/security_settings.html', {
+        'page_title': 'Site & Security Settings',
+        'config': config,
+        'env_checks': env_checks,
+        'env_form': {
+            'debug_off': env_debug_off,
+            'secret_hardened': env_secret_hardened,
+            'allowed_hosts': env_allowed_hosts,
+            'session_cookie_secure': env_session_cookie_secure,
+            'csrf_cookie_secure': env_csrf_cookie_secure,
+            'enable_hsts': env_enable_hsts,
+            'ssl_redirect': env_ssl_redirect,
+            'turnstile_site': env_turnstile_site,
+            'turnstile_secret': env_turnstile_secret,
+        },
+        'session_days': int(getattr(settings, 'SESSION_COOKIE_AGE', 1209600) // 86400),
     })
 
 

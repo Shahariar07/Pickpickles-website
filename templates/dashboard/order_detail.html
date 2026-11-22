@@ -189,6 +189,12 @@
                 {% elif order.order_status == 'CONFIRMED' %}Bubble wrap {{ order.total_items_count }} jars. Then click dispatch above.
                 {% elif order.order_status == 'PACKING' %}Parcel packed with address label. Hand over to delivery rider.
                 {% elif order.order_status == 'OUT_FOR_DELIVERY' %}Rider delivering to {{ order.delivery_city }}.
+                {% elif order.order_status == 'CANCELLED' %}
+                    {% if order.get_full_cancel_reason %}
+                        <span class="text-rose-700 font-bold">কারণ: {{ order.get_full_cancel_reason }}</span>
+                    {% else %}
+                        Order cancelled / returned.
+                    {% endif %}
                 {% endif %}
             </span>
         </div>
@@ -205,6 +211,10 @@
                     <span>Confirm Order</span>
                 </button>
             </form>
+            <button type="button" onclick="openDetailCancelModal()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs px-3 py-1.5 rounded-xl shadow-2xs flex items-center gap-1.5 transition cursor-pointer">
+                <i class="fa-solid fa-xmark text-[10px]"></i>
+                <span>Cancel</span>
+            </button>
             {% endif %}
             {% if order.customer_phone %}
             {% if order.order_status in sms_sent_statuses %}
@@ -292,7 +302,7 @@
                 <div class="grid grid-cols-2 gap-2.5">
                     <div>
                         <label class="block text-[11px] font-bold text-gray-700 mb-1">Order Status</label>
-                        <select name="order_status" class="w-full border rounded-xl px-2.5 py-2 text-xs font-black focus:ring-2 focus:ring-brand-500 transition shadow-2xs {{ order.status_select_class }}">
+                        <select id="detailOrderStatusSelect" name="order_status" onchange="toggleDetailCancelReasonBox(this.value)" class="w-full border rounded-xl px-2.5 py-2 text-xs font-black focus:ring-2 focus:ring-brand-500 transition shadow-2xs {{ order.status_select_class }}">
                             <option value="PENDING" {% if order.order_status == 'PENDING' %}selected{% endif %} class="bg-white text-gray-900 font-bold py-1">🟡 Pending Confirmation</option>
                             <option value="CONFIRMED" {% if order.order_status == 'CONFIRMED' %}selected{% endif %} class="bg-white text-gray-900 font-bold py-1">🔵 Confirmed</option>
                             <option value="PACKING" {% if order.order_status == 'PACKING' %}selected{% endif %} class="bg-white text-gray-900 font-bold py-1">📦 Packing</option>
@@ -311,6 +321,20 @@
                             <option value="REFUNDED" {% if order.payment_status == 'REFUNDED' %}selected{% endif %}>Refunded</option>
                         </select>
                     </div>
+                </div>
+
+                <!-- Cancel Reason Box (shown when Order Status is CANCELLED) -->
+                <div id="detailCancelReasonBox" class="{% if order.order_status != 'CANCELLED' %}hidden {% endif %}bg-rose-50 border border-rose-200 rounded-2xl p-3 space-y-2">
+                    <label class="block text-[11px] font-black text-rose-800">
+                        <i class="fa-solid fa-circle-exclamation mr-1"></i> Parcel Cancel Reason (পার্সেল বাতিলের কারণ)
+                    </label>
+                    <select name="cancel_reason" class="w-full bg-white border border-rose-300 rounded-xl px-2.5 py-2 text-xs font-bold text-gray-900 focus:ring-2 focus:ring-rose-500">
+                        <option value="">-- কারণ নির্বাচন করুন --</option>
+                        {% for r_code, r_label in cancel_reason_choices %}
+                        <option value="{{ r_code }}" {% if order.cancel_reason == r_code %}selected{% endif %}>{{ r_label }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="text" name="cancel_reason_note" value="{{ order.cancel_reason_note|default:'' }}" placeholder="বিস্তারিত নোট (ঐচ্ছিক, যেমন: ২ বার কল দেওয়া হয়েছিল)..." class="w-full bg-white border border-rose-200 rounded-xl px-2.5 py-1.5 text-xs text-gray-900 focus:ring-1 focus:ring-rose-500">
                 </div>
 
                 <div class="grid grid-cols-2 gap-2.5">
@@ -576,8 +600,9 @@
                         <i class="fa-solid fa-location-dot text-brand-600"></i> Delivery Address & Zone
                     </h3>
                     {% if can_edit %}
-                    <button type="button" onclick="openEditCustomerModal()" class="text-xs font-bold text-brand-600 hover:text-brand-800 underline cursor-pointer">
-                        Edit Address
+                    <button type="button" onclick="toggleInlineAddressEdit()" class="text-xs font-bold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 px-2.5 py-1 rounded-xl transition cursor-pointer inline-flex items-center gap-1">
+                        <i class="fa-solid fa-pen text-[10px]"></i>
+                        <span>Edit Address</span>
                     </button>
                     {% else %}
                     <span class="text-xs font-semibold text-gray-400 inline-flex items-center gap-1 cursor-not-allowed" title="ঠিকানা এডিট করার অনুমতি নেই">
@@ -587,7 +612,7 @@
                 </div>
 
                 <!-- Address Box -->
-                <div class="bg-gray-50 p-3 rounded-2xl border border-gray-100 space-y-1 text-xs">
+                <div id="staticAddressDisplayBox" class="bg-gray-50 p-3 rounded-2xl border border-gray-100 space-y-1 text-xs">
                     <span class="text-gray-400 font-bold block text-[10px] uppercase tracking-wider">Street Address</span>
                     <p class="font-bold text-gray-900 text-sm leading-snug">{{ order.delivery_address }}</p>
                     <div class="flex items-center justify-between text-xs text-gray-600 pt-1 border-t border-gray-200/60">
@@ -597,6 +622,37 @@
                         </span>
                     </div>
                 </div>
+
+                {% if can_edit %}
+                <!-- Quick Inline Address Edit Form -->
+                <form id="inlineAddressEditForm" action="{% url 'dashboard:edit_order_customer' order.order_number %}" method="POST" class="hidden bg-emerald-50/50 p-3.5 rounded-2xl border border-emerald-200 space-y-2.5 text-xs">
+                    {% csrf_token %}
+                    <div>
+                        <label class="block text-[11px] font-bold text-gray-700 mb-1">Street Address *</label>
+                        <textarea name="delivery_address" rows="2" required class="w-full bg-white border border-gray-300 rounded-xl px-2.5 py-1.5 text-xs text-gray-900 font-medium focus:ring-2 focus:ring-brand-500">{{ order.delivery_address }}</textarea>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-700 mb-1">City / District *</label>
+                            <input type="text" name="delivery_city" value="{{ order.delivery_city }}" required class="w-full bg-white border border-gray-300 rounded-xl px-2.5 py-1.5 text-xs text-gray-900 font-bold focus:ring-2 focus:ring-brand-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-700 mb-1">Zone</label>
+                            <select name="delivery_zone" class="w-full bg-white border border-gray-300 rounded-xl px-2 py-1.5 text-xs text-gray-900 font-bold focus:ring-2 focus:ring-brand-500">
+                                <option value="INSIDE_DHAKA" {% if order.delivery_zone == 'INSIDE_DHAKA' %}selected{% endif %}>Inside Dhaka</option>
+                                <option value="OUTSIDE_DHAKA" {% if order.delivery_zone == 'OUTSIDE_DHAKA' %}selected{% endif %}>Outside Dhaka</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between gap-2 pt-1">
+                        <button type="button" onclick="openEditCustomerModal()" class="text-[11px] font-bold text-gray-500 hover:text-gray-800 underline cursor-pointer">Full Edit Modal</button>
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" onclick="toggleInlineAddressEdit()" class="px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-gray-600 font-bold hover:bg-gray-100 cursor-pointer">Cancel</button>
+                            <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold shadow-xs cursor-pointer">Save Address</button>
+                        </div>
+                    </div>
+                </form>
+                {% endif %}
 
                 {% if order.delivery_instruction %}
                 <div class="text-amber-950 bg-gradient-to-r from-amber-50 to-orange-50/70 p-3.5 rounded-2xl border-2 border-amber-300 text-xs shadow-xs space-y-1.5">
@@ -1048,7 +1104,7 @@
 
                 <div>
                     <label class="font-bold text-gray-700 block mb-1">Customer Email</label>
-                    <input type="email" name="customer_email" value="{{ order.customer_email|default:'' }}" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500">
+                    <input type="text" name="customer_email" value="{{ order.customer_email|default:'' }}" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-500">
                 </div>
             </div>
 
@@ -2251,6 +2307,63 @@ function sendOrderSmsQuick(orderNumber, smsType, btnEl) {
         }
         alert('Network error sending SMS');
     });
+}
+</script>
+
+<!-- Quick Cancel Reason Modal -->
+<div id="detailCancelModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-5 shadow-2xl border border-rose-200 space-y-4">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-2.5">
+            <h3 class="font-display font-black text-sm text-rose-700 flex items-center gap-2">
+                <i class="fa-solid fa-circle-xmark"></i> Cancel Order #{{ order.order_number }}
+            </h3>
+            <button type="button" onclick="closeDetailCancelModal()" class="text-gray-400 hover:text-gray-700 cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form action="{% url 'dashboard:update_order_status_quick' order.order_number %}" method="POST" class="space-y-3">
+            {% csrf_token %}
+            <input type="hidden" name="status" value="CANCELLED">
+            <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1">কেন অর্ডার/পার্সেলটি বাতিল হচ্ছে? <span class="text-rose-600">*</span></label>
+                <select name="cancel_reason" required class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:ring-2 focus:ring-rose-500">
+                    <option value="">-- কারণ নির্বাচন করুন --</option>
+                    {% for r_code, r_label in cancel_reason_choices %}
+                    <option value="{{ r_code }}">{{ r_label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1">বিস্তারিত নোট (ঐচ্ছিক)</label>
+                <textarea name="cancel_reason_note" rows="2" placeholder="যেমন: কাস্টমারের সাথে কথা হয়েছে / ২ বার কল রিসিভ করেনি..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs text-gray-900 focus:ring-2 focus:ring-rose-500"></textarea>
+            </div>
+            <div class="flex items-center justify-end gap-2 pt-1">
+                <button type="button" onclick="closeDetailCancelModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 cursor-pointer">Back</button>
+                <button type="submit" class="px-4 py-2 rounded-xl text-xs font-black text-white bg-rose-600 hover:bg-rose-700 shadow-xs cursor-pointer">Confirm Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleDetailCancelReasonBox(val) {
+    const box = document.getElementById('detailCancelReasonBox');
+    if (!box) return;
+    if (val === 'CANCELLED') box.classList.remove('hidden');
+    else box.classList.add('hidden');
+}
+function openDetailCancelModal() {
+    const m = document.getElementById('detailCancelModal');
+    if (m) m.classList.remove('hidden');
+}
+function closeDetailCancelModal() {
+    const m = document.getElementById('detailCancelModal');
+    if (m) m.classList.add('hidden');
+}
+function toggleInlineAddressEdit() {
+    const f = document.getElementById('inlineAddressEditForm');
+    const d = document.getElementById('staticAddressDisplayBox');
+    if (!f || !d) return;
+    f.classList.toggle('hidden');
+    d.classList.toggle('hidden');
 }
 </script>
 

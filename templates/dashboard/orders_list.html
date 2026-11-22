@@ -641,6 +641,12 @@
 
                             {% endif %}
 
+                            {% if order.order_status == 'CANCELLED' and order.get_full_cancel_reason %}
+                            <div class="mt-1 text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2 py-0.5 max-w-[190px] whitespace-normal leading-tight" title="{{ order.get_full_cancel_reason }}">
+                                <i class="fa-solid fa-circle-info mr-0.5"></i> {{ order.get_full_cancel_reason }}
+                            </div>
+                            {% endif %}
+
                         </td>
 
 
@@ -699,7 +705,10 @@
 
                                 {% csrf_token %}
 
-                                <select name="status" onchange="this.form.submit()" class="border rounded-xl px-2.5 py-1 text-[11px] font-black cursor-pointer shadow-2xs focus:outline-none focus:ring-2 focus:ring-brand-500 transition {{ order.status_select_class }}" title="Change Order Status">
+                                <input type="hidden" name="cancel_reason" value="">
+                                <input type="hidden" name="cancel_reason_note" value="">
+
+                                <select name="status" data-prev-status="{{ order.order_status }}" onchange="handleQuickStatusSelect(this, '{{ order.order_number }}')" class="border rounded-xl px-2.5 py-1 text-[11px] font-black cursor-pointer shadow-2xs focus:outline-none focus:ring-2 focus:ring-brand-500 transition {{ order.status_select_class }}" title="Change Order Status">
 
                                     {% for code, label in status_choices %}
 
@@ -737,6 +746,12 @@
 
                             </span>
 
+                            {% endif %}
+
+                            {% if order.order_status == 'CANCELLED' and order.get_full_cancel_reason %}
+                            <div class="mt-1 text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2 py-0.5 max-w-[190px] whitespace-normal leading-tight" title="{{ order.get_full_cancel_reason }}">
+                                <i class="fa-solid fa-circle-info mr-0.5"></i> {{ order.get_full_cancel_reason }}
+                            </div>
                             {% endif %}
 
                         </td>
@@ -5621,7 +5636,79 @@ function sendOrderSmsQuick(orderNumber, smsType, btnEl) {
 
 </script>
 
+<!-- Cancel Reason Modal for Orders List -->
+<div id="ordersListCancelModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-5 shadow-2xl border border-rose-200 space-y-4">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-2.5">
+            <h3 class="font-display font-black text-sm text-rose-700 flex items-center gap-2">
+                <i class="fa-solid fa-circle-xmark"></i> Cancel Order <span id="cancelModalOrderLabel"></span>
+            </h3>
+            <button type="button" onclick="cancelOrdersListCancelModal()" class="text-gray-400 hover:text-gray-700 cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1">কেন পার্সেল/অর্ডার বাতিল হচ্ছে? <span class="text-rose-600">*</span></label>
+                <select id="cancelModalReasonSelect" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:ring-2 focus:ring-rose-500">
+                    <option value="">-- কারণ নির্বাচন করুন --</option>
+                    {% for r_code, r_label in cancel_reason_choices %}
+                    <option value="{{ r_code }}">{{ r_label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1">বিস্তারিত নোট (ঐচ্ছিক)</label>
+                <textarea id="cancelModalReasonNote" rows="2" placeholder="যেমন: কাস্টমার কল ধরেননি / অ্যাড্রেস ভুল..." class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs text-gray-900 focus:ring-2 focus:ring-rose-500"></textarea>
+            </div>
+            <div class="flex items-center justify-end gap-2 pt-1">
+                <button type="button" onclick="cancelOrdersListCancelModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 cursor-pointer">Back</button>
+                <button type="button" onclick="confirmOrdersListCancelModal()" class="px-4 py-2 rounded-xl text-xs font-black text-white bg-rose-600 hover:bg-rose-700 shadow-xs cursor-pointer">Confirm Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
 
+<script>
+let _pendingCancelForm = null;
+let _pendingCancelSelect = null;
+
+function handleQuickStatusSelect(selectEl, orderNumber) {
+    if (selectEl.value === 'CANCELLED') {
+        _pendingCancelForm = selectEl.form;
+        _pendingCancelSelect = selectEl;
+        document.getElementById('cancelModalOrderLabel').textContent = '#' + orderNumber;
+        document.getElementById('cancelModalReasonSelect').value = '';
+        document.getElementById('cancelModalReasonNote').value = '';
+        document.getElementById('ordersListCancelModal').classList.remove('hidden');
+        return;
+    }
+    selectEl.form.submit();
+}
+
+function cancelOrdersListCancelModal() {
+    if (_pendingCancelSelect) {
+        _pendingCancelSelect.value = _pendingCancelSelect.getAttribute('data-prev-status') || 'PENDING';
+    }
+    _pendingCancelForm = null;
+    _pendingCancelSelect = null;
+    document.getElementById('ordersListCancelModal').classList.add('hidden');
+}
+
+function confirmOrdersListCancelModal() {
+    const reason = document.getElementById('cancelModalReasonSelect').value;
+    const note = document.getElementById('cancelModalReasonNote').value;
+    if (!reason) {
+        alert('দয়া করে অর্ডার বাতিলের কারণ নির্বাচন করুন।');
+        return;
+    }
+    if (_pendingCancelForm) {
+        const rInput = _pendingCancelForm.querySelector('input[name="cancel_reason"]');
+        const nInput = _pendingCancelForm.querySelector('input[name="cancel_reason_note"]');
+        if (rInput) rInput.value = reason;
+        if (nInput) nInput.value = note;
+        _pendingCancelForm.submit();
+    }
+}
+</script>
 
 {% endblock %}
 

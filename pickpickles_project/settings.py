@@ -281,12 +281,36 @@ is_runserver = any('runserver' in arg for arg in sys.argv)
 # Always-on baseline security headers, cookie protections & DoS payload limits
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_AGE = int(os.environ.get('DJANGO_SESSION_COOKIE_AGE', 60 * 60 * 24 * 14))
+SESSION_EXPIRE_AT_BROWSER_CLOSE = os.environ.get('DJANGO_SESSION_EXPIRE_AT_BROWSER_CLOSE', 'False').lower() in ('true', '1', 't')
 CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_HTTPONLY = False  # Required so frontend fetch() calls can read csrftoken cookie
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+SECURE_CROSS_ORIGIN_OPENER_POLICY = os.environ.get('SECURE_CROSS_ORIGIN_OPENER_POLICY', 'same-origin-allow-popups')
 X_FRAME_OPTIONS = 'SAMEORIGIN'
+PASSWORD_RESET_TIMEOUT = int(os.environ.get('DJANGO_PASSWORD_RESET_TIMEOUT', 3600))
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB max request payload
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB max in-memory upload
+
+# Dynamic Anti-Fraud & Rate-Limiting Thresholds (tunable via .env)
+ORDER_DUPLICATE_COOLDOWN_MINUTES = int(os.environ.get('ORDER_DUPLICATE_COOLDOWN_MINUTES', 5))
+ORDER_MAX_ACTIVE_PENDING_PER_PHONE = int(os.environ.get('ORDER_MAX_ACTIVE_PENDING_PER_PHONE', 2))
+ORDER_COD_CANCEL_BLOCK_THRESHOLD = int(os.environ.get('ORDER_COD_CANCEL_BLOCK_THRESHOLD', 2))
+ORDER_RATE_LIMIT_PER_PHONE_HOURLY = int(os.environ.get('ORDER_RATE_LIMIT_PER_PHONE_HOURLY', 3))
+ORDER_RATE_LIMIT_PER_IP_HOURLY = int(os.environ.get('ORDER_RATE_LIMIT_PER_IP_HOURLY', 5))
+REVIEW_RATE_LIMIT_PER_IP_HOURLY = int(os.environ.get('REVIEW_RATE_LIMIT_PER_IP_HOURLY', 3))
+
+# Application Cache (sized for rate-limiting & courier API caching)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'pickpickles-default-cache',
+        'OPTIONS': {
+            'MAX_ENTRIES': int(os.environ.get('DJANGO_CACHE_MAX_ENTRIES', 5000)),
+        },
+    }
+}
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 if is_runserver or DEBUG:

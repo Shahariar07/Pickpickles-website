@@ -539,14 +539,12 @@ def send_meta_purchase_event_on_accept(order, request=None, force=False):
     return _execute_meta_purchase(order, force=force)
 
 
-def send_meta_view_content_capi(request, product, event_id, override_fbp=None, override_fbc=None, override_external_id=None, override_source_url=None):
+def send_meta_funnel_event_capi(request, event_name, event_id, custom_data, override_fbp=None, override_fbc=None, override_external_id=None, override_source_url=None):
     """
-    Dispatches a high-fidelity 'ViewContent' event to Meta Conversions API (CAPI)
-    asynchronously in a background daemon thread, paired with the browser-side eventID.
-    Includes maximum customer match keys (IP, User-Agent, fbp, fbc, external_id,
-    and phone/email/name when known from session, cookie, or profile).
+    Dispatches a high-fidelity funnel event ('ViewContent', 'AddToCart', 'InitiateCheckout')
+    to Meta Conversions API (CAPI) asynchronously in a background daemon thread, paired with
+    the exact browser-side eventID for deduplication.
     """
-    # Extract request data synchronously before spawning thread
     client_ip = (
         request.META.get('HTTP_CF_CONNECTING_IP') or
         request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip() or
@@ -566,9 +564,6 @@ def send_meta_view_content_capi(request, product, event_id, override_fbp=None, o
     known_city = session_meta.get('customer_city') or session_meta.get('meta_ct') or 'dhaka'
     external_id = (override_external_id or request.COOKIES.get('_pkp_vid') or session_meta.get('visitor_id') or session_meta.get('meta_external_id') or '').strip()
     source_url = override_source_url or request.build_absolute_uri()
-    prod_price = float(product.price_bdt) if hasattr(product, 'price_bdt') else 0.0
-    prod_name = str(product.name)
-    prod_catalog_id = str(getattr(product, 'catalog_id', '') or f"JAR-{product.id}")
 
     def _worker():
         try:
@@ -614,19 +609,13 @@ def send_meta_view_content_capi(request, product, event_id, override_fbp=None, o
 
             payload = {
                 'data': [{
-                    'event_name': 'ViewContent',
+                    'event_name': str(event_name),
                     'event_time': int(time.time()),
                     'event_id': str(event_id),
                     'event_source_url': source_url,
                     'action_source': 'website',
                     'user_data': user_data,
-                    'custom_data': {
-                        'content_name': prod_name,
-                        'content_ids': [prod_catalog_id],
-                        'content_type': 'product',
-                        'value': prod_price,
-                        'currency': 'BDT'
-                    }
+                    'custom_data': custom_data,
                 }]
             }
 
@@ -637,9 +626,32 @@ def send_meta_view_content_capi(request, product, event_id, override_fbp=None, o
             url = f"https://graph.facebook.com/v19.0/{pixel_id}/events?access_token={access_token}"
             requests.post(url, json=payload, timeout=4)
         except Exception as e:
-            logger.debug(f"[Meta CAPI ViewContent] Async send failed: {e}")
+            logger.debug(f"[Meta CAPI {event_name}] Async send failed: {e}")
 
     threading.Thread(target=_worker, daemon=True).start()
+
+
+def send_meta_view_content_capi(request, product, event_id, override_fbp=None, override_fbc=None, override_external_id=None, override_source_url=None):
+    """Dispatches ViewContent CAPI event using the shared funnel CAPI helper."""
+    prod_price = float(product.price_bdt) if hasattr(product, 'price_bdt') else 0.0
+    prod_name = str(product.name)
+    prod_catalog_id = str(getattr(product, 'catalog_id', '') or f"JAR-{product.id}")
+    send_meta_funnel_event_capi(
+        request,
+        'ViewContent',
+        event_id,
+        {
+            'content_name': prod_name,
+            'content_ids': [prod_catalog_id],
+            'content_type': 'product',
+            'value': prod_price,
+            'currency': 'BDT',
+        },
+        override_fbp=override_fbp,
+        override_fbc=override_fbc,
+        override_external_id=override_external_id,
+        override_source_url=override_source_url,
+    )
 
 
 def get_order_meta_details(order):
