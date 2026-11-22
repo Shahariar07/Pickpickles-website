@@ -285,6 +285,7 @@ SESSION_COOKIE_AGE = int(os.environ.get('DJANGO_SESSION_COOKIE_AGE', 60 * 60 * 2
 SESSION_EXPIRE_AT_BROWSER_CLOSE = os.environ.get('DJANGO_SESSION_EXPIRE_AT_BROWSER_CLOSE', 'False').lower() in ('true', '1', 't')
 CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_HTTPONLY = False  # Required so frontend fetch() calls can read csrftoken cookie
+CSRF_FAILURE_VIEW = 'store.views.custom_csrf_failure_view'
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 SECURE_CROSS_ORIGIN_OPENER_POLICY = os.environ.get('SECURE_CROSS_ORIGIN_OPENER_POLICY', 'same-origin-allow-popups')

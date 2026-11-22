@@ -1368,9 +1368,10 @@
                                         var subData = JSON.parse(JSON.stringify(sub));
                                         fetch('/webpush/save_information/', {
                                             method: 'POST',
+                                            credentials: 'same-origin',
                                             headers: {
                                                 'Content-Type': 'application/json',
-                                                'X-CSRFToken': '{{ csrf_token }}'
+                                                'X-CSRFToken': getCsrfTokenForNotif() || '{{ csrf_token }}'
                                             },
                                             body: JSON.stringify({
                                                 status_type: 'subscribe',

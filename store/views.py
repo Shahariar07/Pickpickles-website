@@ -1426,3 +1426,14 @@ def meta_view_content_capi_ajax(request):
         pass
 
     return JsonResponse({'ok': True})
+
+
+def custom_csrf_failure_view(request, reason=""):
+    """
+    Friendly CSRF failure handler so installed Mobile PWAs or bfcache-restored tabs
+    never get stuck on a raw 403 Forbidden screen — refreshes the page with a new CSRF token.
+    """
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in (request.headers.get('accept') or ''):
+        return JsonResponse({'success': False, 'error': 'Session expired. Please refresh and try again.'}, status=403)
+    messages.warning(request, 'সেশন রিফ্রেশ হয়েছে—অনুগ্রহ করে আবার চেষ্টা করুন।')
+    return redirect(request.get_full_path() or 'store:index')
