@@ -347,8 +347,16 @@ class Product(models.Model):
             for ext in ['.webp', '.jpg', '.png', '.jpeg']:
                 candidates.append(f"products/{base}{ext}")
 
-        # Check each candidate on disk in the main products folder
+        # Prefer .webp sibling first for every candidate (huge speed & PageSpeed LCP win)
+        prioritized = []
         for rel_path in candidates:
+            root_p, ext_p = os.path.splitext(rel_path)
+            if ext_p.lower() != '.webp':
+                prioritized.append(f"{root_p}.webp")
+            prioritized.append(rel_path)
+
+        # Check each candidate on disk in the main products folder
+        for rel_path in prioritized:
             try:
                 local_path = os.path.join(settings.MEDIA_ROOT, rel_path.replace('/', os.sep))
                 if os.path.exists(local_path):

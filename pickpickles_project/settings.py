@@ -302,6 +302,7 @@ ORDER_RATE_LIMIT_PER_IP_HOURLY = int(os.environ.get('ORDER_RATE_LIMIT_PER_IP_HOU
 REVIEW_RATE_LIMIT_PER_IP_HOURLY = int(os.environ.get('REVIEW_RATE_LIMIT_PER_IP_HOURLY', 3))
 
 # Application Cache (sized for rate-limiting & courier API caching)
+WHITENOISE_MAX_AGE = 2592000
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',

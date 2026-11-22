@@ -25,12 +25,13 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="apple-touch-icon" href="{% static 'images/icon-192.png' %}">
 
-    <!-- Google Fonts -->
+    <!-- Google Fonts (non-render-blocking) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
         href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap"
-        rel="stylesheet">
+        rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet"></noscript>
 
     <!-- FontAwesome CDN (non-render-blocking) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'">
@@ -755,7 +756,7 @@
     </script>
 
     <!-- Main JavaScript with Auto Versioning (Cache Busting) -->
-    <script src="{% static 'js/main.js' %}?v=no_cart_autopop_20261113_{{ STATIC_VERSION }}"></script>
+    <script src="{% static 'js/main.js' %}?v=no_cart_autopop_20261113_{{ STATIC_VERSION }}" defer></script>
     <script>
         // Ensure drawer footer with Proceed to Checkout is visible when cart has items
         document.addEventListener('DOMContentLoaded', function() {

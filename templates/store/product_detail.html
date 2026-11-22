@@ -274,9 +274,9 @@
 
                 <div class="flex items-center gap-3">
                     <div class="flex items-center border border-slate-300 rounded-2xl bg-white overflow-hidden p-1 shadow-2xs shrink-0">
-                        <button type="button" onclick="adjustProductQty(-1)" class="w-10 h-10 flex items-center justify-center text-lg font-black text-slate-700 hover:bg-slate-100 active:bg-slate-200 rounded-xl transition cursor-pointer">-</button>
-                        <input type="number" name="quantity" id="productQtyInput" value="1" min="1" max="20" class="w-12 text-center font-display font-black text-base border-0 focus:ring-0 text-slate-950 p-0">
-                        <button type="button" onclick="adjustProductQty(1)" class="w-10 h-10 flex items-center justify-center text-lg font-black text-slate-700 hover:bg-slate-100 active:bg-slate-200 rounded-xl transition cursor-pointer">+</button>
+                        <button type="button" onclick="adjustProductQty(-1)" aria-label="Decrease quantity" class="w-10 h-10 flex items-center justify-center text-lg font-black text-slate-700 hover:bg-slate-100 active:bg-slate-200 rounded-xl transition cursor-pointer">-</button>
+                        <input type="number" name="quantity" id="productQtyInput" aria-label="Quantity" value="1" min="1" max="20" class="w-12 text-center font-display font-black text-base border-0 focus:ring-0 text-slate-950 p-0">
+                        <button type="button" onclick="adjustProductQty(1)" aria-label="Increase quantity" class="w-10 h-10 flex items-center justify-center text-lg font-black text-slate-700 hover:bg-slate-100 active:bg-slate-200 rounded-xl transition cursor-pointer">+</button>
                     </div>
 
                     <button type="submit" class="flex-1 bg-gradient-to-r from-[#15803d] to-[#0f4826] hover:from-[#166534] hover:to-[#092d18] active:scale-[0.99] text-white font-display font-black text-sm sm:text-base py-3.5 px-6 rounded-2xl shadow-lg shadow-emerald-800/20 flex items-center justify-center gap-2 transition-all cursor-pointer">
@@ -432,7 +432,7 @@
                     <button type="button" 
                             onclick="openProdReviewLightbox('{{ r.image_url }}', '{{ r.reviewer_name|escapejs }}')" 
                             class="relative group/img block w-full rounded-xl overflow-hidden border border-emerald-200 bg-gray-50 aspect-16/9 cursor-pointer shadow-2xs hover:shadow-sm transition">
-                        <img src="{{ r.image_url }}" alt="Review photo by {{ r.reviewer_name }}" class="w-full h-full object-cover group-hover/img:scale-105 transition duration-300">
+                        <img src="{{ r.image_url }}" alt="Review photo by {{ r.reviewer_name }}" class="w-full h-full object-cover group-hover/img:scale-105 transition duration-300" loading="lazy" decoding="async">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end justify-between p-2 text-white">
                             <span class="inline-flex items-center gap-1 text-[9px] font-black bg-black/60 backdrop-blur-xs px-2 py-0.5 rounded-full border border-white/20 text-white">
                                 <i class="fa-solid fa-camera text-amber-400"></i> Screenshot / Photo
@@ -583,7 +583,7 @@ function closeProdReviewLightbox(e) {
     <div class="relative max-w-2xl w-full max-h-[92vh] flex flex-col items-center" onclick="event.stopPropagation()">
         <div class="w-full flex items-center justify-between pb-2 text-white">
             <span id="prodReviewLightboxName" class="text-xs sm:text-sm font-black truncate">Customer Review Screenshot</span>
-            <button type="button" onclick="closeProdReviewLightbox()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm transition cursor-pointer">
+            <button type="button" onclick="closeProdReviewLightbox()" aria-label="Close review image" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm transition cursor-pointer">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
@@ -596,7 +596,7 @@ function closeProdReviewLightbox(e) {
 <!-- Mobile Sticky Bottom Action Bar (Instant 1-Tap Add to Bag) -->
 <div class="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-3 shadow-2xl flex items-center justify-between gap-3">
     <div class="flex items-center gap-2.5 min-w-0">
-        <img src="{{ product.primary_image_url }}" alt="{{ product.name }}" class="w-10 h-10 rounded-xl object-cover border border-slate-200 shrink-0">
+        <img src="{{ product.primary_image_url }}" alt="{{ product.name }}" class="w-10 h-10 rounded-xl object-cover border border-slate-200 shrink-0" loading="lazy" decoding="async">
         <div class="min-w-0">
             <span class="font-display font-black text-sm text-emerald-950 block leading-tight">৳{{ product.price_bdt|floatformat:0 }}</span>
             <span class="text-[10px] text-slate-500 font-bold block truncate">{{ product.jar_weight_grams }}g • ❄️ Refrigerate</span>
