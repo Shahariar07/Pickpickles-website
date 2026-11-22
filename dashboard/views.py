@@ -7246,14 +7246,24 @@ def sms_campaign_manager(request):
 @login_required(login_url='dashboard:login')
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def sms_history_manager(request):
+    from datetime import datetime
+    from django.core.paginator import Paginator
     from dashboard.sms_service import get_order_sms_history
 
     type_filter = (request.GET.get('type') or 'ALL').strip().upper()
     q = (request.GET.get('q') or '').strip()
+    date_filter = (request.GET.get('date') or '').strip()
 
     logs = get_order_sms_history()
     if type_filter != 'ALL':
         logs = [item for item in logs if (item.get('sms_type') or '').upper() == type_filter]
+
+    if date_filter:
+        try:
+            target_date_str = datetime.strptime(date_filter, '%Y-%m-%d').strftime('%d %b %Y')
+            logs = [item for item in logs if target_date_str in str(item.get('sent_at') or '')]
+        except ValueError:
+            date_filter = ''
 
     if q:
         q_low = q.lower()
@@ -7271,12 +7281,18 @@ def sms_history_manager(request):
                 filtered.append(item)
         logs = filtered
 
+    paginator = Paginator(logs, 25)
+    page_number = request.GET.get('page') or 1
+    page_obj = paginator.get_page(page_number)
+
     return render(request, 'dashboard/sms_history.html', {
         'title': 'SMS History',
-        'sms_history': logs,
-        'total_count': len(logs),
+        'sms_history': page_obj,
+        'page_obj': page_obj,
+        'total_count': paginator.count,
         'type_filter': type_filter,
         'q': q,
+        'date_filter': date_filter,
     })
 
 

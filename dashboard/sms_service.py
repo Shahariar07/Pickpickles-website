@@ -240,9 +240,29 @@ def _get_order_sms_history_path():
     return os.path.join(settings.MEDIA_ROOT, 'order_sms_history.json')
 
 
-def get_order_sms_history() -> list:
+def _parse_sent_at_dt(sent_at_str: str):
+    from datetime import datetime
+    from django.utils import timezone
+    raw = (sent_at_str or '').strip()
+    if raw:
+        for fmt in ('%d %b %Y, %I:%M %p', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M'):
+            try:
+                dt = datetime.strptime(raw, fmt)
+                return timezone.make_aware(dt, timezone.get_current_timezone())
+            except Exception:
+                continue
+    return timezone.now()
+
+
+def _read_json_sms_history_raw() -> tuple[list, bool]:
+    """
+    Read combined history from order_sms_history.json and legacy sms_campaign_history.json.
+    Returns (entries_list, read_ok) where read_ok is False if the primary JSON file exists
+    and failed to parse (so callers never overwrite corrupted/locked files with an empty list).
+    """
     import os, json
     history = []
+    read_ok = True
     path = _get_order_sms_history_path()
     if os.path.exists(path):
         try:
@@ -251,7 +271,7 @@ def get_order_sms_history() -> list:
                 if isinstance(data, list):
                     history = data
         except Exception:
-            pass
+            read_ok = False
 
     legacy_path = os.path.join(settings.MEDIA_ROOT, 'sms_campaign_history.json')
     if os.path.exists(legacy_path):
@@ -281,6 +301,71 @@ def get_order_sms_history() -> list:
                             })
         except Exception:
             pass
+    return history, read_ok
+
+
+def _sync_json_history_to_db():
+    """
+    One-time / incremental import from JSON history files into SMSLog DB table
+    so previous dates' SMS history is never lost.
+    """
+    try:
+        from django.db import OperationalError, ProgrammingError
+        from dashboard.models import SMSLog
+        existing_sigs = set(
+            SMSLog.objects.values_list('sent_at_display', 'phone', 'sms_type', 'message')
+        )
+    except Exception:
+        return False
+
+    json_entries, _ = _read_json_sms_history_raw()
+    if not json_entries:
+        return True
+
+    to_create = []
+    for item in json_entries:
+        sent_at = str(item.get('sent_at') or '').strip()
+        phone = str(item.get('phone') or '').strip()
+        sms_type = str(item.get('sms_type') or 'PENDING').strip()
+        message = str(item.get('message') or '')
+        sig = (sent_at, phone, sms_type, message)
+        if sig in existing_sigs:
+            continue
+        existing_sigs.add(sig)
+        recs = item.get('recipients') or []
+        to_create.append(SMSLog(
+            sms_type=sms_type[:32],
+            sms_type_label=str(item.get('sms_type_label') or ORDER_SMS_TYPE_LABELS.get(sms_type, sms_type))[:64],
+            order_number=str(item.get('order_number') or '')[:64],
+            customer_name=str(item.get('customer_name') or '')[:150],
+            phone=phone[:40],
+            audience_label=str(item.get('audience_label') or '')[:120],
+            recipient_count=int(item.get('recipient_count') or (len(recs) if recs else 1)),
+            recipients_json=recs,
+            message=message,
+            success=bool(item.get('success')),
+            status_message=str(item.get('status_message') or ''),
+            sent_by=str(item.get('sent_by') or '')[:120],
+            sent_at_display=sent_at[:64],
+            created_at=_parse_sent_at_dt(sent_at),
+        ))
+
+    if to_create:
+        try:
+            SMSLog.objects.bulk_create(to_create)
+        except Exception:
+            pass
+    return True
+
+
+def get_order_sms_history() -> list:
+    if _sync_json_history_to_db():
+        try:
+            from dashboard.models import SMSLog
+            return [log.to_dict() for log in SMSLog.objects.all()]
+        except Exception:
+            pass
+    history, _ = _read_json_sms_history_raw()
     return history
 
 
@@ -294,13 +379,48 @@ ORDER_SMS_TYPE_LABELS = {
 
 
 def _save_sms_history_entry(entry: dict):
-    import json
-    history = get_order_sms_history()
-    history.insert(0, entry)
-    history = history[:2000]
+    import os, json, tempfile
+
+    # 1. Persist to database (primary, concurrency-safe, unlimited retention)
     try:
-        with open(_get_order_sms_history_path(), 'w', encoding='utf-8') as f:
-            json.dump(history, f, ensure_ascii=False, indent=2)
+        from dashboard.models import SMSLog
+        sent_at = str(entry.get('sent_at') or '').strip()
+        recs = entry.get('recipients') or []
+        SMSLog.objects.create(
+            sms_type=str(entry.get('sms_type') or 'PENDING')[:32],
+            sms_type_label=str(entry.get('sms_type_label') or '')[:64],
+            order_number=str(entry.get('order_number') or '')[:64],
+            customer_name=str(entry.get('customer_name') or '')[:150],
+            phone=str(entry.get('phone') or '')[:40],
+            audience_label=str(entry.get('audience_label') or '')[:120],
+            recipient_count=int(entry.get('recipient_count') or (len(recs) if recs else 1)),
+            recipients_json=recs,
+            message=str(entry.get('message') or ''),
+            success=bool(entry.get('success')),
+            status_message=str(entry.get('status_message') or ''),
+            sent_by=str(entry.get('sent_by') or '')[:120],
+            sent_at_display=sent_at[:64],
+            created_at=_parse_sent_at_dt(sent_at),
+        )
+    except Exception:
+        pass
+
+    # 2. Mirror atomically to JSON without truncation (never overwrite if read failed)
+    history, read_ok = _read_json_sms_history_raw()
+    if not read_ok:
+        return
+    history.insert(0, entry)
+    path = _get_order_sms_history_path()
+    try:
+        dir_name = os.path.dirname(path)
+        fd, tmp_path = tempfile.mkstemp(prefix='sms_hist_', suffix='.tmp', dir=dir_name)
+        try:
+            with os.fdopen(fd, 'w', encoding='utf-8') as f:
+                json.dump(history, f, ensure_ascii=False, indent=2)
+            os.replace(tmp_path, path)
+        except Exception:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
     except Exception:
         pass
 

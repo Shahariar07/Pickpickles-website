@@ -434,3 +434,46 @@ class PriceHistory(models.Model):
         return f"{self.product.name}: BDT {self.old_price} -> {self.new_price} ({sign}{self.price_delta})"
 
 
+class SMSLog(models.Model):
+    sms_type = models.CharField(max_length=32, db_index=True, default='PENDING')
+    sms_type_label = models.CharField(max_length=64, default='Order Placed')
+    order_number = models.CharField(max_length=64, blank=True, default='', db_index=True)
+    customer_name = models.CharField(max_length=150, blank=True, default='')
+    phone = models.CharField(max_length=40, blank=True, default='', db_index=True)
+    audience_label = models.CharField(max_length=120, blank=True, default='')
+    recipient_count = models.PositiveIntegerField(default=1)
+    recipients_json = models.JSONField(default=list, blank=True)
+    message = models.TextField(blank=True, default='')
+    success = models.BooleanField(default=False, db_index=True)
+    status_message = models.TextField(blank=True, default='')
+    sent_by = models.CharField(max_length=120, blank=True, default='')
+    sent_at_display = models.CharField(max_length=64, blank=True, default='')
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+        verbose_name = 'SMS Log'
+        verbose_name_plural = 'SMS Logs'
+
+    def to_dict(self):
+        return {
+            'sent_at': self.sent_at_display or timezone.localtime(self.created_at).strftime('%d %b %Y, %I:%M %p'),
+            'order_number': self.order_number,
+            'customer_name': self.customer_name,
+            'phone': self.phone,
+            'sms_type': self.sms_type,
+            'sms_type_label': self.sms_type_label,
+            'audience_label': self.audience_label,
+            'recipient_count': self.recipient_count,
+            'recipients': self.recipients_json or [],
+            'message': self.message,
+            'success': self.success,
+            'status_message': self.status_message,
+            'sent_by': self.sent_by,
+        }
+
+    def __str__(self):
+        target = f"#{self.order_number}" if self.order_number else (self.phone or f"{self.recipient_count} recipients")
+        return f"[{self.sms_type_label}] {target} ({'Sent' if self.success else 'Failed'})"
+
+
