@@ -925,13 +925,21 @@ class Order(models.Model):
                 cand_str = f"PKP-{candidate:05d}"
             self.order_number = cand_str
 
-        # Auto-detect delivery zone and city from delivery address
+        # Auto-detect delivery zone and city from delivery address on new orders only;
+        # never overwrite explicit admin edits on existing orders.
         if self.delivery_address:
-            auto_zone, auto_city = detect_dhaka_and_city(self.delivery_address)
-            if not self.delivery_zone or (self.delivery_zone == 'INSIDE_DHAKA' and auto_zone == 'OUTSIDE_DHAKA'):
-                self.delivery_zone = auto_zone
-            if not self.delivery_city or self.delivery_city in ('Dhaka', 'Outside Dhaka'):
-                self.delivery_city = auto_city
+            if not self.pk:
+                auto_zone, auto_city = detect_dhaka_and_city(self.delivery_address)
+                if not self.delivery_zone or (self.delivery_zone == 'INSIDE_DHAKA' and auto_zone == 'OUTSIDE_DHAKA'):
+                    self.delivery_zone = auto_zone
+                if not self.delivery_city or self.delivery_city in ('Dhaka', 'Outside Dhaka'):
+                    self.delivery_city = auto_city
+            elif not self.delivery_zone or not self.delivery_city:
+                auto_zone, auto_city = detect_dhaka_and_city(self.delivery_address)
+                if not self.delivery_zone:
+                    self.delivery_zone = auto_zone
+                if not self.delivery_city:
+                    self.delivery_city = auto_city
 
         # Synchronize customer instruction and delivery instruction
         clean_cust_notes = (self.customer_notes or '').strip()
