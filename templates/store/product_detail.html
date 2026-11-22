@@ -80,8 +80,8 @@
         
         <!-- Left: Product Image Box -->
         <div class="lg:col-span-6 space-y-4">
-            <div class="relative aspect-square rounded-3xl overflow-hidden bg-white border border-gray-200 shadow-md flex items-center justify-center p-4">
-                <img src="{{ product.primary_image_url }}" alt="{{ product.name }}" class="w-full h-full object-cover rounded-2xl hover:scale-105 transition-transform duration-500" id="mainProductImg" loading="eager" fetchpriority="high" decoding="async" width="1024" height="1024">
+            <div class="relative aspect-square w-full rounded-3xl overflow-hidden bg-white border border-gray-200 shadow-md">
+                <img src="{{ product.primary_image_url }}" alt="{{ product.name }}" class="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-500" id="mainProductImg" loading="eager" fetchpriority="high" decoding="async">
 
                 <!-- Top Left Badge: Pre-Order / Custom Promotional Badge, or Best Seller / Spice Badge -->
                 {% if not product.is_in_stock or product.stock_count <= 0 %}
