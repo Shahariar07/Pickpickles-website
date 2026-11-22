@@ -1383,6 +1383,104 @@ class Order(models.Model):
         # Otherwise, keep original digits for foreign numbers entered without +
         return digits
 
+    def get_discount_breakdown(self):
+        """
+        Return a list of {'label': str, 'amount': Decimal} dicts describing
+        the exact offer(s) that make up self.discount_amount.
+        """
+        total_disc = Decimal(str(self.discount_amount or '0.00'))
+        if total_disc <= Decimal('0.00'):
+            return []
+
+        promo = PromotionSetting.get_settings()
+        subtotal = Decimal(str(self.subtotal or '0.00'))
+
+        # Calculate candidate advance payment discount (only if non-COD)
+        adv_disc = Decimal('0.00')
+        adv_label = promo.get_advance_payment_label() if promo else "Advance Payment Discount"
+        if (self.payment_method or 'COD').strip().upper() != 'COD':
+            adv_disc = promo.calculate_advance_payment_discount(subtotal, self.payment_method)
+            # Fallback if advance payment offer was turned off after order placement
+            if adv_disc <= Decimal('0.00') and subtotal > Decimal('0.00'):
+                pct = promo.advance_payment_discount_percent or Decimal('5.00')
+                if pct <= Decimal('0.00'):
+                    pct = Decimal('5.00')
+                from decimal import ROUND_HALF_UP
+                inferred_adv = min(subtotal, (subtotal * pct) / Decimal('100.00')).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+                if abs(total_disc - inferred_adv) <= Decimal('1.00') and not self.coupon_code:
+                    adv_disc = total_disc
+                    pct_str = str(int(pct)) if pct == int(pct) else f"{pct:.2f}".rstrip('0').rstrip('.')
+                    adv_label = f"{pct_str}% Advance Payment OFF"
+
+        # Calculate candidate bundle discount
+        items_count = self.total_items_count if self.pk else 0
+        bundle_disc = promo.calculate_discount(items_count, subtotal) if promo else Decimal('0.00')
+        if (
+            bundle_disc <= Decimal('0.00')
+            and promo
+            and promo.bundle_discount_amount > Decimal('0.00')
+            and not self.coupon_code
+        ):
+            # Infer bundle discount for historical orders if bundle offer was later toggled off
+            matches_bundle_qty = (
+                items_count == promo.bundle_min_jars
+                if promo.bundle_apply_mode == 'EXACT'
+                else items_count >= promo.bundle_min_jars
+            )
+            if matches_bundle_qty and total_disc in (
+                promo.bundle_discount_amount,
+                promo.bundle_discount_amount + adv_disc,
+            ):
+                bundle_disc = promo.bundle_discount_amount
+        bundle_label = promo.get_discount_label() if promo else "Bundle Offer Discount"
+
+        coupon_label = f"Coupon ({self.coupon_code})" if self.coupon_code else ""
+
+        # Exact single-source matches
+        if adv_disc > Decimal('0.00') and total_disc == adv_disc:
+            return [{'label': adv_label, 'amount': adv_disc}]
+
+        if bundle_disc > Decimal('0.00') and total_disc == bundle_disc:
+            return [{'label': bundle_label, 'amount': bundle_disc}]
+
+        # Exact combined bundle + advance payment
+        if bundle_disc > Decimal('0.00') and adv_disc > Decimal('0.00') and total_disc == (bundle_disc + adv_disc):
+            return [
+                {'label': bundle_label, 'amount': bundle_disc},
+                {'label': adv_label, 'amount': adv_disc},
+            ]
+
+        # Coupon + advance payment (or bundle + coupon + advance)
+        breakdown = []
+        remaining = total_disc
+
+        if bundle_disc > Decimal('0.00') and remaining >= bundle_disc and not (
+            self.coupon_code and adv_disc > Decimal('0.00') and total_disc < (bundle_disc + adv_disc)
+        ):
+            breakdown.append({'label': bundle_label, 'amount': bundle_disc})
+            remaining -= bundle_disc
+
+        if adv_disc > Decimal('0.00') and remaining >= adv_disc:
+            breakdown.append({'label': adv_label, 'amount': adv_disc})
+            remaining -= adv_disc
+
+        if remaining > Decimal('0.00'):
+            if coupon_label:
+                breakdown.append({'label': coupon_label, 'amount': remaining})
+            elif not breakdown:
+                breakdown.append({'label': 'Special Discount', 'amount': remaining})
+            else:
+                breakdown.append({'label': 'Extra Discount', 'amount': remaining})
+
+        return breakdown
+
+    def get_discount_label(self) -> str:
+        """Return a concise combined label of applied discounts."""
+        items = self.get_discount_breakdown()
+        if not items:
+            return ""
+        return " + ".join(item['label'] for item in items)
+
     def _get_whatsapp_price_details_text(self):
         """
         Returns a concise, structured breakdown of the order financials:
@@ -1401,8 +1499,8 @@ class Order(models.Model):
             f"• Subtotal: ৳{_fmt(self.subtotal)}",
             f"• Delivery Fee: ৳{_fmt(self.delivery_fee)}",
         ]
-        if self.discount_amount and self.discount_amount > Decimal('0.00'):
-            lines.append(f"• Discount: -৳{_fmt(self.discount_amount)}")
+        for disc in self.get_discount_breakdown():
+            lines.append(f"• {disc['label']}: -৳{_fmt(disc['amount'])}")
 
         if self.payment_status == 'PAID':
             pay_str = "Paid"

@@ -425,12 +425,12 @@
                 <span>Subtotal ({{ order.total_items_count }} items):</span>
                 <span class="font-black">Tk {{ order.subtotal|floatformat:0 }}</span>
             </div>
-            {% if order.discount_amount > 0 %}
+            {% for disc in order.get_discount_breakdown %}
             <div class="flex justify-between text-emerald-800 font-bold">
-                <span>Special Discount (2 Jars):</span>
-                <span class="font-black">-Tk {{ order.discount_amount|floatformat:0 }}</span>
+                <span>{{ disc.label }}:</span>
+                <span class="font-black">-Tk {{ disc.amount|floatformat:0 }}</span>
             </div>
-            {% endif %}
+            {% endfor %}
             <div class="flex justify-between">
                 <span>Delivery ({{ order.delivery_city }}):</span>
                 <span class="font-black">Tk {{ order.delivery_fee|floatformat:0 }}</span>
