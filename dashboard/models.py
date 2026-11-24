@@ -477,3 +477,61 @@ class SMSLog(models.Model):
         return f"[{self.sms_type_label}] {target} ({'Sent' if self.success else 'Failed'})"
 
 
+class SMSTemplateSetting(models.Model):
+    DEFAULT_PLACED = (
+        "Pick Pickles: Order #{order_number} placed! "
+        "Total: Tk {total}. We will confirm & pack soon. Track: www.pickpickles.xyz/track/"
+    )
+    DEFAULT_DISPATCHED = (
+        "Pick Pickles: Order #{order_number} dispatched! "
+        "{payment}. Please refrigerate upon arrival! Track: www.pickpickles.xyz/track/"
+    )
+    DEFAULT_REFILL = (
+        "Pick Pickles: Time for a pickle refill? Enjoy 5% OFF on your next order "
+        "with code WINTER5 (Min. 2 jars). Order: www.pickpickles.xyz"
+    )
+
+    placed_enabled = models.BooleanField(default=True, help_text="Send auto SMS when customer places an order.")
+    placed_template = models.TextField(default=DEFAULT_PLACED)
+    dispatched_enabled = models.BooleanField(default=True, help_text="Send auto SMS when order is marked Out for Delivery.")
+    dispatched_template = models.TextField(default=DEFAULT_DISPATCHED)
+    refill_template = models.TextField(default=DEFAULT_REFILL)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'SMS Template Setting'
+        verbose_name_plural = 'SMS Template Settings'
+
+    @classmethod
+    def get_settings(cls):
+        try:
+            obj = cls.objects.first()
+            if not obj:
+                obj = cls.objects.create()
+            return obj
+        except Exception:
+            return cls()
+
+    @staticmethod
+    def render_message(template_str: str, order=None) -> str:
+        msg = (template_str or '').strip()
+        if not order:
+            return msg
+        total_int = int(round(float(getattr(order, 'total_amount', 0) or 0)))
+        pay_text = "Payment: PAID" if getattr(order, 'payment_status', '') == 'PAID' else f"COD: Tk {total_int}"
+        status_label = order.get_order_status_display() if hasattr(order, 'get_order_status_display') else getattr(order, 'order_status', '')
+        replacements = {
+            '{order_number}': str(getattr(order, 'order_number', '') or ''),
+            '{customer_name}': str(getattr(order, 'customer_name', '') or '').strip(),
+            '{total}': str(total_int),
+            '{payment}': pay_text,
+            '{status}': str(status_label or ''),
+        }
+        for k, v in replacements.items():
+            msg = msg.replace(k, v)
+        return msg
+
+    def __str__(self):
+        return "Auto SMS Templates Configuration"
+
+

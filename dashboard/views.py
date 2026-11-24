@@ -1007,6 +1007,8 @@ def dashboard_index(request):
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
 def orders_list(request):
+    if request.method == 'GET':
+        request.session['last_orders_list_url'] = request.get_full_path()
     if request.method == 'POST' and request.POST.get('action') == 'bulk_update_status':
         if not can_user_edit(request.user):
             messages.error(request, 'Permission Denied: অর্ডার স্ট্যাটাস পরিবর্তন করার অনুমতি নেই। (Status editing restricted.)')
@@ -1047,8 +1049,7 @@ def orders_list(request):
                     updated_count += 1
             status_label = dict(Order.ORDER_STATUS_CHOICES).get(new_status, new_status)
             if updated_count > 0:
-                wa_hint = " (Tip: Select Shipped orders and use the WhatsApp Queue to send messages one by one.)" if new_status == 'OUT_FOR_DELIVERY' else ""
-                messages.success(request, f"Updated {updated_count} order(s) to '{status_label}'{wa_hint}")
+                messages.success(request, f"Updated {updated_count} order(s) to '{status_label}'")
                 if sms_sent_count > 0:
                     messages.info(request, f"📱 Auto SMS sent to {sms_sent_count} customer(s) via BulkSMSBD.")
                 if sms_failed_count > 0:
@@ -1507,6 +1508,7 @@ def order_detail(request, order_number):
             item.fifo_all_sold_out = p_fifo.get('all_sold_out', False)
 
     from dashboard.sms_service import get_order_sms_sent_statuses
+    back_to_orders_url = request.session.get('last_orders_list_url') or reverse('dashboard:orders')
     return render(request, 'dashboard/order_detail.html', {
         'order': order,
         'meta_sent_info': meta_sent_info,
@@ -1514,6 +1516,7 @@ def order_detail(request, order_number):
         'all_products': Product.objects.all().order_by('-is_in_stock', 'name'),
         'promo_setting': PromotionSetting.get_settings(),
         'sms_sent_statuses': get_order_sms_sent_statuses(order.order_number),
+        'back_to_orders_url': back_to_orders_url,
         'cancel_reason_choices': Order.CANCEL_REASON_CHOICES,
     })
 
@@ -1965,6 +1968,36 @@ def order_invoice(request, order_number):
             p_fifo = products_fifo_map.get(item.product_id, {})
             item.fifo_active_batch = p_fifo.get('active_batch')
     return render(request, 'dashboard/order_invoice.html', {'order': order})
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def bulk_order_invoices(request):
+    raw_orders = (request.GET.get('orders') or '').strip()
+    order_numbers = [o.strip() for o in raw_orders.split(',') if o.strip()]
+    orders = []
+    if order_numbers:
+        orders_map = {
+            o.order_number: o
+            for o in Order.objects.prefetch_related('items').filter(order_number__in=order_numbers, is_deleted=False)
+        }
+        orders = [orders_map[num] for num in order_numbers if num in orders_map]
+
+    if not orders:
+        messages.warning(request, 'প্রিন্ট করার জন্য অন্তত একটি অর্ডার সিলেক্ট করুন।')
+        return redirect('dashboard:orders')
+
+    from dashboard.batch_fifo import calculate_all_products_fifo
+    products_fifo_map = calculate_all_products_fifo()
+    for ord_obj in orders:
+        for item in ord_obj.items.all():
+            if item.product_id:
+                p_fifo = products_fifo_map.get(item.product_id, {})
+                item.fifo_active_batch = p_fifo.get('active_batch')
+
+    return render(request, 'dashboard/bulk_order_invoices.html', {
+        'orders': orders,
+        'orders_count': len(orders),
+    })
 
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
@@ -4737,6 +4770,103 @@ def mark_feedback_reminder_sent(request, order_number):
 
 
 @user_passes_test(is_staff_user, login_url='dashboard:login')
+def bulk_send_refill_sms(request):
+    """
+    Send Refill Reminder SMS in bulk to either selected order_numbers or all pending eligible orders.
+    """
+    if request.method != 'POST':
+        return redirect('dashboard:feedback_reminders')
+
+    if not can_user_edit(request.user):
+        messages.error(request, 'Permission Denied: বাল্ক রিফিল SMS পাঠানোর অনুমতি নেই।')
+        return redirect('dashboard:feedback_reminders')
+
+    from dashboard.models import SMSTemplateSetting
+    from dashboard.sms_service import send_bulksmsbd_bulk, normalize_bd_phone, log_campaign_sms_event
+
+    mode = (request.POST.get('mode') or 'selected').strip()
+    days_param = request.POST.get('days', '30')
+    try:
+        min_days = max(1, int(days_param))
+    except (ValueError, TypeError):
+        min_days = 30
+
+    if mode == 'all_pending':
+        cutoff_date = timezone.now() - timedelta(days=min_days)
+        target_orders = list(
+            Order.objects.filter(
+                created_at__lte=cutoff_date,
+                feedback_request_sent_at__isnull=True,
+                is_deleted=False,
+            )
+            .exclude(order_status__in=['CANCELLED'])
+            .order_by('-created_at')
+        )
+        audience_label = f"All Pending Refill ({min_days}+ days)"
+    else:
+        raw_orders = request.POST.get('order_numbers', '')
+        order_numbers = [o.strip() for o in raw_orders.split(',') if o.strip()]
+        if not order_numbers:
+            messages.warning(request, 'কোনো অর্ডার সিলেক্ট করা হয়নি।')
+            return redirect('dashboard:feedback_reminders')
+        target_orders = list(
+            Order.objects.filter(order_number__in=order_numbers, is_deleted=False)
+        )
+        audience_label = f"Selected Refill ({len(target_orders)} orders)"
+
+    if not target_orders:
+        messages.info(request, 'পাঠানোর মতো কোনো অর্ডার পাওয়া যায়নি।')
+        return redirect('dashboard:feedback_reminders')
+
+    tpl_cfg = SMSTemplateSetting.get_settings()
+    msg = (tpl_cfg.refill_template or SMSTemplateSetting.DEFAULT_REFILL).strip()
+
+    unique_numbers = []
+    recipients_meta = []
+    seen_nums = set()
+    for ord_obj in target_orders:
+        norm = normalize_bd_phone(ord_obj.customer_phone)
+        if norm and norm not in seen_nums:
+            seen_nums.add(norm)
+            unique_numbers.append(norm)
+            recipients_meta.append({
+                'name': (ord_obj.customer_name or '').strip(),
+                'phone': norm,
+            })
+
+    if not unique_numbers:
+        messages.error(request, 'সিলেক্ট করা অর্ডারগুলোতে কোনো বৈধ বাংলাদেশি মোবাইল নম্বর পাওয়া যায়নি।')
+        return redirect('dashboard:feedback_reminders')
+
+    res = send_bulksmsbd_bulk(unique_numbers, msg)
+    log_campaign_sms_event(
+        audience_label=audience_label,
+        recipients=recipients_meta,
+        message=msg,
+        success=bool(res.get('success')),
+        status_message=res.get('message', ''),
+        sent_by=getattr(request.user, 'username', ''),
+    )
+
+    if res.get('success'):
+        from django.db.models.functions import Coalesce
+        now = timezone.now()
+        target_ids = [o.id for o in target_orders]
+        Order.objects.filter(id__in=target_ids).update(
+            feedback_request_sent_at=now,
+            feedback_request_count=Coalesce(F('feedback_request_count'), 0) + 1,
+        )
+        messages.success(
+            request,
+            f"✅ {res.get('sent_count', len(unique_numbers))} জন কাস্টমারকে একসাথে Refill Reminder SMS পাঠানো হয়েছে! ({len(target_orders)}টি অর্ডার Done-এ মুভ হয়েছে)"
+        )
+    else:
+        messages.error(request, f"❌ Bulk Refill SMS পাঠানো যায়নি: {res.get('message')}")
+
+    return redirect(request.META.get('HTTP_REFERER') or 'dashboard:feedback_reminders')
+
+
+@user_passes_test(is_staff_user, login_url='dashboard:login')
 def expense_manager(request):
     now = timezone.localtime(timezone.now())
     today = now.date()
@@ -7337,6 +7467,50 @@ def sms_campaign_manager(request):
         'order_sms_history': order_sms_history,
     }
     return render(request, 'dashboard/sms_campaign.html', context)
+
+
+@login_required(login_url='dashboard:login')
+@user_passes_test(is_staff_user, login_url='dashboard:login')
+def sms_templates_manager(request):
+    from dashboard.models import SMSTemplateSetting
+    tpl = SMSTemplateSetting.get_settings()
+
+    if request.method == 'POST':
+        if not can_user_edit(request.user):
+            messages.error(request, 'Permission Denied: SMS টেমপ্লেট এডিট করার অনুমতি নেই।')
+            return redirect('dashboard:sms_templates')
+
+        if request.POST.get('action') == 'reset_defaults':
+            tpl.placed_enabled = True
+            tpl.placed_template = SMSTemplateSetting.DEFAULT_PLACED
+            tpl.dispatched_enabled = True
+            tpl.dispatched_template = SMSTemplateSetting.DEFAULT_DISPATCHED
+            tpl.refill_template = SMSTemplateSetting.DEFAULT_REFILL
+            tpl.save()
+            messages.success(request, 'সব অটো SMS মেসেজ ডিফল্ট অবস্থায় রিসেট করা হয়েছে।')
+            return redirect('dashboard:sms_templates')
+
+        placed_msg = (request.POST.get('placed_template') or '').strip()
+        dispatched_msg = (request.POST.get('dispatched_template') or '').strip()
+        refill_msg = (request.POST.get('refill_template') or '').strip()
+
+        if not placed_msg or not dispatched_msg or not refill_msg:
+            messages.error(request, 'কোনো SMS বক্স খালি রাখা যাবে না।')
+            return redirect('dashboard:sms_templates')
+
+        tpl.placed_enabled = request.POST.get('placed_enabled') == 'on'
+        tpl.placed_template = placed_msg
+        tpl.dispatched_enabled = request.POST.get('dispatched_enabled') == 'on'
+        tpl.dispatched_template = dispatched_msg
+        tpl.refill_template = refill_msg
+        tpl.save()
+        messages.success(request, '✅ অটো SMS টেমপ্লেট সেভ করা হয়েছে! এখন থেকে নতুন অর্ডার ও ডেলিভারিতে আপনার দেওয়া মেসেজই যাবে।')
+        return redirect('dashboard:sms_templates')
+
+    return render(request, 'dashboard/sms_templates.html', {
+        'title': 'Auto SMS Templates',
+        'tpl': tpl,
+    })
 
 
 @login_required(login_url='dashboard:login')

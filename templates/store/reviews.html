@@ -205,17 +205,27 @@
                 <input type="hidden" name="next" value="{{ request.GET.next|default:'/#customer-reviews' }}">
                 {% csrf_token %}
 
+                {% if review_form.errors %}
+                <div class="bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl p-3.5 text-xs font-bold space-y-1">
+                    {% for field, errors in review_form.errors.items %}
+                        {% for err in errors %}
+                        <p class="flex items-start gap-1.5"><i class="fa-solid fa-circle-exclamation text-rose-600 mt-0.5 shrink-0"></i><span>{{ err }}</span></p>
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-black text-gray-900 mb-1.5">Your Full Name <span class="text-rose-500">*</span></label>
                         {{ review_form.reviewer_name }}
                     </div>
                     <div>
-                        <label class="block text-xs font-black text-gray-900 mb-1.5">Phone Number <span class="text-rose-500">*</span></label>
+                        <label class="block text-xs font-black text-gray-900 mb-1.5">Order Phone Number <span class="text-rose-500">*</span></label>
                         {{ review_form.reviewer_phone }}
                         <p class="text-[11px] text-emerald-800 bg-emerald-50/90 border border-emerald-200 rounded-lg px-2.5 py-1.5 mt-1.5 flex items-start gap-1.5 font-semibold leading-snug">
-                            <i class="fa-solid fa-lock text-emerald-600 mt-0.5 shrink-0 text-[10px]"></i>
-                            <span>Your phone number will never be shown publicly. It is strictly used to verify genuine customer purchases.</span>
+                            <i class="fa-solid fa-shield-halved text-emerald-600 mt-0.5 shrink-0 text-[10px]"></i>
+                            <span>Verified Buyers Only: Enter the phone number used in your delivered/shipped order. It will never be shown publicly.</span>
                         </p>
                     </div>
                 </div>

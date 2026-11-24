@@ -12,7 +12,7 @@
         <div class="px-5 py-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3">
             <!-- Left: Back + Order # + Status Badges + Date -->
             <div class="flex items-center gap-2.5 flex-wrap min-w-0">
-                <a href="{% url 'dashboard:orders' %}" class="h-9 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold px-3 rounded-xl inline-flex items-center gap-1.5 transition shrink-0 active:scale-95" title="Back to Orders">
+                <a href="{{ back_to_orders_url|default:'/dashboard/orders/' }}" class="h-9 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold px-3 rounded-xl inline-flex items-center gap-1.5 transition shrink-0 active:scale-95" title="Back to Orders">
                     <i class="fa-solid fa-arrow-left text-[11px]"></i>
                     <span>Orders</span>
                 </a>

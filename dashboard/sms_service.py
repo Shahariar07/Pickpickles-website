@@ -477,23 +477,23 @@ def send_order_status_sms(order, new_status: str, old_status: str = None, force:
     if not force and new_status == 'CONFIRMED':
         return {'success': False, 'skipped': True, 'message': 'Auto SMS on confirmation is disabled.'}
 
+    from dashboard.models import SMSTemplateSetting
+    tpl_cfg = SMSTemplateSetting.get_settings()
+
     total_int = int(round(float(order.total_amount or 0)))
     if new_status == 'PENDING':
-        msg = (
-            f"Pick Pickles: Order #{order.order_number} placed! "
-            f"Total: Tk {total_int}. We will confirm & pack soon. Track: www.pickpickles.xyz/track/"
-        )
+        if not force and not tpl_cfg.placed_enabled:
+            return {'success': False, 'skipped': True, 'message': 'Order Placed auto SMS is turned off.'}
+        msg = SMSTemplateSetting.render_message(tpl_cfg.placed_template or SMSTemplateSetting.DEFAULT_PLACED, order)
     elif new_status == 'CONFIRMED':
         msg = (
             f"Pick Pickles: Order #{order.order_number} confirmed! "
             f"Total: Tk {total_int}. Freshly packed for you. Track: www.pickpickles.xyz/track/"
         )
     elif new_status == 'OUT_FOR_DELIVERY':
-        pay_text = "Payment: PAID" if getattr(order, 'payment_status', '') == 'PAID' else f"COD: Tk {total_int}"
-        msg = (
-            f"Pick Pickles: Order #{order.order_number} dispatched! "
-            f"{pay_text}. Please refrigerate upon arrival! Track: www.pickpickles.xyz/track/"
-        )
+        if not force and not tpl_cfg.dispatched_enabled:
+            return {'success': False, 'skipped': True, 'message': 'Dispatched auto SMS is turned off.'}
+        msg = SMSTemplateSetting.render_message(tpl_cfg.dispatched_template or SMSTemplateSetting.DEFAULT_DISPATCHED, order)
     elif force:
         status_label = order.get_order_status_display() if hasattr(order, 'get_order_status_display') else new_status
         msg = (
@@ -521,10 +521,9 @@ def send_order_refill_reminder_sms(order):
     if not order or not getattr(order, 'customer_phone', None):
         return {'success': False, 'message': 'Customer phone number is missing.'}
 
-    msg = (
-        "Pick Pickles: Time for a pickle refill? Enjoy 5% OFF on your next order "
-        "with code WINTER5 (Min. 2 jars). Order: www.pickpickles.xyz"
-    )
+    from dashboard.models import SMSTemplateSetting
+    tpl_cfg = SMSTemplateSetting.get_settings()
+    msg = SMSTemplateSetting.render_message(tpl_cfg.refill_template or SMSTemplateSetting.DEFAULT_REFILL, order)
     try:
         res = send_bulksmsbd_bulk([order.customer_phone], msg)
         _log_order_sms_event(order, 'REFILL', msg, bool(res.get('success')), res.get('message', ''))

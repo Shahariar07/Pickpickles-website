@@ -278,4 +278,41 @@ class ReviewForm(forms.ModelForm):
         digits = ''.join(c for c in phone if c.isdigit())
         if len(digits) < 10:
             raise forms.ValidationError("Please enter a valid phone number (at least 10-11 digits, e.g. 017XXXXXXXX).")
+
+        last10 = digits[-10:]
+        from django.db.models import Q
+        from .models import Order
+
+        verified_phones = (
+            Order.objects.filter(is_deleted=False)
+            .filter(Q(order_status__in=['OUT_FOR_DELIVERY', 'DELIVERED']) | Q(payment_status='PAID'))
+            .exclude(order_status='CANCELLED')
+            .values_list('customer_phone', flat=True)
+        )
+        is_verified_buyer = any(
+            ''.join(c for c in str(p or '') if c.isdigit())[-10:] == last10
+            for p in verified_phones
+            if len(''.join(c for c in str(p or '') if c.isdigit())) >= 10
+        )
+        if not is_verified_buyer:
+            raise forms.ValidationError(
+                "শুধুমাত্র আমাদের আসল কাস্টমাররাই (যাদের অর্ডার শিপড বা ডেলিভার্ড হয়েছে) রিভিউ দিতে পারবেন। "
+                "অর্ডার করার সময় ব্যবহৃত ফোন নম্বরটি দিন। (Only verified Pickpickles customers can submit a review.)"
+            )
         return phone
+
+    def clean(self):
+        cleaned_data = super().clean()
+        phone = (cleaned_data.get('reviewer_phone') or '').strip()
+        product = cleaned_data.get('product')
+        digits = ''.join(c for c in phone if c.isdigit())
+        if len(digits) >= 10:
+            last10 = digits[-10:]
+            qs = Review.objects.filter(product=product)
+            for existing_phone in qs.values_list('reviewer_phone', flat=True):
+                ex_digits = ''.join(c for c in str(existing_phone or '') if c.isdigit())
+                if len(ex_digits) >= 10 and ex_digits[-10:] == last10:
+                    raise forms.ValidationError(
+                        "এই নম্বর থেকে এই প্রোডাক্টের জন্য ইতিমধ্যেই একটি রিভিউ জমা দেওয়া হয়েছে। (You have already submitted a review for this selection.)"
+                    )
+        return cleaned_data

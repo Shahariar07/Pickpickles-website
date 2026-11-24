@@ -1412,7 +1412,7 @@
 
 
 
-                <!-- Action Buttons: Pack List + WhatsApp Queue -->
+                <!-- Action Buttons: Pack List + Print Slips -->
 
                 <div class="flex items-center gap-1.5 shrink-0">
 
@@ -1422,7 +1422,7 @@
 
                         onclick="openBulkPackingModal()" 
 
-                        class="bg-amber-400 hover:bg-amber-300 text-slate-950 text-[11px] sm:text-xs font-black px-2.5 sm:px-3 py-1.5 sm:py-1 rounded-xl shadow-md transition flex items-center gap-1 cursor-pointer active:scale-95 shrink-0"
+                        class="bg-amber-400 hover:bg-amber-300 text-slate-950 text-[11px] sm:text-xs font-black px-2.5 sm:px-3 py-1.5 sm:py-1.5 rounded-xl shadow-md transition flex items-center gap-1 cursor-pointer active:scale-95 shrink-0 whitespace-nowrap"
 
                         title="সিলেক্ট করা অর্ডারের কিচেন ও প্যাকিং সামারি দেখুন"
 
@@ -1434,27 +1434,23 @@
 
                     </button>
 
-
-
                     <button 
 
                         type="button" 
 
-                        onclick="openBulkWhatsAppModal()" 
+                        onclick="openBulkPrintInvoices()" 
 
-                        class="bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] sm:text-xs font-extrabold px-2.5 sm:px-3 py-1.5 sm:py-1 rounded-xl shadow-md transition flex items-center gap-1 cursor-pointer active:scale-95 shrink-0"
+                        class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-[11px] sm:text-xs font-black px-2.5 sm:px-3 py-1.5 sm:py-1.5 rounded-xl shadow-md transition flex items-center gap-1 cursor-pointer active:scale-95 shrink-0 whitespace-nowrap"
 
-                        title="Open WhatsApp Queue"
+                        title="সিলেক্ট করা সব অর্ডারের স্লিপ একসাথে প্রিন্ট করুন"
 
                     >
 
-                        <i class="fa-brands fa-whatsapp text-xs sm:text-sm"></i>
+                        <i class="fa-solid fa-print text-xs"></i>
 
-                        <span>WA <span class="hidden sm:inline">Queue</span></span>
+                        <span>Print <span class="hidden sm:inline">Slips</span></span>
 
                     </button>
-
-
 
                     <button 
 
@@ -1462,7 +1458,7 @@
 
                         onclick="clearOrderSelection()" 
 
-                        class="hidden sm:flex bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold w-6 h-6 rounded-full items-center justify-center transition cursor-pointer shrink-0"
+                        class="hidden sm:flex bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold w-7 h-7 rounded-full items-center justify-center transition cursor-pointer shrink-0"
 
                         title="Clear selection"
 
@@ -5280,7 +5276,20 @@ function printBulkPackingSlip() {
 
 }
 
-
+function openBulkPrintInvoices() {
+    const checkedBoxes = getUniqueSelectedOrderCheckboxes();
+    if (checkedBoxes.length === 0) {
+        if (typeof showDashboardNotification === 'function') {
+            showDashboardNotification('⚠️ প্রিন্ট করার জন্য অন্তত একটি অর্ডার সিলেক্ট করুন।', 'warning');
+        } else {
+            alert('প্রিন্ট করার জন্য অন্তত একটি অর্ডার সিলেক্ট করুন।');
+        }
+        return;
+    }
+    const orderNums = checkedBoxes.map(cb => cb.value).filter(Boolean);
+    const url = `{% url 'dashboard:bulk_order_invoices' %}?orders=${encodeURIComponent(orderNums.join(','))}`;
+    window.open(url, '_blank');
+}
 
 function openBulkWhatsAppModal() {
 

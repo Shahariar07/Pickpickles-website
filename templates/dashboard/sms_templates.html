@@ -1,0 +1,143 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block title %}Auto SMS Templates | Pickpickles Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6 max-w-4xl mx-auto">
+
+    <!-- Header -->
+    <div class="bg-white rounded-3xl border border-gray-200 shadow-xs p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="flex items-center gap-3.5">
+            <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xl border border-emerald-200 shrink-0">
+                <i class="fa-solid fa-sliders"></i>
+            </div>
+            <div>
+                <h1 class="font-display font-black text-xl sm:text-2xl text-gray-900 leading-tight">
+                    Auto SMS Message Templates
+                </h1>
+                <p class="text-xs text-gray-500 mt-0.5">
+                    কোথায় ও কখন কোন SMS মেসেজ যাবে তা এখান থেকে এডিট ও অন/অফ করতে পারবেন।
+                </p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+            <a href="{% url 'dashboard:sms_history' %}" class="px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold inline-flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <span>SMS History</span>
+            </a>
+            <a href="{% url 'dashboard:sms_campaign' %}" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold inline-flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-paper-plane text-emerald-400"></i>
+                <span>Bulk SMS</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Variable Reference Guide -->
+    <div class="bg-amber-50/80 border border-amber-200 rounded-2xl p-4 text-xs text-amber-950 space-y-2">
+        <div class="font-black flex items-center gap-1.5">
+            <i class="fa-solid fa-wand-magic-sparkles text-amber-600"></i>
+            <span>ডাইনামিক কোড (মেসেজে এগুলো বসালে অটোমেটিক আসল তথ্য বসে যাবে):</span>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <code class="px-2 py-1 rounded-lg bg-white border border-amber-200 font-mono font-bold text-gray-900">{order_number}</code> <span class="self-center text-amber-800">অর্ডার নম্বর (যেমন PKP-00201)</span>
+            <code class="px-2 py-1 rounded-lg bg-white border border-amber-200 font-mono font-bold text-gray-900">{customer_name}</code> <span class="self-center text-amber-800">কাস্টমারের নাম</span>
+            <code class="px-2 py-1 rounded-lg bg-white border border-amber-200 font-mono font-bold text-gray-900">{total}</code> <span class="self-center text-amber-800">মোট টাকা</span>
+            <code class="px-2 py-1 rounded-lg bg-white border border-amber-200 font-mono font-bold text-gray-900">{payment}</code> <span class="self-center text-amber-800">PAID অথবা COD: Tk ...</span>
+        </div>
+        <p class="text-[11px] text-amber-800">
+            💡 খরচ বাঁচাতে মেসেজ ইংরেজিতে <strong>১৬০ অক্ষরের</strong> মধ্যে রাখলে প্রতি অর্ডারে মাত্র ১টি SMS খরচ হবে। (বাংলা লিখলে ৭০ অক্ষরে ১ SMS)।
+        </p>
+    </div>
+
+    <form method="POST" action="{% url 'dashboard:sms_templates' %}" class="space-y-5">
+        {% csrf_token %}
+
+        <!-- 1. Order Placed SMS -->
+        <div class="bg-white rounded-3xl border border-gray-200 shadow-xs p-5 sm:p-6 space-y-3">
+            <div class="flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 uppercase">1. Checkout / Order Placed</span>
+                    <h2 class="font-display font-black text-base text-gray-900 mt-1">কাস্টমার অর্ডার প্লেস করলে যে মেসেজ যাবে</h2>
+                </div>
+                <label class="inline-flex items-center gap-2 cursor-pointer bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-200">
+                    <input type="checkbox" name="placed_enabled" {% if tpl.placed_enabled %}checked{% endif %} class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
+                    <span class="text-xs font-black text-gray-800">Auto SMS Active</span>
+                </label>
+            </div>
+            <textarea name="placed_template" rows="3" required oninput="updateCounter(this, 'cnt_placed')"
+                class="w-full bg-gray-50 border border-gray-300 rounded-2xl p-3.5 text-sm font-medium text-gray-900 focus:bg-white focus:border-emerald-600 focus:outline-hidden">{{ tpl.placed_template }}</textarea>
+            <div class="flex items-center justify-between text-[11px] text-gray-500 font-bold">
+                <span>অর্ডার কনফার্মের সময় কোনো SMS যাবে না (বন্ধ করা আছে)।</span>
+                <span id="cnt_placed"></span>
+            </div>
+        </div>
+
+        <!-- 2. Out for Delivery / Dispatched SMS -->
+        <div class="bg-white rounded-3xl border border-gray-200 shadow-xs p-5 sm:p-6 space-y-3">
+            <div class="flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-indigo-100 text-indigo-800 uppercase">2. Out for Delivery / Dispatched</span>
+                    <h2 class="font-display font-black text-base text-gray-900 mt-1">ডেলিভারিতে পাঠালে (Out for Delivery) যে মেসেজ যাবে</h2>
+                </div>
+                <label class="inline-flex items-center gap-2 cursor-pointer bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-200">
+                    <input type="checkbox" name="dispatched_enabled" {% if tpl.dispatched_enabled %}checked{% endif %} class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
+                    <span class="text-xs font-black text-gray-800">Auto SMS Active</span>
+                </label>
+            </div>
+            <textarea name="dispatched_template" rows="3" required oninput="updateCounter(this, 'cnt_dispatched')"
+                class="w-full bg-gray-50 border border-gray-300 rounded-2xl p-3.5 text-sm font-medium text-gray-900 focus:bg-white focus:border-emerald-600 focus:outline-hidden">{{ tpl.dispatched_template }}</textarea>
+            <div class="flex items-center justify-between text-[11px] text-gray-500 font-bold">
+                <span>ড্যাশবোর্ড থেকে <code>OUT_FOR_DELIVERY</code> করলে বা <code>Dispatch SMS</code> চাপলে এটি যাবে।</span>
+                <span id="cnt_dispatched"></span>
+            </div>
+        </div>
+
+        <!-- 3. Refill Reminder SMS -->
+        <div class="bg-white rounded-3xl border border-gray-200 shadow-xs p-5 sm:p-6 space-y-3">
+            <div>
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 uppercase">3. Refill / Repeat Reminder</span>
+                <h2 class="font-display font-black text-base text-gray-900 mt-1">পুরনো কাস্টমারকে Refill Reminder বাটনে ক্লিক করলে যা যাবে</h2>
+            </div>
+            <textarea name="refill_template" rows="3" required oninput="updateCounter(this, 'cnt_refill')"
+                class="w-full bg-gray-50 border border-gray-300 rounded-2xl p-3.5 text-sm font-medium text-gray-900 focus:bg-white focus:border-emerald-600 focus:outline-hidden">{{ tpl.refill_template }}</textarea>
+            <div class="flex items-center justify-between text-[11px] text-gray-500 font-bold">
+                <span>Refill Reminders পেজ থেকে ম্যানুয়ালি পাঠানোর সময় এটি ব্যবহৃত হয়।</span>
+                <span id="cnt_refill"></span>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center justify-between gap-3 flex-wrap pt-2">
+            <button type="submit" name="action" value="reset_defaults" onclick="return confirm('সব মেসেজ ডিফল্টে ফিরিয়ে আনতে চান?')"
+                class="px-4 py-2.5 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold cursor-pointer transition">
+                ↺ Reset to Default
+            </button>
+            <button type="submit" {% if is_view_only %}disabled{% endif %}
+                class="px-6 py-3 rounded-2xl bg-gradient-to-r from-[#15803d] to-[#0f4826] hover:from-[#166534] hover:to-[#092d18] text-white font-display font-black text-sm shadow-lg shadow-emerald-800/20 inline-flex items-center gap-2 cursor-pointer transition">
+                <i class="fa-solid fa-floppy-disk"></i>
+                <span>Save All SMS Templates</span>
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+function updateCounter(textarea, targetId) {
+    const text = textarea.value || '';
+    const isUnicode = /[^\x00-\x7F]/.test(text);
+    const limit = isUnicode ? 70 : 160;
+    const parts = text.length === 0 ? 0 : Math.ceil(text.length / limit);
+    const el = document.getElementById(targetId);
+    if (el) {
+        el.innerHTML = `${text.length} chars • <strong class="${parts > 1 ? 'text-amber-700' : 'text-emerald-700'}">${parts} SMS</strong> (${isUnicode ? 'Bangla/Unicode' : 'English'} ${limit}/SMS)`;
+    }
+}
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('textarea').forEach(function(ta) {
+        if (ta.name === 'placed_template') updateCounter(ta, 'cnt_placed');
+        if (ta.name === 'dispatched_template') updateCounter(ta, 'cnt_dispatched');
+        if (ta.name === 'refill_template') updateCounter(ta, 'cnt_refill');
+    });
+});
+</script>
+{% endblock %}

@@ -20,8 +20,25 @@
             </div>
         </div>
 
-        <!-- Minimal Time Filter -->
-        <div class="flex items-center gap-1 bg-gray-100 p-1 rounded-xl shrink-0 self-start sm:self-auto text-xs">
+        <!-- Minimal Time Filter & Bulk All Action -->
+        <div class="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+            {% if can_edit and pending_count > 0 %}
+            <form method="POST" action="{% url 'dashboard:bulk_send_refill_sms' %}" onsubmit="return confirm('সব {{ pending_count }}টি Pending অর্ডারের কাস্টমারকে একসাথে Refill SMS পাঠাতে চান? (ডুপ্লিকেট নম্বর অটো বাদ যাবে)');">
+                {% csrf_token %}
+                <input type="hidden" name="mode" value="all_pending">
+                <input type="hidden" name="days" value="{{ min_days }}">
+                <button type="submit" class="px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black inline-flex items-center gap-1.5 shadow-xs cursor-pointer transition">
+                    <i class="fa-solid fa-paper-plane text-[11px]"></i>
+                    <span>Send All Pending ({{ pending_count }})</span>
+                </button>
+            </form>
+            {% endif %}
+            <a href="{% url 'dashboard:sms_templates' %}" class="px-3 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold inline-flex items-center gap-1 transition" title="Edit Refill SMS Message">
+                <i class="fa-solid fa-sliders text-[11px]"></i>
+                <span class="hidden md:inline">Edit Message</span>
+            </a>
+
+            <div class="flex items-center gap-1 bg-gray-100 p-1 rounded-xl shrink-0 text-xs">
             <a href="?days=7&status={{ status_filter }}{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
                class="px-2 py-1 rounded-lg font-bold transition {% if min_days == 7 %}bg-white text-gray-900 shadow-2xs{% else %}text-gray-600 hover:text-gray-900{% endif %}">
                 7d
@@ -46,6 +63,7 @@
                class="px-2 py-1 rounded-lg font-bold transition {% if min_days == 90 %}bg-white text-gray-900 shadow-2xs{% else %}text-gray-600 hover:text-gray-900{% endif %}">
                 90d
             </a>
+            </div>
         </div>
     </div>
 
@@ -98,12 +116,34 @@
             </button>
 
             {% if q %}
-            <a href="?days={{ min_days }}&status={{ status_filter }}" class="bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs px-2.5 py-1.5 rounded-xl transition" title="Clear">
+            <a href="?days={{ min_days }}&status={{ status_filter }}{% if per_page %}&per_page={{ per_page }}{% endif %}" class="bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs px-2.5 py-1.5 rounded-xl transition" title="Clear">
                 <i class="fa-solid fa-xmark"></i>
             </a>
             {% endif %}
         </form>
     </div>
+
+    {% if can_edit and orders %}
+    <!-- Bulk Selection Bar -->
+    <form id="bulkRefillForm" method="POST" action="{% url 'dashboard:bulk_send_refill_sms' %}" class="bg-slate-900 text-white p-3 rounded-2xl flex items-center justify-between gap-3 flex-wrap text-xs">
+        {% csrf_token %}
+        <input type="hidden" name="mode" value="selected">
+        <input type="hidden" name="days" value="{{ min_days }}">
+        <input type="hidden" name="order_numbers" id="bulkRefillOrderNumbers" value="">
+        <div class="flex items-center gap-3">
+            <label class="inline-flex items-center gap-2 cursor-pointer select-none font-bold">
+                <input type="checkbox" id="selectAllRefillCheckbox" onchange="toggleAllRefillCheckboxes(this)" class="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 cursor-pointer">
+                <span>Select All (This Page)</span>
+            </label>
+            <span id="refillSelectedCountBadge" class="px-2.5 py-0.5 rounded-full bg-white/10 text-amber-300 font-black">0 selected</span>
+        </div>
+        <button type="submit" id="sendSelectedRefillBtn" disabled onclick="return submitBulkSelectedRefill();"
+            class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-black inline-flex items-center gap-1.5 transition cursor-pointer">
+            <i class="fa-solid fa-comment-sms"></i>
+            <span id="sendSelectedRefillBtnText">Send Selected Refill SMS</span>
+        </button>
+    </form>
+    {% endif %}
 
     <!-- Minimal Table -->
     <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
@@ -113,6 +153,7 @@
             <table class="w-full text-left text-xs">
                 <thead class="bg-gray-50/80 text-gray-500 font-bold uppercase text-[10px] border-b border-gray-200">
                     <tr>
+                        {% if can_edit %}<th class="py-3 pl-4 pr-2 w-8"><input type="checkbox" onchange="toggleAllRefillCheckboxes(this)" class="w-3.5 h-3.5 rounded text-emerald-600 cursor-pointer"></th>{% endif %}
                         <th class="py-3 px-4">Customer</th>
                         <th class="py-3 px-4">Order</th>
                         <th class="py-3 px-4">Items</th>
@@ -124,6 +165,11 @@
                 <tbody class="divide-y divide-gray-100 font-medium text-gray-800">
                     {% for order in orders %}
                     <tr id="row-{{ order.order_number }}" class="hover:bg-gray-50/60 transition">
+                        {% if can_edit %}
+                        <td class="py-3 pl-4 pr-2 w-8">
+                            <input type="checkbox" value="{{ order.order_number }}" onchange="syncRefillSelection(this)" class="refill-order-checkbox w-3.5 h-3.5 rounded text-emerald-600 cursor-pointer">
+                        </td>
+                        {% endif %}
                         <!-- Customer -->
                         <td class="py-3 px-4">
                             <strong class="text-gray-900 block">{{ order.customer_name }}</strong>
@@ -206,7 +252,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="py-10 text-center text-gray-400 text-xs">
+                        <td colspan="7" class="py-10 text-center text-gray-400 text-xs">
                             No feedback reminder customers found in this filter.
                         </td>
                     </tr>
@@ -220,11 +266,16 @@
             {% for order in orders %}
             <div id="card-{{ order.order_number }}" class="p-3.5 space-y-2 text-xs">
                 <div class="flex items-start justify-between gap-2">
-                    <div>
-                        <strong class="text-gray-900 text-sm block">{{ order.customer_name }}</strong>
-                        <div class="flex items-center gap-1.5 text-[11px] text-gray-500 mt-0.5">
-                            <a href="tel:{{ order.customer_phone }}" class="text-emerald-700 font-semibold">{{ order.customer_phone }}</a>
-                            <span>• {{ order.days_ago }}d ago</span>
+                    <div class="flex items-start gap-2.5">
+                        {% if can_edit %}
+                        <input type="checkbox" value="{{ order.order_number }}" onchange="syncRefillSelection(this)" class="refill-order-checkbox-mobile mt-1 w-4 h-4 rounded text-emerald-600 cursor-pointer">
+                        {% endif %}
+                        <div>
+                            <strong class="text-gray-900 text-sm block">{{ order.customer_name }}</strong>
+                            <div class="flex items-center gap-1.5 text-[11px] text-gray-500 mt-0.5">
+                                <a href="tel:{{ order.customer_phone }}" class="text-emerald-700 font-semibold">{{ order.customer_phone }}</a>
+                                <span>• {{ order.days_ago }}d ago</span>
+                            </div>
                         </div>
                     </div>
                     <strong class="text-gray-900 font-bold">৳{{ order.total_amount }}</strong>
@@ -279,12 +330,12 @@
 
         <!-- Minimal Pagination -->
         {% if is_paginated %}
-        <div class="p-3 bg-gray-50/60 border-t border-gray-100 flex items-center justify-between text-xs text-gray-600">
+        <div class="p-3 bg-gray-50/60 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-gray-600">
             <span>Page <strong>{{ orders.number }}</strong> of <strong>{{ paginator.num_pages }}</strong> ({{ total_eligible }} total)</span>
 
-            <div class="flex items-center gap-1">
+            <div class="flex items-center gap-1 flex-wrap">
                 {% if orders.has_previous %}
-                <a href="?page={{ orders.previous_page_number }}&days={{ min_days }}{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
+                <a href="?page={{ orders.previous_page_number }}&status={{ status_filter }}&days={{ min_days }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
                    class="px-2.5 py-1 bg-white border border-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition">
                     Prev
                 </a>
@@ -296,7 +347,7 @@
                     {% elif p == orders.number %}
                     <span class="px-2.5 py-1 bg-gray-900 text-white font-bold rounded-lg">{{ p }}</span>
                     {% else %}
-                    <a href="?page={{ p }}&days={{ min_days }}{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
+                    <a href="?page={{ p }}&status={{ status_filter }}&days={{ min_days }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
                        class="px-2.5 py-1 bg-white border border-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition">
                         {{ p }}
                     </a>
@@ -304,7 +355,7 @@
                 {% endfor %}
 
                 {% if orders.has_next %}
-                <a href="?page={{ orders.next_page_number }}&days={{ min_days }}{% if q %}&q={{ q }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
+                <a href="?page={{ orders.next_page_number }}&status={{ status_filter }}&days={{ min_days }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}" 
                    class="px-2.5 py-1 bg-white border border-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition">
                     Next
                 </a>
@@ -592,5 +643,53 @@
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closePreviewModal();
     });
+
+    function getSelectedRefillOrders() {
+        const set = new Set();
+        document.querySelectorAll('.refill-order-checkbox:checked, .refill-order-checkbox-mobile:checked').forEach(cb => {
+            if (cb.value) set.add(cb.value);
+        });
+        return Array.from(set);
+    }
+
+    function updateRefillSelectionUI() {
+        const selected = getSelectedRefillOrders();
+        const badge = document.getElementById('refillSelectedCountBadge');
+        const btn = document.getElementById('sendSelectedRefillBtn');
+        const btnText = document.getElementById('sendSelectedRefillBtnText');
+        const hiddenInput = document.getElementById('bulkRefillOrderNumbers');
+        if (badge) badge.textContent = `${selected.length} selected`;
+        if (hiddenInput) hiddenInput.value = selected.join(',');
+        if (btn) btn.disabled = selected.length === 0;
+        if (btnText) btnText.textContent = selected.length > 0 ? `Send Refill SMS (${selected.length})` : 'Send Selected Refill SMS';
+    }
+
+    function syncRefillSelection(cb) {
+        const val = cb.value;
+        const checked = cb.checked;
+        document.querySelectorAll(`.refill-order-checkbox[value="${val}"], .refill-order-checkbox-mobile[value="${val}"]`).forEach(el => {
+            el.checked = checked;
+        });
+        updateRefillSelectionUI();
+    }
+
+    function toggleAllRefillCheckboxes(masterCb) {
+        const checked = masterCb.checked;
+        document.querySelectorAll('.refill-order-checkbox, .refill-order-checkbox-mobile').forEach(el => {
+            el.checked = checked;
+        });
+        const topMaster = document.getElementById('selectAllRefillCheckbox');
+        if (topMaster) topMaster.checked = checked;
+        updateRefillSelectionUI();
+    }
+
+    function submitBulkSelectedRefill() {
+        const selected = getSelectedRefillOrders();
+        if (selected.length === 0) {
+            alert('Please select at least one order first.');
+            return false;
+        }
+        return confirm(`সিলেক্ট করা ${selected.length}টি অর্ডারের কাস্টমারকে একসাথে Refill SMS পাঠাতে চান? (ডুপ্লিকেট নম্বর অটো বাদ যাবে)`);
+    }
 </script>
 {% endblock %}

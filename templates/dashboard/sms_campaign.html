@@ -19,6 +19,10 @@
         </div>
 
         <div class="flex items-center gap-2.5 flex-wrap">
+            <a href="{% url 'dashboard:sms_templates' %}" class="px-3.5 py-2.5 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-black inline-flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-sliders text-amber-700"></i>
+                <span>Edit Auto SMS</span>
+            </a>
             <a href="{% url 'dashboard:sms_history' %}" class="px-3.5 py-2.5 rounded-2xl bg-slate-900 hover:bg-black text-white text-xs font-black inline-flex items-center gap-1.5 transition">
                 <i class="fa-solid fa-clock-rotate-left text-amber-300"></i>
                 <span>SMS History</span>

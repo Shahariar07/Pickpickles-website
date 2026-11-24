@@ -273,7 +273,12 @@ def reviews_view(request):
             )
             return redirect('store:reviews')
         else:
-            messages.error(request, 'Please check your review form details and try again.')
+            first_err = None
+            for field_errs in review_form.errors.values():
+                if field_errs:
+                    first_err = field_errs[0]
+                    break
+            messages.error(request, first_err or 'Please check your review form details and try again.')
 
     # Pagination (12 reviews per page)
     paginator = Paginator(reviews, 12)
