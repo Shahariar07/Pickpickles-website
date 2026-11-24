@@ -5612,6 +5612,101 @@ def business_profitability(request):
         'direct_cogs_pct': round((direct_cogs / total_expenses * 100), 1) if total_expenses > 0 else 0,
     }
 
+    # 4. Monthly Profit Breakdown (Cash Flow vs True Unit Profit)
+    from django.db.models.functions import TruncMonth
+    monthly_map = {}
+
+    def _get_month_bucket(dt_val):
+        if not dt_val:
+            return None
+        ym = dt_val.strftime('%Y-%m')
+        if ym not in monthly_map:
+            monthly_map[ym] = {
+                'ym': ym,
+                'month_label': dt_val.strftime('%B %Y'),
+                'delivered_orders': 0,
+                'delivered_jars': 0,
+                'product_sales': 0.0,
+                'delivery_collected': 0.0,
+                'total_revenue': 0.0,
+                'pipeline_orders': 0,
+                'pipeline_revenue': 0.0,
+                'prod_pack_exp': 0.0,
+                'marketing_exp': 0.0,
+                'logistics_exp': 0.0,
+                'other_exp': 0.0,
+                'total_exp': 0.0,
+            }
+        return monthly_map[ym]
+
+    for row in delivered_paid_orders.annotate(m=TruncMonth('created_at')).values('m').annotate(
+        cnt=Count('id'),
+        total=Sum('total_amount'),
+        sub=Sum('subtotal'),
+        disc=Sum('discount_amount'),
+        deliv=Sum('delivery_fee'),
+    ):
+        b = _get_month_bucket(row['m'])
+        if b:
+            b['delivered_orders'] += row['cnt'] or 0
+            b['total_revenue'] += float(row['total'] or 0)
+            b['delivery_collected'] += float(row['deliv'] or 0)
+            b['product_sales'] += max(0.0, float(row['sub'] or 0) - float(row['disc'] or 0))
+
+    for row in OrderItem.objects.filter(order__in=delivered_paid_orders).annotate(
+        m=TruncMonth('order__created_at')
+    ).values('m').annotate(qty=Sum('quantity')):
+        b = _get_month_bucket(row['m'])
+        if b:
+            b['delivered_jars'] += row['qty'] or 0
+
+    pipeline_all_orders = Order.objects.filter(
+        is_deleted=False,
+        order_status__in=['PENDING', 'CONFIRMED', 'PACKING', 'OUT_FOR_DELIVERY']
+    ).exclude(payment_status='PAID')
+    for row in pipeline_all_orders.annotate(m=TruncMonth('created_at')).values('m').annotate(
+        cnt=Count('id'),
+        total=Sum('total_amount'),
+    ):
+        b = _get_month_bucket(row['m'])
+        if b:
+            b['pipeline_orders'] += row['cnt'] or 0
+            b['pipeline_revenue'] += float(row['total'] or 0)
+
+    for row in Expense.objects.annotate(m=TruncMonth('expense_date')).values('m', 'category').annotate(amt=Sum('amount')):
+        b = _get_month_bucket(row['m'])
+        if not b:
+            continue
+        raw_cat = (row['category'] or '').upper()
+        cat = cat_root_map.get(raw_cat, raw_cat)
+        amt = float(row['amt'] or 0)
+        b['total_exp'] += amt
+        if any(k in cat for k in ['PACKAGING', 'JAR', 'BOTTLE', 'LABEL', 'LID', 'RAW_MATERIAL', 'CUCUMBER', 'VEGGIE', 'FRUIT', 'MANGO', 'EGG', 'BEETROOT', 'CARROT', 'SPICES_BRINE', 'HERB', 'SALT', 'SUGAR', 'WATER', 'VINEGAR', 'SPICE', 'FRESH']):
+            b['prod_pack_exp'] += amt
+        elif any(k in cat for k in ['MARKETING', 'AD', 'FACEBOOK', 'BOOST', 'PROMOTION']):
+            b['marketing_exp'] += amt
+        elif any(k in cat for k in ['LOGISTICS', 'COURIER', 'RIDER', 'DELIVERY']):
+            b['logistics_exp'] += amt
+        else:
+            b['other_exp'] += amt
+
+    monthly_breakdown = []
+    for ym in sorted(monthly_map.keys(), reverse=True):
+        b = monthly_map[ym]
+        b['cash_profit'] = round(b['total_revenue'] - b['total_exp'], 0)
+        b['allocated_cost'] = round(b['delivered_jars'] * total_cost_per_jar, 0)
+        b['true_unit_profit'] = round(b['total_revenue'] - b['allocated_cost'], 0)
+        b['total_revenue'] = round(b['total_revenue'], 0)
+        b['product_sales'] = round(b['product_sales'], 0)
+        b['delivery_collected'] = round(b['delivery_collected'], 0)
+        b['pipeline_revenue'] = round(b['pipeline_revenue'], 0)
+        b['prod_pack_exp'] = round(b['prod_pack_exp'], 0)
+        b['marketing_exp'] = round(b['marketing_exp'], 0)
+        b['logistics_exp'] = round(b['logistics_exp'], 0)
+        b['other_exp'] = round(b['other_exp'], 0)
+        b['total_exp'] = round(b['total_exp'], 0)
+        monthly_breakdown.append(b)
+
     context = {
         'total_jars_sold': jars_sold_total,
         'jars_delivered': jars_delivered,
@@ -5663,6 +5758,7 @@ def business_profitability(request):
         'batch_projected_revenue': batch_projected_revenue,
         'batch_projected_profit': batch_projected_profit,
         'product_profit_list': product_profit_list,
+        'monthly_breakdown': monthly_breakdown,
         'all_products': all_products,
     }
     return render(request, 'dashboard/business_profitability.html', context)
