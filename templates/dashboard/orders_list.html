@@ -1904,7 +1904,7 @@
 
                     <label class="font-bold text-gray-700 block mb-1">Delivery Zone</label>
 
-                    <select name="delivery_zone" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
+                    <select name="delivery_zone" id="manualDeliveryZoneSelect" onchange="manualDeliveryFeeUserOverridden = false; calculateManualOrderTotal(false);" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
 
                         <option value="INSIDE_DHAKA" selected>Inside Dhaka City</option>
 
@@ -1924,7 +1924,7 @@
 
                     </div>
 
-                    <input type="number" step="1" min="0" name="delivery_fee" id="manualDeliveryFeeInput" value="{{ promo_setting.standard_delivery_fee|default:150|floatformat:0 }}" oninput="calculateManualOrderTotal(true)" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
+                    <input type="number" step="1" min="0" name="delivery_fee" id="manualDeliveryFeeInput" value="{{ promo_setting.inside_dhaka_delivery_fee|default:80|floatformat:0 }}" oninput="calculateManualOrderTotal(true)" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 transition">
 
                 </div>
 
@@ -3304,14 +3304,24 @@ function calculateManualOrderTotal(isManualFeeChange = false) {
     const promoActive = !!MANUAL_OFFER_CONFIG.is_active;
     const freeDelEnabled = promoActive && !!MANUAL_OFFER_CONFIG.free_delivery_enabled;
     const freeDelMinJars = parseInt(MANUAL_OFFER_CONFIG.free_delivery_min_jars || 4, 10);
-    const stdDeliveryFee = parseFloat(MANUAL_OFFER_CONFIG.standard_delivery_fee != null ? MANUAL_OFFER_CONFIG.standard_delivery_fee : 150);
-    const qualifiesFreeDelivery = freeDelEnabled && totalJars >= freeDelMinJars;
+    const freeDelMode = MANUAL_OFFER_CONFIG.free_delivery_apply_mode || 'EXACT';
+    const manualZoneEl = document.getElementById('manualDeliveryZoneSelect');
+    const manualZone = manualZoneEl ? manualZoneEl.value : 'INSIDE_DHAKA';
+    const baseZoneFee = manualZone === 'INSIDE_DHAKA'
+        ? parseFloat(MANUAL_OFFER_CONFIG.inside_dhaka_delivery_fee != null ? MANUAL_OFFER_CONFIG.inside_dhaka_delivery_fee : (MANUAL_OFFER_CONFIG.standard_delivery_fee != null ? MANUAL_OFFER_CONFIG.standard_delivery_fee : 80))
+        : parseFloat(MANUAL_OFFER_CONFIG.outside_dhaka_delivery_fee != null ? MANUAL_OFFER_CONFIG.outside_dhaka_delivery_fee : (MANUAL_OFFER_CONFIG.standard_delivery_fee != null ? MANUAL_OFFER_CONFIG.standard_delivery_fee : 130));
+    const extraZoneFee = manualZone === 'INSIDE_DHAKA'
+        ? parseFloat(MANUAL_OFFER_CONFIG.inside_dhaka_extra_per_jar || 0)
+        : parseFloat(MANUAL_OFFER_CONFIG.outside_dhaka_extra_per_jar || 0);
+    const extraStartJar = Math.max(2, parseInt(MANUAL_OFFER_CONFIG.extra_jar_start_from || 5, 10) || 5);
+    const computedDeliveryFee = baseZoneFee + (Math.max(0, (totalJars || 1) - (extraStartJar - 1)) * extraZoneFee);
+    const qualifiesFreeDelivery = freeDelEnabled && (freeDelMode === 'EXACT' ? totalJars === freeDelMinJars : totalJars >= freeDelMinJars);
 
     if (!manualDeliveryFeeUserOverridden && deliveryInput) {
-        deliveryInput.value = qualifiesFreeDelivery ? 0 : Math.round(stdDeliveryFee);
+        deliveryInput.value = qualifiesFreeDelivery ? 0 : Math.round(computedDeliveryFee);
     }
 
-    let deliveryFee = deliveryInput ? (parseFloat(deliveryInput.value) || 0) : (qualifiesFreeDelivery ? 0 : stdDeliveryFee);
+    let deliveryFee = deliveryInput ? (parseFloat(deliveryInput.value) || 0) : (qualifiesFreeDelivery ? 0 : computedDeliveryFee);
     if (deliveryFee < 0) deliveryFee = 0;
 
     if (freeBadge) {

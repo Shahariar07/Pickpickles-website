@@ -23,48 +23,69 @@ FAKE_NAME_EXACT = {
 }
 
 
+_BANGLA_DIGIT_MAP = str.maketrans('০১২৩৪৫৬৭৮৯', '0123456789')
+
+
+def _count_letter_chars(text: str) -> int:
+    """Count alphabetic characters including Bengali vowel signs & combining marks."""
+    return sum(1 for ch in (text or '') if ch.isalpha() or ('\u0980' <= ch <= '\u09FF'))
+
+
 def clean_and_validate_bd_phone(phone_str):
     """
     Validates and standardizes a Bangladeshi mobile number.
+    Supports English & Bangla numerals (০-৯), autofill spaces/hyphens/Unicode marks,
+    +880 / 880 / 00880 / +88001 prefixes, and 10-digit 1[3-9]XXXXXXXX entries.
     Valid operators: 013, 014, 015, 016, 017, 018, 019.
-    Also rejects obvious dummy/fake phone patterns (e.g. 01700000000, 01712345678).
     Returns:
       (cleaned_phone, error_message)
     """
     if not phone_str:
         return None, "Mobile number is required."
-    
+
+    # Convert Bangla numerals (০-৯) to ASCII digits (0-9) and strip invisible Unicode marks
+    normalized = str(phone_str).translate(_BANGLA_DIGIT_MAP).strip()
+    normalized = re.sub(r'[\u200b-\u200f\u202a-\u202e\u2066-\u2069]', '', normalized)
+
+    # Reject if unexpected alphabetic letters are present
+    if re.search(r'[A-Za-z\u0985-\u09df]', normalized):
+        return None, "Please enter a valid 11-digit Bangladeshi mobile number (e.g. 017XXXXXXXX)."
+
     # Remove whitespace, hyphens, parentheses, dots
-    cleaned = re.sub(r'[\s\-\(\)\.]', '', str(phone_str).strip())
-    
-    # Standardize +88 / 88 prefix to local 11-digit format
-    if cleaned.startswith('+880'):
-        cleaned = cleaned[3:]
-    elif cleaned.startswith('880'):
+    cleaned = re.sub(r'[\s\-\(\)\.]', '', normalized)
+
+    # Reject non-Bangladesh international '+' prefixes (e.g. +1 US numbers)
+    if cleaned.startswith('+') and not (cleaned.startswith('+88') or cleaned.startswith('+01')):
+        return None, "Please enter a valid Bangladeshi mobile number starting with 01XXXXXXXXX."
+
+    cleaned = cleaned.lstrip('+')
+
+    # Standardize 00880 / 88001 / 880 / 88 / 10-digit 1XXXXXXXXX to 11-digit 01XXXXXXXXX
+    if cleaned.startswith('00880') and len(cleaned) == 15:
+        cleaned = cleaned[4:]
+    elif cleaned.startswith('88001') and len(cleaned) == 14:
+        cleaned = '0' + cleaned[4:]
+    elif cleaned.startswith('880') and len(cleaned) == 13:
         cleaned = cleaned[2:]
-    elif cleaned.startswith('+88'):
-        cleaned = cleaned[3:]
     elif cleaned.startswith('88') and len(cleaned) == 13:
         cleaned = cleaned[2:]
-        
+    elif re.match(r'^1[3-9]\d{8}$', cleaned):
+        cleaned = '0' + cleaned
+
     # Must be exactly 11 digits starting with valid BD mobile operator (013 - 019)
     if not re.match(r'^01[3-9]\d{8}$', cleaned):
         return None, "Please enter a valid 11-digit Bangladeshi mobile number (e.g. 017XXXXXXXX or 018XXXXXXXX)."
 
-    # Check the subscriber 8 digits (after 01X) for fake/dummy patterns
+    # Check the subscriber 8 digits (after 01X) for obvious dummy patterns
     subscriber_part = cleaned[3:]
-    # Reject 6 or more identical consecutive digits (e.g. 01700000000, 01711111111, 01899999999)
-    if re.search(r'(\d)\1{5,}', cleaned):
+    # Reject 7 or more identical consecutive digits (e.g. 01700000000, 01711111111)
+    if re.search(r'(\d)\1{6,}', cleaned) or len(set(subscriber_part)) <= 1:
         return None, "Please enter a real active mobile number (repeated dummy digits are not allowed)."
 
     # Reject sequential dummy numbers (e.g. 01712345678, 01787654321)
     if any(seq in subscriber_part for seq in FAKE_PHONE_SUBSTRINGS):
         return None, "Please enter your real active mobile number so our delivery rider can reach you."
 
-    # Reject if subscriber part has only 1 or 2 unique digits (e.g. 01712121212)
-    if len(set(subscriber_part)) <= 2:
-        return None, "Please enter a valid active mobile number."
-        
     return cleaned, None
 
 
@@ -105,8 +126,7 @@ class CheckoutForm(forms.ModelForm):
                 'required': True,
                 'id': 'customer_phone',
                 'type': 'tel',
-                'maxlength': '15',
-                'pattern': r'(?:\+?88)?01[3-9]\d{8}',
+                'maxlength': '24',
                 'title': 'Please enter a valid 11-digit Bangladeshi mobile number (e.g. 017XXXXXXXX)'
             }),
             'customer_email': forms.EmailInput(attrs={
@@ -140,7 +160,7 @@ class CheckoutForm(forms.ModelForm):
                 'placeholder': 'bKash number used to send money (01XXXXXXXXX)',
                 'id': 'payment_sender_number',
                 'type': 'tel',
-                'maxlength': '15'
+                'maxlength': '24'
             }),
             'payment_trx_id': forms.TextInput(attrs={
                 'class': 'form-input',
@@ -157,11 +177,9 @@ class CheckoutForm(forms.ModelForm):
 
     def clean_customer_name(self):
         name = (self.cleaned_data.get('customer_name') or '').strip()
-        if len(name) < 3:
-            raise forms.ValidationError("Please enter your full name (at least 3 characters).")
-        # Must contain at least 2 alphabetic characters (English or Bengali)
-        alpha_count = sum(1 for ch in name if ch.isalpha())
-        if alpha_count < 2:
+        if len(name) < 2:
+            raise forms.ValidationError("Please enter your full name.")
+        if _count_letter_chars(name) < 2:
             raise forms.ValidationError("Please enter a valid name using letters.")
         if name.lower() in FAKE_NAME_EXACT or re.search(r'(.)\1{4,}', name.lower()):
             raise forms.ValidationError("Please enter your real full name for delivery.")
@@ -176,11 +194,10 @@ class CheckoutForm(forms.ModelForm):
 
     def clean_delivery_address(self):
         addr = (self.cleaned_data.get('delivery_address') or '').strip()
-        if len(addr) < 8:
-            raise forms.ValidationError("Please enter your complete delivery address (House/Road/Area, at least 8 characters).")
-        alpha_count = sum(1 for ch in addr if ch.isalpha())
-        if alpha_count < 3 or addr.lower() in FAKE_NAME_EXACT or re.search(r'(.)\1{5,}', addr.lower()):
-            raise forms.ValidationError("Please provide a valid, detailed street/area address so the courier can deliver your parcel.")
+        if len(addr) < 4:
+            raise forms.ValidationError("Please enter your delivery address (Area / Road / House).")
+        if _count_letter_chars(addr) < 2 or addr.lower() in FAKE_NAME_EXACT or re.search(r'(.)\1{5,}', addr.lower()):
+            raise forms.ValidationError("Please provide a valid street or area address so the courier can deliver your parcel.")
         return addr
 
     def clean(self):

@@ -274,7 +274,15 @@
                         ⏳ <strong>Total Delivery Timeline:</strong> Estimated delivery time is <strong>7 to 10 days</strong> from order confirmation to your doorstep nationwide across Bangladesh.
                     </p>
                     <p>
-                        💵 <strong>Delivery Charges:</strong> Shipping is a flat <strong>৳150</strong> nationwide across Bangladesh (Inside & Outside Dhaka).
+                        💵 <strong>Delivery Charges:</strong>
+                        {% if promo_settings.is_uniform_flat_delivery %}
+                        Shipping is a flat <strong>৳{{ promo_settings.inside_dhaka_delivery_fee|floatformat:0 }}</strong> nationwide across Bangladesh (Inside &amp; Outside Dhaka).
+                        {% else %}
+                        Inside Dhaka: <strong>{{ promo_settings.inside_dhaka_rate_summary }}</strong> • Outside Dhaka: <strong>{{ promo_settings.outside_dhaka_rate_summary }}</strong>.
+                        {% endif %}
+                        {% if promo_settings.is_active and promo_settings.free_delivery_enabled %}
+                        Orders of <strong>{{ promo_settings.free_delivery_qty_text }}</strong> unlock <strong>FREE Delivery</strong>!
+                        {% endif %}
                     </p>
                 </div>
             </details>

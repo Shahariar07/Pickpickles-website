@@ -182,13 +182,15 @@ class Cart:
 
     def is_free_delivery(self):
         promo = PromotionSetting.get_settings()
-        return promo.is_active and promo.free_delivery_enabled and len(self) >= promo.free_delivery_min_jars
+        return promo.is_free_delivery_qualified(len(self))
 
     def items_needed_for_free_delivery(self):
         promo = PromotionSetting.get_settings()
         if not (promo.is_active and promo.free_delivery_enabled):
             return 0
-        return max(0, promo.free_delivery_min_jars - len(self))
+        if len(self) < promo.free_delivery_min_jars:
+            return promo.free_delivery_min_jars - len(self)
+        return 0
 
     def get_delivery_fee(self, zone='INSIDE_DHAKA'):
         if self.is_free_delivery():

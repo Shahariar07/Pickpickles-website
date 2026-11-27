@@ -183,6 +183,11 @@ def dispatch_order_created_notification(order):
             "vibrate": [300, 100, 300, 100, 400]
         }
 
+        # Skip background daemon DB thread during Django unit test runs (avoids SQLite table lock)
+        import sys
+        if 'test' in sys.argv:
+            return
+
         # Spawn background thread
         worker = threading.Thread(
             target=_async_notify_admins,

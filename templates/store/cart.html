@@ -179,26 +179,44 @@
                         </span>
                     </div>
 
-                    <!-- Nationwide Delivery Pill -->
-                    <div id="freeDeliveryBanner" class="p-3 rounded-2xl border text-xs font-bold bg-slate-50 border-slate-200 text-slate-900">
+                    <!-- Offer Progress Banner (Shows Active Offers Only — No Delivery Fee) -->
+                    <div id="freeDeliveryBanner" class="p-3 rounded-2xl border text-xs font-bold {% if not promo_settings.is_active or not promo_settings.free_delivery_enabled and not promo_settings.bundle_discount_enabled and not promo_settings.advance_payment_discount_enabled %}hidden{% endif %} bg-amber-50/90 border-amber-200 text-amber-950">
                         <div class="flex items-start justify-between gap-2">
                             <div class="flex items-start gap-2 min-w-0 flex-1">
-                                <span id="freeDeliveryIcon" class="shrink-0 text-base leading-none mt-0.5">🚚</span>
+                                <span id="freeDeliveryIcon" class="shrink-0 text-base leading-none mt-0.5">{% if free_delivery_unlocked %}🎉{% elif promo_settings.free_delivery_enabled %}🚚{% elif promo_settings.bundle_discount_enabled %}🎁{% else %}💳{% endif %}</span>
                                 <div class="min-w-0 flex-1">
                                     <div id="freeDeliveryText" class="text-xs font-black leading-snug break-words">
-                                        <strong>Nationwide Delivery Flat ৳{{ promo_settings.standard_delivery_fee|default:150|floatformat:0 }}</strong>
+                                        {% if promo_settings.free_delivery_enabled %}
+                                            {% if free_delivery_unlocked %}<strong>FREE Delivery Unlocked!</strong>{% elif items_needed_for_free_delivery > 0 %}Add <strong>{{ items_needed_for_free_delivery }} more jar{{ items_needed_for_free_delivery|pluralize }}</strong> for <strong>FREE Delivery</strong>!{% else %}<strong>FREE Delivery</strong> on {{ promo_settings.free_delivery_qty_text }}!{% endif %}
+                                        {% elif promo_settings.bundle_discount_enabled %}
+                                            <strong>{{ promo_settings.get_discount_label }}</strong>
+                                        {% elif promo_settings.advance_payment_discount_enabled %}
+                                            <strong>Extra {{ promo_settings.advance_payment_discount_percent|floatformat:0 }}% OFF on bKash!</strong>
+                                        {% endif %}
                                     </div>
                                     <p class="text-[11px] mt-1 opacity-90 leading-normal break-words font-medium" id="freeDeliverySubtext">
-                                        {{ promo_settings.delivery_notice_text|default:"Reliable doorstep courier delivery in 7–10 days across Bangladesh." }}
+                                        {% if promo_settings.free_delivery_enabled %}
+                                            Order {{ promo_settings.free_delivery_qty_text }} to unlock FREE courier delivery!
+                                        {% elif promo_settings.bundle_discount_enabled %}
+                                            Order {{ promo_settings.bundle_min_jars }}{% if promo_settings.bundle_apply_mode == 'AT_LEAST' %}+{% endif %} jars for instant discount!
+                                        {% elif promo_settings.advance_payment_discount_enabled %}
+                                            Pay via bKash at checkout for instant savings!
+                                        {% endif %}
                                     </p>
                                 </div>
                             </div>
-                            <span id="freeDeliveryBadge" class="text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap mt-0.5 bg-slate-800 text-white">
-                                Flat ৳{{ promo_settings.standard_delivery_fee|default:150|floatformat:0 }}
+                            <span id="freeDeliveryBadge" class="text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap mt-0.5 {% if free_delivery_unlocked %}bg-emerald-600 text-white{% else %}bg-amber-400 text-slate-950{% endif %}">
+                                {% if promo_settings.free_delivery_enabled %}
+                                    {% if free_delivery_unlocked %}FREE{% elif items_needed_for_free_delivery > 0 %}{{ cart_total_items }}/{{ promo_settings.free_delivery_min_jars }} Jars{% else %}{{ promo_settings.free_delivery_short_qty }}{% endif %}
+                                {% elif promo_settings.bundle_discount_enabled %}
+                                    {{ promo_settings.bundle_min_jars }}{% if promo_settings.bundle_apply_mode == 'AT_LEAST' %}+{% endif %} Jars
+                                {% else %}
+                                    {{ promo_settings.advance_payment_discount_percent|floatformat:0 }}% OFF
+                                {% endif %}
                             </span>
                         </div>
                         <div class="w-full bg-black/10 rounded-full h-1.5 mt-2.5 overflow-hidden">
-                            <div id="freeDeliveryProgressBar" class="h-1.5 rounded-full transition-all duration-500 bg-emerald-600" style="width: {% if cart_total_items > 0 %}100%{% else %}0%{% endif %};"></div>
+                            <div id="freeDeliveryProgressBar" class="h-1.5 rounded-full transition-all duration-500 bg-emerald-600" style="width: {% if free_delivery_unlocked %}100%{% elif cart_total_items > 0 %}50%{% else %}0%{% endif %};"></div>
                         </div>
                     </div>
 
@@ -219,7 +237,7 @@
                         {% if promo_settings.free_delivery_enabled %}
                         <p class="flex items-center gap-1.5">
                             <span class="shrink-0">🚚</span>
-                            <span><strong>FREE Delivery</strong> automatically unlocked on {{ promo_settings.free_delivery_min_jars }}+ jars!</span>
+                            <span><strong>FREE Delivery</strong> automatically unlocked on {{ promo_settings.free_delivery_qty_text }}!</span>
                         </p>
                         {% endif %}
                         {% if promo_settings.advance_payment_discount_enabled and promo_settings.advance_payment_discount_percent > 0 %}
@@ -246,39 +264,22 @@
                             <span class="font-black text-sm text-emerald-700">-৳<span id="pageCartDiscount">{{ cart_discount|floatformat:2 }}</span></span>
                         </div>
 
-                        <div class="flex justify-between items-center text-slate-600 font-medium">
-                            <div>
-                                <span>Nationwide Delivery</span>
-                                <span class="block text-[11px] text-slate-500 font-medium">Estimated: <strong>7–10 days</strong></span>
-                            </div>
-                            <div class="text-right">
-                                {% if free_delivery_unlocked or delivery_fee == 0 %}
-                                <span class="font-black text-emerald-700 text-sm" id="pageCartDeliveryFee">FREE</span>
-                                {% else %}
-                                <span class="font-black text-slate-900 text-sm" id="pageCartDeliveryFee">৳{{ delivery_fee }}</span>
-                                {% endif %}
-                            </div>
+                        <div id="pageCartFreeDeliveryRow" class="{% if not free_delivery_unlocked %}hidden{% endif %} flex justify-between items-center text-emerald-700 font-bold bg-emerald-50/70 px-2.5 py-1.5 rounded-xl border border-emerald-200/80">
+                            <span class="flex items-center gap-1.5">🚚 Free Delivery Offer</span>
+                            <span class="font-black text-sm text-emerald-700">FREE</span>
                         </div>
-
-                        <p class="text-[11px] text-slate-400 font-medium" id="pageCartDeliveryNote">
-                            {% if free_delivery_unlocked or delivery_fee == 0 %}
-                            <strong class="text-emerald-700">🎉 Congratulations! You unlocked FREE delivery.</strong>
-                            {% else %}
-                            {{ promo_settings.delivery_notice_text|default:"Flat ৳150 nationwide delivery across Bangladesh." }}
-                            {% endif %}
-                        </p>
 
                         <div class="border-t-2 border-slate-200/80 pt-3 flex justify-between items-baseline text-base">
                             <div>
-                                <span class="font-black text-slate-950 block">Total (Est.)</span>
-                                <span class="text-[11px] text-slate-500 font-medium">Food-grade airtight packaging included</span>
+                                <span class="font-black text-slate-950 block">Cart Total</span>
+                                <span id="pageCartShippingHint" class="text-[11px] text-slate-500 font-medium">{% if free_delivery_unlocked %}🎉 Free delivery unlocked!{% else %}Delivery calculated at checkout{% endif %}</span>
                             </div>
-                            <span class="font-display font-black text-2xl sm:text-3xl text-emerald-800">৳<span id="pageCartTotal">{{ grand_total }}</span></span>
+                            <span class="font-display font-black text-2xl sm:text-3xl text-emerald-800">৳<span id="pageCartTotal">{{ cart_net_total|floatformat:2 }}</span></span>
                         </div>
                     </div>
 
                     <!-- Proceed to Checkout Button -->
-                    <a href="{% url 'store:checkout' %}" class="w-full flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-800 active:scale-[0.99] text-white font-display font-black text-base py-4 rounded-2xl shadow-xl shadow-emerald-800/25 transition-all text-center cursor-pointer">
+                    <a href="{% url 'store:checkout' %}" id="cartProceedCheckoutBtn" class="w-full flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-800 active:scale-[0.99] text-white font-display font-black text-base py-4 rounded-2xl shadow-xl shadow-emerald-800/25 transition-all text-center cursor-pointer">
                         <span>Proceed to Checkout</span>
                         <i class="fa-solid fa-arrow-right text-sm"></i>
                     </a>

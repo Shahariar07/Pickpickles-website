@@ -218,6 +218,8 @@ def cart_context(request):
     }
 
     try:
+        promo = base_context.get('promo_settings') or PromotionSetting.get_settings()
+        default_fee = float(promo.inside_dhaka_delivery_fee if promo else 80)
         if not hasattr(request, 'session'):
             return {
                 'cart': [],
@@ -227,30 +229,33 @@ def cart_context(request):
                 'cart_bundle_discount': 0,
                 'cart_coupon_discount': 0,
                 'applied_coupon_code': '',
+                'cart_net_total': 0,
                 'cart_grand_total': 0,
-                'delivery_fee': 150,
+                'delivery_fee': default_fee,
                 'free_delivery_unlocked': False,
                 'items_needed_for_free_delivery': 0,
                 **base_context,
             }
         cart = Cart(request)
-        promo = base_context.get('promo_settings') or PromotionSetting.get_settings()
         discount = cart.get_discount()
-        delivery_fee = cart.get_delivery_fee()
+        delivery_fee = cart.get_delivery_fee('INSIDE_DHAKA')
         free_unlocked = cart.is_free_delivery()
         items_needed = cart.items_needed_for_free_delivery()
         coupon_code = cart.get_coupon_code()
         coupon_disc = cart.get_coupon_discount()
         bundle_disc = cart.get_bundle_discount()
+        subtotal_val = cart.get_subtotal()
+        cart_net_total = max(0, subtotal_val - discount)
         cart_grand_total = cart.get_total_price('INSIDE_DHAKA')
         return {
             'cart': cart,
             'cart_total_items': len(cart),
-            'cart_subtotal': cart.get_subtotal(),
+            'cart_subtotal': subtotal_val,
             'cart_discount': discount,
             'cart_bundle_discount': bundle_disc,
             'cart_coupon_discount': coupon_disc,
             'applied_coupon_code': coupon_code,
+            'cart_net_total': cart_net_total,
             'cart_grand_total': cart_grand_total,
             'cart_delivery_fee': delivery_fee,
             'delivery_fee': delivery_fee,
@@ -259,6 +264,8 @@ def cart_context(request):
             **base_context,
         }
     except Exception:
+        promo = base_context.get('promo_settings')
+        fallback_fee = float(promo.inside_dhaka_delivery_fee) if promo else 80
         return {
             'cart': [],
             'cart_total_items': 0,
@@ -267,8 +274,9 @@ def cart_context(request):
             'cart_bundle_discount': 0,
             'cart_coupon_discount': 0,
             'applied_coupon_code': '',
+            'cart_net_total': 0,
             'cart_grand_total': 0,
-            'delivery_fee': 150,
+            'delivery_fee': fallback_fee,
             'free_delivery_unlocked': False,
             'items_needed_for_free_delivery': 0,
             **base_context,

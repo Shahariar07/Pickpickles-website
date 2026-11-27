@@ -503,7 +503,7 @@ class PromotionSetting(models.Model):
     hero_badge_enabled = models.BooleanField(default=True, help_text="Show badge in Hero section.")
 
     # 2. Announcement Bar
-    announcement_bar_text = models.CharField(max_length=300, default="🎁 2 Jars Flat ৳100 OFF • 🚚 Nationwide Delivery Flat ৳150!", blank=True, help_text="Header announcement text.")
+    announcement_bar_text = models.CharField(max_length=300, default="🎁 2 Jars Flat ৳50 OFF • 🚚 Inside Dhaka ৳80 & Outside Dhaka ৳130!", blank=True, help_text="Header announcement text.")
     announcement_bar_enabled = models.BooleanField(default=True, help_text="Show top announcement bar.")
 
     # 3. Bundle / Volume Discount
@@ -513,11 +513,22 @@ class PromotionSetting(models.Model):
     bundle_discount_label = models.CharField(max_length=200, default="2-Jar Flat ৳100 OFF", blank=True, help_text="Discount breakdown label.")
     bundle_apply_mode = models.CharField(max_length=20, choices=APPLY_MODE_CHOICES, default='EXACT', help_text="Apply discount on exact quantity or minimum threshold.")
 
-    # 4. Delivery Rules
-    standard_delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('150.00'), help_text="Standard flat delivery fee nationwide.")
+    # 4. Delivery Rules (Zone-wise + Per-Jar Extra Support)
+    inside_dhaka_delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('80.00'), help_text="Base delivery fee Inside Dhaka City (৳).")
+    inside_dhaka_extra_per_jar = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), help_text="Extra delivery fee per additional jar Inside Dhaka starting from extra_jar_start_from (৳).")
+    outside_dhaka_delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('130.00'), help_text="Base delivery fee Outside Dhaka / Nationwide (৳).")
+    outside_dhaka_extra_per_jar = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), help_text="Extra delivery fee per additional jar Outside Dhaka starting from extra_jar_start_from (৳).")
+    extra_jar_start_from = models.PositiveIntegerField(default=5, help_text="Jar number from which extra per-jar delivery charge starts (e.g. 5 means 1–4 jars have 0 extra charge; 5th jar adds 1x extra).")
+    standard_delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('130.00'), help_text="Fallback / nationwide standard delivery fee.")
     free_delivery_enabled = models.BooleanField(default=False, help_text="Enable free delivery on threshold.")
-    free_delivery_min_jars = models.PositiveIntegerField(default=4, help_text="Minimum jars needed for free delivery.")
-    delivery_notice_text = models.CharField(max_length=255, default="Flat ৳150 nationwide delivery across Bangladesh.", blank=True, help_text="Delivery notice note in cart drawer and checkout.")
+    free_delivery_min_jars = models.PositiveIntegerField(default=4, help_text="Jar count needed for free delivery.")
+    free_delivery_apply_mode = models.CharField(
+        max_length=20,
+        choices=APPLY_MODE_CHOICES,
+        default='EXACT',
+        help_text="Apply free delivery on exact jar count (e.g. exact 4 jars) or minimum threshold (e.g. 4+ jars).",
+    )
+    delivery_notice_text = models.CharField(max_length=255, default="", blank=True, help_text="Optional custom delivery notice note (leave blank to auto-generate dynamically from rates).")
 
     # 5. Advance Payment Offer
     advance_payment_discount_enabled = models.BooleanField(default=True, help_text="Enable extra percentage discount on advance payment (bKash/Nagad).")
@@ -530,8 +541,132 @@ class PromotionSetting(models.Model):
         verbose_name = "Promotion & Offer Setting"
         verbose_name_plural = "Promotion & Offer Settings"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._orig_std_fee = self.__dict__.get('standard_delivery_fee')
+        self._orig_in_fee = self.__dict__.get('inside_dhaka_delivery_fee')
+        self._orig_out_fee = self.__dict__.get('outside_dhaka_delivery_fee')
+
     def __str__(self):
         return f"{self.campaign_name} ({'Active' if self.is_active else 'Disabled'})"
+
+    @staticmethod
+    def _fmt_bdt(val) -> str:
+        try:
+            d = Decimal(str(val or '0'))
+            return str(int(d)) if d == d.to_integral() else f"{d:.2f}".rstrip('0').rstrip('.')
+        except Exception:
+            return str(val or '0')
+
+    @property
+    def is_uniform_flat_delivery(self) -> bool:
+        in_fee = Decimal(str(self.inside_dhaka_delivery_fee or 0))
+        out_fee = Decimal(str(self.outside_dhaka_delivery_fee or 0))
+        in_ext = Decimal(str(self.inside_dhaka_extra_per_jar or 0))
+        out_ext = Decimal(str(self.outside_dhaka_extra_per_jar or 0))
+        return in_fee == out_fee and in_ext == Decimal('0') and out_ext == Decimal('0')
+
+    @staticmethod
+    def _ordinal(n: int) -> str:
+        n = int(n or 5)
+        if 10 <= (n % 100) <= 20:
+            suffix = 'th'
+        else:
+            suffix = {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th')
+        return f"{n}{suffix}"
+
+    def _format_extra_note(self, extra: Decimal, short: bool = False) -> str:
+        start_jar = max(2, int(self.extra_jar_start_from or 5))
+        ext_str = self._fmt_bdt(extra)
+        if start_jar <= 2:
+            return f"+৳{ext_str}/extra jar"
+        ord_str = self._ordinal(start_jar)
+        return f"+৳{ext_str}/jar from {ord_str}" if short else f"+৳{ext_str}/jar from {ord_str} jar"
+
+    @property
+    def inside_dhaka_rate_summary(self) -> str:
+        base = Decimal(str(self.inside_dhaka_delivery_fee or 0))
+        extra = Decimal(str(self.inside_dhaka_extra_per_jar or 0))
+        if base <= Decimal('0') and extra <= Decimal('0'):
+            return "FREE"
+        if extra > Decimal('0'):
+            return f"৳{self._fmt_bdt(base)} ({self._format_extra_note(extra)})"
+        return f"Flat ৳{self._fmt_bdt(base)}"
+
+    @property
+    def outside_dhaka_rate_summary(self) -> str:
+        base = Decimal(str(self.outside_dhaka_delivery_fee or 0))
+        extra = Decimal(str(self.outside_dhaka_extra_per_jar or 0))
+        if base <= Decimal('0') and extra <= Decimal('0'):
+            return "FREE"
+        if extra > Decimal('0'):
+            return f"৳{self._fmt_bdt(base)} ({self._format_extra_note(extra)})"
+        return f"Flat ৳{self._fmt_bdt(base)}"
+
+    @property
+    def short_delivery_badge(self) -> str:
+        if self.is_uniform_flat_delivery:
+            base = Decimal(str(self.inside_dhaka_delivery_fee or 0))
+            if base <= Decimal('0'):
+                return "FREE Nationwide Delivery"
+            return f"Nationwide Flat ৳{self._fmt_bdt(base)}"
+        in_dec = Decimal(str(self.inside_dhaka_delivery_fee or 0))
+        out_dec = Decimal(str(self.outside_dhaka_delivery_fee or 0))
+        in_ext = Decimal(str(self.inside_dhaka_extra_per_jar or 0))
+        out_ext = Decimal(str(self.outside_dhaka_extra_per_jar or 0))
+        in_b = self._fmt_bdt(in_dec)
+        out_b = self._fmt_bdt(out_dec)
+        if in_dec == out_dec and in_ext == out_ext and in_ext > Decimal('0'):
+            return f"Nationwide ৳{in_b} ({self._format_extra_note(in_ext, short=True)})"
+        in_part = f"Dhaka ৳{in_b} ({self._format_extra_note(in_ext, short=True)})" if in_ext > Decimal('0') else f"Dhaka ৳{in_b}"
+        out_part = f"Outside ৳{out_b} ({self._format_extra_note(out_ext, short=True)})" if out_ext > Decimal('0') else f"Outside ৳{out_b}"
+        return f"{in_part} • {out_part}"
+
+    @property
+    def free_delivery_qty_text(self) -> str:
+        target = max(1, int(self.free_delivery_min_jars or 4))
+        if self.free_delivery_apply_mode == 'EXACT':
+            return f"exact {target} jar{'s' if target != 1 else ''}"
+        return f"{target}+ jars"
+
+    @property
+    def free_delivery_short_qty(self) -> str:
+        target = max(1, int(self.free_delivery_min_jars or 4))
+        if self.free_delivery_apply_mode == 'EXACT':
+            return f"Exact {target} Jar{'s' if target != 1 else ''}"
+        return f"{target}+ Jars"
+
+    def is_free_delivery_qualified(self, total_items: int) -> bool:
+        if not self.is_active or not self.free_delivery_enabled:
+            return False
+        qty = int(total_items or 0)
+        if qty <= 0:
+            return False
+        target = max(1, int(self.free_delivery_min_jars or 4))
+        if self.free_delivery_apply_mode == 'EXACT':
+            return qty == target
+        return qty >= target
+
+    @property
+    def auto_delivery_notice(self) -> str:
+        if self.is_uniform_flat_delivery:
+            base = Decimal(str(self.inside_dhaka_delivery_fee or 0))
+            core = "FREE nationwide delivery across Bangladesh." if base <= Decimal('0') else f"Flat ৳{self._fmt_bdt(base)} nationwide delivery across Bangladesh."
+        else:
+            in_part = f"Inside Dhaka {self.inside_dhaka_rate_summary.replace('Flat ', '')}"
+            out_part = f"Outside Dhaka {self.outside_dhaka_rate_summary.replace('Flat ', '')}"
+            core = f"{in_part} • {out_part}."
+        if self.is_active and self.free_delivery_enabled:
+            return f"{core} FREE delivery on {self.free_delivery_qty_text}!"
+        return core
+
+    @property
+    def effective_delivery_notice(self) -> str:
+        raw = (self.delivery_notice_text or '').strip()
+        # Ignore legacy hardcoded "Flat ৳150 nationwide" text when zone rates differ
+        if raw and not (not self.is_uniform_flat_delivery and 'flat ৳150 nationwide' in raw.lower()):
+            return raw
+        return self.auto_delivery_notice
 
     @classmethod
     def get_settings(cls):
@@ -571,6 +706,16 @@ class PromotionSetting(models.Model):
 
     def save(self, *args, **kwargs):
         import re
+        # Backward compatibility: if caller only updated standard_delivery_fee in code/tests, mirror to zone fees
+        std_changed = self._orig_std_fee is not None and Decimal(str(self.standard_delivery_fee or 0)) != Decimal(str(self._orig_std_fee or 0))
+        in_changed = self._orig_in_fee is not None and Decimal(str(self.inside_dhaka_delivery_fee or 0)) != Decimal(str(self._orig_in_fee or 0))
+        out_changed = self._orig_out_fee is not None and Decimal(str(self.outside_dhaka_delivery_fee or 0)) != Decimal(str(self._orig_out_fee or 0))
+        if std_changed and not in_changed and not out_changed:
+            self.inside_dhaka_delivery_fee = self.standard_delivery_fee
+            self.outside_dhaka_delivery_fee = self.standard_delivery_fee
+        else:
+            self.standard_delivery_fee = self.outside_dhaka_delivery_fee
+
         if self.bundle_discount_amount > Decimal('0.00'):
             amount_int = int(self.bundle_discount_amount) if self.bundle_discount_amount == int(self.bundle_discount_amount) else f"{self.bundle_discount_amount:.0f}"
             if self.bundle_discount_label and re.search(r'৳\s*\d+', self.bundle_discount_label):
@@ -585,6 +730,9 @@ class PromotionSetting(models.Model):
             elif not self.advance_payment_discount_label:
                 self.advance_payment_discount_label = f"{pct_str}% Advance Payment OFF"
         super().save(*args, **kwargs)
+        self._orig_std_fee = self.standard_delivery_fee
+        self._orig_in_fee = self.inside_dhaka_delivery_fee
+        self._orig_out_fee = self.outside_dhaka_delivery_fee
 
     def calculate_advance_payment_discount(self, subtotal: Decimal = Decimal('0.00'), payment_method: str = 'COD') -> Decimal:
         method = (payment_method or 'COD').strip().upper()
@@ -612,9 +760,20 @@ class PromotionSetting(models.Model):
         return Decimal('0.00')
 
     def calculate_delivery_fee(self, total_items: int = 1, weight_grams: int = 600, zone: str = 'INSIDE_DHAKA') -> Decimal:
-        if self.is_active and self.free_delivery_enabled and total_items >= self.free_delivery_min_jars:
+        qty = max(1, int(total_items or 1))
+        if self.is_free_delivery_qualified(qty):
             return Decimal('0.00')
-        return self.standard_delivery_fee
+        norm_zone = str(zone or 'INSIDE_DHAKA').strip().upper()
+        start_jar = max(2, int(self.extra_jar_start_from or 5))
+        extra_jars = max(0, qty - (start_jar - 1))
+        if norm_zone in ('INSIDE_DHAKA', 'DHAKA', 'DHAKA_CITY'):
+            base = self.inside_dhaka_delivery_fee if self.inside_dhaka_delivery_fee is not None else self.standard_delivery_fee
+            extra = self.inside_dhaka_extra_per_jar or Decimal('0.00')
+        else:
+            base = self.outside_dhaka_delivery_fee if self.outside_dhaka_delivery_fee is not None else self.standard_delivery_fee
+            extra = self.outside_dhaka_extra_per_jar or Decimal('0.00')
+        fee = Decimal(str(base or '0.00')) + (Decimal(str(extra or '0.00')) * Decimal(extra_jars))
+        return max(Decimal('0.00'), fee.quantize(Decimal('0.01')))
 
 
 def calculate_pathao_delivery_fee(weight_grams: int = 600, zone: str = 'INSIDE_DHAKA', total_items: int = 1) -> Decimal:

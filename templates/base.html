@@ -13,7 +13,7 @@
     <meta property="og:site_name" content="Pickpickles Bangladesh">
     <meta property="og:type" content="{% block og_type %}website{% endblock %}">
     <meta property="og:title" content="{% block og_title %}Pickpickles | 100% Fresh Artisanal Pickles in Bangladesh{% endblock %}">
-    <meta property="og:description" content="{% block og_description %}Super crunchy, cold-pack vinegar-brined pickles handcrafted in Bangladesh. Zero heavy oil, maximum crunch! Flat ৳150 nationwide delivery.{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Super crunchy, cold-pack vinegar-brined pickles handcrafted in Bangladesh. Zero heavy oil, maximum crunch! {{ promo_settings.short_delivery_badge }}.{% endblock %}">
     <meta property="og:image" content="{% block og_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'images/logo.png' %}{% endblock %}">
     <meta name="twitter:card" content="summary_large_image">
 
@@ -236,7 +236,7 @@
             {% else %}
             <span class="inline-flex items-center gap-1">🥒 <strong class="font-bold text-emerald-300">100% Fresh Pickles</strong> <span class="text-emerald-500 opacity-70">•</span> <span>Handcrafted in Bangladesh</span></span>
             <span class="hidden sm:inline text-emerald-700">•</span>
-            <span class="text-amber-300 font-extrabold inline-flex items-center gap-1">🚚 Nationwide Delivery Flat ৳{{ promo_settings.standard_delivery_fee|default:150|floatformat:0 }} Across Bangladesh</span>
+            <span class="text-amber-300 font-extrabold inline-flex items-center gap-1">🚚 {{ promo_settings.short_delivery_badge }}</span>
             <span class="hidden md:inline text-emerald-700">•</span>
             <span class="hidden md:inline-flex items-center gap-1 text-emerald-200">💵 bKash / Cash on Delivery</span>
             {% endif %}
@@ -418,10 +418,27 @@
                     <h4 class="text-white font-display font-bold text-base mb-4 uppercase tracking-wider">Delivery &
                         Support</h4>
                     <ul class="space-y-2.5 text-sm">
-                        <li class="flex items-center gap-2">
-                            <i class="fa-solid fa-truck text-brand-accent"></i>
-                            <span>Delivery: Flat ৳150 Nationwide</span>
+                        {% if promo_settings.is_uniform_flat_delivery %}
+                        <li class="flex items-start gap-2">
+                            <i class="fa-solid fa-truck text-brand-accent mt-1 shrink-0"></i>
+                            <span>Delivery: {{ promo_settings.short_delivery_badge }}</span>
                         </li>
+                        {% else %}
+                        <li class="flex items-start gap-2">
+                            <i class="fa-solid fa-city text-brand-accent mt-1 shrink-0"></i>
+                            <span>Inside Dhaka: <strong class="text-white">{{ promo_settings.inside_dhaka_rate_summary }}</strong></span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fa-solid fa-truck text-brand-accent mt-1 shrink-0"></i>
+                            <span>Outside Dhaka: <strong class="text-white">{{ promo_settings.outside_dhaka_rate_summary }}</strong></span>
+                        </li>
+                        {% endif %}
+                        {% if promo_settings.is_active and promo_settings.free_delivery_enabled %}
+                        <li class="flex items-start gap-2 text-emerald-300 font-semibold">
+                            <i class="fa-solid fa-gift text-brand-accent mt-1 shrink-0"></i>
+                            <span>FREE Delivery on <strong class="text-white">{{ promo_settings.free_delivery_qty_text }}</strong></span>
+                        </li>
+                        {% endif %}
                         <li class="flex items-center gap-2">
                             <i class="fa-solid fa-clock text-brand-accent"></i>
                             <span>Delivery Time: 7–10 Days Nationwide</span>
@@ -482,7 +499,8 @@
         </div>
     </footer>
 
-    <!-- Mobile Sticky Bottom Navigation Bar -->
+    <!-- Mobile Sticky Bottom Navigation Bar (Hidden on /checkout/ so sticky Confirm Order bar is 100% unobstructed) -->
+    {% if request.resolver_match.url_name != 'checkout' %}
     <div
         class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-gray-200 px-2 py-1.5 flex items-center justify-around shadow-2xl safe-area-bottom">
         <a href="{% url 'store:index' %}"
@@ -542,6 +560,7 @@
         </button>
         {% endif %}
     </div>
+    {% endif %}
 
     <!-- Slide-Out Quick Cart Drawer (Mobile & Desktop) -->
     <div id="cartDrawerBackdrop" onclick="toggleCartDrawer(false)"
@@ -566,26 +585,44 @@
             </button>
         </div>
 
-        <!-- Nationwide Delivery Banner in Drawer -->
-        <div class="p-3 border-b text-xs transition-all bg-slate-50 border-slate-200 text-slate-900" id="drawerFreeDeliveryBanner">
+        <!-- Offer Progress Banner in Drawer (Shows Active Offers Only — No Delivery Fee) -->
+        <div class="p-3 border-b text-xs transition-all {% if not promo_settings.is_active or not promo_settings.free_delivery_enabled and not promo_settings.bundle_discount_enabled and not promo_settings.advance_payment_discount_enabled %}hidden{% endif %} bg-amber-50/90 border-amber-200 text-amber-950" id="drawerFreeDeliveryBanner">
             <div class="flex items-center justify-between gap-2">
                 <div class="flex items-center gap-2 min-w-0 flex-1">
-                    <span id="drawerFreeDeliveryIcon" class="shrink-0 text-base">🚚</span>
+                    <span id="drawerFreeDeliveryIcon" class="shrink-0 text-base">{% if free_delivery_unlocked %}🎉{% elif promo_settings.free_delivery_enabled %}🚚{% elif promo_settings.bundle_discount_enabled %}🎁{% else %}💳{% endif %}</span>
                     <div class="min-w-0 flex-1">
                         <div id="drawerFreeDeliveryMsg" class="font-black text-xs leading-snug break-words">
-                            <strong>Nationwide Delivery Flat ৳{{ promo_settings.standard_delivery_fee|default:150|floatformat:0 }}</strong>
+                            {% if promo_settings.free_delivery_enabled %}
+                                {% if free_delivery_unlocked %}<strong>FREE Delivery Unlocked!</strong>{% elif items_needed_for_free_delivery > 0 %}Add <strong>{{ items_needed_for_free_delivery }} more jar{{ items_needed_for_free_delivery|pluralize }}</strong> for <strong>FREE Delivery</strong>!{% else %}<strong>FREE Delivery</strong> on {{ promo_settings.free_delivery_qty_text }}!{% endif %}
+                            {% elif promo_settings.bundle_discount_enabled %}
+                                <strong>{{ promo_settings.get_discount_label }}</strong>
+                            {% elif promo_settings.advance_payment_discount_enabled %}
+                                <strong>Extra {{ promo_settings.advance_payment_discount_percent|floatformat:0 }}% OFF on bKash!</strong>
+                            {% endif %}
                         </div>
                         <p class="text-[10px] mt-0.5 opacity-80 leading-tight break-words font-medium" id="drawerFreeDeliverySubtext">
-                            {{ promo_settings.delivery_notice_text|default:"Flat ৳150 nationwide delivery across Bangladesh." }}
+                            {% if promo_settings.free_delivery_enabled %}
+                                Order {{ promo_settings.free_delivery_qty_text }} to unlock ৳0 delivery!
+                            {% elif promo_settings.bundle_discount_enabled %}
+                                Order {{ promo_settings.bundle_min_jars }}{% if promo_settings.bundle_apply_mode == 'AT_LEAST' %}+{% endif %} jars for instant discount!
+                            {% elif promo_settings.advance_payment_discount_enabled %}
+                                Pay via bKash at checkout for instant savings!
+                            {% endif %}
                         </p>
                     </div>
                 </div>
-                <span id="drawerFreeDeliveryBadge" class="text-[9.5px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap bg-amber-400 text-slate-950">
-                    Flat ৳{{ promo_settings.standard_delivery_fee|default:150|floatformat:0 }}
+                <span id="drawerFreeDeliveryBadge" class="text-[9.5px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap {% if free_delivery_unlocked %}bg-emerald-600 text-white{% else %}bg-amber-400 text-slate-950{% endif %}">
+                    {% if promo_settings.free_delivery_enabled %}
+                        {% if free_delivery_unlocked %}FREE{% elif items_needed_for_free_delivery > 0 %}{{ cart_total_items }}/{{ promo_settings.free_delivery_min_jars }} Jars{% else %}{{ promo_settings.free_delivery_short_qty }}{% endif %}
+                    {% elif promo_settings.bundle_discount_enabled %}
+                        {{ promo_settings.bundle_min_jars }}{% if promo_settings.bundle_apply_mode == 'AT_LEAST' %}+{% endif %} Jars
+                    {% else %}
+                        {{ promo_settings.advance_payment_discount_percent|floatformat:0 }}% OFF
+                    {% endif %}
                 </span>
             </div>
             <div class="w-full bg-black/10 rounded-full h-1 mt-2 overflow-hidden">
-                <div id="drawerFreeDeliveryBar" class="h-1 rounded-full transition-all duration-500 bg-emerald-600" style="width: {% if cart_total_items > 0 %}100%{% else %}0%{% endif %};"></div>
+                <div id="drawerFreeDeliveryBar" class="h-1 rounded-full transition-all duration-500 bg-emerald-600" style="width: {% if free_delivery_unlocked %}100%{% elif cart_total_items > 0 %}50%{% else %}0%{% endif %};"></div>
             </div>
         </div>
 
@@ -656,27 +693,28 @@
                 <span id="drawerDiscountLabel">🎁 {{ promo_settings.get_discount_label|default:"Special Offer Discount" }}</span>
                 <span>-৳<span id="drawerDiscount">{{ cart_discount|floatformat:2 }}</span></span>
             </div>
-            <div class="flex items-center justify-between text-xs text-gray-500 font-medium">
-                <span>Nationwide Delivery</span>
-                <span id="drawerDeliveryFee" class="{% if free_delivery_unlocked or delivery_fee == 0 %}text-emerald-700 font-black{% else %}text-gray-700 font-bold{% endif %}">
-                    {% if free_delivery_unlocked or delivery_fee == 0 %}FREE{% else %}৳{{ delivery_fee|floatformat:2 }}{% endif %}
-                </span>
+            <div id="drawerFreeDeliveryRow" class="{% if not free_delivery_unlocked %}hidden{% endif %} flex items-center justify-between text-xs text-emerald-700 font-bold bg-emerald-50/80 px-2.5 py-1.5 rounded-lg border border-emerald-200/80">
+                <span>🚚 Free Delivery Offer</span>
+                <span class="font-black">FREE</span>
             </div>
             <div class="flex items-center justify-between text-sm pt-2 border-t border-gray-100">
-                <span class="font-bold text-gray-900">Estimated Total</span>
-                <span class="font-display font-black text-lg text-emerald-800">৳<span id="drawerEstimatedTotal">{{ cart_grand_total|floatformat:2 }}</span></span>
+                <div>
+                    <span class="font-bold text-gray-900 block">Total</span>
+                    <span id="drawerShippingHint" class="text-[10.5px] text-gray-400 font-medium {% if free_delivery_unlocked %}hidden{% endif %}">Delivery calculated at checkout</span>
+                </div>
+                <span class="font-display font-black text-lg text-emerald-800">৳<span id="drawerEstimatedTotal">{{ cart_net_total|floatformat:2 }}</span></span>
             </div>
             <div id="drawerOfferReminder" class="{% if not promo_settings.is_active %}hidden{% endif %} {% if not promo_settings.bundle_discount_enabled and not promo_settings.free_delivery_enabled and not promo_settings.advance_payment_discount_enabled %}hidden{% endif %} text-[11px] bg-amber-50/90 border border-amber-200 text-amber-950 rounded-xl px-3 py-2 font-semibold space-y-0.5">
+                {% if promo_settings.is_active and promo_settings.bundle_discount_enabled and promo_settings.bundle_discount_amount > 0 %}
+                <p id="drawerBundleOfferHint" class="flex items-center gap-1.5"><span class="shrink-0">🎁</span><span><strong>{{ promo_settings.get_discount_label }}</strong> on {{ promo_settings.bundle_min_jars }}{% if promo_settings.bundle_apply_mode == 'AT_LEAST' %}+{% endif %} jars!</span></p>
+                {% endif %}
+                {% if promo_settings.is_active and promo_settings.free_delivery_enabled %}
+                <p id="drawerFreeDelOfferHint" class="flex items-center gap-1.5"><span class="shrink-0">🚚</span><span><strong>FREE Delivery</strong> on {{ promo_settings.free_delivery_qty_text }}!</span></p>
+                {% endif %}
                 {% if promo_settings.is_active and promo_settings.advance_payment_discount_enabled and promo_settings.advance_payment_discount_percent > 0 %}
                 <p class="flex items-center gap-1.5"><span class="shrink-0">💳</span><span>Extra <strong>{{ promo_settings.advance_payment_discount_percent|floatformat:0 }}% OFF</strong> on bKash advance payment at checkout!</span></p>
                 {% endif %}
-                {% if promo_settings.is_active and promo_settings.bundle_discount_enabled and promo_settings.bundle_discount_amount > 0 %}
-                <p id="drawerBundleOfferHint" class="flex items-center gap-1.5"><span class="shrink-0">🎁</span><span>{{ promo_settings.get_discount_label }}</span></p>
-                {% endif %}
             </div>
-            <p class="text-[11px] text-center font-medium hidden" id="drawerDeliveryNote">
-                <span class="text-slate-700 font-bold">🚚 {{ promo_settings.delivery_notice_text|default:"Flat ৳150 nationwide delivery across Bangladesh." }}</span>
-            </p>
             <a href="{% url 'store:checkout' %}"
                 class="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-700 hover:to-brand-800 active:scale-[0.99] text-white font-bold text-base py-3.5 px-4 rounded-xl shadow-lg shadow-brand-600/25 transition-all text-center">
                 <span>Proceed to Checkout</span>
@@ -691,10 +729,10 @@
         </div>
     </div>
 
-    <!-- Floating WhatsApp Support Button (Mobile & Desktop) -->
+    <!-- Floating WhatsApp Support Button (Hidden on mobile /checkout/ to avoid overlapping Confirm Order & payment cards) -->
     <a href="https://wa.me/8801794271523?text=Hi%20Pickpickles!%20I%20would%20like%20to%20order%20homemade%20pickles."
         target="_blank" rel="noopener noreferrer"
-        class="fixed bottom-20 md:bottom-6 right-5 z-40 bg-[#25D366] hover:bg-[#20bd5a] text-white p-3.5 sm:px-4 sm:py-3 rounded-full shadow-2xl flex items-center gap-2.5 hover:scale-105 active:scale-95 transition-all group border-2 border-white"
+        class="fixed bottom-20 md:bottom-6 right-5 z-40 bg-[#25D366] hover:bg-[#20bd5a] text-white p-3.5 sm:px-4 sm:py-3 rounded-full shadow-2xl {% if request.resolver_match.url_name == 'checkout' %}hidden md:flex{% else %}flex{% endif %} items-center gap-2.5 hover:scale-105 active:scale-95 transition-all group border-2 border-white"
         title="Chat on WhatsApp">
         <i class="fa-brands fa-whatsapp text-2xl"></i>
         <span class="hidden sm:inline font-bold text-xs">WhatsApp Order</span>
@@ -714,10 +752,19 @@
             "bundle_discount_amount": {{ promo_settings.bundle_discount_amount|default:100 }},
             "bundle_discount_label": "{{ promo_settings.bundle_discount_label|escapejs }}",
             "bundle_apply_mode": "{{ promo_settings.bundle_apply_mode|escapejs }}",
-            "standard_delivery_fee": {{ promo_settings.standard_delivery_fee|default:150 }},
+            "inside_dhaka_delivery_fee": {{ promo_settings.inside_dhaka_delivery_fee|default:80 }},
+            "inside_dhaka_extra_per_jar": {{ promo_settings.inside_dhaka_extra_per_jar|default:0 }},
+            "outside_dhaka_delivery_fee": {{ promo_settings.outside_dhaka_delivery_fee|default:130 }},
+            "outside_dhaka_extra_per_jar": {{ promo_settings.outside_dhaka_extra_per_jar|default:0 }},
+            "extra_jar_start_from": {{ promo_settings.extra_jar_start_from|default:5 }},
+            "standard_delivery_fee": {{ promo_settings.standard_delivery_fee|default:130 }},
+            "short_delivery_badge": "{{ promo_settings.short_delivery_badge|escapejs }}",
+            "is_uniform_flat_delivery": {{ promo_settings.is_uniform_flat_delivery|yesno:"true,false" }},
             "free_delivery_enabled": {{ promo_settings.free_delivery_enabled|yesno:"true,false" }},
             "free_delivery_min_jars": {{ promo_settings.free_delivery_min_jars|default:4 }},
-            "delivery_notice_text": "{{ promo_settings.delivery_notice_text|escapejs }}",
+            "free_delivery_apply_mode": "{{ promo_settings.free_delivery_apply_mode|default:'EXACT'|escapejs }}",
+            "free_delivery_qty_text": "{{ promo_settings.free_delivery_qty_text|escapejs }}",
+            "delivery_notice_text": "{{ promo_settings.effective_delivery_notice|escapejs }}",
             "advance_payment_discount_enabled": {{ promo_settings.advance_payment_discount_enabled|yesno:"true,false" }},
             "advance_payment_discount_percent": {{ promo_settings.advance_payment_discount_percent|default:5 }},
             "advance_payment_discount_label": "{{ promo_settings.get_advance_payment_label|escapejs }}"

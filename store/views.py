@@ -30,10 +30,21 @@ def _get_promo_payload():
         'bundle_discount_amount': float(promo.bundle_discount_amount) if is_active else 0.0,
         'bundle_discount_label': promo.get_discount_label() if is_active else '',
         'bundle_apply_mode': promo.bundle_apply_mode,
+        'inside_dhaka_delivery_fee': float(promo.inside_dhaka_delivery_fee),
+        'inside_dhaka_extra_per_jar': float(promo.inside_dhaka_extra_per_jar),
+        'outside_dhaka_delivery_fee': float(promo.outside_dhaka_delivery_fee),
+        'outside_dhaka_extra_per_jar': float(promo.outside_dhaka_extra_per_jar),
+        'extra_jar_start_from': promo.extra_jar_start_from,
         'standard_delivery_fee': float(promo.standard_delivery_fee),
+        'short_delivery_badge': promo.short_delivery_badge,
+        'inside_dhaka_rate_summary': promo.inside_dhaka_rate_summary,
+        'outside_dhaka_rate_summary': promo.outside_dhaka_rate_summary,
+        'is_uniform_flat_delivery': promo.is_uniform_flat_delivery,
         'free_delivery_enabled': bool(promo.free_delivery_enabled and is_active),
         'free_delivery_min_jars': promo.free_delivery_min_jars,
-        'delivery_notice_text': promo.delivery_notice_text,
+        'free_delivery_apply_mode': promo.free_delivery_apply_mode,
+        'free_delivery_qty_text': promo.free_delivery_qty_text,
+        'delivery_notice_text': promo.effective_delivery_notice,
         'advance_payment_discount_enabled': bool(promo.advance_payment_discount_enabled and is_active),
         'advance_payment_discount_percent': float(promo.advance_payment_discount_percent or 0) if is_active else 0.0,
         'advance_payment_discount_label': promo.get_advance_payment_label() if is_active else '',
@@ -316,22 +327,32 @@ from .pathao import PathaoCourierService
 
 def cart_view(request):
     cart = Cart(request)
+    selected_zone = request.GET.get('zone', 'INSIDE_DHAKA')
+    if selected_zone not in ('INSIDE_DHAKA', 'OUTSIDE_DHAKA'):
+        selected_zone = 'INSIDE_DHAKA'
     subtotal = cart.get_subtotal()
     discount = cart.get_discount()
     total_weight_grams = cart.get_total_weight_grams()
     total_weight_kg = cart.get_total_weight_kg()
     billing_weight_kg = cart.get_billing_weight_kg()
-    delivery_fee = cart.get_delivery_fee('INSIDE_DHAKA')
-    grand_total = cart.get_total_price('INSIDE_DHAKA')
+    delivery_fee = cart.get_delivery_fee(selected_zone)
+    delivery_fee_inside = cart.get_delivery_fee('INSIDE_DHAKA')
+    delivery_fee_outside = cart.get_delivery_fee('OUTSIDE_DHAKA')
+    cart_net_total = max(Decimal('0.00'), subtotal - discount)
+    grand_total = cart.get_total_price(selected_zone)
     return render(request, 'store/cart.html', {
         'cart': cart,
+        'selected_zone': selected_zone,
         'cart_subtotal': subtotal,
         'cart_discount': discount,
+        'cart_net_total': cart_net_total,
         'cart_total_items': len(cart),
         'total_weight_grams': total_weight_grams,
         'total_weight_kg': total_weight_kg,
         'billing_weight_kg': billing_weight_kg,
         'delivery_fee': delivery_fee,
+        'delivery_fee_inside': delivery_fee_inside,
+        'delivery_fee_outside': delivery_fee_outside,
         'grand_total': grand_total,
         'free_delivery_unlocked': cart.is_free_delivery(),
         'items_needed_for_free_delivery': cart.items_needed_for_free_delivery(),
@@ -734,7 +755,13 @@ def checkout(request):
             bundle_coupon_discount = cart.get_discount()
             advance_discount = promo.calculate_advance_payment_discount(subtotal, order.payment_method)
             discount = min(subtotal, bundle_coupon_discount + advance_discount)
-            delivery_zone = form.cleaned_data.get('delivery_zone') or 'INSIDE_DHAKA'
+            submitted_city = (form.cleaned_data.get('delivery_city') or '').strip()
+            submitted_zone = form.cleaned_data.get('delivery_zone') or 'INSIDE_DHAKA'
+            if submitted_city and submitted_city.lower() not in ('dhaka', 'ঢাকা'):
+                delivery_zone = 'OUTSIDE_DHAKA'
+            else:
+                delivery_zone = submitted_zone
+            order.delivery_zone = delivery_zone
             delivery_fee = cart.get_delivery_fee(delivery_zone)
             total = max(Decimal('0.00'), subtotal - discount + delivery_fee)
             
@@ -813,7 +840,12 @@ def checkout(request):
             messages.success(request, f"Order #{order.order_number} confirmed successfully!")
             return redirect('store:order_success', order_number=order.order_number)
         else:
-            messages.error(request, 'Please verify your contact and delivery address details.')
+            first_field_err = None
+            for field_errs in form.errors.values():
+                if field_errs:
+                    first_field_err = field_errs[0]
+                    break
+            messages.error(request, first_field_err or 'Please verify your contact and delivery address details.')
     else:
         form = CheckoutForm(initial={'delivery_zone': 'INSIDE_DHAKA', 'payment_method': 'COD'})
 

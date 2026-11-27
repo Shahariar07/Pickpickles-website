@@ -1252,9 +1252,15 @@ def orders_list(request):
         'bundle_discount_amount': float(promo_setting.bundle_discount_amount or 0),
         'bundle_discount_label': promo_setting.get_discount_label() if (promo_setting.is_active and promo_setting.bundle_discount_enabled) else '',
         'bundle_apply_mode': promo_setting.bundle_apply_mode,
-        'standard_delivery_fee': float(promo_setting.standard_delivery_fee if promo_setting.standard_delivery_fee is not None else 150),
+        'inside_dhaka_delivery_fee': float(promo_setting.inside_dhaka_delivery_fee if promo_setting.inside_dhaka_delivery_fee is not None else 80),
+        'inside_dhaka_extra_per_jar': float(promo_setting.inside_dhaka_extra_per_jar or 0),
+        'outside_dhaka_delivery_fee': float(promo_setting.outside_dhaka_delivery_fee if promo_setting.outside_dhaka_delivery_fee is not None else 130),
+        'outside_dhaka_extra_per_jar': float(promo_setting.outside_dhaka_extra_per_jar or 0),
+        'extra_jar_start_from': int(promo_setting.extra_jar_start_from or 5),
+        'standard_delivery_fee': float(promo_setting.standard_delivery_fee if promo_setting.standard_delivery_fee is not None else 130),
         'free_delivery_enabled': bool(promo_setting.is_active and promo_setting.free_delivery_enabled),
         'free_delivery_min_jars': int(promo_setting.free_delivery_min_jars or 4),
+        'free_delivery_apply_mode': promo_setting.free_delivery_apply_mode,
         'advance_payment_discount_enabled': bool(promo_setting.is_active and promo_setting.advance_payment_discount_enabled),
         'advance_payment_discount_percent': float(promo_setting.advance_payment_discount_percent or 0),
         'advance_payment_discount_label': promo_setting.get_advance_payment_label() if (promo_setting.is_active and promo_setting.advance_payment_discount_enabled) else '',
@@ -7238,6 +7244,9 @@ def offer_manager(request):
                 # 4. Delivery Rules
                 promo.free_delivery_enabled = request.POST.get('free_delivery_enabled') == '1'
                 promo.free_delivery_min_jars = max(1, int(request.POST.get('free_delivery_min_jars', 4)))
+                if 'free_delivery_apply_mode' in request.POST:
+                    fd_mode = request.POST.get('free_delivery_apply_mode', 'EXACT')
+                    promo.free_delivery_apply_mode = fd_mode if fd_mode in ('EXACT', 'AT_LEAST') else 'EXACT'
 
                 # 5. Advance Payment Offer
                 promo.advance_payment_discount_enabled = request.POST.get('advance_payment_discount_enabled') == '1'
@@ -7253,7 +7262,26 @@ def offer_manager(request):
                 else:
                     promo.advance_payment_discount_label = adv_label_raw
 
-            promo.standard_delivery_fee = Decimal(str(request.POST.get('standard_delivery_fee', '150.00')).strip() or '150.00')
+            if 'inside_dhaka_delivery_fee' in request.POST or 'outside_dhaka_delivery_fee' in request.POST:
+                in_fee = max(Decimal('0.00'), Decimal(str(request.POST.get('inside_dhaka_delivery_fee', '80.00')).strip() or '0.00'))
+                in_ext = max(Decimal('0.00'), Decimal(str(request.POST.get('inside_dhaka_extra_per_jar', '0.00')).strip() or '0.00'))
+                out_fee = max(Decimal('0.00'), Decimal(str(request.POST.get('outside_dhaka_delivery_fee', '130.00')).strip() or '0.00'))
+                out_ext = max(Decimal('0.00'), Decimal(str(request.POST.get('outside_dhaka_extra_per_jar', '0.00')).strip() or '0.00'))
+                promo.inside_dhaka_delivery_fee = in_fee
+                promo.inside_dhaka_extra_per_jar = in_ext
+                promo.outside_dhaka_delivery_fee = out_fee
+                promo.outside_dhaka_extra_per_jar = out_ext
+                promo.standard_delivery_fee = out_fee
+                if 'extra_jar_start_from' in request.POST:
+                    promo.extra_jar_start_from = max(2, min(50, int(request.POST.get('extra_jar_start_from', 5) or 5)))
+            elif 'standard_delivery_fee' in request.POST:
+                std_fee = max(Decimal('0.00'), Decimal(str(request.POST.get('standard_delivery_fee', '130.00')).strip() or '0.00'))
+                promo.standard_delivery_fee = std_fee
+                promo.inside_dhaka_delivery_fee = std_fee
+                promo.outside_dhaka_delivery_fee = std_fee
+                promo.inside_dhaka_extra_per_jar = Decimal('0.00')
+                promo.outside_dhaka_extra_per_jar = Decimal('0.00')
+
             promo.delivery_notice_text = request.POST.get('delivery_notice_text', '').strip()
 
             promo.save()

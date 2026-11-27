@@ -1099,7 +1099,7 @@
                 <div>
                     <label class="font-bold text-gray-700 block mb-1">Delivery Fee (৳)</label>
                     <input type="number" step="0.01" name="delivery_fee" value="{{ order.delivery_fee }}" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-brand-500">
-                    <span class="text-[10px] text-gray-400">Default: Flat ৳150 Nationwide</span>
+                    <span class="text-[10px] text-gray-400">Default: Dhaka {{ promo_setting.inside_dhaka_rate_summary }} • Outside {{ promo_setting.outside_dhaka_rate_summary }}</span>
                 </div>
 
                 <div>
@@ -1709,7 +1709,13 @@ const EDIT_ORDER_PROMO = {
     is_active: {% if promo_setting.is_active %}true{% else %}false{% endif %},
     free_delivery_enabled: {% if promo_setting.free_delivery_enabled %}true{% else %}false{% endif %},
     free_delivery_min_jars: {{ promo_setting.free_delivery_min_jars|default:4 }},
-    standard_delivery_fee: {{ promo_setting.standard_delivery_fee|default:150|floatformat:2 }}
+    free_delivery_apply_mode: '{{ promo_setting.free_delivery_apply_mode|default:"EXACT"|escapejs }}',
+    inside_dhaka_delivery_fee: {{ promo_setting.inside_dhaka_delivery_fee|default:80|floatformat:2 }},
+    inside_dhaka_extra_per_jar: {{ promo_setting.inside_dhaka_extra_per_jar|default:0|floatformat:2 }},
+    outside_dhaka_delivery_fee: {{ promo_setting.outside_dhaka_delivery_fee|default:130|floatformat:2 }},
+    outside_dhaka_extra_per_jar: {{ promo_setting.outside_dhaka_extra_per_jar|default:0|floatformat:2 }},
+    extra_jar_start_from: {{ promo_setting.extra_jar_start_from|default:5 }},
+    standard_delivery_fee: {{ promo_setting.standard_delivery_fee|default:130|floatformat:2 }}
 };
 
 function openEditOrderModal() {
@@ -1831,8 +1837,18 @@ function recalculateEditOrderTotals(autoCalcFee = false) {
 
     const feeInput = document.getElementById('editOrderDeliveryFeeInput');
     if (autoCalcFee && feeInput) {
-        const freeQualifies = EDIT_ORDER_PROMO.is_active && EDIT_ORDER_PROMO.free_delivery_enabled && totalJars >= EDIT_ORDER_PROMO.free_delivery_min_jars;
-        feeInput.value = freeQualifies ? '0.00' : EDIT_ORDER_PROMO.standard_delivery_fee.toFixed(2);
+        const freeQualifies = EDIT_ORDER_PROMO.is_active && EDIT_ORDER_PROMO.free_delivery_enabled && (
+            EDIT_ORDER_PROMO.free_delivery_apply_mode === 'EXACT'
+                ? totalJars === EDIT_ORDER_PROMO.free_delivery_min_jars
+                : totalJars >= EDIT_ORDER_PROMO.free_delivery_min_jars
+        );
+        const editZoneSel = document.querySelector('#editOrderModal select[name="delivery_zone"]');
+        const editZone = editZoneSel ? editZoneSel.value : '{{ order.delivery_zone|default:"INSIDE_DHAKA" }}';
+        const baseFee = editZone === 'INSIDE_DHAKA' ? EDIT_ORDER_PROMO.inside_dhaka_delivery_fee : EDIT_ORDER_PROMO.outside_dhaka_delivery_fee;
+        const extraFee = editZone === 'INSIDE_DHAKA' ? EDIT_ORDER_PROMO.inside_dhaka_extra_per_jar : EDIT_ORDER_PROMO.outside_dhaka_extra_per_jar;
+        const extraStartJar = Math.max(2, parseInt(EDIT_ORDER_PROMO.extra_jar_start_from || 5, 10) || 5);
+        const calcFee = baseFee + (Math.max(0, (totalJars || 1) - (extraStartJar - 1)) * extraFee);
+        feeInput.value = freeQualifies ? '0.00' : calcFee.toFixed(2);
     }
 
     const discountInput = document.getElementById('editOrderDiscountInput');

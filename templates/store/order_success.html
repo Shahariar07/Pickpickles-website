@@ -114,7 +114,7 @@
                     <span class="text-lg">🚚</span>
                     <div>
                         <strong class="font-black text-amber-950 block">Courier Transit to Doorstep</strong>
-                        <span class="text-[11px] text-amber-800 leading-tight block mt-0.5">Bubble-wrapped securely and delivered right to your doorstep nationwide (Flat ৳150).</span>
+                        <span class="text-[11px] text-amber-800 leading-tight block mt-0.5">Bubble-wrapped securely and delivered right to your doorstep ({% if order.delivery_fee == 0 %}FREE Delivery{% else %}Delivery: ৳{{ order.delivery_fee|floatformat:0 }}{% endif %}).</span>
                     </div>
                 </div>
             </div>

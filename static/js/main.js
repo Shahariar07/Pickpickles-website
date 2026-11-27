@@ -117,7 +117,15 @@ function showToast(message, isError = false) {
         ? '<div class="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0 text-sm"><i class="fa-solid fa-circle-exclamation"></i></div>'
         : '<div class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 text-sm"><i class="fa-solid fa-circle-check"></i></div>';
 
-    const cartBtnHtml = isError ? '' : '<button type="button" onclick="toggleCartDrawer(true)" class="bg-[#15803d] hover:bg-[#166534] active:scale-95 text-white font-black text-[11px] px-2.5 py-1 rounded-lg shrink-0 transition-all shadow-xs ml-1 cursor-pointer">View Bag</button>';
+    const cartBtnHtml = isError ? '' : `
+        <div class="flex items-center gap-1.5 shrink-0 ml-1">
+            <button type="button" onclick="toggleCartDrawer(true)" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold text-[11px] px-2.5 py-1.5 rounded-lg transition-all cursor-pointer border border-slate-700">Bag</button>
+            <a href="/checkout/" class="bg-[#15803d] hover:bg-[#166534] active:scale-95 text-white font-black text-[11px] px-3 py-1.5 rounded-lg transition-all shadow-xs cursor-pointer inline-flex items-center gap-1">
+                <span>Order Now</span>
+                <i class="fa-solid fa-arrow-right text-[9px]"></i>
+            </a>
+        </div>
+    `;
 
     toast.innerHTML = `
         ${iconHtml}
@@ -142,7 +150,7 @@ function showToast(message, isError = false) {
 
     toastTimeout = setTimeout(() => {
         dismissToast();
-    }, 3500);
+    }, 5500);
 }
 
 function dismissToast() {
@@ -172,10 +180,19 @@ function getPromoSettings(offerInfo = null) {
         bundle_discount_amount: 0,
         bundle_discount_label: 'Special Offer Discount',
         bundle_apply_mode: 'EXACT',
-        standard_delivery_fee: 150,
+        inside_dhaka_delivery_fee: 80,
+        inside_dhaka_extra_per_jar: 0,
+        outside_dhaka_delivery_fee: 130,
+        outside_dhaka_extra_per_jar: 0,
+        extra_jar_start_from: 5,
+        standard_delivery_fee: 130,
+        short_delivery_badge: 'Dhaka ৳80 • Outside ৳130',
+        is_uniform_flat_delivery: false,
         free_delivery_enabled: false,
         free_delivery_min_jars: 4,
-        delivery_notice_text: 'Flat ৳150 nationwide delivery across Bangladesh.',
+        free_delivery_apply_mode: 'EXACT',
+        free_delivery_qty_text: 'exact 4 jars',
+        delivery_notice_text: 'Inside Dhaka ৳80 • Outside Dhaka ৳130.',
         advance_payment_discount_enabled: false,
         advance_payment_discount_percent: 0,
         advance_payment_discount_label: 'Advance Payment OFF'
@@ -209,18 +226,47 @@ function formatDiscountLabel(promo, cartData = null) {
     return `🎁 ${bundleLabel}`;
 }
 
-// Unified Offer & Delivery Progress Updater (Drawer, Cart Page & Checkout Page)
+function isPromoFreeDeliveryUnlocked(promo, totalItems) {
+    const p = promo || getPromoSettings();
+    const count = parseInt(totalItems, 10) || 0;
+    if (count <= 0 || !Boolean(p.is_active) || !Boolean(p.free_delivery_enabled)) {
+        return false;
+    }
+    const freeMin = Math.max(1, parseInt(p.free_delivery_min_jars, 10) || 4);
+    const freeMode = p.free_delivery_apply_mode || 'EXACT';
+    return freeMode === 'EXACT' ? count === freeMin : count >= freeMin;
+}
+
+function computeZoneDeliveryFee(promo, totalItems, zone = 'INSIDE_DHAKA') {
+    const p = promo || getPromoSettings();
+    const count = Math.max(1, parseInt(totalItems, 10) || 1);
+    if (isPromoFreeDeliveryUnlocked(p, count)) {
+        return 0;
+    }
+    const startJar = Math.max(2, parseInt(p.extra_jar_start_from, 10) || 5);
+    const extraJars = Math.max(0, count - (startJar - 1));
+    const normZone = String(zone || 'INSIDE_DHAKA').toUpperCase();
+    if (normZone === 'INSIDE_DHAKA' || normZone === 'DHAKA' || normZone === 'DHAKA_CITY') {
+        const base = parseFloat(p.inside_dhaka_delivery_fee !== undefined ? p.inside_dhaka_delivery_fee : (p.standard_delivery_fee !== undefined ? p.standard_delivery_fee : 80)) || 0;
+        const ext = parseFloat(p.inside_dhaka_extra_per_jar || 0) || 0;
+        return Math.max(0, base + ext * extraJars);
+    }
+    const base = parseFloat(p.outside_dhaka_delivery_fee !== undefined ? p.outside_dhaka_delivery_fee : (p.standard_delivery_fee !== undefined ? p.standard_delivery_fee : 130)) || 0;
+    const ext = parseFloat(p.outside_dhaka_extra_per_jar || 0) || 0;
+    return Math.max(0, base + ext * extraJars);
+}
+
+// Unified Offer Progress Updater (Drawer, Cart Page & Checkout Page — Offers Only, No Delivery Fee Display)
 function updateFreeDeliveryProgress(totalItems, offerInfo = null) {
     const count = parseInt(totalItems, 10) || 0;
     const promo = getPromoSettings(offerInfo);
 
     const isActive = Boolean(promo.is_active);
-    const stdFee = parseFloat(promo.standard_delivery_fee !== undefined ? promo.standard_delivery_fee : 150) || 0;
-    const stdFeeStr = stdFee % 1 === 0 ? String(parseInt(stdFee, 10)) : stdFee.toFixed(0);
-    const noticeText = promo.delivery_notice_text || `Flat ৳${stdFeeStr} nationwide delivery across Bangladesh.`;
-
     const freeEnabled = isActive && Boolean(promo.free_delivery_enabled);
     const freeMin = Math.max(1, parseInt(promo.free_delivery_min_jars, 10) || 4);
+    const freeMode = promo.free_delivery_apply_mode || 'EXACT';
+    const freeQtyLabel = freeMode === 'EXACT' ? `exact ${freeMin} jar${freeMin !== 1 ? 's' : ''}` : `${freeMin}+ jars`;
+    const freeUnlocked = isPromoFreeDeliveryUnlocked(promo, count);
 
     const bundleEnabled = isActive && Boolean(promo.bundle_discount_enabled) && (parseFloat(promo.bundle_discount_amount) || 0) > 0;
     const bundleMin = Math.max(1, parseInt(promo.bundle_min_jars, 10) || 2);
@@ -230,22 +276,25 @@ function updateFreeDeliveryProgress(totalItems, offerInfo = null) {
     const bundleMode = promo.bundle_apply_mode || 'EXACT';
     const bundleUnlocked = bundleEnabled && (bundleMode === 'EXACT' ? count === bundleMin : count >= bundleMin);
 
+    const advancePct = parseFloat(promo.advance_payment_discount_percent || 0) || 0;
+    const advanceEnabled = isActive && Boolean(promo.advance_payment_discount_enabled) && advancePct > 0;
+    const advancePctStr = advancePct % 1 === 0 ? String(parseInt(advancePct, 10)) : advancePct.toFixed(0);
+
+    const hasAnyOffer = freeEnabled || bundleEnabled || advanceEnabled;
+
     let state = {
-        bannerBg: 'bg-slate-50 border-slate-200 text-slate-900',
-        icon: '🚚',
-        msgHtml: stdFee === 0 ? '<strong>FREE Nationwide Delivery</strong>' : `<strong>Nationwide Delivery Flat ৳${stdFeeStr}</strong>`,
-        subtext: noticeText,
-        badgeClass: 'bg-slate-800 text-white',
-        badgeText: stdFee === 0 ? 'FREE' : `Flat ৳${stdFeeStr}`,
-        barClass: 'bg-emerald-600',
-        barWidth: count > 0 ? '100%' : '0%',
-        footerNoteHtml: stdFee === 0
-            ? '<span class="text-emerald-700 font-bold">🎉 Free nationwide delivery is active!</span>'
-            : `<span class="text-slate-600 font-medium">${noticeText}</span>`
+        bannerBg: 'bg-amber-50/90 border-amber-200 text-amber-950',
+        icon: '🎁',
+        msgHtml: '',
+        subtext: '',
+        badgeClass: 'bg-amber-400 text-slate-950',
+        badgeText: '',
+        barClass: 'bg-amber-500',
+        barWidth: '0%',
     };
 
     if (freeEnabled) {
-        if (count >= freeMin) {
+        if (freeUnlocked) {
             state = {
                 bannerBg: 'bg-emerald-50 border-emerald-200 text-emerald-950',
                 icon: '🎉',
@@ -257,9 +306,8 @@ function updateFreeDeliveryProgress(totalItems, offerInfo = null) {
                 badgeText: 'FREE',
                 barClass: 'bg-emerald-600',
                 barWidth: '100%',
-                footerNoteHtml: '<strong class="text-emerald-700">🎉 Congratulations! You unlocked FREE delivery.</strong>'
             };
-        } else {
+        } else if (count < freeMin) {
             const needed = Math.max(1, freeMin - count);
             const pct = Math.min(100, Math.round((count / freeMin) * 100));
             state = {
@@ -267,15 +315,28 @@ function updateFreeDeliveryProgress(totalItems, offerInfo = null) {
                 icon: '🚚',
                 msgHtml: count > 0
                     ? `Add <strong>${needed} more jar${needed > 1 ? 's' : ''}</strong> for <strong>FREE Delivery</strong>!`
-                    : `<strong>FREE Delivery</strong> on ${freeMin}+ jars!`,
+                    : `<strong>FREE Delivery</strong> on ${freeQtyLabel}!`,
                 subtext: bundleUnlocked
-                    ? `${bundleLabel} applied! ${needed} more jar${needed > 1 ? 's' : ''} for ৳0 delivery.`
-                    : noticeText,
+                    ? `🎁 ${bundleLabel} applied! Add ${needed} more jar${needed > 1 ? 's' : ''} for FREE delivery.`
+                    : `Order ${freeQtyLabel} to unlock FREE delivery!`,
                 badgeClass: 'bg-amber-400 text-slate-950',
                 badgeText: `${count}/${freeMin} Jars`,
                 barClass: 'bg-amber-500',
                 barWidth: `${pct}%`,
-                footerNoteHtml: `<span class="text-slate-600 font-medium">${noticeText}</span>`
+            };
+        } else {
+            // count > freeMin in EXACT mode
+            state = {
+                bannerBg: bundleUnlocked ? 'bg-emerald-50 border-emerald-200 text-emerald-950' : 'bg-amber-50/90 border-amber-200 text-amber-950',
+                icon: bundleUnlocked ? '🎉' : '🚚',
+                msgHtml: bundleUnlocked
+                    ? `<strong>${bundleLabel} Unlocked!</strong>`
+                    : `<strong>FREE Delivery</strong> applies on ${freeQtyLabel}`,
+                subtext: `FREE delivery offer is valid on ${freeQtyLabel}.`,
+                badgeClass: bundleUnlocked ? 'bg-emerald-600 text-white' : 'bg-amber-400 text-slate-950',
+                badgeText: `Exact ${freeMin} Jars`,
+                barClass: bundleUnlocked ? 'bg-emerald-600' : 'bg-amber-500',
+                barWidth: bundleUnlocked ? '100%' : '0%',
             };
         }
     } else if (bundleEnabled) {
@@ -289,7 +350,6 @@ function updateFreeDeliveryProgress(totalItems, offerInfo = null) {
                 badgeText: `-৳${bundleAmountStr}`,
                 barClass: 'bg-emerald-600',
                 barWidth: '100%',
-                footerNoteHtml: `<span class="text-slate-600 font-medium">${noticeText}</span>`
             };
         } else if (count < bundleMin) {
             const needed = Math.max(1, bundleMin - count);
@@ -300,16 +360,35 @@ function updateFreeDeliveryProgress(totalItems, offerInfo = null) {
                 msgHtml: count > 0
                     ? `Add <strong>${needed} more jar${needed > 1 ? 's' : ''}</strong> to get <strong>${bundleLabel}</strong>!`
                     : `<strong>${bundleLabel}</strong> on ${bundleMin}${bundleMode === 'AT_LEAST' ? '+' : ''} jars!`,
-                subtext: noticeText,
+                subtext: `Order ${bundleMin}${bundleMode === 'AT_LEAST' ? '+' : ''} jars for instant ৳${bundleAmountStr} discount!`,
                 badgeClass: 'bg-amber-400 text-slate-950',
                 badgeText: `${count}/${bundleMin} Jars`,
                 barClass: 'bg-amber-500',
                 barWidth: `${pct}%`,
-                footerNoteHtml: `<span class="text-slate-600 font-medium">${noticeText}</span>`
             };
         } else {
-            state.subtext = `Offer "${bundleLabel}" applies on exact ${bundleMin} jars. ${noticeText}`;
+            state = {
+                bannerBg: 'bg-amber-50/90 border-amber-200 text-amber-950',
+                icon: '🎁',
+                msgHtml: `<strong>${bundleLabel}</strong>`,
+                subtext: `Applies on exact ${bundleMin} jars.`,
+                badgeClass: 'bg-amber-400 text-slate-950',
+                badgeText: `Exact ${bundleMin} Jars`,
+                barClass: 'bg-amber-500',
+                barWidth: '0%',
+            };
         }
+    } else if (advanceEnabled) {
+        state = {
+            bannerBg: 'bg-pink-50/90 border-pink-200 text-pink-950',
+            icon: '💳',
+            msgHtml: `<strong>Extra ${advancePctStr}% OFF on bKash!</strong>`,
+            subtext: `Pay via bKash at checkout for instant ${advancePctStr}% savings!`,
+            badgeClass: 'bg-pink-600 text-white',
+            badgeText: `${advancePctStr}% OFF`,
+            barClass: 'bg-pink-500',
+            barWidth: count > 0 ? '100%' : '0%',
+        };
     }
 
     // 1. Drawer Elements
@@ -319,23 +398,23 @@ function updateFreeDeliveryProgress(totalItems, offerInfo = null) {
     const drawerSubtext = document.getElementById('drawerFreeDeliverySubtext');
     const drawerBadge = document.getElementById('drawerFreeDeliveryBadge');
     const freeBarEl = document.getElementById('drawerFreeDeliveryBar');
-    const deliveryNoteEl = document.getElementById('drawerDeliveryNote');
 
     if (drawerBanner) {
-        drawerBanner.className = `p-3 border-b text-xs transition-all ${state.bannerBg}`;
-        if (drawerIcon) drawerIcon.innerText = state.icon;
-        if (freeMsgEl) freeMsgEl.innerHTML = state.msgHtml;
-        if (drawerSubtext) drawerSubtext.innerText = state.subtext;
-        if (drawerBadge) {
-            drawerBadge.className = `text-[9.5px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap mt-0.5 ${state.badgeClass}`;
-            drawerBadge.innerText = state.badgeText;
-        }
-        if (freeBarEl) {
-            freeBarEl.className = `h-1 rounded-full transition-all duration-500 ${state.barClass}`;
-            freeBarEl.style.width = state.barWidth;
-        }
-        if (deliveryNoteEl) {
-            deliveryNoteEl.innerHTML = state.footerNoteHtml;
+        if (!hasAnyOffer) {
+            drawerBanner.classList.add('hidden');
+        } else {
+            drawerBanner.className = `p-3 border-b text-xs transition-all ${state.bannerBg}`;
+            if (drawerIcon) drawerIcon.innerText = state.icon;
+            if (freeMsgEl) freeMsgEl.innerHTML = state.msgHtml;
+            if (drawerSubtext) drawerSubtext.innerText = state.subtext;
+            if (drawerBadge) {
+                drawerBadge.className = `text-[9.5px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap mt-0.5 ${state.badgeClass}`;
+                drawerBadge.innerText = state.badgeText;
+            }
+            if (freeBarEl) {
+                freeBarEl.className = `h-1 rounded-full transition-all duration-500 ${state.barClass}`;
+                freeBarEl.style.width = state.barWidth;
+            }
         }
     }
 
@@ -348,17 +427,21 @@ function updateFreeDeliveryProgress(totalItems, offerInfo = null) {
     const pageFreeBadge = document.getElementById('freeDeliveryBadge');
 
     if (pageFreeBanner) {
-        pageFreeBanner.className = `px-2.5 py-2 rounded-xl border text-[11px] font-bold transition-all ${state.bannerBg}`;
-        if (pageFreeIcon) pageFreeIcon.innerText = state.icon;
-        if (pageFreeText) pageFreeText.innerHTML = state.msgHtml;
-        if (pageFreeProgress) {
-            pageFreeProgress.className = `h-1 rounded-full transition-all duration-500 ${state.barClass}`;
-            pageFreeProgress.style.width = state.barWidth;
-        }
-        if (pageFreeSubtext) pageFreeSubtext.innerText = state.subtext;
-        if (pageFreeBadge) {
-            pageFreeBadge.className = `text-[9.5px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap ${state.badgeClass}`;
-            pageFreeBadge.innerText = state.badgeText;
+        if (!hasAnyOffer) {
+            pageFreeBanner.classList.add('hidden');
+        } else {
+            pageFreeBanner.className = `px-2.5 py-2 rounded-xl border text-[11px] font-bold transition-all ${state.bannerBg}`;
+            if (pageFreeIcon) pageFreeIcon.innerText = state.icon;
+            if (pageFreeText) pageFreeText.innerHTML = state.msgHtml;
+            if (pageFreeProgress) {
+                pageFreeProgress.className = `h-1 rounded-full transition-all duration-500 ${state.barClass}`;
+                pageFreeProgress.style.width = state.barWidth;
+            }
+            if (pageFreeSubtext) pageFreeSubtext.innerText = state.subtext;
+            if (pageFreeBadge) {
+                pageFreeBadge.className = `text-[9.5px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap ${state.badgeClass}`;
+                pageFreeBadge.innerText = state.badgeText;
+            }
         }
     }
 }
@@ -403,33 +486,25 @@ function renderCartDrawer(items, subtotal, discount, cartData = null) {
         }
     }
 
-    // Update Drawer Delivery Fee & Estimated Total
-    const freeEnabled = Boolean(promo.is_active) && Boolean(promo.free_delivery_enabled);
-    const freeMin = Math.max(1, parseInt(promo.free_delivery_min_jars, 10) || 4);
-    const fallbackFree = freeEnabled && totalItems >= freeMin;
-    const fallbackFee = fallbackFree ? 0 : (parseFloat(promo.standard_delivery_fee !== undefined ? promo.standard_delivery_fee : 150) || 0);
+    // Update Drawer Free Delivery Offer Badge & Net Cart Total (No Delivery Fee in Cart)
+    const fallbackFree = isPromoFreeDeliveryUnlocked(promo, totalItems);
     const isFreeDelivery = cartData && cartData.free_delivery_unlocked !== undefined
         ? Boolean(cartData.free_delivery_unlocked)
-        : (cartData && cartData.delivery_fee !== undefined ? parseFloat(cartData.delivery_fee) === 0 : fallbackFree);
-    const feeVal = cartData && cartData.delivery_fee !== undefined ? parseFloat(cartData.delivery_fee) : fallbackFee;
-    const grandVal = cartData && cartData.grand_total !== undefined
-        ? parseFloat(cartData.grand_total)
-        : (Math.max(0, subVal - discVal) + (totalItems > 0 ? feeVal : 0));
+        : fallbackFree;
+    const netTotalVal = Math.max(0, subVal - discVal);
 
-    const drawerDeliveryFee = document.getElementById('drawerDeliveryFee');
-    if (drawerDeliveryFee) {
-        if (isFreeDelivery || feeVal === 0) {
-            drawerDeliveryFee.className = 'text-emerald-700 font-black';
-            drawerDeliveryFee.innerText = 'FREE';
-        } else {
-            drawerDeliveryFee.className = 'text-gray-700 font-bold';
-            drawerDeliveryFee.innerText = `৳${feeVal.toFixed(2)}`;
-        }
+    const drawerFreeRow = document.getElementById('drawerFreeDeliveryRow');
+    if (drawerFreeRow) {
+        drawerFreeRow.classList.toggle('hidden', !isFreeDelivery);
+    }
+    const drawerShipHint = document.getElementById('drawerShippingHint');
+    if (drawerShipHint) {
+        drawerShipHint.classList.toggle('hidden', isFreeDelivery);
     }
 
     const drawerEstimatedTotal = document.getElementById('drawerEstimatedTotal');
     if (drawerEstimatedTotal) {
-        drawerEstimatedTotal.innerText = grandVal.toFixed(2);
+        drawerEstimatedTotal.innerText = netTotalVal.toFixed(2);
     }
 
     const drawerFooter = document.getElementById('cartDrawerFooter');
@@ -604,6 +679,7 @@ function quickAddToCart(productId, quantity = 1, btnEl = null, variant = '') {
 // AJAX Update Cart item quantity (+ / - / remove)
 async function ajaxUpdateCart(itemKey, action) {
     const token = getCsrfToken();
+    const activeCartZone = window.cartSelectedZone || 'INSIDE_DHAKA';
     try {
         const response = await fetch('/cart/update-ajax/', {
             method: 'POST',
@@ -615,7 +691,8 @@ async function ajaxUpdateCart(itemKey, action) {
             body: JSON.stringify({
                 product_id: itemKey,
                 item_key: itemKey,
-                action: action
+                action: action,
+                zone: activeCartZone
             })
         });
 
@@ -669,37 +746,20 @@ async function ajaxUpdateCart(itemKey, action) {
                 }
             }
 
-            const stdFee = parseFloat(promo.standard_delivery_fee !== undefined ? promo.standard_delivery_fee : 150) || 0;
-            const deliveryFee = data.delivery_fee !== undefined ? parseFloat(data.delivery_fee) : stdFee;
-            const isFreeDelivery = Boolean(data.free_delivery_unlocked) || deliveryFee === 0;
-            const pageDelivery = document.getElementById('pageCartDeliveryFee');
-            const pageOldFee = document.getElementById('pageCartOldFee');
-            const pageDeliveryNote = document.getElementById('pageCartDeliveryNote');
-
-            if (pageDelivery) {
-                if (pageOldFee) pageOldFee.classList.add('hidden');
-                if (isFreeDelivery) {
-                    pageDelivery.className = "font-black text-emerald-700 text-sm";
-                    pageDelivery.innerText = "FREE";
-                } else {
-                    pageDelivery.className = "font-black text-slate-900 text-sm";
-                    pageDelivery.innerText = `৳${deliveryFee.toFixed(2)}`;
-                }
+            const isFreeDelivery = Boolean(data.free_delivery_unlocked);
+            const pageFreeRow = document.getElementById('pageCartFreeDeliveryRow');
+            if (pageFreeRow) {
+                pageFreeRow.classList.toggle('hidden', !isFreeDelivery);
             }
-            if (pageDeliveryNote) {
-                if (isFreeDelivery) {
-                    pageDeliveryNote.innerHTML = '<strong class="text-emerald-700">🎉 Congratulations! You unlocked FREE delivery.</strong>';
-                } else {
-                    pageDeliveryNote.innerText = promo.delivery_notice_text || `Flat ৳${stdFee.toFixed(0)} nationwide delivery across Bangladesh.`;
-                }
+            const pageShipHint = document.getElementById('pageCartShippingHint');
+            if (pageShipHint) {
+                pageShipHint.innerText = isFreeDelivery ? '🎉 Free delivery unlocked!' : 'Delivery calculated at checkout';
             }
 
             const pageTot = document.getElementById('pageCartTotal');
             if (pageTot) {
-                const total = data.grand_total !== undefined
-                    ? parseFloat(data.grand_total)
-                    : (Math.max(0, subVal - discountVal) + deliveryFee);
-                pageTot.innerText = total.toFixed(2);
+                const netTot = Math.max(0, subVal - discountVal);
+                pageTot.innerText = netTot.toFixed(2);
             }
 
             const pageWeight = document.getElementById('pageCartWeightKg');
@@ -824,8 +884,11 @@ async function applyCouponCode(inputId) {
     const token = getCsrfToken();
     let currentZone = 'INSIDE_DHAKA';
     const zoneChecked = document.querySelector('input[name="delivery_zone"]:checked');
+    const hiddenZoneEl = document.getElementById('delivery_zone');
     if (zoneChecked && zoneChecked.value) {
         currentZone = zoneChecked.value;
+    } else if (hiddenZoneEl && hiddenZoneEl.value) {
+        currentZone = hiddenZoneEl.value;
     }
     const phoneInput = document.querySelector('input[name="customer_phone"]');
     const customerPhone = phoneInput ? phoneInput.value.trim() : '';
@@ -956,8 +1019,11 @@ async function removeCouponCode() {
     const token = getCsrfToken();
     let currentZone = 'INSIDE_DHAKA';
     const zoneChecked = document.querySelector('input[name="delivery_zone"]:checked');
+    const hiddenZoneEl = document.getElementById('delivery_zone');
     if (zoneChecked && zoneChecked.value) {
         currentZone = zoneChecked.value;
+    } else if (hiddenZoneEl && hiddenZoneEl.value) {
+        currentZone = hiddenZoneEl.value;
     }
 
     try {

@@ -102,8 +102,15 @@ Resolution Protocol for Pickpickles Bangladesh.{% endblock %}
 
             <div class="space-y-3 text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
                 <p>
-                    <strong>1.1 Nationwide Standard Delivery Fee:</strong> Delivery is a flat <strong>৳150</strong>
-                    nationwide across Bangladesh (Inside & Outside Dhaka) for all standard jar orders.
+                    <strong>1.1 Standard Delivery Fee:</strong>
+                    {% if promo_settings.is_uniform_flat_delivery %}
+                    Delivery is a flat <strong>৳{{ promo_settings.inside_dhaka_delivery_fee|floatformat:0 }}</strong> nationwide across Bangladesh (Inside &amp; Outside Dhaka) for standard jar orders.
+                    {% else %}
+                    Delivery inside Dhaka City is <strong>{{ promo_settings.inside_dhaka_rate_summary }}</strong>, and Outside Dhaka (nationwide across all districts) is <strong>{{ promo_settings.outside_dhaka_rate_summary }}</strong>.
+                    {% endif %}
+                    {% if promo_settings.is_active and promo_settings.free_delivery_enabled %}
+                    Orders of <strong>{{ promo_settings.free_delivery_qty_text }}</strong> automatically qualify for <strong>FREE Nationwide Delivery (৳0)</strong>.
+                    {% endif %}
                 </p>
                 <p>
                     <strong>1.3 Estimated Delivery Timeline:</strong>
@@ -540,18 +547,30 @@ Resolution Protocol for Pickpickles Bangladesh.{% endblock %}
                             <td class="py-3.5 px-4 flex items-center gap-1.5">
                                 <span
                                     class="bg-emerald-700 text-white text-[10px] px-2 py-0.5 rounded-md font-black">STANDARD</span>
-                                All Orders (Nationwide)
+                                Standard Orders
                             </td>
-                            <td class="py-3.5 px-4 text-emerald-800 font-black">Flat ৳150</td>
-                            <td class="py-3.5 px-4 text-emerald-800 font-black">Flat ৳150</td>
+                            <td class="py-3.5 px-4 text-emerald-800 font-black">{{ promo_settings.inside_dhaka_rate_summary }}</td>
+                            <td class="py-3.5 px-4 text-emerald-800 font-black">{{ promo_settings.outside_dhaka_rate_summary }}</td>
                             <td class="py-3.5 px-4 font-bold text-slate-800">7–10 Days</td>
                             <td class="py-3.5 px-4 text-emerald-800 font-black">100% Free Replacement</td>
                         </tr>
+                        {% if promo_settings.is_active and promo_settings.free_delivery_enabled %}
+                        <tr class="bg-amber-50/60 font-bold text-slate-900">
+                            <td class="py-3.5 px-4 flex items-center gap-1.5">
+                                <span class="bg-amber-500 text-slate-950 text-[10px] px-2 py-0.5 rounded-md font-black">BUNDLE</span>
+                                {{ promo_settings.free_delivery_short_qty }}
+                            </td>
+                            <td class="py-3.5 px-4 text-emerald-700 font-black">FREE (৳0)</td>
+                            <td class="py-3.5 px-4 text-emerald-700 font-black">FREE (৳0)</td>
+                            <td class="py-3.5 px-4 font-bold text-slate-800">7–10 Days</td>
+                            <td class="py-3.5 px-4 text-emerald-800 font-black">100% Free Replacement</td>
+                        </tr>
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
             <p class="text-[11px] text-slate-500 font-medium">
-                * Nationwide delivery is a flat ৳150 across Bangladesh. Cash on Delivery (COD) is available for customers with clean courier delivery records. Customers with negative courier return history or fraud reports must complete advance payment prior to dispatch.
+                * {{ promo_settings.effective_delivery_notice }} Cash on Delivery (COD) is available for customers with clean courier delivery records. Customers with negative courier return history or fraud reports must complete advance payment prior to dispatch.
             </p>
         </section>
 

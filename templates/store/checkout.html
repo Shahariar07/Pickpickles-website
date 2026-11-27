@@ -61,8 +61,12 @@
                                     <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
                                         <i class="fa-regular fa-user text-xs sm:text-sm"></i>
                                     </span>
-                                    <input type="text" name="customer_name" id="customer_name" value="{{ form.customer_name.value|default:'' }}" required autocomplete="name" placeholder="e.g. Tanvir Ahmed" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 sm:py-2.5 text-xs sm:text-sm text-slate-900 font-semibold focus:bg-white focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 focus:outline-hidden transition">
+                                    <input type="text" name="customer_name" id="customer_name" value="{{ form.customer_name.value|default:'' }}" required autocomplete="name" placeholder="e.g. Tanvir Ahmed / তানভীর আহমেদ" class="w-full bg-slate-50 border {% if form.customer_name.errors %}border-rose-500 field-server-err{% else %}border-slate-200{% endif %} rounded-xl pl-9 pr-3 py-2 sm:py-2.5 text-xs sm:text-sm text-slate-900 font-semibold focus:bg-white focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 focus:outline-hidden transition">
                                 </div>
+                                <p id="customer_name_err" class="hidden text-rose-700 bg-rose-50 border border-rose-200 font-semibold text-[11px] p-2 rounded-xl mt-1 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-circle-exclamation text-rose-600 text-xs shrink-0"></i>
+                                    <span>Please enter your full name (আপনার নাম লিখুন).</span>
+                                </p>
                                 {% if form.customer_name.errors %}
                                     <p class="text-rose-600 font-bold text-[11px] mt-1 flex items-center gap-1">
                                         <i class="fa-solid fa-circle-exclamation"></i> {{ form.customer_name.errors.0 }}
@@ -75,11 +79,11 @@
                                 <label class="block text-[11px] sm:text-xs font-bold text-slate-700 mb-1" for="customer_phone">
                                     Mobile Number <span class="text-rose-500">*</span>
                                 </label>
-                                <div class="flex items-center w-full bg-slate-50 border border-slate-200 rounded-xl overflow-hidden focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-600/20 focus-within:border-emerald-600 transition">
+                                <div class="flex items-center w-full bg-slate-50 border {% if form.customer_phone.errors %}border-rose-500 field-server-err{% else %}border-slate-200{% endif %} rounded-xl overflow-hidden focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-600/20 focus-within:border-emerald-600 transition">
                                     <span class="flex items-center gap-1 px-2.5 sm:px-3 py-2 sm:py-2.5 text-slate-600 text-[11px] sm:text-xs font-black border-r border-slate-200 bg-slate-100/70 shrink-0 select-none">
                                         🇧🇩 +88
                                     </span>
-                                    <input type="tel" name="customer_phone" id="customer_phone" value="{{ form.customer_phone.value|default:'' }}" required inputmode="numeric" placeholder="01XXXXXXXXX" maxlength="15" autocomplete="tel" class="w-full min-w-0 bg-transparent px-3 py-2 sm:py-2.5 text-xs sm:text-sm text-slate-900 font-semibold tracking-wide focus:outline-hidden">
+                                    <input type="tel" name="customer_phone" id="customer_phone" value="{{ form.customer_phone.value|default:'' }}" required inputmode="tel" placeholder="01XXXXXXXXX" maxlength="24" autocomplete="tel" class="w-full min-w-0 bg-transparent px-3 py-2 sm:py-2.5 text-xs sm:text-sm text-slate-900 font-semibold tracking-wide focus:outline-hidden">
                                 </div>
                                 
                                 <p id="customer_phone_err" class="hidden text-rose-700 bg-rose-50 border border-rose-200 font-semibold text-[11px] p-2 rounded-xl mt-1 flex items-center gap-1.5">
@@ -100,7 +104,7 @@
                                 </label>
                                 <div class="relative">
                                     <i class="fa-solid fa-location-dot absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
-                                    <select name="delivery_city" id="delivery_city" onchange="const z = document.getElementById('delivery_zone'); if (z) z.value = (this.value === 'Dhaka' ? 'INSIDE_DHAKA' : 'OUTSIDE_DHAKA');" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-2 sm:py-2.5 text-xs sm:text-sm text-slate-900 font-semibold focus:bg-white focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 focus:outline-hidden transition cursor-pointer">
+                                    <select name="delivery_city" id="delivery_city" onchange="onCheckoutCityChange(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-2 sm:py-2.5 text-xs sm:text-sm text-slate-900 font-semibold focus:bg-white focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 focus:outline-hidden transition cursor-pointer">
                                         {% with selected_city=form.delivery_city.value|default:'Dhaka' %}
                                         <option value="Dhaka" {% if selected_city == 'Dhaka' %}selected{% endif %}>Dhaka</option>
                                         <option value="Bagerhat" {% if selected_city == 'Bagerhat' %}selected{% endif %}>Bagerhat</option>
@@ -176,7 +180,11 @@
                                 <label class="block text-[11px] sm:text-xs font-bold text-slate-700 mb-1" for="delivery_address">
                                     Full Delivery Address <span class="text-rose-500">*</span>
                                 </label>
-                                <textarea name="delivery_address" id="delivery_address" rows="2" required autocomplete="street-address" placeholder="House #, Road #, Area, Thana & District" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 sm:p-3 text-xs sm:text-sm text-slate-900 font-semibold focus:bg-white focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 focus:outline-hidden transition">{{ form.delivery_address.value|default:'' }}</textarea>
+                                <textarea name="delivery_address" id="delivery_address" rows="2" required autocomplete="street-address" placeholder="House #, Road #, Area, Thana & District (বাসা, রোড ও এলাকার ঠিকানা)" class="w-full bg-slate-50 border {% if form.delivery_address.errors %}border-rose-500 field-server-err{% else %}border-slate-200{% endif %} rounded-xl px-3 py-2 sm:p-3 text-xs sm:text-sm text-slate-900 font-semibold focus:bg-white focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 focus:outline-hidden transition">{{ form.delivery_address.value|default:'' }}</textarea>
+                                <p id="delivery_address_err" class="hidden text-rose-700 bg-rose-50 border border-rose-200 font-semibold text-[11px] p-2 rounded-xl mt-1 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-circle-exclamation text-rose-600 text-xs shrink-0"></i>
+                                    <span>Please enter your delivery address (ডেলিভারির ঠিকানা লিখুন).</span>
+                                </p>
                                 {% if form.delivery_address.errors %}
                                     <p class="text-rose-600 font-bold text-[11px] mt-1">{{ form.delivery_address.errors.0 }}</p>
                                 {% endif %}
@@ -269,7 +277,7 @@
                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                                         <div>
                                             <label class="block text-xs font-bold text-slate-900 mb-1" for="bkash_sender">Your bKash Number *</label>
-                                            <input type="tel" id="bkash_sender" placeholder="01XXXXXXXXX" maxlength="15" class="w-full px-3.5 py-2.5 rounded-xl border-2 border-pink-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 text-xs font-bold text-slate-900 outline-hidden bg-white transition-all shadow-2xs">
+                                            <input type="tel" id="bkash_sender" placeholder="01XXXXXXXXX" maxlength="24" inputmode="tel" class="w-full px-3.5 py-2.5 rounded-xl border-2 border-pink-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 text-xs font-bold text-slate-900 outline-hidden bg-white transition-all shadow-2xs">
                                             
                                             <!-- English bKash Sender Error -->
                                             <p id="bkash_sender_err" class="hidden text-rose-700 bg-rose-50 border border-rose-200 font-semibold text-xs p-2.5 rounded-xl mt-1.5 flex items-center gap-2 shadow-2xs">
@@ -352,7 +360,7 @@
                                     <span id="freeDeliveryIcon" class="shrink-0 text-xs">{% if free_delivery_unlocked %}🎉{% elif promo_settings.free_delivery_enabled %}🚚{% else %}🎁{% endif %}</span>
                                     <span id="freeDeliveryText" class="text-[11px] leading-snug">
                                         {% if promo_settings.free_delivery_enabled %}
-                                            {% if free_delivery_unlocked %}FREE Delivery Unlocked!{% else %}Add {{ items_needed_for_free_delivery }} more for FREE Delivery{% endif %}
+                                            {% if free_delivery_unlocked %}FREE Delivery Unlocked!{% elif items_needed_for_free_delivery > 0 %}Add {{ items_needed_for_free_delivery }} more jar{{ items_needed_for_free_delivery|pluralize }} for FREE Delivery{% else %}FREE Delivery applies on {{ promo_settings.free_delivery_qty_text }}{% endif %}
                                         {% elif promo_settings.bundle_discount_enabled %}
                                             {% if cart_bundle_discount > 0 %}{{ promo_settings.get_discount_label }} Unlocked!{% else %}{{ promo_settings.get_discount_label }} ({{ promo_settings.bundle_min_jars }}{% if promo_settings.bundle_apply_mode == 'AT_LEAST' %}+{% endif %} jars){% endif %}
                                         {% endif %}
@@ -360,7 +368,7 @@
                                 </div>
                                 <span id="freeDeliveryBadge" class="text-[10px] font-black shrink-0 whitespace-nowrap {% if free_delivery_unlocked %}text-emerald-700{% else %}text-slate-600{% endif %}">
                                     {% if promo_settings.free_delivery_enabled %}
-                                        {% if free_delivery_unlocked %}FREE{% else %}{{ cart_total_items }}/{{ promo_settings.free_delivery_min_jars }}{% endif %}
+                                        {% if free_delivery_unlocked %}FREE{% elif items_needed_for_free_delivery > 0 %}{{ cart_total_items }}/{{ promo_settings.free_delivery_min_jars }}{% else %}{{ promo_settings.free_delivery_short_qty }}{% endif %}
                                     {% else %}
                                         {% if cart_bundle_discount > 0 %}-৳{{ cart_bundle_discount|floatformat:0 }}{% else %}{{ promo_settings.bundle_min_jars }} Jars{% endif %}
                                     {% endif %}
@@ -399,7 +407,7 @@
                             </div>
 
                             <div class="flex justify-between items-center text-slate-600">
-                                <span>Nationwide Delivery <span class="text-[10.5px] sm:text-xs text-slate-400">(7–10 days)</span></span>
+                                <span><span id="checkoutDeliveryLabel">{% if promo_settings.is_uniform_flat_delivery %}Nationwide Delivery{% elif form.delivery_zone.value == 'OUTSIDE_DHAKA' %}Outside Dhaka Delivery{% else %}Inside Dhaka Delivery{% endif %}</span> <span class="text-[10.5px] sm:text-xs text-slate-400">(7–10 days)</span></span>
                                 {% if free_delivery_unlocked or delivery_fee == 0 %}
                                 <span class="font-bold text-emerald-700" id="checkoutDeliveryFee">FREE</span>
                                 {% else %}
@@ -473,9 +481,11 @@
                         </div>
                         <script>
                             document.addEventListener('DOMContentLoaded', function() {
+                                const firstErrField = document.querySelector('.field-server-err');
                                 const msgBox = document.getElementById('checkoutInlineMessages');
-                                if (msgBox) {
-                                    setTimeout(() => msgBox.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+                                const targetEl = firstErrField || msgBox;
+                                if (targetEl) {
+                                    setTimeout(() => targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
                                 }
                             });
                         </script>
@@ -496,8 +506,8 @@
             </div>
         </form>
 
-        <!-- Sticky Mobile Bottom Checkout Bar (Easy 1-Tap Order on Mobile) -->
-        <div class="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 px-3.5 py-2.5 shadow-[0_-6px_20px_rgba(0,0,0,0.08)] flex items-center justify-between gap-3">
+        <!-- Sticky Mobile Bottom Checkout Bar (Elevated z-50 & Unobstructed 1-Tap Order on Mobile) -->
+        <div class="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200 px-3.5 py-2.5 shadow-[0_-6px_20px_rgba(0,0,0,0.12)] flex items-center justify-between gap-3 safe-area-bottom">
             <div class="min-w-0">
                 <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block leading-none">Total Payable</span>
                 <div class="flex items-center gap-2 mt-0.5">
@@ -507,9 +517,9 @@
                     </button>
                 </div>
             </div>
-            <button type="button" onclick="document.getElementById('submitOrderBtn')?.click();" class="bg-emerald-700 hover:bg-emerald-800 active:scale-[0.98] text-white font-display font-black text-sm px-5 py-3 rounded-xl shadow-md shadow-emerald-800/20 flex items-center gap-1.5 shrink-0 cursor-pointer">
-                <span>Confirm Order</span>
-                <i class="fa-solid fa-arrow-right text-xs"></i>
+            <button type="button" id="mobileStickySubmitBtn" onclick="document.getElementById('submitOrderBtn')?.click();" class="bg-emerald-700 hover:bg-emerald-800 active:scale-[0.98] text-white font-display font-black text-sm px-5 py-3 rounded-xl shadow-md shadow-emerald-800/20 flex items-center gap-1.5 shrink-0 cursor-pointer">
+                <span id="mobileStickySubmitText">Confirm Order</span>
+                <i class="fa-solid fa-arrow-right text-xs" id="mobileStickySubmitIcon"></i>
             </button>
         </div>
 
@@ -535,11 +545,42 @@
     window.isFreeDelivery = {{ free_delivery_unlocked|yesno:"true,false" }};
     window.configuredBundleDiscount = parseFloat("{{ cart_bundle_discount|default:0 }}") || 0;
     window.configuredCouponDiscount = parseFloat("{{ cart_coupon_discount|default:0 }}") || 0;
-    window.configuredDeliveryFee = window.isFreeDelivery ? 0.0 : parseFloat("{{ delivery_fee|default:150 }}");
+    window.insideDhakaBaseFee = parseFloat("{{ promo_settings.inside_dhaka_delivery_fee|default:80 }}") || 0;
+    window.insideDhakaExtraFee = parseFloat("{{ promo_settings.inside_dhaka_extra_per_jar|default:0 }}") || 0;
+    window.outsideDhakaBaseFee = parseFloat("{{ promo_settings.outside_dhaka_delivery_fee|default:130 }}") || 0;
+    window.outsideDhakaExtraFee = parseFloat("{{ promo_settings.outside_dhaka_extra_per_jar|default:0 }}") || 0;
+    window.extraJarStartFrom = Math.max(2, parseInt("{{ promo_settings.extra_jar_start_from|default:5 }}", 10) || 5);
+    window.isUniformFlatDelivery = {{ promo_settings.is_uniform_flat_delivery|yesno:"true,false" }};
+    window.configuredDeliveryFee = window.isFreeDelivery ? 0.0 : parseFloat("{{ delivery_fee|default:80 }}");
+
+    function getActiveCheckoutZone() {
+        const cityEl = document.getElementById('delivery_city');
+        const zoneEl = document.getElementById('delivery_zone');
+        if (cityEl && cityEl.value) {
+            const z = (cityEl.value.trim().toLowerCase() === 'dhaka') ? 'INSIDE_DHAKA' : 'OUTSIDE_DHAKA';
+            if (zoneEl) zoneEl.value = z;
+            return z;
+        }
+        return (zoneEl && zoneEl.value) ? zoneEl.value : 'INSIDE_DHAKA';
+    }
+
+    function onCheckoutCityChange(cityVal) {
+        const zoneEl = document.getElementById('delivery_zone');
+        const newZone = (String(cityVal || '').trim().toLowerCase() === 'dhaka') ? 'INSIDE_DHAKA' : 'OUTSIDE_DHAKA';
+        if (zoneEl) zoneEl.value = newZone;
+        updateDeliveryFee();
+    }
 
     function calculateDeliveryFee(weightGrams, zone) {
         if (window.isFreeDelivery) return 0.0;
-        return window.configuredDeliveryFee;
+        const count = Math.max(1, window.cartTotalItemsCount || 1);
+        const startJar = Math.max(2, window.extraJarStartFrom || 5);
+        const extraJars = Math.max(0, count - (startJar - 1));
+        const activeZone = String(zone || getActiveCheckoutZone() || 'INSIDE_DHAKA').toUpperCase();
+        if (activeZone === 'INSIDE_DHAKA' || activeZone === 'DHAKA') {
+            return Math.max(0.0, window.insideDhakaBaseFee + (window.insideDhakaExtraFee * extraJars));
+        }
+        return Math.max(0.0, window.outsideDhakaBaseFee + (window.outsideDhakaExtraFee * extraJars));
     }
 
     function toggleMobileSummary() {
@@ -565,7 +606,16 @@
     window.advanceDiscountPercent = parseFloat("{{ promo_settings.advance_payment_discount_percent|default:0 }}") || 0;
 
     function updateDeliveryFee(skipToggleRefresh = false) {
-        const fee = calculateDeliveryFee(window.totalWeightGrams, 'INSIDE_DHAKA');
+        const activeZone = getActiveCheckoutZone();
+        const fee = calculateDeliveryFee(window.totalWeightGrams, activeZone);
+        const delLabelEl = document.getElementById('checkoutDeliveryLabel');
+        if (delLabelEl) {
+            if (window.isUniformFlatDelivery) {
+                delLabelEl.innerText = 'Nationwide Delivery';
+            } else {
+                delLabelEl.innerText = activeZone === 'OUTSIDE_DHAKA' ? 'Outside Dhaka Delivery' : 'Inside Dhaka Delivery';
+            }
+        }
         const bundleDiscount = window.configuredBundleDiscount !== undefined ? window.configuredBundleDiscount : (parseFloat("{{ cart_bundle_discount|default:0 }}") || 0);
         const couponDiscount = window.configuredCouponDiscount !== undefined ? window.configuredCouponDiscount : (parseFloat("{{ cart_coupon_discount|default:0 }}") || 0);
         const subtotal = window.subtotalValue !== undefined ? window.subtotalValue : (parseFloat("{{ cart_subtotal|default:0 }}") || 0);
@@ -752,36 +802,57 @@
         }
     }
 
+    // Normalize Bangla numerals (০-৯), autofill spaces/hyphens/Unicode marks, +880, and 10-digit 17XXXXXXXX
+    const BANGLA_DIGITS = {'০':'0','১':'1','২':'2','৩':'3','৪':'4','৫':'5','৬':'6','৭':'7','৮':'8','৯':'9'};
+    function normalizeBdMobileJS(phone) {
+        if (!phone) return '';
+        let s = String(phone).replace(/[০-৯]/g, ch => BANGLA_DIGITS[ch] || ch);
+        s = s.replace(/[\u200b-\u200f\u202a-\u202e\u2066-\u2069\s\-\(\)\.]/g, '');
+        if (s.startsWith('+') && !s.startsWith('+88') && !s.startsWith('+01')) {
+            return s; // Non-BD international number
+        }
+        s = s.replace(/^\+/, '');
+        if (s.startsWith('00880') && s.length === 15) s = s.substring(4);
+        else if (s.startsWith('88001') && s.length === 14) s = '0' + s.substring(4);
+        else if (s.startsWith('880') && s.length === 13) s = s.substring(2);
+        else if (s.startsWith('88') && s.length === 13) s = s.substring(2);
+        else if (/^1[3-9]\d{8}$/.test(s)) s = '0' + s;
+        return s;
+    }
+
     // Helper to validate Bangladeshi mobile number (and block dummy numbers like 01700000000 / 01712345678)
     function isValidBangladeshiMobile(phone) {
-        if (!phone) return false;
-        let clean = phone.replace(/[\s\-\(\)\.]/g, '');
-        if (clean.startsWith('+880')) clean = clean.substring(3);
-        else if (clean.startsWith('880')) clean = clean.substring(2);
-        else if (clean.startsWith('+88')) clean = clean.substring(3);
-        else if (clean.startsWith('88') && clean.length === 13) clean = clean.substring(2);
-        
+        const clean = normalizeBdMobileJS(phone);
+        if (!clean || /[A-Za-z\u0985-\u09df]/.test(clean)) return false;
         if (!/^01[3-9]\d{8}$/.test(clean)) return false;
-        if (/(\d)\1{5,}/.test(clean)) return false;
+        if (/(\d)\1{6,}/.test(clean)) return false;
         const sub = clean.substring(3);
         const fakeSeqs = ['1234567', '2345678', '3456789', '4567890', '9876543', '8765432', '7654321', '6543210', '0123456'];
         if (fakeSeqs.some(seq => sub.includes(seq))) return false;
-        if (new Set(sub.split('')).size <= 2) return false;
+        if (new Set(sub.split('')).size <= 1) return false;
         return true;
     }
 
     // Live typing and blur validation
+    ['customer_name', 'delivery_address'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', function () {
+            setFieldError(id, id + '_err', false);
+        });
+    });
+
     const custPhoneEl = document.getElementById('customer_phone');
     if (custPhoneEl) {
         custPhoneEl.addEventListener('input', function () {
             setFieldError('customer_phone', 'customer_phone_err', false);
         });
         custPhoneEl.addEventListener('blur', function () {
-            const val = this.value.trim();
-            if (val && !isValidBangladeshiMobile(val)) {
-                setFieldError('customer_phone', 'customer_phone_err', true);
-            } else if (val) {
+            const raw = this.value.trim();
+            if (!raw) return;
+            if (isValidBangladeshiMobile(raw)) {
+                this.value = normalizeBdMobileJS(raw);
                 setFieldError('customer_phone', 'customer_phone_err', false);
+            } else {
+                setFieldError('customer_phone', 'customer_phone_err', true);
             }
         });
     }
@@ -797,19 +868,50 @@
         const selectedMethod = document.querySelector('input[name="payment_method"]:checked')?.value || 'COD';
         const hiddenSender = document.getElementById('payment_sender_number');
         const hiddenTrx = document.getElementById('payment_trx_id');
-        let hasError = false;
+        let firstInvalidEl = null;
+        let firstErrMsg = '';
 
-        // Validate customer phone
+        // 1. Validate customer name
+        const custNameInput = document.getElementById('customer_name');
+        const custNameVal = (custNameInput?.value || '').trim();
+        if (custNameVal.length < 2) {
+            setFieldError('customer_name', 'customer_name_err', true);
+            if (!firstInvalidEl) {
+                firstInvalidEl = custNameInput;
+                firstErrMsg = 'Please enter your full name (আপনার নাম লিখুন).';
+            }
+        } else {
+            setFieldError('customer_name', 'customer_name_err', false);
+        }
+
+        // 2. Validate & normalize customer phone
         const custPhoneInput = document.getElementById('customer_phone');
         const custPhoneVal = (custPhoneInput?.value || '').trim();
         if (!isValidBangladeshiMobile(custPhoneVal)) {
             setFieldError('customer_phone', 'customer_phone_err', true);
-            if (!hasError) custPhoneInput?.focus();
-            hasError = true;
+            if (!firstInvalidEl) {
+                firstInvalidEl = custPhoneInput;
+                firstErrMsg = 'Please enter a valid 11-digit mobile number (01XXXXXXXXX).';
+            }
         } else {
+            if (custPhoneInput) custPhoneInput.value = normalizeBdMobileJS(custPhoneVal);
             setFieldError('customer_phone', 'customer_phone_err', false);
         }
 
+        // 3. Validate delivery address
+        const addrInput = document.getElementById('delivery_address');
+        const addrVal = (addrInput?.value || '').trim();
+        if (addrVal.length < 4) {
+            setFieldError('delivery_address', 'delivery_address_err', true);
+            if (!firstInvalidEl) {
+                firstInvalidEl = addrInput;
+                firstErrMsg = 'Please enter your delivery address (ডেলিভারির ঠিকানা লিখুন).';
+            }
+        } else {
+            setFieldError('delivery_address', 'delivery_address_err', false);
+        }
+
+        // 4. Validate bKash fields if bKash selected
         if (selectedMethod === 'BKASH') {
             const senderInput = document.getElementById('bkash_sender');
             const trxInput = document.getElementById('bkash_trx');
@@ -818,34 +920,54 @@
 
             if (!isValidBangladeshiMobile(senderVal)) {
                 setFieldError('bkash_sender', 'bkash_sender_err', true);
-                if (!hasError) senderInput?.focus();
-                hasError = true;
+                if (!firstInvalidEl) {
+                    firstInvalidEl = senderInput;
+                    firstErrMsg = 'Please enter a valid bKash sender mobile number.';
+                }
             } else {
+                const normSender = normalizeBdMobileJS(senderVal);
+                if (senderInput) senderInput.value = normSender;
                 setFieldError('bkash_sender', 'bkash_sender_err', false);
             }
 
             if (!trxVal || trxVal.length < 6) {
                 setFieldError('bkash_trx', 'bkash_trx_err', true);
-                if (!hasError) trxInput?.focus();
-                hasError = true;
+                if (!firstInvalidEl) {
+                    firstInvalidEl = trxInput;
+                    firstErrMsg = 'Please enter your bKash Transaction ID (TrxID).';
+                }
             } else {
                 setFieldError('bkash_trx', 'bkash_trx_err', false);
             }
 
-            if (hiddenSender) hiddenSender.value = senderVal;
+            if (hiddenSender) hiddenSender.value = senderInput ? senderInput.value.trim() : '';
             if (hiddenTrx) hiddenTrx.value = trxVal;
         } else {
             if (hiddenSender) hiddenSender.value = '';
             if (hiddenTrx) hiddenTrx.value = '';
         }
 
-        if (hasError) {
+        if (firstInvalidEl) {
             e.preventDefault();
+            firstInvalidEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => firstInvalidEl.focus({ preventScroll: true }), 180);
             if (typeof showToast === 'function') {
-                showToast('Please enter a valid 11-digit Bangladeshi mobile number (01XXXXXXXXX).', 'error', 4500);
+                showToast(firstErrMsg, true);
             }
             return false;
         }
+
+        // Show clear loading state so slow mobile connections never double-tap or get confused
+        const submitBtn = document.getElementById('submitOrderBtn');
+        const submitText = document.getElementById('submitBtnText');
+        const submitIcon = document.getElementById('submitBtnIcon');
+        const mobBtn = document.getElementById('mobileStickySubmitBtn');
+        const mobText = document.getElementById('mobileStickySubmitText');
+        if (submitBtn) submitBtn.disabled = true;
+        if (submitText) submitText.innerText = 'Confirming Order...';
+        if (submitIcon) submitIcon.className = 'fa-solid fa-spinner fa-spin text-sm';
+        if (mobBtn) mobBtn.disabled = true;
+        if (mobText) mobText.innerText = 'Confirming...';
 
         // Save customer profile to localStorage for returning 1-click checkout experience
         saveCheckoutProfile();
@@ -966,6 +1088,14 @@
             }
             if (cityEl && profile.city && (!cityEl.value.trim() || cityEl.value.trim() === 'Dhaka')) {
                 cityEl.value = profile.city;
+            }
+            const urlZone = new URLSearchParams(window.location.search).get('zone');
+            if (urlZone === 'OUTSIDE_DHAKA' && cityEl && cityEl.value === 'Dhaka' && (!profile.city || profile.city === 'Dhaka')) {
+                const zEl = document.getElementById('delivery_zone');
+                if (zEl) zEl.value = 'OUTSIDE_DHAKA';
+            } else if (cityEl && cityEl.value) {
+                const zEl = document.getElementById('delivery_zone');
+                if (zEl) zEl.value = (cityEl.value.trim().toLowerCase() === 'dhaka') ? 'INSIDE_DHAKA' : 'OUTSIDE_DHAKA';
             }
 
             if (autoFilled) {

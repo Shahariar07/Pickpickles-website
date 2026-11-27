@@ -607,4 +607,85 @@ class ManualOrderOfferAndCouponTests(TestCase):
         self.assertEqual(order.total_amount, Decimal('600.00'))
         self.assertEqual(order.items.first().quantity, 1)
 
+    def test_offer_manager_saves_zone_and_per_jar_delivery_fees_and_updates_manual_order(self):
+        """Offer Manager saves Inside/Outside Dhaka base + per-jar fees and manual order creation applies them dynamically."""
+        from store.models import Order
+
+        res_save = self.client.post(reverse('dashboard:offer_manager'), {
+            'is_active': '1',
+            'campaign_name': 'Zone Delivery Test',
+            'bundle_min_jars': '2',
+            'bundle_discount_amount': '100',
+            'bundle_apply_mode': 'EXACT',
+            'inside_dhaka_delivery_fee': '80',
+            'inside_dhaka_extra_per_jar': '20',
+            'outside_dhaka_delivery_fee': '130',
+            'outside_dhaka_extra_per_jar': '25',
+            'extra_jar_start_from': '5',
+            'free_delivery_enabled': '1',
+            'free_delivery_min_jars': '4',
+            'free_delivery_apply_mode': 'EXACT',
+            'delivery_notice_text': '',
+        })
+        self.assertEqual(res_save.status_code, 302)
+
+        promo = PromotionSetting.get_settings()
+        self.assertEqual(promo.inside_dhaka_delivery_fee, Decimal('80.00'))
+        self.assertEqual(promo.inside_dhaka_extra_per_jar, Decimal('20.00'))
+        self.assertEqual(promo.outside_dhaka_delivery_fee, Decimal('130.00'))
+        self.assertEqual(promo.outside_dhaka_extra_per_jar, Decimal('25.00'))
+        self.assertEqual(promo.extra_jar_start_from, 5)
+        self.assertEqual(promo.standard_delivery_fee, Decimal('130.00'))
+
+        # 3-jar manual order Inside Dhaka -> Base only (80.00)
+        res_dhaka = self.client.post(reverse('dashboard:create_manual_order'), {
+            'customer_name': 'Dhaka Buyer',
+            'customer_phone': '01711223344',
+            'delivery_address': 'Uttara Sector 7',
+            'delivery_city': 'Dhaka',
+            'delivery_zone': 'INSIDE_DHAKA',
+            'product_id': [str(self.product.id)],
+            'quantity': ['3'],
+        })
+        self.assertEqual(res_dhaka.status_code, 302)
+        self.assertEqual(Order.objects.order_by('-id').first().delivery_fee, Decimal('80.00'))
+
+        # 4-jar manual order Outside Dhaka -> Exact 4 Jars = FREE (0.00)
+        self.client.post(reverse('dashboard:create_manual_order'), {
+            'customer_name': 'Four Jar Exact',
+            'customer_phone': '01711223355',
+            'delivery_address': 'Agrabad',
+            'delivery_city': 'Chattogram',
+            'delivery_zone': 'OUTSIDE_DHAKA',
+            'product_id': [str(self.product.id)],
+            'quantity': ['4'],
+        })
+        self.assertEqual(Order.objects.order_by('-id').first().delivery_fee, Decimal('0.00'))
+
+        # 5-jar manual order Inside Dhaka -> Base + 1x Extra = 80 + 20 = 100.00
+        self.client.post(reverse('dashboard:create_manual_order'), {
+            'customer_name': 'Five Jar Dhaka',
+            'customer_phone': '01711223366',
+            'delivery_address': 'Mirpur',
+            'delivery_city': 'Dhaka',
+            'delivery_zone': 'INSIDE_DHAKA',
+            'product_id': [str(self.product.id)],
+            'quantity': ['5'],
+        })
+        self.assertEqual(Order.objects.order_by('-id').first().delivery_fee, Decimal('100.00'))
+
+        # 6-jar manual order Outside Dhaka -> Base + 2x Extra = 130 + 2*25 = 180.00
+        self.client.post(reverse('dashboard:create_manual_order'), {
+            'customer_name': 'Six Jar Sylhet',
+            'customer_phone': '01811223344',
+            'delivery_address': 'Zindabazar',
+            'delivery_city': 'Sylhet',
+            'delivery_zone': 'OUTSIDE_DHAKA',
+            'product_id': [str(self.product.id)],
+            'quantity': ['6'],
+        })
+        self.assertEqual(Order.objects.order_by('-id').first().delivery_fee, Decimal('180.00'))
+
+
+
 
