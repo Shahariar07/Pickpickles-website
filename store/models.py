@@ -979,6 +979,20 @@ class Order(models.Model):
     payment_trx_id = models.CharField(max_length=100, blank=True, help_text="bKash / Nagad Transaction ID")
     bkash_payment_id = models.CharField(max_length=100, blank=True, null=True, help_text="Official bKash PGW Payment ID")
     
+    # Marketing & Ad Attribution Tracking
+    utm_source = models.CharField(max_length=100, blank=True, default='', db_index=True, help_text="e.g. facebook, instagram, google, tiktok")
+    utm_medium = models.CharField(max_length=100, blank=True, default='', help_text="e.g. cpc, paid, social, bio")
+    utm_campaign = models.CharField(max_length=255, blank=True, default='', db_index=True, help_text="Campaign name e.g. Winter_Pickle_Sale_2026")
+    utm_content = models.CharField(max_length=255, blank=True, default='', help_text="Ad creative name e.g. Spicy_Garlic_Video_Ad")
+    utm_term = models.CharField(max_length=255, blank=True, default='', help_text="Keyword or target audience")
+    meta_ad_id = models.CharField(max_length=100, blank=True, default='', db_index=True, help_text="Meta Ad ID from URL parameter (e.g. {{ad.id}})")
+    meta_adset_id = models.CharField(max_length=100, blank=True, default='', help_text="Meta AdSet ID from URL parameter")
+    meta_campaign_id = models.CharField(max_length=100, blank=True, default='', help_text="Meta Campaign ID from URL parameter")
+    meta_fbclid = models.CharField(max_length=255, blank=True, default='', help_text="Facebook Click Identifier (fbclid)")
+    traffic_source = models.CharField(max_length=150, blank=True, default='', help_text="Resolved traffic source summary (e.g. Meta Ads, Google Ads, Organic)")
+    landing_url = models.TextField(blank=True, default='', help_text="First landing page URL with parameters")
+    referrer_url = models.TextField(blank=True, default='', help_text="External HTTP Referer on entry")
+
     # Order Status & Management
     order_status = models.CharField(max_length=30, choices=ORDER_STATUS_CHOICES, default='PENDING', db_index=True)
     is_notification_seen = models.BooleanField(default=False, db_index=True, help_text="True once staff has seen this new order notification")
@@ -1122,6 +1136,161 @@ class Order(models.Model):
         Unified Customer and Delivery Instruction.
         """
         return (self.customer_notes or self.admin_notes or '').strip()
+
+    @property
+    def is_from_ad(self):
+        """True if order originated from a paid ad or tracked social click."""
+        if any([self.meta_fbclid, self.meta_ad_id, self.meta_campaign_id, self.utm_campaign, self.utm_content]):
+            return True
+        if self.utm_medium and self.utm_medium.lower() in ('cpc', 'paid', 'ads', 'paid_social', 'ppc', 'cpa'):
+            return True
+        if self.traffic_source and 'ad' in self.traffic_source.lower():
+            return True
+        # Check fallback meta_order_tracking.json for older orders
+        try:
+            from store.meta_capi import get_order_tracking_keys
+            tk = get_order_tracking_keys(self.order_number)
+            if tk and (tk.get('fbc') or tk.get('utm_campaign') or tk.get('ad_id')):
+                return True
+        except Exception:
+            pass
+        return False
+
+    @property
+    def ad_attribution_summary(self):
+        """
+        Returns structured ad attribution details for Dashboard badges & cards.
+        Automatically falls back to meta_order_tracking.json for historical orders.
+        """
+        if hasattr(self, '_cached_ad_attr'):
+            return self._cached_ad_attr
+
+        src = (self.utm_source or '').strip()
+        med = (self.utm_medium or '').strip()
+        camp = (self.utm_campaign or '').strip()
+        cont = (self.utm_content or '').strip()
+        term = (self.utm_term or '').strip()
+        ad_id = (self.meta_ad_id or '').strip()
+        adset_id = (self.meta_adset_id or '').strip()
+        camp_id = (self.meta_campaign_id or '').strip()
+        fbclid = (self.meta_fbclid or '').strip()
+        t_source = (self.traffic_source or '').strip()
+        ref = (self.referrer_url or '').strip()
+        land = (self.landing_url or '').strip()
+        ua_browser = ''
+
+        # Fallback to JSON tracking file for historical orders or extra UA info
+        try:
+            from store.meta_capi import get_order_tracking_keys
+            tk = get_order_tracking_keys(self.order_number) or {}
+            fbc = (tk.get('fbc') or '').strip()
+            if not fbclid and fbc.startswith('fb.') and fbc.count('.') >= 3:
+                fbclid = fbc.split('.', 3)[3]
+            elif not fbclid and fbc:
+                fbclid = fbc
+            if not src:
+                src = (tk.get('utm_source') or '').strip()
+            if not med:
+                med = (tk.get('utm_medium') or '').strip()
+            if not camp:
+                camp = (tk.get('utm_campaign') or '').strip()
+            if not cont:
+                cont = (tk.get('utm_content') or '').strip()
+            if not ad_id:
+                ad_id = (tk.get('ad_id') or '').strip()
+            if not adset_id:
+                adset_id = (tk.get('adset_id') or '').strip()
+            if not camp_id:
+                camp_id = (tk.get('campaign_id') or '').strip()
+            ua = (tk.get('client_user_agent') or '').strip()
+            if any(x in ua for x in ('FBAN', 'FBAV', 'FB_IAB', 'FBIOS')):
+                ua_browser = 'Facebook App'
+            elif 'Instagram' in ua:
+                ua_browser = 'Instagram App'
+            elif 'WhatsApp' in ua:
+                ua_browser = 'WhatsApp'
+        except Exception:
+            pass
+
+        src_low = src.lower()
+        ref_low = ref.lower()
+        is_paid = bool(
+            fbclid or ad_id or camp_id or camp or cont
+            or med.lower() in ('cpc', 'paid', 'ads', 'paid_social', 'ppc', 'cpa')
+        )
+
+        # Determine Platform & Badge Styling
+        if is_paid and ('ig' in src_low or 'instagram' in src_low or ua_browser == 'Instagram App'):
+            platform = 'Instagram Ad'
+            short_badge = f"IG Ad: {cont or camp}" if (cont or camp) else "Instagram Ad"
+            icon = 'fa-brands fa-instagram'
+            badge_class = 'bg-pink-50 text-pink-800 border-pink-200'
+        elif is_paid and ('google' in src_low or 'gclid' in land.lower()):
+            platform = 'Google Ad'
+            short_badge = f"Google Ad: {camp}" if camp else "Google Ad"
+            icon = 'fa-brands fa-google'
+            badge_class = 'bg-amber-50 text-amber-900 border-amber-200'
+        elif is_paid and ('tiktok' in src_low or 'ttclid' in land.lower()):
+            platform = 'TikTok Ad'
+            short_badge = f"TikTok Ad: {cont or camp}" if (cont or camp) else "TikTok Ad"
+            icon = 'fa-brands fa-tiktok'
+            badge_class = 'bg-slate-900 text-white border-slate-800'
+        elif is_paid or fbclid:
+            platform = 'Facebook / Meta Ad'
+            label_detail = cont or camp or (f"Ad #{ad_id[-6:]}" if ad_id else "")
+            short_badge = f"Meta Ad: {label_detail}" if label_detail else "Meta Ad"
+            icon = 'fa-brands fa-facebook'
+            badge_class = 'bg-blue-50 text-blue-800 border-blue-200'
+        elif ua_browser == 'Facebook App' or 'facebook.com' in ref_low or 'fb.com' in ref_low or src_low in ('fb', 'facebook'):
+            platform = 'Facebook (App / Organic)'
+            short_badge = 'Facebook'
+            icon = 'fa-brands fa-facebook-f'
+            badge_class = 'bg-indigo-50 text-indigo-800 border-indigo-200'
+        elif ua_browser == 'Instagram App' or 'instagram.com' in ref_low or src_low in ('ig', 'instagram'):
+            platform = 'Instagram (App / Bio)'
+            short_badge = 'Instagram'
+            icon = 'fa-brands fa-instagram'
+            badge_class = 'bg-pink-50 text-pink-700 border-pink-200'
+        elif ua_browser == 'WhatsApp' or 'wa.me' in ref_low or 'whatsapp' in src_low:
+            platform = 'WhatsApp'
+            short_badge = 'WhatsApp'
+            icon = 'fa-brands fa-whatsapp'
+            badge_class = 'bg-emerald-50 text-emerald-800 border-emerald-200'
+        elif 'google.' in ref_low or src_low == 'google':
+            platform = 'Google Search'
+            short_badge = 'Google Organic'
+            icon = 'fa-brands fa-google'
+            badge_class = 'bg-emerald-50 text-emerald-800 border-emerald-200'
+        else:
+            platform = t_source or 'Direct / Website'
+            short_badge = 'Direct'
+            icon = 'fa-solid fa-globe'
+            badge_class = 'bg-gray-100 text-gray-600 border-gray-200'
+
+        if len(short_badge) > 32:
+            short_badge = short_badge[:30] + '…'
+
+        res = {
+            'is_ad': is_paid,
+            'platform': platform,
+            'short_badge': short_badge,
+            'icon': icon,
+            'badge_class': badge_class,
+            'ad_name': cont,
+            'campaign_name': camp,
+            'adset_name': term,
+            'ad_id': ad_id,
+            'adset_id': adset_id,
+            'campaign_id': camp_id,
+            'utm_source': src,
+            'utm_medium': med,
+            'fbclid': fbclid,
+            'browser_app': ua_browser,
+            'referrer_url': ref,
+            'landing_url': land,
+        }
+        self._cached_ad_attr = res
+        return res
 
 
     @property

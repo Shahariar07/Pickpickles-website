@@ -1154,7 +1154,12 @@ def orders_list(request):
             Q(customer_name__icontains=search_query) |
             Q(customer_phone__icontains=search_query) |
             Q(delivery_city__icontains=search_query) |
-            Q(payment_trx_id__icontains=search_query)
+            Q(payment_trx_id__icontains=search_query) |
+            Q(utm_campaign__icontains=search_query) |
+            Q(utm_content__icontains=search_query) |
+            Q(utm_source__icontains=search_query) |
+            Q(meta_ad_id__icontains=search_query) |
+            Q(traffic_source__icontains=search_query)
         )
         if num_match:
             try:
@@ -1174,10 +1179,12 @@ def orders_list(request):
         writer.writerow([
             'Order #', 'Date & Time', 'Customer Name', 'Phone', 'City', 'Zone', 'Delivery Address',
             'Items Ordered', 'Total Jars', 'Subtotal (BDT)', 'Delivery Fee (BDT)', 'Total Amount (BDT)',
-            'Payment Method', 'Payment Status', 'bKash TrxID', 'Order Status', 'Courier', 'Consignment ID'
+            'Payment Method', 'Payment Status', 'bKash TrxID', 'Order Status', 'Courier', 'Consignment ID',
+            'Traffic Source', 'Campaign Name', 'Ad Name', 'Meta Ad ID'
         ])
         for o in orders:
             items_summary = ", ".join(f"{itm.product_name} (x{itm.quantity})" for itm in o.items.all())
+            attr = o.ad_attribution_summary
             writer.writerow([
                 o.order_number,
                 timezone.localtime(o.created_at).strftime('%Y-%m-%d %I:%M %p'),
@@ -1197,6 +1204,10 @@ def orders_list(request):
                 o.get_order_status_display(),
                 o.active_courier_name or '',
                 o.active_consignment_id or '',
+                attr.get('platform', ''),
+                attr.get('campaign_name', ''),
+                attr.get('ad_name', ''),
+                attr.get('ad_id', ''),
             ])
         return response
 
@@ -2374,7 +2385,12 @@ def orders_trash(request):
             Q(customer_name__icontains=search_query) |
             Q(customer_phone__icontains=search_query) |
             Q(delivery_city__icontains=search_query) |
-            Q(payment_trx_id__icontains=search_query)
+            Q(payment_trx_id__icontains=search_query) |
+            Q(utm_campaign__icontains=search_query) |
+            Q(utm_content__icontains=search_query) |
+            Q(utm_source__icontains=search_query) |
+            Q(meta_ad_id__icontains=search_query) |
+            Q(traffic_source__icontains=search_query)
         )
         if num_match:
             try:

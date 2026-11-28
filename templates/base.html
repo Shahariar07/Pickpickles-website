@@ -125,7 +125,7 @@
         fbq('init', '{{ META_PIXEL_ID }}', advancedMatching);
         fbq('track', 'PageView');
 
-        // Capture and persist Meta Match Keys (fbclid, _fbp, _fbc) across sessions & pages
+        // Capture and persist Meta Match Keys & Ad Attribution (UTM, Ad ID, fbclid) across sessions & pages
         try {
             var urlParams = new URLSearchParams(window.location.search);
             var urlFbclid = urlParams.get('fbclid');
@@ -143,6 +143,52 @@
             if (mFbp) localStorage.setItem('_fbp', decodeURIComponent(mFbp));
             var mFbc = (document.cookie.match(/(?:^|;\s*)_fbc=([^;]*)/) || [])[1];
             if (mFbc) localStorage.setItem('_fbc', decodeURIComponent(mFbc));
+
+            // Persist Ad / UTM parameters in localStorage (30-day attribution memory)
+            var attrMap = {
+                utm_source: ['utm_source', 'source'],
+                utm_medium: ['utm_medium', 'medium'],
+                utm_campaign: ['utm_campaign', 'campaign'],
+                utm_content: ['utm_content', 'ad_name', 'ad'],
+                utm_term: ['utm_term', 'adset_name', 'adset'],
+                meta_ad_id: ['ad_id', 'hsa_ad', 'fb_ad_id'],
+                meta_adset_id: ['adset_id', 'hsa_grp', 'fb_adset_id'],
+                meta_campaign_id: ['campaign_id', 'hsa_cam', 'fb_campaign_id']
+            };
+            var storedAttr = {};
+            try { storedAttr = JSON.parse(localStorage.getItem('pkp_ad_attribution') || '{}') || {}; } catch (e2) {}
+            if (storedAttr.ts && (Date.now() - storedAttr.ts > 30 * 86400 * 1000)) {
+                storedAttr = {};
+            }
+            var updatedAttr = false;
+            Object.keys(attrMap).forEach(function(key) {
+                for (var i = 0; i < attrMap[key].length; i++) {
+                    var v = urlParams.get(attrMap[key][i]);
+                    if (v && v.trim()) {
+                        storedAttr[key] = v.trim().substring(0, 250);
+                        updatedAttr = true;
+                        break;
+                    }
+                }
+            });
+            if (urlFbclid) {
+                storedAttr.meta_fbclid = urlFbclid.trim().substring(0, 250);
+                updatedAttr = true;
+            }
+            if (updatedAttr || !storedAttr.landing_url) {
+                if (updatedAttr || window.location.search) {
+                    storedAttr.landing_url = (window.location.pathname + window.location.search).substring(0, 1000);
+                } else if (!storedAttr.landing_url) {
+                    storedAttr.landing_url = window.location.pathname.substring(0, 1000);
+                }
+            }
+            if (document.referrer && document.referrer.indexOf(window.location.hostname) === -1 && (!storedAttr.referrer_url || updatedAttr)) {
+                storedAttr.referrer_url = document.referrer.substring(0, 1000);
+            }
+            if (updatedAttr || !storedAttr.ts) {
+                storedAttr.ts = Date.now();
+            }
+            localStorage.setItem('pkp_ad_attribution', JSON.stringify(storedAttr));
         } catch (e) {}
     })();
     </script>

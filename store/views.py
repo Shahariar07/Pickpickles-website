@@ -770,6 +770,57 @@ def checkout(request):
             order.delivery_fee = delivery_fee
             order.total_amount = total
             order.coupon_code = cart.get_coupon_code() or None
+
+            # Populate Ad & UTM Attribution (from POST hidden inputs or session fallback)
+            def _pick_attr(post_key, sess_key, max_len=255):
+                val = (request.POST.get(post_key) or request.session.get(sess_key) or '').strip()
+                return val[:max_len]
+
+            order.utm_source = _pick_attr('utm_source', 'pkp_utm_source', 100)
+            order.utm_medium = _pick_attr('utm_medium', 'pkp_utm_medium', 100)
+            order.utm_campaign = _pick_attr('utm_campaign', 'pkp_utm_campaign', 255)
+            order.utm_content = _pick_attr('utm_content', 'pkp_utm_content', 255)
+            order.utm_term = _pick_attr('utm_term', 'pkp_utm_term', 255)
+            order.meta_ad_id = _pick_attr('meta_ad_id', 'pkp_meta_ad_id', 100)
+            order.meta_adset_id = _pick_attr('meta_adset_id', 'pkp_meta_adset_id', 100)
+            order.meta_campaign_id = _pick_attr('meta_campaign_id', 'pkp_meta_campaign_id', 100)
+
+            raw_fbclid = _pick_attr('meta_fbclid', 'meta_fbclid', 255)
+            if not raw_fbclid:
+                raw_fbc = (request.POST.get('meta_fbc') or request.COOKIES.get('_fbc') or request.session.get('meta_fbc') or '').strip()
+                if raw_fbc.startswith('fb.') and raw_fbc.count('.') >= 3:
+                    raw_fbclid = raw_fbc.split('.', 3)[3][:255]
+            order.meta_fbclid = raw_fbclid
+
+            order.landing_url = _pick_attr('landing_url', 'pkp_landing_url', 1000)
+            order.referrer_url = _pick_attr('referrer_url', 'pkp_referrer_url', 1000)
+
+            ua_str = (request.META.get('HTTP_USER_AGENT') or '').strip()
+            src_lower = order.utm_source.lower()
+            ref_lower = order.referrer_url.lower()
+            is_paid_click = bool(
+                order.meta_fbclid or order.meta_ad_id or order.meta_campaign_id
+                or order.utm_campaign or order.utm_content
+                or order.utm_medium.lower() in ('cpc', 'paid', 'ads', 'paid_social', 'ppc', 'cpa')
+            )
+            if is_paid_click and ('ig' in src_lower or 'instagram' in src_lower or 'Instagram' in ua_str):
+                order.traffic_source = 'Instagram Ads'
+            elif is_paid_click and ('google' in src_lower or 'gclid' in order.landing_url.lower()):
+                order.traffic_source = 'Google Ads'
+            elif is_paid_click and ('tiktok' in src_lower or 'ttclid' in order.landing_url.lower()):
+                order.traffic_source = 'TikTok Ads'
+            elif is_paid_click:
+                order.traffic_source = 'Facebook / Meta Ads'
+            elif any(x in ua_str for x in ('FBAN', 'FBAV', 'FB_IAB', 'FBIOS')) or 'facebook.com' in ref_lower:
+                order.traffic_source = 'Facebook (App / Organic)'
+            elif 'Instagram' in ua_str or 'instagram.com' in ref_lower:
+                order.traffic_source = 'Instagram (App / Organic)'
+            elif 'WhatsApp' in ua_str or 'wa.me' in ref_lower:
+                order.traffic_source = 'WhatsApp'
+            elif 'google.' in ref_lower:
+                order.traffic_source = 'Google Search'
+            else:
+                order.traffic_source = 'Direct / Website'
             
             # Payment status determination
             if order.payment_method == 'COD':

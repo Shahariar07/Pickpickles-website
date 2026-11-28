@@ -23,9 +23,20 @@
 
         <form method="POST" action="{% url 'store:checkout' %}" id="checkoutForm" novalidate>
             {% csrf_token %}
-            <!-- Meta CAPI Match Keys (Browser & Ad Click Attribution) -->
+            <!-- Meta CAPI Match Keys & Ad Attribution (Browser & Ad Click Attribution) -->
             <input type="hidden" name="meta_fbp" id="id_meta_fbp" value="{{ meta_fbp|default:'' }}">
             <input type="hidden" name="meta_fbc" id="id_meta_fbc" value="{{ meta_fbc|default:'' }}">
+            <input type="hidden" name="meta_fbclid" id="id_meta_fbclid" value="">
+            <input type="hidden" name="utm_source" id="id_utm_source" value="">
+            <input type="hidden" name="utm_medium" id="id_utm_medium" value="">
+            <input type="hidden" name="utm_campaign" id="id_utm_campaign" value="">
+            <input type="hidden" name="utm_content" id="id_utm_content" value="">
+            <input type="hidden" name="utm_term" id="id_utm_term" value="">
+            <input type="hidden" name="meta_ad_id" id="id_meta_ad_id" value="">
+            <input type="hidden" name="meta_adset_id" id="id_meta_adset_id" value="">
+            <input type="hidden" name="meta_campaign_id" id="id_meta_campaign_id" value="">
+            <input type="hidden" name="landing_url" id="id_landing_url" value="">
+            <input type="hidden" name="referrer_url" id="id_referrer_url" value="">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-start">
 
                 <!-- Left Column: Form Steps (7 Cols) -->
@@ -971,6 +982,19 @@
 
         // Save customer profile to localStorage for returning 1-click checkout experience
         saveCheckoutProfile();
+        if (typeof populateMetaTrackingKeys === 'function') {
+            populateMetaTrackingKeys();
+        }
+        try {
+            var attrQuick = JSON.parse(localStorage.getItem('pkp_ad_attribution') || '{}') || {};
+            ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'meta_ad_id', 'meta_adset_id', 'meta_campaign_id', 'landing_url', 'referrer_url'].forEach(function(k) {
+                var el = document.getElementById('id_' + k);
+                if (el && !el.value && attrQuick[k]) el.value = String(attrQuick[k]).trim();
+            });
+            var fbclidQuick = attrQuick.meta_fbclid || sessionStorage.getItem('meta_fbclid') || localStorage.getItem('meta_fbclid') || '';
+            var fbclidElQ = document.getElementById('id_meta_fbclid');
+            if (fbclidElQ && !fbclidElQ.value && fbclidQuick) fbclidElQ.value = fbclidQuick;
+        } catch(eAttr) {}
     });
 
     const CHECKOUT_PROFILE_KEY = 'pickpickles_checkout_profile';
@@ -1171,6 +1195,22 @@
                     if (fbcInput && !fbcInput.value) fbcInput.value = fbc;
                     try { localStorage.setItem('_fbc', fbc); } catch(e) {}
                 }
+
+                // Populate persisted Ad / UTM Attribution fields from localStorage
+                try {
+                    var attrData = JSON.parse(localStorage.getItem('pkp_ad_attribution') || '{}') || {};
+                    var savedFbclid = attrData.meta_fbclid || sessionStorage.getItem('meta_fbclid') || localStorage.getItem('meta_fbclid') || '';
+                    if (savedFbclid) {
+                        var fbclidEl = document.getElementById('id_meta_fbclid');
+                        if (fbclidEl && !fbclidEl.value) fbclidEl.value = savedFbclid;
+                    }
+                    ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'meta_ad_id', 'meta_adset_id', 'meta_campaign_id', 'landing_url', 'referrer_url'].forEach(function(k) {
+                        var el = document.getElementById('id_' + k);
+                        if (el && !el.value && attrData[k]) {
+                            el.value = String(attrData[k]).trim();
+                        }
+                    });
+                } catch(e2) {}
             } catch(e) {}
         }
 

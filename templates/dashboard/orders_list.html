@@ -579,6 +579,17 @@
 
                             </div>
 
+                            {% with attr=order.ad_attribution_summary %}
+                            {% if attr.is_ad or attr.short_badge != 'Direct' %}
+                            <div class="mt-1">
+                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold border {{ attr.badge_class }} max-w-[140px] truncate" title="{{ attr.platform }}{% if attr.ad_name %} • Ad: {{ attr.ad_name }}{% endif %}{% if attr.campaign_name %} • Campaign: {{ attr.campaign_name }}{% endif %}">
+                                    <i class="{{ attr.icon }} text-[8.5px]"></i>
+                                    <span class="truncate">{{ attr.short_badge }}</span>
+                                </span>
+                            </div>
+                            {% endif %}
+                            {% endwith %}
+
                         </td>
 
 
@@ -1077,11 +1088,19 @@
                 </div>
 
                 <!-- Date & Time Sub-Row -->
-                <div class="flex items-center text-[11px] text-slate-500 -mt-0.5 pl-7">
+                <div class="flex items-center gap-1.5 flex-wrap text-[11px] text-slate-500 -mt-0.5 pl-7">
                     <span class="inline-flex items-center gap-1.5 font-bold text-slate-700 bg-slate-100/90 px-2 py-0.5 rounded-md border border-slate-200/90 shadow-2xs whitespace-nowrap">
                         <i class="fa-regular fa-clock text-[9.5px] text-brand-600"></i>
                         <span>{{ order.created_at|date:"M d, Y • h:i A" }}</span>
                     </span>
+                    {% with attr=order.ad_attribution_summary %}
+                    {% if attr.is_ad or attr.short_badge != 'Direct' %}
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9.5px] font-extrabold border shadow-2xs {{ attr.badge_class }} max-w-[175px] truncate" title="{{ attr.platform }}{% if attr.ad_name %} • Ad: {{ attr.ad_name }}{% endif %}">
+                        <i class="{{ attr.icon }} text-[9px]"></i>
+                        <span class="truncate">{{ attr.short_badge }}</span>
+                    </span>
+                    {% endif %}
+                    {% endwith %}
                 </div>
 
                 <!-- Row 2: Customer & Order Details (Compact 2-Column Summary) -->

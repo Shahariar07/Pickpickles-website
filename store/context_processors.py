@@ -79,16 +79,58 @@ def cart_context(request):
         except Exception:
             meta_pixel_purchase_events_json = ''
 
-    # Meta Match Keys (fbp, fbc, fbclid) capture for high Conversions API Event Match Quality
+    # Meta Match Keys (fbp, fbc, fbclid) & Ad Attribution (UTM / Ad ID) capture
     meta_fbp = ''
     meta_fbc = ''
     try:
         if hasattr(request, 'session'):
+            # 0. Capture UTM & Ad parameters on any landing page visit
+            if hasattr(request, 'GET') and request.GET:
+                attr_param_map = {
+                    'utm_source': ('utm_source', 'source'),
+                    'utm_medium': ('utm_medium', 'medium'),
+                    'utm_campaign': ('utm_campaign', 'campaign'),
+                    'utm_content': ('utm_content', 'ad_name', 'ad'),
+                    'utm_term': ('utm_term', 'adset_name', 'adset'),
+                    'meta_ad_id': ('ad_id', 'hsa_ad', 'fb_ad_id'),
+                    'meta_adset_id': ('adset_id', 'hsa_grp', 'fb_adset_id'),
+                    'meta_campaign_id': ('campaign_id', 'hsa_cam', 'fb_campaign_id'),
+                }
+                captured_any_attr = False
+                for sess_key, query_keys in attr_param_map.items():
+                    for qk in query_keys:
+                        val = str(request.GET.get(qk) or '').strip()
+                        if val:
+                            request.session[f'pkp_{sess_key}'] = val[:250]
+                            captured_any_attr = True
+                            break
+                if captured_any_attr or 'fbclid' in request.GET or 'gclid' in request.GET or 'ttclid' in request.GET:
+                    try:
+                        request.session['pkp_landing_url'] = request.get_full_path()[:1000]
+                    except Exception:
+                        pass
+
+            # Capture initial external HTTP Referer once per session
+            if hasattr(request, 'META') and not request.session.get('pkp_referrer_url'):
+                raw_ref = str(request.META.get('HTTP_REFERER') or '').strip()
+                host = str(request.get_host() or '').split(':')[0].lower()
+                if raw_ref and (not host or host not in raw_ref.lower()):
+                    request.session['pkp_referrer_url'] = raw_ref[:1000]
+
+            # Capture initial landing URL if none recorded yet
+            if not request.session.get('pkp_landing_url'):
+                try:
+                    path_Now = request.get_full_path()
+                    if not path_Now.startswith(('/static/', '/media/', '/api/', '/dashboard/', '/admin/')):
+                        request.session['pkp_landing_url'] = path_Now[:1000]
+                except Exception:
+                    pass
+
             # 1. Capture fbclid from GET query parameter (ad click arrival)
             if hasattr(request, 'GET') and 'fbclid' in request.GET:
                 fbclid = str(request.GET.get('fbclid') or '').strip()
                 if fbclid:
-                    request.session['meta_fbclid'] = fbclid
+                    request.session['meta_fbclid'] = fbclid[:250]
                     meta_fbc = f"fb.1.{int(time.time())}.{fbclid}"
                     request.session['meta_fbc'] = meta_fbc
 

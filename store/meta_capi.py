@@ -77,6 +77,14 @@ def record_order_tracking_keys(order, request):
             'fbc': fbc,
             'client_user_agent': client_ua,
             'client_ip_address': client_ip,
+            'utm_source': getattr(order, 'utm_source', '') or '',
+            'utm_medium': getattr(order, 'utm_medium', '') or '',
+            'utm_campaign': getattr(order, 'utm_campaign', '') or '',
+            'utm_content': getattr(order, 'utm_content', '') or '',
+            'ad_id': getattr(order, 'meta_ad_id', '') or '',
+            'adset_id': getattr(order, 'meta_adset_id', '') or '',
+            'campaign_id': getattr(order, 'meta_campaign_id', '') or '',
+            'traffic_source': getattr(order, 'traffic_source', '') or '',
             'recorded_at': time.strftime('%Y-%m-%d %I:%M:%S %p'),
         }
 
